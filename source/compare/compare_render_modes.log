@@ -1,0 +1,98 @@
+Compare render modes | steps=10000 | repeats=10 | fps=[1, 3, 5]
+------------------------------------------------------------------------
+        text | run=01/10 | time=7.760s | sps=1288.59
+        text | run=02/10 | time=7.790s | sps=1283.67
+        text | run=03/10 | time=7.802s | sps=1281.65
+        text | run=04/10 | time=7.903s | sps=1265.39
+        text | run=05/10 | time=7.776s | sps=1286.02
+        text | run=06/10 | time=7.780s | sps=1285.37
+        text | run=07/10 | time=7.748s | sps=1290.70
+        text | run=08/10 | time=7.806s | sps=1281.06
+        text | run=09/10 | time=7.735s | sps=1292.79
+        text | run=10/10 | time=7.783s | sps=1284.85
+        text | average       | time=7.788s | sps=1283.97
+------------------------------------------------------------------------
+        none | run=01/10 | time=7.047s | sps=1419.07
+        none | run=02/10 | time=6.970s | sps=1434.67
+        none | run=03/10 | time=6.964s | sps=1435.95
+        none | run=04/10 | time=6.947s | sps=1439.42
+        none | run=05/10 | time=6.954s | sps=1438.05
+        none | run=06/10 | time=6.937s | sps=1441.45
+        none | run=07/10 | time=6.940s | sps=1440.94
+        none | run=08/10 | time=6.946s | sps=1439.66
+        none | run=09/10 | time=7.031s | sps=1422.25
+        none | run=10/10 | time=6.908s | sps=1447.51
+        none | average       | time=6.965s | sps=1435.85
+------------------------------------------------------------------------
+     delay@1 | run=01/10 | time=7.902s | sps=1265.45
+     delay@1 | run=02/10 | time=7.386s | sps=1353.83
+     delay@1 | run=03/10 | time=7.200s | sps=1388.99
+     delay@1 | run=04/10 | time=7.170s | sps=1394.73
+     delay@1 | run=05/10 | time=7.169s | sps=1394.87
+     delay@1 | run=06/10 | time=7.202s | sps=1388.44
+     delay@1 | run=07/10 | time=7.215s | sps=1385.95
+     delay@1 | run=08/10 | time=7.210s | sps=1387.05
+     delay@1 | run=09/10 | time=7.213s | sps=1386.38
+     delay@1 | run=10/10 | time=7.136s | sps=1401.41
+     delay@1 | average       | time=7.280s | sps=1373.57
+------------------------------------------------------------------------
+     trail@1 | run=01/10 | time=7.596s | sps=1316.53
+     trail@1 | run=02/10 | time=7.579s | sps=1319.49
+     trail@1 | run=03/10 | time=7.598s | sps=1316.13
+     trail@1 | run=04/10 | time=7.532s | sps=1327.66
+     trail@1 | run=05/10 | time=7.565s | sps=1321.93
+     trail@1 | run=06/10 | time=7.479s | sps=1337.05
+     trail@1 | run=07/10 | time=7.640s | sps=1308.83
+     trail@1 | run=08/10 | time=7.505s | sps=1332.36
+     trail@1 | run=09/10 | time=7.546s | sps=1325.18
+     trail@1 | run=10/10 | time=7.512s | sps=1331.12
+     trail@1 | average       | time=7.555s | sps=1323.58
+------------------------------------------------------------------------
+     delay@3 | run=01/10 | time=7.361s | sps=1358.52
+     delay@3 | run=02/10 | time=7.312s | sps=1367.55
+     delay@3 | run=03/10 | time=7.359s | sps=1358.84
+     delay@3 | run=04/10 | time=7.420s | sps=1347.64
+     delay@3 | run=05/10 | time=7.327s | sps=1364.81
+     delay@3 | run=06/10 | time=7.327s | sps=1364.75
+     delay@3 | run=07/10 | time=7.327s | sps=1364.85
+     delay@3 | run=08/10 | time=7.359s | sps=1358.95
+     delay@3 | run=09/10 | time=7.373s | sps=1356.26
+     delay@3 | run=10/10 | time=7.395s | sps=1352.18
+     delay@3 | average       | time=7.356s | sps=1359.41
+------------------------------------------------------------------------
+     trail@3 | run=01/10 | time=8.234s | sps=1214.43
+     trail@3 | run=02/10 | time=8.219s | sps=1216.66
+     trail@3 | run=03/10 | time=8.294s | sps=1205.73
+     trail@3 | run=04/10 | time=8.242s | sps=1213.25
+     trail@3 | run=05/10 | time=8.228s | sps=1215.42
+     trail@3 | run=06/10 | time=8.327s | sps=1200.97
+     trail@3 | run=07/10 | time=8.269s | sps=1209.33
+     trail@3 | run=08/10 | time=8.283s | sps=1207.31
+     trail@3 | run=09/10 | time=8.197s | sps=1219.98
+     trail@3 | run=10/10 | time=8.232s | sps=1214.81
+     trail@3 | average       | time=8.252s | sps=1211.76
+------------------------------------------------------------------------
+     delay@5 | run=01/10 | time=7.550s | sps=1324.50
+     delay@5 | run=02/10 | time=7.576s | sps=1319.91
+     delay@5 | run=03/10 | time=7.638s | sps=1309.24
+     delay@5 | run=04/10 | time=7.899s | sps=1265.96
+     delay@5 | run=05/10 | time=7.678s | sps=1302.37
+     delay@5 | run=06/10 | time=7.552s | sps=1324.18
+     delay@5 | run=07/10 | time=7.567s | sps=1321.55
+     delay@5 | run=08/10 | time=7.566s | sps=1321.76
+     delay@5 | run=09/10 | time=7.924s | sps=1262.01
+     delay@5 | run=10/10 | time=7.645s | sps=1308.00
+     delay@5 | average       | time=7.660s | sps=1305.56
+------------------------------------------------------------------------
+     trail@5 | run=01/10 | time=9.184s | sps=1088.90
+     trail@5 | run=02/10 | time=9.174s | sps=1089.98
+     trail@5 | run=03/10 | time=9.128s | sps=1095.52
+     trail@5 | run=04/10 | time=9.118s | sps=1096.71
+     trail@5 | run=05/10 | time=9.115s | sps=1097.06
+     trail@5 | run=06/10 | time=9.138s | sps=1094.34
+     trail@5 | run=07/10 | time=9.157s | sps=1092.11
+     trail@5 | run=08/10 | time=9.146s | sps=1093.42
+     trail@5 | run=09/10 | time=9.162s | sps=1091.51
+     trail@5 | run=10/10 | time=9.040s | sps=1106.22
+     trail@5 | average       | time=9.136s | sps=1094.56
+------------------------------------------------------------------------

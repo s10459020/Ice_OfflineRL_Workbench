@@ -1,7 +1,14 @@
+import sys
+from pathlib import Path
+
 import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 
-from visualizers.minigrid import RenderDelayWrapper, TrailDelayWrapper
+SOURCE_ROOT = Path(__file__).resolve().parents[1]
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
+from scheduler.minigrid import RenderDelayWrapper, TrailDelayWrapper
 
 
 def run_with_trail_delay(steps: int = 6000, fps: int = 5) -> None:

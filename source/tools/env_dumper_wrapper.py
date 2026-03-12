@@ -1,4 +1,5 @@
 import inspect
+from pathlib import Path
 from typing import Any
 
 import gymnasium as gym
@@ -224,7 +225,7 @@ if __name__ == "__main__":
     run_env_dump(
         env_id="MiniGrid-FourRooms-v0",
         render_mode=None,
-        output="source/visualizers/minigrid/fourrooms_dump.txt",
+        output=str(Path(__file__).resolve().with_name("fourrooms_dump.txt")),
     )
 
 

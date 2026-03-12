@@ -1,11 +1,16 @@
 import time
 from collections.abc import Callable
 from pathlib import Path
+import sys
 
 import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 
-from visualizers.minigrid import RenderDelayWrapper, TrailDelayWrapper
+SOURCE_ROOT = Path(__file__).resolve().parents[1] / "source"
+if str(SOURCE_ROOT) not in sys.path:
+    sys.path.insert(0, str(SOURCE_ROOT))
+
+from scheduler.minigrid import RenderDelayWrapper, TrailDelayWrapper
 
 
 RUN_STEPS = 10000
@@ -25,8 +30,7 @@ def _log(message: str) -> None:
 
 def _setup_log_file() -> None:
     global _LOG_FILE
-    repo_root = Path(__file__).resolve().parents[1]
-    log_dir = repo_root / "tmp"
+    log_dir = Path(__file__).resolve().parent
     log_dir.mkdir(parents=True, exist_ok=True)
     log_path = log_dir / "compare_render_modes.log"
     _LOG_FILE = open(log_path, "w", encoding="utf-8")
