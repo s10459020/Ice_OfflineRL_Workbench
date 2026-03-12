@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ice-offline-rl-workbench"
+version = "0.1.0"
+description = "Offline RL and MiniGrid experimentation workspace"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "gymnasium",
+    "minigrid",
+    "numpy",
+]
+
+[tool.setuptools]
+package-dir = {"" = "source"}
+
+[tool.setuptools.packages.find]
+where = ["source"]
+include = ["agent*", "scheduler*", "tools*", "tests*"]
