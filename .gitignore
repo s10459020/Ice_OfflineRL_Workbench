@@ -1,3 +1,5 @@
 ﻿# Ignore all hidden directories (folders starting with '.')
 .*/
 **/.*/
+tmp/
+documents/
