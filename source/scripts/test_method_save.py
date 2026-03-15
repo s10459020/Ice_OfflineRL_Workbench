@@ -7,7 +7,7 @@ from minigrid.wrappers import FullyObsWrapper
 
 from agent import QTableAgent
 from tools import StepPenaltyWrapper
-from trainer import train
+from strategy import train
 
 
 def q_table_state_from_minigrid_observation(obs: Any) -> Any:

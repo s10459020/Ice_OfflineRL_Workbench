@@ -6,7 +6,7 @@ import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from agent import QTableAgent
-from tester import test
+from strategy import test
 
 
 def q_table_state_from_minigrid_observation(obs: Any) -> Any:

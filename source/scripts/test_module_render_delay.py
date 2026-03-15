@@ -2,8 +2,8 @@ import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 from minigrid.wrappers import FullyObsWrapper
 
-from scheduler.minigrid import RenderDelayWrapper
-from tester import test
+from visualization.minigrid import RenderDelayWrapper
+from strategy import test
 
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human", max_steps=6000)

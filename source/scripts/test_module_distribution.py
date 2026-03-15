@@ -6,9 +6,9 @@ import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from agent import QTableAgent
-from distribution import DistributionWrapper
+from visualization.minigrid import DistributionWrapper, RenderOverlayWrapper
 from tools import StepPenaltyWrapper
-from trainer import train
+from strategy import train
 
 
 def minigrid_q_encoder(obs: Any) -> Any:
@@ -23,6 +23,7 @@ agent.set_encoder(minigrid_q_encoder)
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 env = FullyObsWrapper(env)
 env = StepPenaltyWrapper(env, step_penalty=0.01)
+env = RenderOverlayWrapper(env)
 env = DistributionWrapper(env)
 env.set_q_function(lambda obs, action: agent.q(obs, action))
 

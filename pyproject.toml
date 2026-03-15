@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -19,13 +19,4 @@ package-dir = {"" = "source"}
 
 [tool.setuptools.packages.find]
 where = ["source"]
-include = [
-    "agent*",
-    "scheduler*",
-    "tools*",
-    "tests*",
-    "trainer*",
-    "distribution*",
-    "scripts*",
-    "tester*",
-]
+include = ["*"]
