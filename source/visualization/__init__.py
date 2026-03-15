@@ -3,7 +3,7 @@ from .minigrid import (
     RenderDelayWrapper,
     RenderLayer,
     RenderOverlayWrapper,
-    TrailDelayWrapper,
+    TrailWrapper,
     minigrid_build_observation,
 )
 
@@ -12,6 +12,7 @@ __all__ = [
     "RenderDelayWrapper",
     "RenderLayer",
     "RenderOverlayWrapper",
-    "TrailDelayWrapper",
+    "TrailWrapper",
     "minigrid_build_observation",
 ]
+

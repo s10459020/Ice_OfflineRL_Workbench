@@ -7,7 +7,10 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from .render_overlay_wrapper import RenderLayer, RenderOverlayWrapper
+from .render_overlay_wrapper import OverlayHost, find_overlay_host
+
+
+DISTRIBUTION_LAYER = 20
 
 
 def minigrid_build_observation(x: int, y: int, d: int, base_env: gym.Env) -> Any:
@@ -56,9 +59,11 @@ class DistributionWrapper(gym.Wrapper):
     )
 
     def __init__(self, env: gym.Env) -> None:
-        if not isinstance(env, RenderOverlayWrapper):
-            raise TypeError("DistributionWrapper requires env to be RenderOverlayWrapper.")
+        overlay_host = find_overlay_host(env)
+        if overlay_host is None:
+            raise TypeError("DistributionWrapper requires an overlay host in wrapper chain.")
         super().__init__(env)
+        self._overlay_host: OverlayHost = overlay_host
         self._base_env = self.env.unwrapped
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
         self._sector_map_cache: dict[int, np.ndarray] = {}
@@ -85,13 +90,7 @@ class DistributionWrapper(gym.Wrapper):
         self._pickup_color = np.array([80, 220, 120], dtype=np.float32)
         self._pickup_fill_min = 0.10
 
-        self.env.register_overlay(
-            name="distribution",
-            fn=self._overlay_distribution,
-            layer=int(RenderLayer.DISTRIBUTION),
-            z=0,
-            enabled=True,
-        )
+        self._overlay_host.register_overlay("distribution", DISTRIBUTION_LAYER, self._overlay_distribution)
 
     # ---------------------------------------------------------------------
     # Wrapper/Env functions

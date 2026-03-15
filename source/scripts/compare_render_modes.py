@@ -5,7 +5,7 @@ from pathlib import Path
 import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 
-from visualization.minigrid import RenderDelayWrapper, RenderOverlayWrapper, TrailDelayWrapper
+from visualization.minigrid import RenderDelayWrapper, RenderOverlayWrapper, TrailWrapper
 
 
 RUN_STEPS = 10000
@@ -91,7 +91,7 @@ def _run_trail(steps: int, fps: int) -> float:
     env = gym.make(ENV_ID, render_mode="human")
     env = RenderDelayWrapper(env, fps=fps, render_on_done=False, render_on_reset=False)
     env = RenderOverlayWrapper(env)
-    env = TrailDelayWrapper(env)
+    env = TrailWrapper(env)
     env.reset()
     start = time.perf_counter()
     for _ in range(steps):
@@ -140,3 +140,4 @@ def compare_render_modes(
 
 if __name__ == "__main__":
     compare_render_modes()
+

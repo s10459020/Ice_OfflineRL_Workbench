@@ -20,17 +20,11 @@ class RenderDelayWrapper(gym.Wrapper):
         self._render_on_done = bool(render_on_done)
         self._render_on_reset = bool(render_on_reset)
         self._next_render_time = 0.0
-        self.render_tick = 0
-        self._base_env = self.env.unwrapped
-        self.env_render = self._base_env.render
-        self._base_env.render = lambda: None
 
     def _render_now(self):
         if self._interval > 0.0:
             self._next_render_time = time.perf_counter() + self._interval
-        out = self.env_render()
-        self.render_tick += 1
-        return out
+        return self.env.render()
 
     def reset(self, **kwargs):
         result = self.env.reset(**kwargs)
@@ -50,7 +44,3 @@ class RenderDelayWrapper(gym.Wrapper):
         if self._render_on_done and (terminated or truncated):
             self._render_now()
         return out
-
-    def close(self):
-        self._base_env.render = self.env_render
-        return self.env.close()

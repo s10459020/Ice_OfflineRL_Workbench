@@ -1,23 +1,25 @@
-from __future__ import annotations
-
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
 from types import MethodType
-from typing import Any
+from typing import Any, Protocol, runtime_checkable
 
 import gymnasium as gym
 import numpy as np
 from minigrid.core.grid import Grid
-from minigrid.utils.rendering import fill_coords, highlight_img, point_in_triangle, rotate_fn
+from minigrid.utils.rendering import (
+    fill_coords,
+    highlight_img,
+    point_in_rect,
+    point_in_triangle,
+    rotate_fn,
+)
 
 
 class RenderLayer(IntEnum):
     BACKGROUND = 0
     OBJECTS = 10
-    DISTRIBUTION = 20
-    TRAIL = 30
     AGENT = 40
     HIGHLIGHT = 50
 
@@ -25,82 +27,141 @@ class RenderLayer(IntEnum):
 TileOverlayFn = Callable[[np.ndarray, dict[str, Any]], None]
 
 
+@runtime_checkable
+class OverlayHost(Protocol):
+    def register_overlay(self, name: str, layer: int, fn: TileOverlayFn) -> None:
+        ...
+
+    def unregister_overlay(self, name: str) -> None:
+        ...
+
+
+def find_overlay_host(env: gym.Env) -> OverlayHost | None:
+    """Find the first overlay host in a wrapper chain."""
+    current: gym.Env | None = env
+    visited: set[int] = set()
+    while current is not None:
+        if isinstance(current, OverlayHost):
+            return current
+        current_id = id(current)
+        if current_id in visited or not isinstance(current, gym.Wrapper):
+            break
+        visited.add(current_id)
+        current = current.env
+    return None
+
+
 @dataclass
 class _OverlaySpec:
+    id: int
     name: str
-    fn: TileOverlayFn
     layer: int
-    z: int
-    enabled: bool
-    order: int
+    fn: TileOverlayFn
 
 
 class RenderOverlayWrapper(gym.Wrapper):
-    """Patch Grid.render once and apply ordered tile overlays."""
+    """
+    Overlay pipeline for MiniGrid tile rendering.
+
+    Flow:
+    1) Patch `grid.render` once per reset.
+    2) Build each tile by ordered overlay callbacks.
+    3) Apply overlays in sorted order (layer, id).
+    """
 
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
         self._base_env = self.env.unwrapped
         self._overlay_specs: dict[str, _OverlaySpec] = {}
         self._register_counter = 0
-        self.register_overlay(
-            name="agent",
-            fn=self._overlay_agent,
-            layer=int(RenderLayer.AGENT),
-            z=0,
-            enabled=True,
-        )
-        self.register_overlay(
-            name="highlight",
-            fn=self._overlay_highlight,
-            layer=int(RenderLayer.HIGHLIGHT),
-            z=0,
-            enabled=True,
-        )
-        self._patch_grid_render()
+
+        # Built-in overlays.
+        self.register_overlay("background", RenderLayer.BACKGROUND, self._overlay_background)
+        self.register_overlay("objects", RenderLayer.OBJECTS, self._overlay_objects)
+        self.register_overlay("agent", RenderLayer.AGENT, self._overlay_agent)
+        self.register_overlay("highlight", RenderLayer.HIGHLIGHT, self._overlay_highlight)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+    @staticmethod
+    def find_overlay_wrapper(env: gym.Env) -> "RenderOverlayWrapper | None":
+        """Compatibility helper: find RenderOverlayWrapper in a wrapper chain."""
+        current: gym.Env | None = env
+        visited: set[int] = set()
+        while current is not None:
+            if isinstance(current, RenderOverlayWrapper):
+                return current
+            current_id = id(current)
+            if current_id in visited or not isinstance(current, gym.Wrapper):
+                break
+            visited.add(current_id)
+            current = current.env
+        return None
 
     def register_overlay(
         self,
         name: str,
-        fn: TileOverlayFn,
-        *,
         layer: int,
-        z: int = 0,
-        enabled: bool = True,
+        fn: TileOverlayFn,
     ) -> None:
         self._register_counter += 1
-        self._overlay_specs[name] = _OverlaySpec(
-            name=name,
-            fn=fn,
-            layer=int(layer),
-            z=int(z),
-            enabled=bool(enabled),
-            order=self._register_counter,
-        )
+        self._overlay_specs[name] = _OverlaySpec(self._register_counter, name, layer, fn)
 
     def unregister_overlay(self, name: str) -> None:
         self._overlay_specs.pop(name, None)
 
-    def set_overlay_enabled(self, name: str, enabled: bool) -> None:
-        spec = self._overlay_specs.get(name)
-        if spec is None:
-            raise KeyError(f"overlay not found: {name}")
-        spec.enabled = bool(enabled)
+    def reset(self, **kwargs):
+        out = self.env.reset(**kwargs)
+        self._patch_grid_render() # MiniGrid may recreate `grid` on reset.
+        return out
 
-    def _sorted_overlays(self) -> list[_OverlaySpec]:
-        overlays = [spec for spec in self._overlay_specs.values() if spec.enabled]
-        overlays.sort(key=lambda s: (s.layer, s.z, s.order))
-        return overlays
-
+    # ------------------------------------------------------------------
+    # Render flow internals
+    # ------------------------------------------------------------------
     def _patch_grid_render(self) -> None:
         grid = self._base_env.grid
         grid.render = MethodType(self._overlay_render, grid)
 
-    def reset(self, **kwargs):
-        out = self.env.reset(**kwargs)
-        # MiniGrid may recreate grid on reset.
-        self._patch_grid_render()
-        return out
+    def _sorted_overlays(self) -> list[_OverlaySpec]:
+        overlays = list(self._overlay_specs.values())
+        overlays.sort(key=lambda s: (s.layer, s.id))
+        return overlays
+
+    def _build_tile_context(
+        self,
+        i: int,
+        j: int,
+        cell: Any,
+        tile_size: int,
+        agent_pos: tuple[int, int],
+        agent_dir: int | None,
+        highlight_mask: np.ndarray,
+    ) -> dict[str, Any]:
+        return {
+            "i": i,
+            "j": j,
+            "cell": cell,
+            "tile_size": tile_size,
+            "agent_pos": agent_pos,
+            "agent_dir": agent_dir,
+            "agent_here": np.array_equal(agent_pos, (i, j)),
+            "highlight": bool(highlight_mask[i, j]),
+        }
+
+    # ------------------------------------------------------------------
+    # Built-in overlays
+    # ------------------------------------------------------------------
+    def _overlay_background(self, tile_img: np.ndarray, _ctx: dict[str, Any]) -> None:
+        # Match MiniGrid native tile base: black background + top/left borders.
+        fill_coords(tile_img, point_in_rect(0.0, 0.031, 0.0, 1.0), (100, 100, 100))
+        fill_coords(tile_img, point_in_rect(0.0, 1.0, 0.0, 0.031), (100, 100, 100))
+
+    def _overlay_objects(self, tile_img: np.ndarray, ctx: dict[str, Any]) -> None:
+        cell = ctx["cell"]
+        if cell is None:
+            return
+        cell.render(tile_img)
 
     def _overlay_agent(self, tile_img: np.ndarray, ctx: dict[str, Any]) -> None:
         if not ctx["agent_here"] or ctx["agent_dir"] is None:
@@ -118,6 +179,9 @@ class RenderOverlayWrapper(gym.Wrapper):
         if bool(ctx["highlight"]):
             highlight_img(tile_img)
 
+    # ------------------------------------------------------------------
+    # Patched Grid.render callback
+    # ------------------------------------------------------------------
     def _overlay_render(
         self,
         grid_self: Grid,
@@ -130,37 +194,29 @@ class RenderOverlayWrapper(gym.Wrapper):
             highlight_mask = np.zeros((grid_self.width, grid_self.height), dtype=bool)
 
         overlays = self._sorted_overlays()
-        width_px = grid_self.width * tile_size
-        height_px = grid_self.height * tile_size
-        img = np.zeros((height_px, width_px, 3), dtype=np.uint8)
+        img = np.zeros((grid_self.height * tile_size, grid_self.width * tile_size, 3), dtype=np.uint8)
 
         for j in range(grid_self.height):
             for i in range(grid_self.width):
                 cell = grid_self.get(i, j)
-                tile_img = Grid.render_tile(
-                    cell,
-                    agent_dir=None,
-                    highlight=False,
+                ctx = self._build_tile_context(
+                    i=i,
+                    j=j,
+                    cell=cell,
                     tile_size=tile_size,
-                ).astype(np.uint8)
-                ctx = {
-                    "i": i,
-                    "j": j,
-                    "cell": cell,
-                    "tile_size": tile_size,
-                    "agent_pos": agent_pos,
-                    "agent_dir": agent_dir,
-                    "agent_here": np.array_equal(agent_pos, (i, j)),
-                    "highlight": bool(highlight_mask[i, j]),
-                }
+                    agent_pos=agent_pos,
+                    agent_dir=agent_dir,
+                    highlight_mask=highlight_mask,
+                )
+                tile_img = np.zeros((tile_size, tile_size, 3), dtype=np.uint8)
 
                 for spec in overlays:
                     spec.fn(tile_img, ctx)
 
-                ymin = j * tile_size
-                ymax = (j + 1) * tile_size
-                xmin = i * tile_size
-                xmax = (i + 1) * tile_size
-                img[ymin:ymax, xmin:xmax, :] = tile_img
+                y0 = j * tile_size
+                y1 = (j + 1) * tile_size
+                x0 = i * tile_size
+                x1 = (i + 1) * tile_size
+                img[y0:y1, x0:x1, :] = tile_img
 
         return img
