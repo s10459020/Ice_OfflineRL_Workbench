@@ -1,14 +1,13 @@
-from __future__ import annotations
-
 import pickle
 import random
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 
 
 QTableState = Any
+ObservationEncoder = Callable[[Any], QTableState]
 
 
 class QTableAgent:
@@ -21,13 +20,22 @@ class QTableAgent:
         gamma: float = 0.99,
         epsilon: float = 1.0,
         seed: int = 42,
+        agent_name: str = "QTableAgent",
     ) -> None:
+        self.agent_name = str(agent_name)
         self.n_actions = int(n_actions)
         self.alpha = float(alpha)
         self.gamma = float(gamma)
         self.epsilon = float(epsilon)
         self.q_table: dict[QTableState, np.ndarray] = {}
         self._rng = random.Random(seed)
+        self._encoder: ObservationEncoder = lambda observation: observation
+
+    def set_encoder(self, encoder: ObservationEncoder) -> None:
+        self._encoder = encoder
+
+    def encode(self, observation: Any) -> QTableState:
+        return self._encoder(observation)
 
     def _ensure_state(self, state: QTableState) -> np.ndarray:
         action_values = self.q_table.get(state)
@@ -36,7 +44,7 @@ class QTableAgent:
             self.q_table[state] = action_values
         return action_values
 
-    def act(self, state: QTableState, *, greedy: bool = False) -> int:
+    def _act_state(self, state: QTableState, *, greedy: bool = False) -> int:
         action_values = self._ensure_state(state)
         if not greedy and self._rng.random() < self.epsilon:
             return self._rng.randrange(self.n_actions)
@@ -46,7 +54,7 @@ class QTableAgent:
             return int(best_actions[0])
         return int(self._rng.choice(best_actions.tolist()))
 
-    def update(
+    def _update_state(
         self,
         state: QTableState,
         action: int,
@@ -61,11 +69,38 @@ class QTableAgent:
         td_error = td_target - float(q_s[action])
         q_s[action] += self.alpha * td_error
 
-    def save(self, path: str | Path) -> Path:
-        model_path = Path(path)
+    def _q_state(self, state: QTableState, action: int) -> float:
+        return float(self._ensure_state(state)[int(action)])
+
+    def q(self, observation: Any, action: int) -> float:
+        state = self.encode(observation)
+        return self._q_state(state, action)
+
+    def act(self, observation: Any, *, greedy: bool = False) -> int:
+        state = self.encode(observation)
+        return self._act_state(state, greedy=greedy)
+
+    def update(
+        self,
+        observation: Any,
+        action: int,
+        reward: float,
+        next_observation: Any,
+        done: bool,
+    ) -> None:
+        state = self.encode(observation)
+        next_state = self.encode(next_observation)
+        self._update_state(state, action, reward, next_state, done)
+
+    def save(self, model_dir: str | Path, model_name: str) -> Path:
+        model_dir_path = Path(model_dir)
+        model_path = model_dir_path / model_name
+        if model_path.suffix == "":
+            model_path = model_path.with_suffix(".pkl")
         model_path.parent.mkdir(parents=True, exist_ok=True)
 
         payload = {
+            "agent_name": self.agent_name,
             "n_actions": self.n_actions,
             "alpha": self.alpha,
             "gamma": self.gamma,
@@ -77,7 +112,10 @@ class QTableAgent:
         return model_path
 
     @classmethod
-    def load(cls, path: str | Path) -> "QTableAgent":
+    def load(
+        cls,
+        path: str | Path,
+    ) -> "QTableAgent":
         model_path = Path(path)
         with model_path.open("rb") as f:
             payload = pickle.load(f)
@@ -87,6 +125,7 @@ class QTableAgent:
             alpha=float(payload["alpha"]),
             gamma=float(payload["gamma"]),
             epsilon=float(payload["epsilon"]),
+            agent_name=str(payload.get("agent_name", "QTableAgent")),
         )
         q_table = payload["q_table"]
         agent.q_table = {

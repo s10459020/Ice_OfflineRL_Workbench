@@ -19,4 +19,13 @@ package-dir = {"" = "source"}
 
 [tool.setuptools.packages.find]
 where = ["source"]
-include = ["agent*", "scheduler*", "tools*", "tests*"]
+include = [
+    "agent*",
+    "scheduler*",
+    "tools*",
+    "tests*",
+    "trainer*",
+    "distribution*",
+    "scripts*",
+    "tester*",
+]

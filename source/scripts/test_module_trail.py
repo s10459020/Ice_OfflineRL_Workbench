@@ -1,0 +1,27 @@
+import gymnasium as gym
+import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
+from minigrid.wrappers import FullyObsWrapper
+
+from scheduler.minigrid import RenderDelayWrapper, TrailDelayWrapper
+from tester import test
+
+
+env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human", max_steps=6000)
+env = FullyObsWrapper(env)
+env = RenderDelayWrapper(env, fps=3, render_on_done=True)
+env = TrailDelayWrapper(env)
+
+print("start | env=BabyAI-OneRoomS8-v0-fullobs | render_fps=3")
+try:
+    finished_episodes = test(
+        env=env,
+        max_episodes=30,
+        max_episode_steps=200,
+        seed=None,
+        print_flag=True,
+        render_flag=True,
+    )
+finally:
+    env.close()
+
+print(f"finished_episodes={finished_episodes}")
