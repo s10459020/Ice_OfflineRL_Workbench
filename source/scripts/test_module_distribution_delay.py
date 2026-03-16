@@ -6,9 +6,14 @@ import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from agent import QTableAgent
-from visualization.minigrid import DistributionWrapper, RenderDelayWrapper, RenderOverlayWrapper
-from tools import StepPenaltyWrapper
 from strategy import train
+from tools import StepPenaltyWrapper
+from visualization.minigrid import (
+    DistributionWrapper,
+    RenderDelayWrapper,
+    RenderOverlayWrapper,
+    TrailWrapper,
+)
 
 
 def minigrid_q_encoder(obs: Any) -> Any:
@@ -34,10 +39,16 @@ env = DistributionWrapper(
     env,
     value_fn=lambda obs, action: agent.q(obs, action),
 )
+env = TrailWrapper(
+    env,
+    clear_on_render=True,
+    max_trails=20,
+)
+env = RenderDelayWrapper(env, fps=2, render_on_done=True)
 
 print(
     "start train | from=scratch | "
-    "env=BabyAI-OneRoomS8-v0-fullobs | step_penalty=0.01"
+    "env=BabyAI-OneRoomS8-v0-fullobs | step_penalty=0.01 | trail=3 | delay_fps=3"
 )
 try:
     steps, episodes, _ = train(

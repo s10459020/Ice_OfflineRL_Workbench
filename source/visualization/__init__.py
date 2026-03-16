@@ -4,7 +4,6 @@ from .minigrid import (
     RenderLayer,
     RenderOverlayWrapper,
     TrailWrapper,
-    minigrid_build_observation,
 )
 
 __all__ = [
@@ -13,6 +12,5 @@ __all__ = [
     "RenderLayer",
     "RenderOverlayWrapper",
     "TrailWrapper",
-    "minigrid_build_observation",
 ]
 
