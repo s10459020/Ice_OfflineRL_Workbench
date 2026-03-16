@@ -130,7 +130,7 @@ class EnvDumperWrapper(gym.Wrapper):
         else:
             lines.append(f"  - {key}: {text}")
 
-    def _append_bullet(self, lines: list[str], key: str, value: Any, *, format_space: bool = True) -> None:
+    def _append_bullet(self, lines: list[str], key: str, value: Any, format_space: bool = True) -> None:
         text = (
             self._format_space(value)
             if format_space and isinstance(value, gym.Space)

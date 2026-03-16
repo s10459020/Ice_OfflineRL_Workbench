@@ -1,14 +1,13 @@
-from __future__ import annotations
-
 import math
-
-import gymnasium as gym
 import numpy as np
+import gymnasium as gym
+
 from minigrid.utils.rendering import fill_coords, point_in_triangle, rotate_fn
 
-from .render_overlay_wrapper import RenderOverlayWrapper
+from .render_overlay_wrapper import OverlayDependentWrapper
 
-class TrailWrapper(gym.Wrapper):
+
+class TrailWrapper(OverlayDependentWrapper):
     """Render a trail overlay using recent (position, direction) states."""
 
     def __init__(
@@ -20,19 +19,19 @@ class TrailWrapper(gym.Wrapper):
     ) -> None:
         if max_trails < 1:
             raise ValueError("max_trails must be >= 1")
-        if (overlay_wrapper := RenderOverlayWrapper.find_wrapper(env)) is None:
-            raise TypeError("TrailWrapper requires RenderOverlayWrapper in wrapper chain.")
-
-        super().__init__(env)
-        self._overlay_wrapper: RenderOverlayWrapper = overlay_wrapper
-        self._overlay_wrapper.register_overlay("trail", trail_layer, self._overlay_trail)
+        
+        super().__init__(
+            env,
+            overlay_fn=self._overlay_trail,
+            overlay_layer=trail_layer,
+        )
 
         # Trail state.s
         # Ordered history: ((x, y), direction)
         # Per-cell lookup built before each render: (x, y) -> [(idx, dir), ...]
         self._trails: list[tuple[tuple[int, int], int]] = []
         self._trails_by_cell: dict[tuple[int, int], list[tuple[int, int]]] = {}
-        self._max_trails = int(max_trails)
+        self._max_trails = max_trails
 
         # Trail rendering style.
         self._trail_color = np.array([70, 160, 255], dtype=np.float32)
@@ -40,7 +39,7 @@ class TrailWrapper(gym.Wrapper):
         # Render-time caches.
         self._arrow_masks_cache: dict[int, dict[int, np.ndarray]] = {}
 
-        self._clear_on_render = bool(clear_on_render)
+        self._clear_on_render = clear_on_render
 
     # ------------------------------------------------------------------
     # Env lifecycle
@@ -69,9 +68,9 @@ class TrailWrapper(gym.Wrapper):
     # Overlay callback
     # ------------------------------------------------------------------
     def _overlay_trail(self, tile_img: np.ndarray, ctx: dict[str, object]) -> None:
-        i = int(ctx["i"])
-        j = int(ctx["j"])
-        tile_size = int(ctx["tile_size"])
+        i = ctx["i"]
+        j = ctx["j"]
+        tile_size = ctx["tile_size"]
         entries = self._trails_by_cell.get((i, j))
         if not entries:
             return
@@ -83,7 +82,7 @@ class TrailWrapper(gym.Wrapper):
 
         for idx, trail_dir in entries:
             alpha = 0.10 + 0.60 * (idx / trail_den)
-            mask = arrow_masks[int(trail_dir)]
+            mask = arrow_masks[trail_dir]
             overlay_rgb[mask] = self._trail_color
             overlay_alpha[mask] = alpha
 
@@ -97,7 +96,7 @@ class TrailWrapper(gym.Wrapper):
     def _capture_agent_state(self) -> tuple[tuple[int, int], int]:
         base = self.env.unwrapped
         x, y = base.agent_pos
-        return (int(x), int(y)), int(base.agent_dir)
+        return (x, y), base.agent_dir
 
     def _rebuild_trails_by_cell(self) -> None:
         trails_by_cell: dict[tuple[int, int], list[tuple[int, int]]] = {}

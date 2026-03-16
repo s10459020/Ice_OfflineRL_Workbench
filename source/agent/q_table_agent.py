@@ -44,7 +44,7 @@ class QTableAgent:
             self.q_table[state] = action_values
         return action_values
 
-    def _act_state(self, state: QTableState, *, greedy: bool = False) -> int:
+    def _act_state(self, state: QTableState, greedy: bool = False) -> int:
         action_values = self._ensure_state(state)
         if not greedy and self._rng.random() < self.epsilon:
             return self._rng.randrange(self.n_actions)
@@ -76,7 +76,7 @@ class QTableAgent:
         state = self.encode(observation)
         return self._q_state(state, action)
 
-    def act(self, observation: Any, *, greedy: bool = False) -> int:
+    def act(self, observation: Any, greedy: bool = False) -> int:
         state = self.encode(observation)
         return self._act_state(state, greedy=greedy)
 

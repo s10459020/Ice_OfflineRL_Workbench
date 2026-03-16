@@ -8,16 +8,16 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from .render_overlay_wrapper import RenderOverlayWrapper
+from .render_overlay_wrapper import OverlayDependentWrapper
 
 
 def minigrid_build_observation(x: int, y: int, d: int, base_env: gym.Env) -> Any:
     """Build MiniGrid observation by reusing base_env.gen_obs()."""
-    old_pos = tuple(int(v) for v in base_env.agent_pos)
-    old_dir = int(base_env.agent_dir)
+    old_pos = tuple(base_env.agent_pos)
+    old_dir = base_env.agent_dir
     try:
-        base_env.agent_pos = (int(x), int(y))
-        base_env.agent_dir = int(d)
+        base_env.agent_pos = (x, y)
+        base_env.agent_dir = d
         return base_env.gen_obs()
     finally:
         base_env.agent_pos = old_pos
@@ -45,9 +45,9 @@ class BaseRenderer(ABC):
         pickup_color: tuple[int, int, int] = (80, 220, 120),
         pickup_fill_min: float = 0.10,
     ) -> None:
-        self._gamma = float(gamma)
+        self._gamma = gamma
         self._pickup_color = np.asarray(pickup_color, dtype=np.float32)
-        self._pickup_fill_min = float(pickup_fill_min)
+        self._pickup_fill_min = pickup_fill_min
 
     @staticmethod
     def _flatten_directional(cell_values: np.ndarray) -> np.ndarray:
@@ -63,11 +63,11 @@ class BaseRenderer(ABC):
         den = vmax - vmin
         if den <= 1e-12:
             return 0.0
-        norm = float(np.clip((value - vmin) / den, 0.0, 1.0))
-        return float(np.power(norm, self._gamma))
+        norm = np.clip((value - vmin) / den, 0.0, 1.0)
+        return np.power(norm, self._gamma)
 
     def _pickup_scaled_color(self, cell_values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
-        pickup_value = float(np.mean(cell_values[:, MiniGridAction.PICKUP]))
+        pickup_value = np.mean(cell_values[:, MiniGridAction.PICKUP])
         pickup_norm = self._normalize_scalar(pickup_value, vmin, vmax)
         pickup_scale = self._pickup_fill_min + (1.0 - self._pickup_fill_min) * pickup_norm
         return np.clip(self._pickup_color * pickup_scale, 0.0, 255.0)
@@ -94,10 +94,10 @@ class _Rect12Renderer(BaseRenderer):
     ) -> None:
         super().__init__()
         self._rect_color = np.asarray(rect_color, dtype=np.uint8)
-        self._rect_w_min = float(rect_w_min)
-        self._rect_w_max = float(rect_w_max)
-        self._rect_h = float(rect_h)
-        self._rect_levels = int(rect_levels)
+        self._rect_w_min = rect_w_min
+        self._rect_w_max = rect_w_max
+        self._rect_h = rect_h
+        self._rect_levels = rect_levels
         self._rect_mask_cache: dict[int, np.ndarray] = {}
         self._center_square_mask_cache: dict[int, np.ndarray] = {}
 
@@ -119,7 +119,7 @@ class _Rect12Renderer(BaseRenderer):
         )
         for d_idx in MiniGridDirection:
             for slot_idx, a_real in enumerate(action_order):
-                level = int(round(float(norm_grid[d_idx, a_real]) * (self._rect_levels - 1)))
+                level = int(round(norm_grid[d_idx, a_real] * (self._rect_levels - 1)))
                 level = max(1, min(self._rect_levels - 1, level))
                 tile_img_u8[masks[d_idx, slot_idx, level]] = self._rect_color
         center_mask = self._get_center_square_mask(tile_img_u8.shape[0])
@@ -139,7 +139,7 @@ class _Rect12Renderer(BaseRenderer):
         for d_idx, (slots, y_anchor, x_anchor) in strips.items():
             for slot_idx, center in enumerate(slots):
                 for level in range(1, self._rect_levels):
-                    ratio = float(level) / float(self._rect_levels - 1)
+                    ratio = level / (self._rect_levels - 1)
                     width = self._rect_w_min + (self._rect_w_max - self._rect_w_min) * ratio
                     mask_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
                     if y_anchor is not None:
@@ -201,11 +201,11 @@ class _Ring12Renderer(BaseRenderer):
         ring_outer: float = 0.46,
     ) -> None:
         super().__init__()
-        self._alpha_min = float(alpha_min)
-        self._alpha_max = float(alpha_max)
+        self._alpha_min = alpha_min
+        self._alpha_max = alpha_max
         self._ring_color = np.asarray(ring_color, dtype=np.float32)
-        self._ring_inner = float(ring_inner)
-        self._ring_outer = float(ring_outer)
+        self._ring_inner = ring_inner
+        self._ring_outer = ring_outer
         self._sector_map_cache: dict[int, np.ndarray] = {}
         self._center_circle_mask_cache: dict[int, np.ndarray] = {}
 
@@ -216,7 +216,7 @@ class _Ring12Renderer(BaseRenderer):
         vmin: float,
         vmax: float,
     ) -> None:
-        tile_size = int(tile_img_u8.shape[0])
+        tile_size = tile_img_u8.shape[0]
         sector_map = self._get_sector_map(tile_size)
         norm_grid = self._normalize_values(
             self._flatten_directional(cell_values), vmin, vmax
@@ -270,21 +270,19 @@ class _Ring12Renderer(BaseRenderer):
         return mask
 
 
-class DistributionWrapper(gym.Wrapper):
+class DistributionWrapper(OverlayDependentWrapper):
     """Render-time (s,a) distribution overlay for MiniGrid."""
 
     def __init__(
         self,
         env: gym.Env,
         distribution_layer: int = 20,
-        overlay_name: str | None = None,
     ) -> None:
-        overlay_wrapper = RenderOverlayWrapper.find_wrapper(env)
-        if overlay_wrapper is None:
-            raise TypeError("DistributionWrapper requires RenderOverlayWrapper in wrapper chain.")
-        super().__init__(env)
-        self._overlay_wrapper: RenderOverlayWrapper = overlay_wrapper
-        self._overlay_name = overlay_name or f"distribution_{id(self)}"
+        super().__init__(
+            env,
+            overlay_fn=self._overlay_distribution,
+            overlay_layer=distribution_layer,
+        )
         self._base_env = self.env.unwrapped
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
         self._last_sa_values: np.ndarray | None = None
@@ -296,11 +294,6 @@ class DistributionWrapper(gym.Wrapper):
             "rect12": _Rect12Renderer(),
             "ring12": _Ring12Renderer(),
         }
-        self._overlay_wrapper.register_overlay(
-            self._overlay_name,
-            int(distribution_layer),
-            self._overlay_distribution,
-        )
 
     def set_q_function(self, q_function: Callable[[Any, int], float] | None) -> None:
         self._q_function = q_function
@@ -323,8 +316,8 @@ class DistributionWrapper(gym.Wrapper):
         return out
 
     def compute_sa_values(self, q_function: Callable[[Any, int], float]) -> np.ndarray:
-        width = int(self._base_env.width)
-        height = int(self._base_env.height)
+        width = self._base_env.width
+        height = self._base_env.height
         sa_values = np.zeros(
             (width, height, len(MiniGridDirection), len(MiniGridAction)),
             dtype=np.float32,
@@ -334,14 +327,14 @@ class DistributionWrapper(gym.Wrapper):
                 for d in MiniGridDirection:
                     obs_i = self._get_cached_observation(x, y, d)
                     for action in MiniGridAction:
-                        sa_values[x, y, d, action] = float(q_function(obs_i, action))
+                        sa_values[x, y, d, action] = q_function(obs_i, action)
         return sa_values
 
     def render(self):
         if self._q_function is not None:
             self._last_sa_values = self.compute_sa_values(self._q_function)
-            self._frame_vmin = float(np.min(self._last_sa_values))
-            self._frame_vmax = float(np.max(self._last_sa_values))
+            self._frame_vmin = np.min(self._last_sa_values)
+            self._frame_vmax = np.max(self._last_sa_values)
         else:
             self._last_sa_values = None
             self._frame_vmin = 0.0
@@ -351,8 +344,8 @@ class DistributionWrapper(gym.Wrapper):
     def _overlay_distribution(self, tile_img: np.ndarray, ctx: dict[str, Any]) -> None:
         if self._last_sa_values is None:
             return
-        i = int(ctx["i"])
-        j = int(ctx["j"])
+        i = ctx["i"]
+        j = ctx["j"]
         cell_values = self._last_sa_values[i, j]
         self._renderers[self._render_style].render(
             tile_img,
@@ -362,7 +355,7 @@ class DistributionWrapper(gym.Wrapper):
         )
 
     def _get_cached_observation(self, x: int, y: int, d: int) -> Any:
-        key = (int(x), int(y), int(d))
+        key = (x, y, d)
         obs = self._obs_cache.get(key)
         if obs is None:
             obs = minigrid_build_observation(key[0], key[1], key[2], self._base_env)

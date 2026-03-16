@@ -1,7 +1,4 @@
-from __future__ import annotations
-
 import time
-
 import gymnasium as gym
 
 
@@ -16,9 +13,9 @@ class RenderDelayWrapper(gym.Wrapper):
         render_on_reset: bool = False,
     ) -> None:
         super().__init__(env)
-        self._interval = 0.0 if fps <= 0.0 else 1.0 / float(fps)
-        self._render_on_done = bool(render_on_done)
-        self._render_on_reset = bool(render_on_reset)
+        self._interval = 0.0 if fps <= 0.0 else 1.0 / fps
+        self._render_on_done = render_on_done
+        self._render_on_reset = render_on_reset
         self._next_render_time = 0.0
 
     def _render_now(self):

@@ -1,6 +1,5 @@
 import math
 from collections.abc import Callable
-from dataclasses import dataclass
 from enum import IntEnum
 from types import MethodType
 from typing import Any
@@ -27,14 +26,6 @@ class RenderLayer(IntEnum):
 TileOverlayFn = Callable[[np.ndarray, dict[str, Any]], None]
 
 
-@dataclass
-class _OverlaySpec:
-    id: int
-    name: str
-    layer: int
-    fn: TileOverlayFn
-
-
 class RenderOverlayWrapper(gym.Wrapper):
     """
     Overlay pipeline for MiniGrid tile rendering.
@@ -48,44 +39,32 @@ class RenderOverlayWrapper(gym.Wrapper):
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
         self._base_env = self.env.unwrapped
-        self._overlay_specs: dict[str, _OverlaySpec] = {}
-        self._register_counter = 0
+        self._overlay_by_layer: dict[int, TileOverlayFn] = {}
+        self._ordered_overlay_fns: list[TileOverlayFn] = []
 
         # Built-in overlays.
-        self.register_overlay("background", RenderLayer.BACKGROUND, self._overlay_background)
-        self.register_overlay("objects", RenderLayer.OBJECTS, self._overlay_objects)
-        self.register_overlay("agent", RenderLayer.AGENT, self._overlay_agent)
-        self.register_overlay("highlight", RenderLayer.HIGHLIGHT, self._overlay_highlight)
+        self.register_overlay(RenderLayer.BACKGROUND, self._overlay_background)
+        self.register_overlay(RenderLayer.OBJECTS, self._overlay_objects)
+        self.register_overlay(RenderLayer.AGENT, self._overlay_agent)
+        self.register_overlay(RenderLayer.HIGHLIGHT, self._overlay_highlight)
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
-    @staticmethod
-    def find_wrapper(env: gym.Env) -> "RenderOverlayWrapper | None":
-        """Find RenderOverlayWrapper in a wrapper chain."""
-        current: gym.Env | None = env
-        visited: set[int] = set()
-        while current is not None:
-            if isinstance(current, RenderOverlayWrapper):
-                return current
-            current_id = id(current)
-            if current_id in visited or not isinstance(current, gym.Wrapper):
-                break
-            visited.add(current_id)
-            current = current.env
-        return None
-
     def register_overlay(
         self,
-        name: str,
         layer: int,
         fn: TileOverlayFn,
     ) -> None:
-        self._register_counter += 1
-        self._overlay_specs[name] = _OverlaySpec(self._register_counter, name, layer, fn)
-
-    def unregister_overlay(self, name: str) -> None:
-        self._overlay_specs.pop(name, None)
+        if layer in self._overlay_by_layer:
+            raise ValueError(f"overlay layer already registered: {layer}")
+        
+        self._overlay_by_layer[layer] = fn
+        # Overlay order only changes at register-time.
+        self._ordered_overlay_fns = [
+            overlay_fn
+            for _, overlay_fn in sorted(self._overlay_by_layer.items(), key=lambda item: item[0])
+        ]
 
     def reset(self, **kwargs):
         out = self.env.reset(**kwargs)
@@ -98,11 +77,6 @@ class RenderOverlayWrapper(gym.Wrapper):
     def _patch_grid_render(self) -> None:
         grid = self._base_env.grid
         grid.render = MethodType(self._overlay_render, grid)
-
-    def _sorted_overlays(self) -> list[_OverlaySpec]:
-        overlays = list(self._overlay_specs.values())
-        overlays.sort(key=lambda s: (s.layer, s.id))
-        return overlays
 
     def _build_tile_context(
         self,
@@ -122,7 +96,7 @@ class RenderOverlayWrapper(gym.Wrapper):
             "agent_pos": agent_pos,
             "agent_dir": agent_dir,
             "agent_here": np.array_equal(agent_pos, (i, j)),
-            "highlight": bool(highlight_mask[i, j]),
+            "highlight": highlight_mask[i, j],
         }
 
     # ------------------------------------------------------------------
@@ -147,12 +121,12 @@ class RenderOverlayWrapper(gym.Wrapper):
             tri_fn,
             cx=0.5,
             cy=0.5,
-            theta=0.5 * math.pi * int(ctx["agent_dir"]),
+            theta=0.5 * math.pi * ctx["agent_dir"],
         )
         fill_coords(tile_img, tri_fn, (255, 0, 0))
 
     def _overlay_highlight(self, tile_img: np.ndarray, ctx: dict[str, Any]) -> None:
-        if bool(ctx["highlight"]):
+        if ctx["highlight"]:
             highlight_img(tile_img)
 
     # ------------------------------------------------------------------
@@ -169,7 +143,7 @@ class RenderOverlayWrapper(gym.Wrapper):
         if highlight_mask is None:
             highlight_mask = np.zeros((grid_self.width, grid_self.height), dtype=bool)
 
-        overlays = self._sorted_overlays()
+        overlays = self._ordered_overlay_fns
         img = np.zeros((grid_self.height * tile_size, grid_self.width * tile_size, 3), dtype=np.uint8)
 
         for j in range(grid_self.height):
@@ -186,8 +160,8 @@ class RenderOverlayWrapper(gym.Wrapper):
                 )
                 tile_img = np.zeros((tile_size, tile_size, 3), dtype=np.uint8)
 
-                for spec in overlays:
-                    spec.fn(tile_img, ctx)
+                for overlay_fn in overlays:
+                    overlay_fn(tile_img, ctx)
 
                 y0 = j * tile_size
                 y1 = (j + 1) * tile_size
@@ -196,3 +170,41 @@ class RenderOverlayWrapper(gym.Wrapper):
                 img[y0:y1, x0:x1, :] = tile_img
 
         return img
+
+
+class OverlayDependentWrapper(gym.Wrapper):
+    """
+    Base wrapper for modules that depend on RenderOverlayWrapper.
+
+    Common behavior:
+    1) Reuse existing RenderOverlayWrapper if present.
+    2) Auto-insert RenderOverlayWrapper when missing.
+    3) Register callback and keep overlay id.
+    """
+
+    def __init__(
+        self,
+        env: gym.Env,
+        overlay_fn: TileOverlayFn,
+        overlay_layer: int,
+    ) -> None:
+        overlay_wrapper = self._find_overlay_wrapper(env)
+        if overlay_wrapper is None:
+            env = RenderOverlayWrapper(env)
+            overlay_wrapper = env
+        
+        super().__init__(env)
+        self._overlay_wrapper: RenderOverlayWrapper = overlay_wrapper
+        self._overlay_wrapper.register_overlay(
+            overlay_layer,
+            overlay_fn,
+        )
+
+    @staticmethod
+    def _find_overlay_wrapper(env: gym.Env) -> RenderOverlayWrapper | None:
+        current: gym.Env = env
+        while isinstance(current, gym.Wrapper):
+            if isinstance(current, RenderOverlayWrapper):
+                return current
+            current = current.env
+        return None
