@@ -6,11 +6,7 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_triangle, rotate_fn
 
-from .render_overlay_wrapper import OverlayHost, find_overlay_host
-
-
-TRAIL_LAYER = 30
-
+from .render_overlay_wrapper import RenderOverlayWrapper
 
 class TrailWrapper(gym.Wrapper):
     """Render a trail overlay using recent (position, direction) states."""
@@ -18,25 +14,25 @@ class TrailWrapper(gym.Wrapper):
     def __init__(
         self,
         env: gym.Env,
-        clear_on_render: bool = True,
         max_trails: int = 64,
+        trail_layer: int = 30,
+        clear_on_render: bool = False,
     ) -> None:
         if max_trails < 1:
             raise ValueError("max_trails must be >= 1")
-        overlay_host = find_overlay_host(env)
-        if overlay_host is None:
-            raise TypeError("TrailWrapper requires an overlay host in wrapper chain.")
+        if (overlay_wrapper := RenderOverlayWrapper.find_wrapper(env)) is None:
+            raise TypeError("TrailWrapper requires RenderOverlayWrapper in wrapper chain.")
 
         super().__init__(env)
-        self._overlay_host: OverlayHost = overlay_host
-        self._clear_on_render = bool(clear_on_render)
-        self._max_trails = int(max_trails)
+        self._overlay_wrapper: RenderOverlayWrapper = overlay_wrapper
+        self._overlay_wrapper.register_overlay("trail", trail_layer, self._overlay_trail)
 
-        # Trail state.
+        # Trail state.s
         # Ordered history: ((x, y), direction)
-        self.trails: list[tuple[tuple[int, int], int]] = []
         # Per-cell lookup built before each render: (x, y) -> [(idx, dir), ...]
+        self._trails: list[tuple[tuple[int, int], int]] = []
         self._trails_by_cell: dict[tuple[int, int], list[tuple[int, int]]] = {}
+        self._max_trails = int(max_trails)
 
         # Trail rendering style.
         self._trail_color = np.array([70, 160, 255], dtype=np.float32)
@@ -44,22 +40,20 @@ class TrailWrapper(gym.Wrapper):
         # Render-time caches.
         self._arrow_masks_cache: dict[int, dict[int, np.ndarray]] = {}
 
-        self._overlay_host.register_overlay("trail", TRAIL_LAYER, self._overlay_trail)
+        self._clear_on_render = bool(clear_on_render)
 
     # ------------------------------------------------------------------
     # Env lifecycle
     # ------------------------------------------------------------------
     def reset(self, **kwargs):
         out = self.env.reset(**kwargs)
-        self.trails.clear()
-        self.trails.append(self._capture_agent_state())
-        self._trim_trails()
+        self._trails.clear()
+        self._push_current_state()
         return out
 
     def step(self, action):
         out = self.env.step(action)
-        self.trails.append(self._capture_agent_state())
-        self._trim_trails()
+        self._push_current_state()
         return out
 
     def render(self):
@@ -67,7 +61,7 @@ class TrailWrapper(gym.Wrapper):
         out = self.env.render()
 
         if self._clear_on_render:
-            self.trails.clear()
+            self._trails.clear()
 
         return out
 
@@ -82,7 +76,7 @@ class TrailWrapper(gym.Wrapper):
         if not entries:
             return
 
-        trail_den = max(1, len(self.trails) - 1)
+        trail_den = max(1, len(self._trails) - 1)
         arrow_masks = self._get_arrow_masks(tile_size)
         overlay_rgb = np.zeros_like(tile_img, dtype=np.float32)
         overlay_alpha = np.zeros((tile_size, tile_size), dtype=np.float32)
@@ -107,14 +101,15 @@ class TrailWrapper(gym.Wrapper):
 
     def _rebuild_trails_by_cell(self) -> None:
         trails_by_cell: dict[tuple[int, int], list[tuple[int, int]]] = {}
-        for idx, (pos, trail_dir) in enumerate(self.trails):
+        for idx, (pos, trail_dir) in enumerate(self._trails):
             trails_by_cell.setdefault(pos, []).append((idx, trail_dir))
         self._trails_by_cell = trails_by_cell
 
-    def _trim_trails(self) -> None:
-        overflow = len(self.trails) - self._max_trails
+    def _push_current_state(self) -> None:
+        self._trails.append(self._capture_agent_state())
+        overflow = len(self._trails) - self._max_trails
         if overflow > 0:
-            del self.trails[:overflow]
+            del self._trails[:overflow]
 
     def _get_arrow_masks(self, tile_size: int) -> dict[int, np.ndarray]:
         arrow_masks = self._arrow_masks_cache.get(tile_size)

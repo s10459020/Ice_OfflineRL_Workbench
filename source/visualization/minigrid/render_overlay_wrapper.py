@@ -3,7 +3,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import IntEnum
 from types import MethodType
-from typing import Any, Protocol, runtime_checkable
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -25,30 +25,6 @@ class RenderLayer(IntEnum):
 
 
 TileOverlayFn = Callable[[np.ndarray, dict[str, Any]], None]
-
-
-@runtime_checkable
-class OverlayHost(Protocol):
-    def register_overlay(self, name: str, layer: int, fn: TileOverlayFn) -> None:
-        ...
-
-    def unregister_overlay(self, name: str) -> None:
-        ...
-
-
-def find_overlay_host(env: gym.Env) -> OverlayHost | None:
-    """Find the first overlay host in a wrapper chain."""
-    current: gym.Env | None = env
-    visited: set[int] = set()
-    while current is not None:
-        if isinstance(current, OverlayHost):
-            return current
-        current_id = id(current)
-        if current_id in visited or not isinstance(current, gym.Wrapper):
-            break
-        visited.add(current_id)
-        current = current.env
-    return None
 
 
 @dataclass
@@ -85,8 +61,8 @@ class RenderOverlayWrapper(gym.Wrapper):
     # Public API
     # ------------------------------------------------------------------
     @staticmethod
-    def find_overlay_wrapper(env: gym.Env) -> "RenderOverlayWrapper | None":
-        """Compatibility helper: find RenderOverlayWrapper in a wrapper chain."""
+    def find_wrapper(env: gym.Env) -> "RenderOverlayWrapper | None":
+        """Find RenderOverlayWrapper in a wrapper chain."""
         current: gym.Env | None = env
         visited: set[int] = set()
         while current is not None:
