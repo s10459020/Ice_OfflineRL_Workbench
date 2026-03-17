@@ -6,9 +6,9 @@ import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from agent import QTableAgent
-from visualization.minigrid import DistributionWrapper, RenderDelayWrapper, RenderOverlayWrapper
-from tools import StepPenaltyWrapper
 from strategy import train
+from tools import StepPenaltyWrapper
+from visualization.minigrid import DistributionWrapper, RenderOverlayWrapper
 
 
 def minigrid_q_encoder(obs: Any) -> Any:

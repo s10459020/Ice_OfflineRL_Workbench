@@ -29,50 +29,118 @@ class BaseRenderer:
     """Base utilities shared by concrete distribution renderers."""
     def __init__(
         self,
-        gamma: float = 0.60,
+        n_segments: int = 5,
         pickup_color: tuple[int, int, int] = (80, 220, 120),
-        pickup_fill_min: float = 0.10,
     ) -> None:
-        self._gamma = gamma
+        if n_segments != 5:
+            raise ValueError("n_segments is fixed to 5 (quantile bins: 20/40/60/80).")
+        self._n_segments = n_segments
+        self._quantile_levels = np.asarray([0.2, 0.4, 0.6, 0.8], dtype=np.float32)
         self._pickup_color = np.asarray(pickup_color, dtype=np.float32)
-        self._pickup_fill_min = pickup_fill_min
+        self._pickup_mask_cache: dict[int, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
 
     @staticmethod
     def _flatten_directional(cell_values: np.ndarray) -> np.ndarray:
         """Flatten the 4x3 directional action values into 12 sectors."""
         return cell_values[:, :3].reshape(12)
 
-    def _normalize_values(self, values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
-        """Normalize an array to [0, 1] with gamma shaping."""
-        den = vmax - vmin
-        if den <= 1e-12:
-            return np.zeros_like(values, dtype=np.float32)
-        return np.power((values - vmin) / den, self._gamma, dtype=np.float32)
+    def compute_quantile_edges(self, frame_values: np.ndarray) -> np.ndarray:
+        """Compute 20/40/60/80 quantile edges for one frame."""
+        flat = np.asarray(frame_values, dtype=np.float32).reshape(-1)
+        edges = np.quantile(flat, self._quantile_levels).astype(np.float32)
+        # If quantile thresholds collapse (common with many tied values),
+        # fall back to linear min-max cuts to preserve usable ordering.
+        if float(edges[-1] - edges[0]) <= 1e-12:
+            v_min = float(np.min(flat))
+            v_max = float(np.max(flat))
+            if float(v_max - v_min) > 1e-12:
+                edges = np.linspace(v_min, v_max, 6, dtype=np.float32)[1:-1]
+        return edges
 
-    def _normalize_scalar(self, value: float, vmin: float, vmax: float) -> float:
-        """Scalar version of `_normalize_values`."""
-        den = vmax - vmin
-        if den <= 1e-12:
-            return 0.0
-        norm = np.clip((value - vmin) / den, 0.0, 1.0)
-        return np.power(norm, self._gamma)
+    @staticmethod
+    def quantize_values(values: np.ndarray, edges: np.ndarray) -> np.ndarray:
+        """Map continuous values to 5 quantile bins [0..4]."""
+        edges = np.asarray(edges, dtype=np.float32).reshape(-1)
+        if edges.size != 4:
+            raise ValueError("edges must contain exactly 4 quantile thresholds.")
+        # right=True gives: <=q20 -> 0, <=q40 -> 1, <=q60 -> 2, <=q80 -> 3, >q80 -> 4
+        bins = np.digitize(values, edges, right=True)
+        return np.clip(bins, 0, 4).astype(np.int8)
 
-    def _pickup_scaled_color(self, cell_values: np.ndarray, vmin: float, vmax: float) -> np.ndarray:
-        """Map pickup value strength to center marker color."""
-        pickup_value = np.mean(cell_values[:, MiniGridAction.PICKUP])
-        pickup_norm = self._normalize_scalar(pickup_value, vmin, vmax)
-        pickup_scale = self._pickup_fill_min + (1.0 - self._pickup_fill_min) * pickup_norm
-        return np.clip(self._pickup_color * pickup_scale, 0.0, 255.0)
+    @classmethod
+    def quantize_scalar(cls, value: float, edges: np.ndarray) -> int:
+        """Scalar helper for 5-bin quantization."""
+        return int(cls.quantize_values(np.asarray([value], dtype=np.float32), edges)[0])
 
     def render(
         self,
         tile_img_u8: np.ndarray,
         cell_values: np.ndarray,
-        vmin: float,
-        vmax: float,
+        quantile_edges: np.ndarray,
     ) -> None:
         """Render one cell overlay into `tile_img_u8`."""
         pass
+
+    @staticmethod
+    def _blend_mask(
+        tile_img_u8: np.ndarray,
+        mask: np.ndarray,
+        color: np.ndarray,
+        alpha: float,
+    ) -> None:
+        if alpha <= 0.0 or not np.any(mask):
+            return
+        tile_f = tile_img_u8.astype(np.float32)
+        tile_f[mask] = (1.0 - alpha) * tile_f[mask] + alpha * color
+        tile_img_u8[:, :, :] = np.clip(tile_f, 0.0, 255.0).astype(np.uint8)
+
+    def _get_pickup_masks(self, tile_size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        masks = self._pickup_mask_cache.get(tile_size)
+        if masks is not None:
+            return masks
+
+        yy, xx = np.indices((tile_size, tile_size), dtype=np.float32)
+        cx = (tile_size - 1) * 0.5
+        cy = (tile_size - 1) * 0.5
+        dx = (xx - cx) / max(cx, 1.0)
+        dy = (yy - cy) / max(cy, 1.0)
+
+        circle_mask = (dx * dx + dy * dy) <= (0.16 * 0.16)
+
+        square_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
+        fill_coords(square_img, point_in_rect(0.42, 0.58, 0.42, 0.58), 1)
+        square_mask = square_img.astype(bool)
+
+        square_max_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
+        fill_coords(square_max_img, point_in_rect(0.36, 0.64, 0.36, 0.64), 1)
+        square_max_mask = square_max_img.astype(bool)
+
+        masks = (circle_mask, square_mask, square_max_mask)
+        self._pickup_mask_cache[tile_size] = masks
+        return masks
+
+    def _render_pickup_marker(
+        self,
+        tile_img_u8: np.ndarray,
+        cell_values: np.ndarray,
+        quantile_edges: np.ndarray,
+    ) -> None:
+        # Segment rule for action-4(pickup):
+        # <=20% none, <=40% semi-circle, <=60% circle, <=80% square, >80% star.
+        pickup_value = float(np.mean(cell_values[:, MiniGridAction.PICKUP]))
+        pickup_bin = self.quantize_scalar(pickup_value, quantile_edges)
+        if pickup_bin <= 0:
+            return
+
+        circle_mask, square_mask, square_max_mask = self._get_pickup_masks(tile_img_u8.shape[0])
+        if pickup_bin == 1:
+            self._blend_mask(tile_img_u8, circle_mask, self._pickup_color, alpha=0.45)
+        elif pickup_bin == 2:
+            self._blend_mask(tile_img_u8, circle_mask, self._pickup_color, alpha=0.90)
+        elif pickup_bin == 3:
+            self._blend_mask(tile_img_u8, square_mask, self._pickup_color, alpha=0.90)
+        else:
+            self._blend_mask(tile_img_u8, square_max_mask, self._pickup_color, alpha=0.95)
 
 
 class _Rect12Renderer(BaseRenderer):
@@ -83,27 +151,24 @@ class _Rect12Renderer(BaseRenderer):
         rect_w_min: float = 0.015,
         rect_w_max: float = 0.135,
         rect_h: float = 0.045,
-        rect_levels: int = 16,
     ) -> None:
         super().__init__()
         self._rect_color = np.asarray(rect_color, dtype=np.uint8)
         self._rect_w_min = rect_w_min
         self._rect_w_max = rect_w_max
         self._rect_h = rect_h
-        self._rect_levels = rect_levels
+        self._rect_levels = self._n_segments
         self._rect_mask_cache: dict[int, np.ndarray] = {}
-        self._center_square_mask_cache: dict[int, np.ndarray] = {}
 
     def render(
         self,
         tile_img_u8: np.ndarray,
         cell_values: np.ndarray,
-        vmin: float,
-        vmax: float,
+        quantile_edges: np.ndarray,
     ) -> None:
-        # Build 4x3 normalized values -> map each slot to bar length level.
-        norm_grid = self._normalize_values(
-            self._flatten_directional(cell_values), vmin, vmax
+        # Build 4x3 quantile-bin values -> map each slot to one of 5 bar levels.
+        bin_grid = self.quantize_values(
+            self._flatten_directional(cell_values), quantile_edges
         ).reshape(4, 3)
         masks = self._get_rect_masks(tile_img_u8.shape[0])
         action_order = (
@@ -113,12 +178,9 @@ class _Rect12Renderer(BaseRenderer):
         )
         for d_idx in MiniGridDirection:
             for slot_idx, a_real in enumerate(action_order):
-                level = int(round(norm_grid[d_idx, a_real] * (self._rect_levels - 1)))
-                level = max(1, min(self._rect_levels - 1, level))
+                level = int(bin_grid[d_idx, a_real])
                 tile_img_u8[masks[d_idx, slot_idx, level]] = self._rect_color
-        center_mask = self._get_center_square_mask(tile_img_u8.shape[0])
-        # Center square visualizes pickup intensity.
-        tile_img_u8[center_mask] = self._pickup_scaled_color(cell_values, vmin, vmax).astype(np.uint8)
+        self._render_pickup_marker(tile_img_u8, cell_values, quantile_edges)
 
     def _get_rect_masks(self, tile_size: int) -> np.ndarray:
         """Build/cache bar masks for each direction-slot-level combination."""
@@ -134,8 +196,8 @@ class _Rect12Renderer(BaseRenderer):
         }
         for d_idx, (slots, y_anchor, x_anchor) in strips.items():
             for slot_idx, center in enumerate(slots):
-                for level in range(1, self._rect_levels):
-                    ratio = level / (self._rect_levels - 1)
+                for level in range(self._rect_levels):
+                    ratio = level / max(1, (self._rect_levels - 1))
                     width = self._rect_w_min + (self._rect_w_max - self._rect_w_min) * ratio
                     mask_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
                     if y_anchor is not None:
@@ -160,17 +222,6 @@ class _Rect12Renderer(BaseRenderer):
                     masks[d_idx, slot_idx, level] = mask_img.astype(bool)
         self._rect_mask_cache[tile_size] = masks
         return masks
-
-    def _get_center_square_mask(self, tile_size: int) -> np.ndarray:
-        """Build/cache center square mask."""
-        mask = self._center_square_mask_cache.get(tile_size)
-        if mask is not None:
-            return mask
-        mask_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
-        fill_coords(mask_img, point_in_rect(0.42, 0.58, 0.42, 0.58), 1)
-        mask = mask_img.astype(bool)
-        self._center_square_mask_cache[tile_size] = mask
-        return mask
 
 
 class _Ring12Renderer(BaseRenderer):
@@ -211,30 +262,29 @@ class _Ring12Renderer(BaseRenderer):
         self,
         tile_img_u8: np.ndarray,
         cell_values: np.ndarray,
-        vmin: float,
-        vmax: float,
+        quantile_edges: np.ndarray,
     ) -> None:
-        # Convert directional values to per-sector alpha, then blend ring color.
+        # Convert directional values to per-sector quantile bins, then blend ring color.
         tile_size = tile_img_u8.shape[0]
         sector_map = self._get_sector_map(tile_size)
-        norm_grid = self._normalize_values(
-            self._flatten_directional(cell_values), vmin, vmax
+        bin_grid = self.quantize_values(
+            self._flatten_directional(cell_values), quantile_edges
         ).reshape(4, 3)
+        alpha_palette = np.asarray(
+            [self._alpha_min + (self._alpha_max - self._alpha_min) * (k / 4.0) for k in range(5)],
+            dtype=np.float32,
+        )
         alpha_values = np.zeros(12, dtype=np.float32)
         for sector_idx, (d_idx, a_idx) in enumerate(self._SECTOR_DA_ORDER):
-            alpha_values[sector_idx] = (
-                self._alpha_min + (self._alpha_max - self._alpha_min) * norm_grid[d_idx, a_idx]
-            )
+            alpha_values[sector_idx] = alpha_palette[int(bin_grid[d_idx, a_idx])]
         tile_img = tile_img_u8.astype(np.float32)
         valid = sector_map >= 0
         if np.any(valid):
             alpha_map = np.zeros((tile_size, tile_size), dtype=np.float32)
             alpha_map[valid] = alpha_values[sector_map[valid]]
             tile_img = (1.0 - alpha_map[..., None]) * tile_img + alpha_map[..., None] * self._ring_color
-        center_mask = self._get_center_circle_mask(tile_size)
-        # Center circle visualizes pickup intensity.
-        tile_img[center_mask] = self._pickup_scaled_color(cell_values, vmin, vmax)
         tile_img_u8[:, :, :] = np.clip(tile_img, 0.0, 255.0).astype(np.uint8)
+        self._render_pickup_marker(tile_img_u8, cell_values, quantile_edges)
 
     def _get_sector_map(self, tile_size: int) -> np.ndarray:
         """Build/cache sector index map for ring pixels (-1 outside ring)."""
@@ -290,18 +340,17 @@ class _StateVRenderer(BaseRenderer):
         self,
         tile_img_u8: np.ndarray,
         cell_values: np.ndarray,
-        vmin: float,
-        vmax: float,
+        quantile_edges: np.ndarray,
     ) -> None:
-        # V(s): expected Q(s,a) over actions, then averaged over directions.
-        # Here we use a uniform expectation over all four actions.
+        # V(s): expected Q(s,a) over all shown actions (including pickup), averaged over directions.
         v_s = float(np.mean(np.mean(cell_values[:, :4], axis=1)))
-        v_norm = self._normalize_scalar(v_s, vmin, vmax)
-        alpha = self._alpha_min + (self._alpha_max - self._alpha_min) * v_norm
+        v_bin = self.quantize_scalar(v_s, quantile_edges)
+        alpha = self._alpha_min + (self._alpha_max - self._alpha_min) * (v_bin / 4.0)
 
         tile_img = tile_img_u8.astype(np.float32)
         tile_img = (1.0 - alpha) * tile_img + alpha * self._state_color
         tile_img_u8[:, :, :] = np.clip(tile_img, 0.0, 255.0).astype(np.uint8)
+        self._render_pickup_marker(tile_img_u8, cell_values, quantile_edges)
 
 
 class DistributionWrapper(OverlayDependentWrapper):
@@ -319,6 +368,7 @@ class DistributionWrapper(OverlayDependentWrapper):
         "ring12": _Ring12Renderer,
         "state_v": _StateVRenderer,
     }
+    _ENABLE_PICKUP = True
 
     def __init__(
         self,
@@ -344,8 +394,7 @@ class DistributionWrapper(OverlayDependentWrapper):
         self._wrappers_cache_root: gym.Env | None = None
         # Latest frame value map (width, height, direction, action).
         self._values: np.ndarray | None = None
-        self._values_min = 0.0
-        self._values_max = 0.0
+        self._quantile_edges = np.zeros(4, dtype=np.float32)
         # Value estimator used to fill the value map each frame.
         self._value_fn = value_fn
         # Rendering style is fixed at initialization time.
@@ -361,35 +410,40 @@ class DistributionWrapper(OverlayDependentWrapper):
         self._wrappers_cache = None
         self._wrappers_cache_root = None
         self._values = None
-        self._values_min = 0.0
-        self._values_max = 0.0
+        self._quantile_edges.fill(0.0)
         return out
 
     def render(self):
-        """Refresh value map for current frame, then render downstream env."""
-        # Cache frame-wise range so all cells share the same normalization scale.
+        """Refresh value map and per-frame quantile bins, then render."""
         self._values = self._compute_distribution_values()
-        self._values_min = np.min(self._values)
-        self._values_max = np.max(self._values)
+        if self._values.size > 0:
+            shown_values = self._values[:, :, :, :4]
+            self._quantile_edges = self._renderer.compute_quantile_edges(shown_values)
+        else:
+            self._quantile_edges.fill(0.0)
         return self.env.render()
 
     # ---------------------------------------------------------------------
     # Value map build
     # ---------------------------------------------------------------------
     def _compute_distribution_values(self) -> np.ndarray:
-        """Compute full-grid value map for all directions/actions."""
+        """Compute interior-grid value map for all directions/actions (skip border walls)."""
         width = self._base_env.width
         height = self._base_env.height
+        inner_w = max(0, width - 2)
+        inner_h = max(0, height - 2)
         values = np.zeros(
-            (width, height, len(MiniGridDirection), len(MiniGridAction)),
+            (inner_w, inner_h, len(MiniGridDirection), len(MiniGridAction)),
             dtype=np.float32,
         )
-        for x in range(width):
-            for y in range(height):
+        for x in range(1, width - 1):
+            for y in range(1, height - 1):
+                ix = x - 1
+                iy = y - 1
                 for d in MiniGridDirection:
                     obs_i = self._get_cached_observation(x, y, d)
                     for action in MiniGridAction:
-                        values[x, y, d, action] = self._value_fn(obs_i, action)
+                        values[ix, iy, d, action] = self._value_fn(obs_i, action)
         return values
 
     def _get_cached_observation(self, x: int, y: int, d: int) -> Any:
@@ -450,10 +504,16 @@ class DistributionWrapper(OverlayDependentWrapper):
             return
         i = ctx["i"]
         j = ctx["j"]
-        cell_values = self._values[i, j]
+        # Distribution map excludes border walls, so shift indices by -1.
+        if i == 0 or j == 0:
+            return
+        ix = i - 1
+        iy = j - 1
+        if ix < 0 or iy < 0 or ix >= self._values.shape[0] or iy >= self._values.shape[1]:
+            return
+        cell_values = self._values[ix, iy]
         self._renderer.render(
             tile_img,
             cell_values,
-            self._values_min,
-            self._values_max,
+            self._quantile_edges,
         )
