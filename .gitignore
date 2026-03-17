@@ -2,5 +2,7 @@
 .*/
 **/.*/
 tmp/
+tmps/
+document/
 documents/
 model/
