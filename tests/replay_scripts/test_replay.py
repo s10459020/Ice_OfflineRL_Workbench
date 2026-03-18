@@ -7,9 +7,9 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
-from replay import StateDatasetReader, serialize_state_tranjectory
-from tools import stage
-from strategy import (
+from ice_offline.replay import StateDatasetReader, serialize_state_trajectory
+from ice_offline.tools import stage
+from ice_offline.strategy import (
     collect_dataset,
     replay,
 )
@@ -44,7 +44,7 @@ collector_episodes = []
 with StateDatasetReader(dataset_path) as reader:
     for episode_index in range(min(int(episodes), reader.num_episodes)):
         states = list(reader.iter_episode_states(episode_index))
-        serialized = serialize_state_tranjectory(states, include_payload=False, include_signature=False)
+        serialized = serialize_state_trajectory(states, include_payload=False, include_signature=False)
         collector_episodes.append(
             {"episode_index": episode_index, "num_states": int(serialized["length"])}
         )

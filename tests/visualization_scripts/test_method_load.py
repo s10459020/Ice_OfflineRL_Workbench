@@ -5,8 +5,8 @@ import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from agent import QTableAgent
-from strategy import test
+from ice_offline.agent import QTableAgent
+from ice_offline.strategy import test
 
 
 def q_table_state_from_minigrid_observation(obs: Any) -> Any:

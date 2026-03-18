@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 
-def serialize_state_tranjectory(
+def serialize_state_trajectory(
     states: list[Any],
     *,
     include_payload: bool = True,

@@ -7,7 +7,7 @@ from typing import Any
 import numpy as np
 
 
-def serialize_observation_tranjectory(
+def serialize_observation_trajectory(
     observations: Any,
     *,
     include_payload: bool = True,

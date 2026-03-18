@@ -4,7 +4,7 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
-from strategy import collect_dataset
+from ice_offline.strategy import collect_dataset
 
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="rgb_array")

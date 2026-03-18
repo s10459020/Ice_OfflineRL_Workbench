@@ -225,7 +225,7 @@ if __name__ == "__main__":
     run_env_dump(
         env_id="MiniGrid-FourRooms-v0",
         render_mode=None,
-        output=str(Path(__file__).resolve().with_name("fourrooms_dump.txt")),
+        output="tmps/fourrooms_dump.txt",
     )
 
 

@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import Any
 import gymnasium as gym
-from agent import Agent
-from tools import ensure_render_quite
+from ice_offline.agent import Agent
+from ice_offline.tools import ensure_render_quiet
 
 def train(
     env: gym.Env,
@@ -26,7 +26,7 @@ def train(
     if max_episode_steps is not None and max_episode_steps <= 0:
         return 0, 0, {}
 
-    env = ensure_render_quite(env)
+    env = ensure_render_quiet(env)
 
     save_model_dir = Path(save_model_dir) if save_model_dir is not None else None
     save_model_name = f"{str(env.spec.id)}_{str(agent.agent_name)}"

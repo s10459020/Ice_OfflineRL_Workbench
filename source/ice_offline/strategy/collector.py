@@ -5,8 +5,8 @@ from typing import Any, Callable, Protocol
 
 import gymnasium as gym
 
-from replay import ObservationCollector, StateCollector
-from tools import ensure_render_quite
+from ice_offline.replay import ObservationCollector, StateCollector
+from ice_offline.tools import ensure_render_quiet
 
 Policy = Callable[[Any], int]
 
@@ -86,7 +86,7 @@ def collect_dataset(
     for hook in hooks:
         wrapped_env = hook.prepare_env(wrapped_env)
 
-    wrapped_env = ensure_render_quite(wrapped_env)
+    wrapped_env = ensure_render_quiet(wrapped_env)
 
     if policy is None:
         policy = lambda obs: wrapped_env.action_space.sample()

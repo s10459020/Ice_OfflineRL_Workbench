@@ -8,11 +8,11 @@ import warnings
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
-from replay import StateDatasetReader, StateDatasetWriter, convert_observation, serialize_state_tranjectory
+from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation, serialize_state_trajectory
 from minigrid.wrappers import FullyObsWrapper
-from tools import stage
+from ice_offline.tools import stage
 
-from strategy import collect_dataset
+from ice_offline.strategy import collect_dataset
 
 warnings.filterwarnings("ignore", message="Observation is not in observation space.*")
 warnings.filterwarnings("ignore", message="Misconfigured dataset named .*")
@@ -124,14 +124,14 @@ with StateDatasetReader(state_path) as original_reader, StateDatasetReader(conve
                 f"episode length mismatch at episode={episode_index}: original={len(original_states)} converted={len(converted_states)}"
             )
 
-        no_carry0 = serialize_state_tranjectory(
+        no_carry0 = serialize_state_trajectory(
             original_states,
             include_payload=False,
             include_signature=True,
             ignore_carrying=True,
             normalize_agent_cell=True,
         )
-        no_carry1 = serialize_state_tranjectory(
+        no_carry1 = serialize_state_trajectory(
             converted_states,
             include_payload=False,
             include_signature=True,
@@ -141,8 +141,8 @@ with StateDatasetReader(state_path) as original_reader, StateDatasetReader(conve
         equal = str(no_carry0.get("signature", "")) == str(no_carry1.get("signature", ""))
         all_equal = all_equal and equal
 
-        full0 = serialize_state_tranjectory(original_states, include_payload=True, include_signature=False)
-        full1 = serialize_state_tranjectory(converted_states, include_payload=True, include_signature=False)
+        full0 = serialize_state_trajectory(original_states, include_payload=True, include_signature=False)
+        full1 = serialize_state_trajectory(converted_states, include_payload=True, include_signature=False)
         carrying_gap = 0
         payload0 = full0.get("payload", [])
         payload1 = full1.get("payload", [])

@@ -5,10 +5,10 @@ import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from agent import QTableAgent
-from strategy import train
-from tools import StepPenaltyWrapper
-from visualization.minigrid import DistributionWrapper, RenderOverlayWrapper
+from ice_offline.agent import QTableAgent
+from ice_offline.strategy import train
+from ice_offline.tools import StepPenaltyWrapper
+from ice_offline.visualization.minigrid import DistributionWrapper, RenderOverlayWrapper
 
 
 def minigrid_q_encoder(obs: Any) -> Any:

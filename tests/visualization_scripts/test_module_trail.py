@@ -1,8 +1,8 @@
 import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 
-from visualization.minigrid import RenderOverlayWrapper, TrailWrapper
-from strategy import test
+from ice_offline.visualization.minigrid import RenderOverlayWrapper, TrailWrapper
+from ice_offline.strategy import test
 
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human", max_steps=6000)

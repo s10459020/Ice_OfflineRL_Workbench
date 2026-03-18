@@ -4,8 +4,8 @@ from typing import Any
 
 import gymnasium as gym
 
-from replay import StateDatasetReader, StateReplayWrapper
-from tools import ensure_render_quite
+from ice_offline.replay import StateDatasetReader, StateReplayWrapper
+from ice_offline.tools import ensure_render_quiet
 
 
 def replay(
@@ -15,7 +15,7 @@ def replay(
     render_flag: bool = False,
     print_flag: bool = True,
 ) -> list[dict[str, Any]]:
-    env = ensure_render_quite(env)
+    env = ensure_render_quiet(env)
     replay_env = StateReplayWrapper(env=env, reader=reader, random_episode=False)
     episode_summaries: list[dict[str, Any]] = []
 

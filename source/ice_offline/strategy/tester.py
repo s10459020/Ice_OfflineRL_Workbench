@@ -2,7 +2,7 @@ from typing import Any, Callable
 
 import gymnasium as gym
 
-from tools import ensure_render_quite
+from ice_offline.tools import ensure_render_quiet
 
 Policy = Callable[[Any], int]
 
@@ -23,7 +23,7 @@ def test(
     episodes = 0
     global_step = 0
 
-    env = ensure_render_quite(env)
+    env = ensure_render_quiet(env)
     for episode in range(1, max_episodes + 1):
         obs, _ = env.reset(seed=None if seed is None else seed + episode)
         env.render()

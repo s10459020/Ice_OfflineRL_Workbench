@@ -5,9 +5,9 @@ import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from agent import QTableAgent
-from tools import RenderQuiteWrapper, StepPenaltyWrapper
-from visualization.minigrid import (
+from ice_offline.agent import QTableAgent
+from ice_offline.tools import RenderQuietWrapper, StepPenaltyWrapper
+from ice_offline.visualization.minigrid import (
     DistributionWrapper,
     RenderDelayWrapper,
     RenderOverlayWrapper,
@@ -122,7 +122,7 @@ agent.set_encoder(minigrid_q_encoder)
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 env = FullyObsWrapper(env)
-env = RenderQuiteWrapper(env)
+env = RenderQuietWrapper(env)
 env = StepPenaltyWrapper(env, step_penalty=0.01)
 env = RenderOverlayWrapper(env)
 env = TrailWrapper(env, clear_on_render=False, max_trails=8)

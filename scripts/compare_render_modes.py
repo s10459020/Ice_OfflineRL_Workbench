@@ -5,7 +5,7 @@ from pathlib import Path
 import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 
-from visualization.minigrid import RenderDelayWrapper, RenderOverlayWrapper, TrailWrapper
+from ice_offline.visualization.minigrid import RenderDelayWrapper, RenderOverlayWrapper, TrailWrapper
 
 
 RUN_STEPS = 10000

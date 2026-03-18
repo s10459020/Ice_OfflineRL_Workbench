@@ -5,12 +5,12 @@ from pathlib import Path
 import gymnasium as gym
 import minigrid  # noqa: F401
 import minari
-from replay import StateDatasetReader, StateDatasetWriter, convert_observation
-from replay.read_metadata import read_metadata, resolve_env_id
+from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation
+from ice_offline.replay.read_metadata import read_metadata, resolve_env_id
 from minigrid.wrappers import FullyObsWrapper
-from tools import stage
+from ice_offline.tools import stage
 
-from strategy import replay
+from ice_offline.strategy import replay
 
 metadata_path = Path("tmps/metadata.json")
 state_dataset_path = Path("tmps/main_data_info_converted.hdf5")

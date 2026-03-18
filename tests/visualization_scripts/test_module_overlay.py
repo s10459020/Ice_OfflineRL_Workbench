@@ -7,7 +7,7 @@ import numpy as np
 import pygame
 from minigrid.wrappers import FullyObsWrapper
 
-from visualization.minigrid import RenderOverlayWrapper
+from ice_offline.visualization.minigrid import RenderOverlayWrapper
 
 
 ENV_ID = "BabyAI-OneRoomS8-v0"
