@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 from .collect_observation_dataset import ObservationCollector
 from .collect_state_dataset import StateCollector, ensure_state_capture
 from .convert_observation import convert_observation

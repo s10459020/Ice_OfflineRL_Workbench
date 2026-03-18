@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 
 def print_banner(title: str) -> None:
     bar = "#" * 72
