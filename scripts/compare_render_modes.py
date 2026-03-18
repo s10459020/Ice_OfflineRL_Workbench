@@ -12,6 +12,7 @@ RUN_STEPS = 10000
 RUN_REPEATS = 10
 ENV_ID = "MiniGrid-FourRooms-v0"
 FPS_LIST = (1, 3, 5)
+LOG_PATH = Path("../tmps/compare_render_modes.log")
 
 _LOG_FILE = None
 
@@ -25,11 +26,8 @@ def _log(message: str) -> None:
 
 def _setup_log_file() -> None:
     global _LOG_FILE
-    repo_root = Path(__file__).resolve().parents[2]
-    log_dir = repo_root / "tmps"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_path = log_dir / "compare_render_modes.log"
-    _LOG_FILE = open(log_path, "w", encoding="utf-8")
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    _LOG_FILE = LOG_PATH.open("w", encoding="utf-8")
 
 
 def _close_log_file() -> None:
