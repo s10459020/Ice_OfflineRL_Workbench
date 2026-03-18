@@ -4,26 +4,31 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
-from strategy import collect_observation_dataset
+from strategy import collect_dataset
 
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="rgb_array")
 env = FullyObsWrapper(env)
 
-result = collect_observation_dataset(
+result = collect_dataset(
     env=env,
-    output_path="tmps/one_room_s8_data.hdf5",
+    collect_observation=True,
+    collect_state=False,
+    observation_output_path="tmps/one_room_s8_data.hdf5",
     max_episodes=3,
     max_episode_steps=20,
     seed=42,
     dataset_id="one-room-s8-data-v0",
 )
+env.close()
 
+obs_result = result["collect_observation"] or {}
 print(
     "observation_collect_done "
     f"| episodes={result['episodes']} "
     f"| steps={result['steps']} "
-    f"| dataset_id={result['dataset_id']} "
-    f"| minari_path={result['minari_path']} "
-    f"| path={result['path']}"
+    f"| dataset_id={obs_result.get('dataset_id', '')} "
+    f"| minari_path={obs_result.get('minari_path', '')} "
+    f"| path={obs_result.get('path', '')}"
 )
+

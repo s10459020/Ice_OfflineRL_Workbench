@@ -4,6 +4,10 @@ from .state_types import AgentState
 
 __all__ = [
     "AgentState",
+    "convert_fullobs",
+    "convert_fullobs_episode",
+    "ObservationCollector",
+    "StateCollector",
     "StateCaptureWrapper",
     "StateDatasetReader",
     "StateReplayWrapper",
@@ -13,6 +17,18 @@ __all__ = [
 
 
 def __getattr__(name: str):
+    if name in ("convert_fullobs", "convert_fullobs_episode"):
+        from .convert_fullobs import convert_fullobs, convert_fullobs_episode
+
+        return {"convert_fullobs": convert_fullobs, "convert_fullobs_episode": convert_fullobs_episode}[name]
+    if name == "ObservationCollector":
+        from .collect_observation import ObservationCollector
+
+        return ObservationCollector
+    if name == "StateCollector":
+        from .collect_state import StateCollector
+
+        return StateCollector
     if name == "StateCaptureWrapper":
         from .state_capture_wrapper import StateCaptureWrapper
 

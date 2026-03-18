@@ -26,6 +26,12 @@ try:
         captured_count += 1
         if len(first_states) < 10:
             first_states.append(reset_state)
+        print(
+            f"episode={ep} step=0 "
+            f"pos={reset_state.agent_pos} dir={reset_state.agent_dir} "
+            f"mission='{reset_state.mission}' carrying={reset_state.carrying} "
+            f"grid_shape={reset_state.grid.shape}"
+        )
         env.render()
         time.sleep(frame_delay)
         for step in range(1, max_episode_steps + 1):
@@ -37,11 +43,10 @@ try:
                 first_states.append(state)
             carrying = state.carrying if state.carrying is not None else "None"
             print(
-                f"episode={ep} step={step} action={int(action)} "
+                f"episode={ep} step={step} "
                 f"pos={state.agent_pos} dir={state.agent_dir} "
                 f"mission='{state.mission}' carrying={carrying} "
-                f"grid_shape={state.grid.shape} "
-                f"terminated={terminated} truncated={truncated}"
+                f"grid_shape={state.grid.shape}"
             )
             env.render()
             time.sleep(frame_delay)
