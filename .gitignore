@@ -1,8 +1,5 @@
 ﻿# Ignore all hidden directories (folders starting with '.')
 .*/
 **/.*/
-tmp/
 tmps/
-document/
-documents/
 model/
