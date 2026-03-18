@@ -13,6 +13,8 @@ __all__ = [
     "StateReplayWrapper",
     "StateDatasetWriter",
     "ensure_state_capture",
+    "read_metadata",
+    "resolve_env_id",
 ]
 
 
@@ -34,15 +36,20 @@ def __getattr__(name: str):
 
         return StateCaptureWrapper
     if name in ("StateDatasetWriter", "ensure_state_capture"):
-        from .state_writer import StateDatasetWriter, ensure_state_capture
+        from .write_state_dataset import StateDatasetWriter
+        from .collect_state import ensure_state_capture
 
         return {"StateDatasetWriter": StateDatasetWriter, "ensure_state_capture": ensure_state_capture}[name]
     if name == "StateDatasetReader":
-        from .state_reader import StateDatasetReader
+        from .read_state_dataset import StateDatasetReader
 
         return StateDatasetReader
     if name == "StateReplayWrapper":
         from .state_replay_wrapper import StateReplayWrapper
 
         return StateReplayWrapper
+    if name in ("read_metadata", "resolve_env_id"):
+        from .read_metadata import read_metadata, resolve_env_id
+
+        return {"read_metadata": read_metadata, "resolve_env_id": resolve_env_id}[name]
     raise AttributeError(f"module 'replay' has no attribute '{name}'")

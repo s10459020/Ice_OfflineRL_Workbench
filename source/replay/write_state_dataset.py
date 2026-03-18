@@ -4,12 +4,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import json
 from pathlib import Path
-from typing import Any
+from typing import Iterable
 
-import gymnasium as gym
 import numpy as np
 
-from .state_capture_wrapper import StateCaptureWrapper
 from .state_types import AgentState
 
 try:
@@ -41,96 +39,78 @@ class _EpisodeBuffer:
         return len(self.missions)
 
 
-def ensure_state_capture(env: gym.Env) -> gym.Env:
-    current = env
-    while isinstance(current, gym.Wrapper):
-        if isinstance(current, StateCaptureWrapper):
-            return env
-        current = current.env
-    return StateCaptureWrapper(env)
-
-
 class StateDatasetWriter:
-    """
-    Write per-episode MiniGrid state trajectories to HDF5.
-
-    write_interval:
-      - 0: keep all completed episodes in memory and write once on close.
-      - N (>0): flush completed episodes every N episodes.
-    """
+    """Write completed state trajectories to HDF5."""
 
     def __init__(
         self,
         output_path: str | Path,
-        write_interval: int = 0,
+        flush_interval: int = 0,
         compression: str | None = "gzip",
     ) -> None:
-        if write_interval < 0:
-            raise ValueError("write_interval must be >= 0.")
+        if flush_interval < 0:
+            raise ValueError("flush_interval must be >= 0.")
         if h5py is None:  # pragma: no cover
             raise ImportError("h5py is required for StateDatasetWriter.") from _H5PY_IMPORT_ERROR
 
         self.output_path = Path(output_path)
         self.output_path.parent.mkdir(parents=True, exist_ok=True)
-        self.write_interval = int(write_interval)
+        self.flush_interval = int(flush_interval)
         self.compression = compression
 
         self._file = h5py.File(self.output_path, "w")
         self._file.attrs["format"] = "state_dataset_v1"
         self._file.attrs["created_utc"] = datetime.now(timezone.utc).isoformat()
-        self._file.attrs["write_interval"] = self.write_interval
+        self._file.attrs["flush_interval"] = self.flush_interval
 
         self._pending_episodes: list[_EpisodeBuffer] = []
         self._episode_index = 0
         self._current: _EpisodeBuffer | None = None
         self._closed = False
 
-    def wrap_env(self, env: gym.Env) -> gym.Env:
-        return ensure_state_capture(env)
-
-    def on_reset(self, info: dict[str, Any]) -> None:
-        self._ensure_open()
-        if self._current is not None:
-            raise RuntimeError("Previous episode not ended. Call end_episode() first.")
-        state = self._extract_state(info)
-        self._current = _EpisodeBuffer()
-        self._current.append_state(state)
-
-    def on_step(
-        self,
-        action: int,
-        reward: float,
-        terminated: bool,
-        truncated: bool,
-        info: dict[str, Any],
-    ) -> None:
+    def push_state(self, state: AgentState) -> None:
         self._ensure_open()
         if self._current is None:
-            raise RuntimeError("Call on_reset() before on_step().")
-        next_state = self._extract_state(info)
-        _ = (action, reward)
-        self._current.append_state(next_state)
-        if terminated or truncated:
-            self.end_episode()
+            self._current = _EpisodeBuffer()
+        self._current.append_state(state)
 
     def end_episode(self) -> None:
         self._ensure_open()
         if self._current is None:
             raise RuntimeError("No active episode to end.")
-        episode = self._current
+        if self._current.num_states == 0:
+            self._current = None
+            return
+        self._pending_episodes.append(self._current)
         self._current = None
-        self._pending_episodes.append(episode)
+        self._auto_flush_if_needed()
 
-        if self.write_interval > 0 and len(self._pending_episodes) >= self.write_interval:
-            self._flush_pending()
+    def push_episode(self, states: Iterable[AgentState]) -> None:
+        self._ensure_open()
+        self._current = _EpisodeBuffer()
+        for state in states:
+            self._current.append_state(state)
+        if self._current.num_states == 0:
+            self._current = None
+            return
+        self._pending_episodes.append(self._current)
+        self._current = None
+        self._auto_flush_if_needed()
+
+    def push_episodes(self, episodes: Iterable[Iterable[AgentState]]) -> None:
+        for states in episodes:
+            self.push_episode(states)
+
+    def flush(self) -> None:
+        self._ensure_open()
+        self._flush_pending()
 
     def close(self) -> None:
         if self._closed:
             return
-        if self._current is not None:
-            self.end_episode()
-        if self._pending_episodes:
-            self._flush_pending()
+        # Drop unfinished and unflushed data by design.
+        self._current = None
+        self._pending_episodes.clear()
 
         self._file.attrs["total_episodes"] = self._episode_index
         self._file.flush()
@@ -141,14 +121,13 @@ class StateDatasetWriter:
         if self._closed:
             raise RuntimeError("Writer is closed.")
 
-    @staticmethod
-    def _extract_state(info: dict[str, Any]) -> AgentState:
-        state = info.get("state")
-        if not isinstance(state, AgentState):
-            raise KeyError("info['state'] missing. Wrap env with StateCaptureWrapper first.")
-        return state
+    def _auto_flush_if_needed(self) -> None:
+        if self.flush_interval > 0 and len(self._pending_episodes) >= self.flush_interval:
+            self._flush_pending()
 
     def _flush_pending(self) -> None:
+        if not self._pending_episodes:
+            return
         for episode in self._pending_episodes:
             self._write_episode(episode, self._episode_index)
             self._episode_index += 1

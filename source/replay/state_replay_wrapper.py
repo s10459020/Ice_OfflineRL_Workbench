@@ -7,7 +7,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-from .state_reader import StateDatasetReader
+from .read_state_dataset import StateDatasetReader
 from .state_types import AgentState
 
 
