@@ -6,6 +6,7 @@ from typing import Any, Callable, Protocol
 import gymnasium as gym
 
 from replay import ObservationCollector, StateCollector
+from tools import ensure_render_quite
 
 Policy = Callable[[Any], int]
 
@@ -29,8 +30,6 @@ class CollectorHook(Protocol):
     def close(self) -> None: ...
 
     def result(self) -> dict[str, Any]: ...
-
-
 def collect_dataset(
     env: gym.Env,
     *,
@@ -43,10 +42,12 @@ def collect_dataset(
     max_episode_steps: int | None = 20,
     seed: int | None = 42,
     policy: Policy | None = None,
-    write_interval: int = 0,
+    flush_interval: int = 0,
+    write_interval: int | None = None,
     record_infos: bool = True,
     overwrite_local_dataset: bool = True,
     normalize_mission_observation: bool = True,
+    render_flag: bool = False,
     print_flag: bool = False,
 ) -> dict[str, Any]:
     empty_state = {"path": str(Path(state_output_path))} if collect_state else None
@@ -79,12 +80,16 @@ def collect_dataset(
         )
         hooks.append(observation_hook)
     if collect_state:
-        state_hook = StateCollector(output_path=state_output_path, write_interval=write_interval)
+        if write_interval is not None:
+            flush_interval = int(write_interval)
+        state_hook = StateCollector(output_path=state_output_path, flush_interval=flush_interval)
         hooks.append(state_hook)
 
     wrapped_env = env
     for hook in hooks:
         wrapped_env = hook.prepare_env(wrapped_env)
+
+    wrapped_env = ensure_render_quite(wrapped_env)
 
     if policy is None:
         policy = lambda obs: wrapped_env.action_space.sample()
@@ -96,6 +101,8 @@ def collect_dataset(
             obs, info = wrapped_env.reset(seed=None if seed is None else seed + episode)
             for hook in hooks:
                 hook.on_reset(info)
+            if render_flag:
+                wrapped_env.render()
 
             episode_step = 0
             while True:
@@ -105,6 +112,8 @@ def collect_dataset(
                 for hook in hooks:
                     hook.on_step(action, reward, terminated, truncated, info)
                 total_steps += 1
+                if render_flag:
+                    wrapped_env.render()
 
                 done = bool(terminated or truncated)
                 forced_cutoff = max_episode_steps is not None and episode_step >= max_episode_steps

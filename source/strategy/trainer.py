@@ -2,19 +2,7 @@ from pathlib import Path
 from typing import Any
 import gymnasium as gym
 from agent import Agent
-from tools import RenderQuiteWrapper
-
-
-def _ensure_innermost_render_quite(env: gym.Env) -> None:
-    """Insert RenderQuiteWrapper closest to the base env in wrapper chain."""
-    if not isinstance(env, gym.Wrapper):
-        raise TypeError("train() expects a gym.Wrapper env so RenderQuiteWrapper can be inserted in-place.")
-
-    current = env
-    while isinstance(current, gym.Wrapper) and isinstance(current.env, gym.Wrapper):
-        current = current.env
-
-    current.env = RenderQuiteWrapper(current.env)
+from tools import ensure_render_quite
 
 def train(
     env: gym.Env,
@@ -38,7 +26,7 @@ def train(
     if max_episode_steps is not None and max_episode_steps <= 0:
         return 0, 0, {}
 
-    _ensure_innermost_render_quite(env)
+    env = ensure_render_quite(env)
 
     save_model_dir = Path(save_model_dir) if save_model_dir is not None else None
     save_model_name = f"{str(env.spec.id)}_{str(agent.agent_name)}"

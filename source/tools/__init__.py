@@ -1,11 +1,14 @@
 from .env_dumper_wrapper import EnvDumper, EnvDumperWrapper, run_env_dump
-from .render_quite_wrapper import RenderQuiteWrapper
+from .render_quite_wrapper import RenderQuiteWrapper, ensure_render_quite
 from .step_penalty_wrapper import StepPenaltyWrapper
+from .test_format import print_banner
 
 __all__ = [
     "EnvDumperWrapper",
     "EnvDumper",
     "RenderQuiteWrapper",
+    "ensure_render_quite",
+    "print_banner",
     "run_env_dump",
     "StepPenaltyWrapper",
 ]

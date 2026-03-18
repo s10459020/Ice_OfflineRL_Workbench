@@ -20,3 +20,17 @@ class RenderQuiteWrapper(gym.Wrapper):
 
     def step(self, action):
         return self._run_without_render(self.env.step, action)
+
+
+def ensure_render_quite(env: gym.Env) -> gym.Env:
+    """Ensure RenderQuiteWrapper exists; insert closest to base env when possible."""
+    if not isinstance(env, gym.Wrapper):
+        return RenderQuiteWrapper(env)
+
+    current = env
+    while isinstance(current, gym.Wrapper) and isinstance(current.env, gym.Wrapper):
+        current = current.env
+
+    if not isinstance(current.env, RenderQuiteWrapper):
+        current.env = RenderQuiteWrapper(current.env)
+    return env

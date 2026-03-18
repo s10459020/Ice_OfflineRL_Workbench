@@ -2,21 +2,9 @@ from typing import Any, Callable
 
 import gymnasium as gym
 
-from tools import RenderQuiteWrapper
+from tools import ensure_render_quite
 
 Policy = Callable[[Any], int]
-
-
-def _ensure_innermost_render_quite(env: gym.Env) -> None:
-    """Insert RenderQuiteWrapper closest to the base env in wrapper chain."""
-    if not isinstance(env, gym.Wrapper):
-        raise TypeError("test() expects a gym.Wrapper env so RenderQuiteWrapper can be inserted in-place.")
-
-    current = env
-    while isinstance(current, gym.Wrapper) and isinstance(current.env, gym.Wrapper):
-        current = current.env
-
-    current.env = RenderQuiteWrapper(current.env)
 
 
 def test(
@@ -35,7 +23,7 @@ def test(
     episodes = 0
     global_step = 0
 
-    _ensure_innermost_render_quite(env)
+    env = ensure_render_quite(env)
     for episode in range(1, max_episodes + 1):
         obs, _ = env.reset(seed=None if seed is None else seed + episode)
         env.render()
