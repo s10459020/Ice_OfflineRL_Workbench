@@ -8,60 +8,70 @@ import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
 from replay import StateDatasetReader
-from strategy import collect_state_dataset_with_signatures, replay_state_dataset_with_signatures
-
-
-def _banner(title: str) -> None:
-    bar = "#" * 72
-    print("\n" + bar)
-    print(f"# {title.upper():^68} #")
-    print(bar)
+from tools import print_banner
+from strategy import (
+    collect_dataset,
+    replay_state_dataset,
+    serialize_state_tranjectory,
+)
 
 
 dataset_path = Path("tmps/one_room_s8_info.hdf5")
 episodes = 3
 max_episode_steps = 20
-fps = 6
 
-_banner("collector")
+###############################################################################
+# STAGE: COLLECT
+###############################################################################
+print_banner("collector")
 time.sleep(1.0)
 
 collector_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 collector_env = FullyObsWrapper(collector_env)
-collector_result = collect_state_dataset_with_signatures(
+collector_result = collect_dataset(
     env=collector_env,
-    output_path=dataset_path,
+    collect_state=True,
+    collect_observation=False,
+    state_output_path=dataset_path,
     max_episodes=episodes,
     max_episode_steps=max_episode_steps,
     seed=42,
     write_interval=0,
-    fps=fps,
     print_flag=True,
 )
 collector_env.close()
 
-collector_episodes = collector_result["episodes"]
-print(f"collector_done | path={collector_result['path']} | episodes={len(collector_episodes)}")
+collector_episodes = []
+with StateDatasetReader(dataset_path) as reader:
+    for episode_index in range(min(int(episodes), reader.num_episodes)):
+        states = list(reader.iter_episode_states(episode_index))
+        serialized = serialize_state_tranjectory(states, include_payload=False, include_signature=False)
+        collector_episodes.append(
+            {"episode_index": episode_index, "num_states": int(serialized["length"])}
+        )
+print(
+    f"collector_done | path={collector_result['collect_state']['path']} | episodes={len(collector_episodes)}"
+)
 for item in collector_episodes:
     print(
         f"collector_episode={item['episode_index']} "
-        f"transitions={item['num_transitions']} "
-        f"transition_code={item['transition_signature']} "
-        f"state_code={item['state_signature']}"
+        f"states={item['num_states']}"
     )
 
-_banner("replay")
+###############################################################################
+# STAGE: REPLAY
+###############################################################################
+print_banner("replay")
 time.sleep(1.0)
 
+replay_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
+replay_env = FullyObsWrapper(replay_env)
 with StateDatasetReader(dataset_path) as reader:
-    replay_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
-    replay_env = FullyObsWrapper(replay_env)
-    replay_episodes = replay_state_dataset_with_signatures(
+    replay_episodes = replay_state_dataset(
         env=replay_env,
         reader=reader,
         episodes=episodes,
-        fps=fps,
-        reset_pause_sec=1.0,
+        render_flag=True,
         print_flag=True,
     )
 
@@ -69,24 +79,26 @@ print(f"replay_done | episodes={len(replay_episodes)}")
 for item in replay_episodes:
     print(
         f"replay_episode={item['episode_index']} "
-        f"states={item['num_states']} "
-        f"state_code={item['state_signature']}"
+        f"states={item['num_states']}"
     )
 
-_banner("compare")
+###############################################################################
+# STAGE: COMPARE
+###############################################################################
+print_banner("compare")
 time.sleep(1.0)
 
-collector_state_codes = [item["state_signature"] for item in collector_episodes]
-replay_state_codes = [item["state_signature"] for item in replay_episodes]
+collector_states = [item["num_states"] for item in collector_episodes]
+replay_states = [item["num_states"] for item in replay_episodes]
 
-all_match = len(collector_state_codes) == len(replay_state_codes)
-for episode_index, (c_code, r_code) in enumerate(zip(collector_state_codes, replay_state_codes)):
-    matched = c_code == r_code
+all_match = len(collector_states) == len(replay_states)
+for episode_index, (c_count, r_count) in enumerate(zip(collector_states, replay_states)):
+    matched = c_count == r_count
     all_match = all_match and matched
     print(
         f"compare_episode={episode_index} "
-        f"collector_state_code={c_code} "
-        f"replay_state_code={r_code} "
+        f"collector_states={c_count} "
+        f"replay_states={r_count} "
         f"matched={matched}"
     )
 

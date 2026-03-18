@@ -31,4 +31,3 @@ print(
     f"| minari_path={obs_result.get('minari_path', '')} "
     f"| path={obs_result.get('path', '')}"
 )
-
