@@ -9,7 +9,8 @@ from typing import Any
 import gymnasium as gym
 import numpy as np
 
-from .state_capture_wrapper import AgentState, StateCaptureWrapper
+from .state_capture_wrapper import StateCaptureWrapper
+from .state_types import AgentState
 
 try:
     import h5py
