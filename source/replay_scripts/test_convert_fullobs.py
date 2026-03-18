@@ -8,24 +8,11 @@ import warnings
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
-from replay import StateDatasetReader
-from replay.state_types import AgentState
+from replay import StateDatasetReader, StateDatasetWriter, convert_observation, serialize_state_tranjectory
 from minigrid.wrappers import FullyObsWrapper
-from tools import print_banner
+from tools import stage
 
-from strategy import (
-    collect_dataset,
-    convert_observation_tranjectory_to_state_tranjectory,
-    serialize_state_tranjectory,
-)
-
-try:
-    import h5py
-except ImportError as exc:  # pragma: no cover
-    h5py = None
-    _H5PY_IMPORT_ERROR = exc
-else:
-    _H5PY_IMPORT_ERROR = None
+from strategy import collect_dataset
 
 warnings.filterwarnings("ignore", message="Observation is not in observation space.*")
 warnings.filterwarnings("ignore", message="Misconfigured dataset named .*")
@@ -50,24 +37,6 @@ def _state_signature_no_carrying(state) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:16]
 
 
-def _write_episode(file, episode_index: int, states: list[AgentState]) -> None:
-    group = file.create_group(f"episode_{episode_index}")
-    group.attrs["num_states"] = len(states)
-    utf8 = h5py.string_dtype(encoding="utf-8")
-
-    missions = [str(state.mission) for state in states]
-    positions = [(int(s.agent_pos[0]), int(s.agent_pos[1])) for s in states]
-    directions = [int(s.agent_dir) for s in states]
-    grids = [np.asarray(s.grid, dtype=np.uint8) for s in states]
-    carrying = [json.dumps(s.carrying, ensure_ascii=True) for s in states]
-
-    group.create_dataset("mission", data=np.asarray(missions, dtype=object), dtype=utf8)
-    group.create_dataset("agent_pos", data=np.asarray(positions, dtype=np.int32))
-    group.create_dataset("agent_dir", data=np.asarray(directions, dtype=np.int8))
-    group.create_dataset("grid", data=np.asarray(grids, dtype=np.uint8), compression="gzip")
-    group.create_dataset("carrying", data=np.asarray(carrying, dtype=object), dtype=utf8)
-
-
 env_id = "BabyAI-OneRoomS8-v0"
 dataset_id = "one-room-s8-local-convert-test-v0"
 episodes = 3
@@ -82,7 +51,7 @@ converted_state_path = state_path.with_name(f"{converted_stem}{state_path.suffix
 ###############################################################################
 # STAGE: COLLECT
 ###############################################################################
-print_banner("collect")
+stage("collect")
 env = FullyObsWrapper(gym.make(env_id, render_mode="rgb_array"))
 collect_result = collect_dataset(
     env=env,
@@ -110,9 +79,7 @@ print(
 ###############################################################################
 # STAGE: CONVERT
 ###############################################################################
-print_banner("convert")
-if h5py is None:  # pragma: no cover
-    raise ImportError("h5py is required for test_convert_fullobs.py.") from _H5PY_IMPORT_ERROR
+stage("convert")
 try:
     import minari
 except ImportError as exc:  # pragma: no cover
@@ -121,13 +88,14 @@ except ImportError as exc:  # pragma: no cover
 local_dataset_id = str(obs_result.get("dataset_id", dataset_id))
 dataset = minari.load_dataset(local_dataset_id)
 total_to_convert = max(0, min(int(episodes), len(dataset)))
-converted_state_path.parent.mkdir(parents=True, exist_ok=True)
-with h5py.File(converted_state_path, "w") as file:
-    file.attrs["format"] = "state_dataset_v1"
-    file.attrs["total_episodes"] = int(total_to_convert)
+writer = StateDatasetWriter(output_path=converted_state_path, flush_interval=1)
+try:
     for episode_index in range(total_to_convert):
-        states = convert_observation_tranjectory_to_state_tranjectory(dataset[episode_index].observations)
-        _write_episode(file, episode_index=episode_index, states=states)
+        states = convert_observation(dataset[episode_index].observations)
+        writer.push_episode(states)
+    writer.flush()
+finally:
+    writer.close()
 convert_result = {"dataset_id": local_dataset_id, "converted_episodes": total_to_convert, "path": str(converted_state_path)}
 print(
     "convert_fullobs_done "
@@ -140,7 +108,7 @@ print(
 ###############################################################################
 # STAGE: COMPARE
 ###############################################################################
-print_banner("compare")
+stage("compare")
 with StateDatasetReader(state_path) as original_reader, StateDatasetReader(converted_state_path) as converted_reader:
     if original_reader.num_episodes != converted_reader.num_episodes:
         raise RuntimeError(

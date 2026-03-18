@@ -4,10 +4,11 @@ from .state_types import AgentState
 
 __all__ = [
     "AgentState",
-    "convert_fullobs",
-    "convert_fullobs_episode",
+    "convert_observation",
     "ObservationCollector",
     "StateCollector",
+    "serialize_state_tranjectory",
+    "serialize_observation_tranjectory",
     "StateCaptureWrapper",
     "StateDatasetReader",
     "StateReplayWrapper",
@@ -19,25 +20,33 @@ __all__ = [
 
 
 def __getattr__(name: str):
-    if name in ("convert_fullobs", "convert_fullobs_episode"):
-        from .convert_fullobs import convert_fullobs, convert_fullobs_episode
+    if name == "convert_observation":
+        from .convert_observation import convert_observation
 
-        return {"convert_fullobs": convert_fullobs, "convert_fullobs_episode": convert_fullobs_episode}[name]
+        return convert_observation
     if name == "ObservationCollector":
-        from .collect_observation import ObservationCollector
+        from .collect_observation_dataset import ObservationCollector
 
         return ObservationCollector
     if name == "StateCollector":
-        from .collect_state import StateCollector
+        from .collect_state_dataset import StateCollector
 
         return StateCollector
+    if name == "serialize_state_tranjectory":
+        from .serialize_state_tranjectory import serialize_state_tranjectory
+
+        return serialize_state_tranjectory
+    if name == "serialize_observation_tranjectory":
+        from .serialize_observation_tranjectory import serialize_observation_tranjectory
+
+        return serialize_observation_tranjectory
     if name == "StateCaptureWrapper":
         from .state_capture_wrapper import StateCaptureWrapper
 
         return StateCaptureWrapper
     if name in ("StateDatasetWriter", "ensure_state_capture"):
         from .write_state_dataset import StateDatasetWriter
-        from .collect_state import ensure_state_capture
+        from .collect_state_dataset import ensure_state_capture
 
         return {"StateDatasetWriter": StateDatasetWriter, "ensure_state_capture": ensure_state_capture}[name]
     if name == "StateDatasetReader":

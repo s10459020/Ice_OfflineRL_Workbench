@@ -17,11 +17,8 @@ class StateCollector:
         self,
         output_path: str | Path,
         flush_interval: int = 0,
-        write_interval: int | None = None,
     ) -> None:
         self.output_path = Path(output_path)
-        if write_interval is not None:
-            flush_interval = int(write_interval)
         self._writer = StateDatasetWriter(output_path=self.output_path, flush_interval=flush_interval)
         self._episode_open = False
 

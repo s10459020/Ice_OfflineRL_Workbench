@@ -34,7 +34,7 @@ except ImportError:  # pragma: no cover
 _AGENT_OBJECT_IDX = int(OBJECT_TO_IDX["agent"])
 
 
-def convert_fullobs(episode: Any) -> list[AgentState]:
+def convert_observation(episode: Any) -> list[AgentState]:
     observations = _read_observations(episode)
     for key in ("image", "direction", "mission"):
         if key not in observations:
@@ -125,6 +125,3 @@ def _decode_text(value: Any) -> str:
     if isinstance(value, np.bytes_):
         return bytes(value).decode("utf-8")
     return str(value)
-
-
-convert_fullobs_episode = convert_fullobs

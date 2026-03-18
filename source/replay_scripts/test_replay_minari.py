@@ -5,12 +5,12 @@ from pathlib import Path
 import gymnasium as gym
 import minigrid  # noqa: F401
 import minari
-from replay import StateDatasetReader, StateDatasetWriter
+from replay import StateDatasetReader, StateDatasetWriter, convert_observation
 from replay.read_metadata import read_metadata, resolve_env_id
 from minigrid.wrappers import FullyObsWrapper
-from tools import print_banner
+from tools import stage
 
-from strategy import convert_observation_tranjectory_to_state_tranjectory, replay_state_dataset
+from strategy import replay
 
 metadata_path = Path("tmps/metadata.json")
 state_dataset_path = Path("tmps/main_data_info_converted.hdf5")
@@ -19,7 +19,7 @@ max_episodes: int | None = None
 ###############################################################################
 # STAGE: LOAD
 ###############################################################################
-print_banner("load")
+stage("load")
 if not metadata_path.exists():
     raise FileNotFoundError(f"metadata not found: {metadata_path}")
 
@@ -39,12 +39,12 @@ print(
 ###############################################################################
 # STAGE: CONVERT
 ###############################################################################
-print_banner("convert")
+stage("convert")
 writer = StateDatasetWriter(output_path=state_dataset_path, flush_interval=1)
 try:
     for episode_index in range(selected_count):
         observations = dataset[episode_index].observations
-        states = convert_observation_tranjectory_to_state_tranjectory(observations)
+        states = convert_observation(observations)
         writer.push_episode(states)
         print(
             f"convert_episode source=minari_episode_{episode_index} "
@@ -65,11 +65,11 @@ print(
 ###############################################################################
 # STAGE: REPLAY
 ###############################################################################
-print_banner("replay")
+stage("replay")
 replay_env = gym.make(env_id, render_mode="human")
 replay_env = FullyObsWrapper(replay_env)
 with StateDatasetReader(state_dataset_path) as reader:
-    replay_episodes = replay_state_dataset(
+    replay_episodes = replay(
         env=replay_env,
         reader=reader,
         episodes=selected_count,

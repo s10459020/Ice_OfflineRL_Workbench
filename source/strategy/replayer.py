@@ -8,7 +8,7 @@ from replay import StateDatasetReader, StateReplayWrapper
 from tools import ensure_render_quite
 
 
-def replay_state_dataset(
+def replay(
     env: gym.Env,
     reader: StateDatasetReader,
     episodes: int = 3,

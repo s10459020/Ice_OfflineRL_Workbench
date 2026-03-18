@@ -18,7 +18,7 @@ result = collect_dataset(
     max_episodes=3,
     max_episode_steps=20,
     seed=42,
-    write_interval=10,
+    flush_interval=10,
     print_flag=True,
 )
 env.close()

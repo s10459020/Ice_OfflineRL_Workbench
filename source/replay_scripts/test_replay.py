@@ -7,12 +7,11 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
-from replay import StateDatasetReader
-from tools import print_banner
+from replay import StateDatasetReader, serialize_state_tranjectory
+from tools import stage
 from strategy import (
     collect_dataset,
-    replay_state_dataset,
-    serialize_state_tranjectory,
+    replay,
 )
 
 
@@ -23,7 +22,7 @@ max_episode_steps = 20
 ###############################################################################
 # STAGE: COLLECT
 ###############################################################################
-print_banner("collector")
+stage("collector")
 time.sleep(1.0)
 
 collector_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
@@ -36,7 +35,7 @@ collector_result = collect_dataset(
     max_episodes=episodes,
     max_episode_steps=max_episode_steps,
     seed=42,
-    write_interval=0,
+    flush_interval=0,
     print_flag=True,
 )
 collector_env.close()
@@ -61,13 +60,13 @@ for item in collector_episodes:
 ###############################################################################
 # STAGE: REPLAY
 ###############################################################################
-print_banner("replay")
+stage("replay")
 time.sleep(1.0)
 
 replay_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 replay_env = FullyObsWrapper(replay_env)
 with StateDatasetReader(dataset_path) as reader:
-    replay_episodes = replay_state_dataset(
+    replay_episodes = replay(
         env=replay_env,
         reader=reader,
         episodes=episodes,
@@ -85,7 +84,7 @@ for item in replay_episodes:
 ###############################################################################
 # STAGE: COMPARE
 ###############################################################################
-print_banner("compare")
+stage("compare")
 time.sleep(1.0)
 
 collector_states = [item["num_states"] for item in collector_episodes]

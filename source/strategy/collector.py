@@ -43,7 +43,6 @@ def collect_dataset(
     seed: int | None = 42,
     policy: Policy | None = None,
     flush_interval: int = 0,
-    write_interval: int | None = None,
     record_infos: bool = True,
     overwrite_local_dataset: bool = True,
     normalize_mission_observation: bool = True,
@@ -80,8 +79,6 @@ def collect_dataset(
         )
         hooks.append(observation_hook)
     if collect_state:
-        if write_interval is not None:
-            flush_interval = int(write_interval)
         state_hook = StateCollector(output_path=state_output_path, flush_interval=flush_interval)
         hooks.append(state_hook)
 
