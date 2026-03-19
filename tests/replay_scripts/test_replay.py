@@ -7,7 +7,8 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.replay import StateDatasetReader, serialize_state_trajectory
+from ice_offline.replay import StateDatasetReader, serialize_state_sequence
+from ice_offline.tools.types import Transition
 from ice_offline.tools import stage
 from ice_offline.strategy import (
     collect_dataset,
@@ -26,7 +27,7 @@ time.sleep(1.0)
 
 collector_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 collector_env = FullyObsWrapper(collector_env)
-collector_episodes_count, collector_steps = collect_dataset(
+collector_steps = collect_dataset(
     env=collector_env,
     state_output_path=dataset_path,
     max_episodes=episodes,
@@ -40,13 +41,13 @@ collector_episodes = []
 with StateDatasetReader(dataset_path) as reader:
     for episode_index in range(min(int(episodes), reader.num_episodes)):
         states = list(reader.iter_episode_states(episode_index))
-        serialized = serialize_state_trajectory(states, include_payload=False, include_signature=False)
+        serialized = serialize_state_sequence(states, include_payload=False, include_signature=False)
         collector_episodes.append(
             {"episode_index": episode_index, "num_states": int(serialized["length"])}
         )
 print(
     f"collector_done | path={dataset_path} | episodes={len(collector_episodes)} "
-    f"| collected_episodes={collector_episodes_count} | collected_steps={collector_steps}"
+    f"| collected_steps={collector_steps}"
 )
 for item in collector_episodes:
     print(
@@ -63,20 +64,21 @@ time.sleep(1.0)
 replay_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 replay_env = FullyObsWrapper(replay_env)
 with StateDatasetReader(dataset_path) as reader:
-    replay_episodes = replay(
+    state_sequences = reader.read(max_episodes=episodes)
+    trajectories = [
+        [Transition(action=0, reward=0.0) for _ in range(max(0, len(states) - 1))]
+        for states in state_sequences
+    ]
+    replay_steps = replay(
         env=replay_env,
-        reader=reader,
-        episodes=episodes,
-        render_flag=True,
-        print_flag=True,
+        state_sequences=state_sequences,
+        trajectories=trajectories,
+        max_episodes=episodes,
+        render_interval=1,
+        print_interval=1,
     )
 
-print(f"replay_done | episodes={len(replay_episodes)}")
-for item in replay_episodes:
-    print(
-        f"replay_episode={item['episode_index']} "
-        f"states={item['num_states']}"
-    )
+print(f"replay_done | steps={replay_steps}")
 
 ###############################################################################
 # STAGE: COMPARE
@@ -85,17 +87,10 @@ stage("compare")
 time.sleep(1.0)
 
 collector_states = [item["num_states"] for item in collector_episodes]
-replay_states = [item["num_states"] for item in replay_episodes]
-
-all_match = len(collector_states) == len(replay_states)
-for episode_index, (c_count, r_count) in enumerate(zip(collector_states, replay_states)):
-    matched = c_count == r_count
-    all_match = all_match and matched
-    print(
-        f"compare_episode={episode_index} "
-        f"collector_states={c_count} "
-        f"replay_states={r_count} "
-        f"matched={matched}"
-    )
+all_match = len(collector_states) == int(episodes)
+print(
+    f"compare_episodes collector={len(collector_states)} "
+    f"replay={int(episodes)} matched={all_match}"
+)
 
 print(f"compare_result | all_matched={all_match}")

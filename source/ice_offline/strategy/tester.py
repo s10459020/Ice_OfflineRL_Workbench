@@ -4,45 +4,47 @@ import gymnasium as gym
 
 from ice_offline.tools import ensure_render_quiet
 
-Policy = Callable[[Any], int]
-
-
 def test(
     env: gym.Env,
-    policy: Policy | None = None,
     max_episodes: int = 100,
+    *,
     seed: int | None = None,
-    print_flag: bool = False,
-    render_flag: bool = False,
+    policy: Callable[[Any], int] | None = None,
+    render_interval: int | None = None,
+    print_interval: int | None = None,
 ) -> int:
     if max_episodes <= 0:
         raise ValueError("max_episodes must be > 0.")
-    if policy is None:
-        policy = lambda _: env.action_space.sample()
-
-    episodes = 0
-    steps = 0
+    if render_interval is not None and render_interval <= 0:
+        raise ValueError("render_interval must be > 0 when provided.")
+    if print_interval is not None and print_interval <= 0:
+        raise ValueError("print_interval must be > 0 when provided.")
 
     env = ensure_render_quiet(env)
+    if policy is None:
+        policy = lambda _obs: env.action_space.sample()
+
+    step = 0
     for episode in range(1, max_episodes + 1):
-        obs, _ = env.reset(seed=None if seed is None else seed + episode)
-        if render_flag:
+        episode_seed = None if seed is None else seed + episode
+        obs, _ = env.reset(seed=episode_seed)
+
+        if render_interval == 1:
             env.render()
-        episodes += 1
 
         episode_step = 0
         while True:
-            episode_step += 1
             action = int(policy(obs))
             next_obs, reward, terminated, truncated, _ = env.step(action)
-            steps += 1
+            episode_step += 1
+            step += 1
 
-            if render_flag:
+            if render_interval is not None and step % render_interval == 0:
                 env.render()
 
-            if print_flag:
+            if print_interval is not None and step % print_interval == 0:
                 print(
-                    f"step={steps} episode={episode} episode_step={episode_step} "
+                    f"step={step} episode={episode} episode_step={episode_step} "
                     f"action={action} reward={float(reward):.3f} "
                     f"terminated={terminated} truncated={truncated}"
                 )
@@ -52,4 +54,4 @@ def test(
 
             obs = next_obs
 
-    return episodes
+    return step

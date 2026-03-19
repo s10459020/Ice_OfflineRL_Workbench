@@ -26,14 +26,14 @@ env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 env = FullyObsWrapper(env)
 
 try:
-    finished_episodes = test(
+    finished_steps = test(
         env=env,
         max_episodes=20,
         seed=None,
         policy=lambda obs: int((0, 1, 2, 3)[agent.act(obs, greedy=False)]),
-        print_flag=True,
+        print_interval=1,
     )
 finally:
     env.close()
 
-print(f"finished_episodes={finished_episodes}")
+print(f"finished_steps={finished_steps}")

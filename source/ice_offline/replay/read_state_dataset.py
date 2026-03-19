@@ -6,7 +6,7 @@ from typing import Any, Iterator
 
 import numpy as np
 
-from .state_types import AgentState
+from ice_offline.tools.types import State
 
 try:
     import h5py
@@ -59,7 +59,7 @@ class StateDatasetReader:
             return int(raw)
         return int(group["grid"].shape[0])
 
-    def get_state(self, episode_index: int, state_index: int) -> AgentState:
+    def get_state(self, episode_index: int, state_index: int) -> State:
         group = self._episode_group(episode_index)
         num_states = self.episode_length(episode_index)
         if state_index < 0 or state_index >= num_states:
@@ -75,7 +75,7 @@ class StateDatasetReader:
         carrying_json = self._decode_scalar(group["carrying"][state_index])
         carrying = json.loads(carrying_json)
 
-        return AgentState(
+        return State(
             mission=mission,
             agent_pos=(int(agent_pos_raw[0]), int(agent_pos_raw[1])),
             agent_dir=agent_dir,
@@ -83,10 +83,19 @@ class StateDatasetReader:
             carrying=carrying,
         )
 
-    def iter_episode_states(self, episode_index: int) -> Iterator[AgentState]:
+    def iter_episode_states(self, episode_index: int) -> Iterator[State]:
         num_states = self.episode_length(episode_index)
         for state_index in range(num_states):
             yield self.get_state(episode_index=episode_index, state_index=state_index)
+
+    def read(self, max_episodes: int | None = None) -> list[list[State]]:
+        if max_episodes is not None and max_episodes <= 0:
+            raise ValueError("max_episodes must be > 0 when provided.")
+        limit = self.num_episodes if max_episodes is None else min(int(max_episodes), self.num_episodes)
+        trajectories: list[list[State]] = []
+        for episode_index in range(limit):
+            trajectories.append(list(self.iter_episode_states(episode_index)))
+        return trajectories
 
     def close(self) -> None:
         if self._closed:

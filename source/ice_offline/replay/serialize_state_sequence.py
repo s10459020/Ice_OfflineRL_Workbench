@@ -6,7 +6,7 @@ from typing import Any
 import numpy as np
 
 
-def serialize_state_trajectory(
+def serialize_state_sequence(
     states: list[Any],
     *,
     include_payload: bool = True,
@@ -62,4 +62,3 @@ def _to_jsonable(value: Any) -> Any:
     if isinstance(value, (list, tuple)):
         return [_to_jsonable(v) for v in value]
     return value
-

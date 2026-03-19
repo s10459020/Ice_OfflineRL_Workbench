@@ -1,5 +1,4 @@
-﻿
-from pathlib import Path
+﻿from pathlib import Path
 from typing import Any, Callable
 
 import gymnasium as gym
@@ -13,14 +12,14 @@ def collect_dataset(
     env: gym.Env,
     max_episodes: int = 3,
     *,
+    seed: int | None = 42,
     policy: Callable[[Any], int] | None = None,
     state_output_path: str | Path | None = None,
     observation_output_path: str | Path | None = None,
-    seed: int | None = 42,
     flush_interval: int = 0,
     render_interval: int | None = None,
     print_interval: int | None = None,
-) -> tuple[int, int]:
+) -> int:
     if max_episodes <= 0:
         raise ValueError("max_episodes must be > 0.")
     if state_output_path is None and observation_output_path is None:
@@ -31,8 +30,6 @@ def collect_dataset(
         raise ValueError("render_interval must be > 0 when provided.")
     if print_interval is not None and print_interval <= 0:
         raise ValueError("print_interval must be > 0 when provided.")
-    if policy is None:
-        policy = lambda _obs: env.action_space.sample()
 
     state_writer: StateDatasetWriter | None = None
     if state_output_path is not None:
@@ -49,14 +46,16 @@ def collect_dataset(
             flush_interval=flush_interval,
         )
 
-    total_steps = 0
-    episodes = 0
-
     env = ensure_render_quiet(env)
+    if policy is None:
+        policy = lambda _obs: env.action_space.sample()
+
+    step = 0
     try:
         for episode in range(1, max_episodes + 1):
             obs, info = env.reset(seed=None if seed is None else seed + episode)
-            episodes += 1
+            if render_interval == 1:
+                env.render()
 
             if state_writer is not None:
                 state_writer.push_state(info["state"])
@@ -68,17 +67,17 @@ def collect_dataset(
                 action = int(policy(obs))
                 next_obs, reward, terminated, truncated, info = env.step(action)
                 episode_step += 1
-                total_steps += 1
+                step += 1
 
                 if state_writer is not None:
                     state_writer.push_state(info["state"])
                 if observation_writer is not None:
                     observation_writer.push_observation(next_obs)
-                if render_interval is not None and total_steps % render_interval == 0:
+                if render_interval is not None and step % render_interval == 0:
                     env.render()
-                if print_interval is not None and total_steps % print_interval == 0:
+                if print_interval is not None and step % print_interval == 0:
                     print(
-                        f"step={total_steps} episode={episode} episode_step={episode_step} "
+                        f"step={step} episode={episode} episode_step={episode_step} "
                         f"action={action} reward={float(reward):.3f} "
                         f"terminated={terminated} truncated={truncated}"
                     )
@@ -98,4 +97,4 @@ def collect_dataset(
             state_writer.flush()
             state_writer.close()
 
-    return episodes, total_steps
+    return step

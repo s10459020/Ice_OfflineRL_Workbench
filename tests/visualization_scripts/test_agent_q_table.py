@@ -32,11 +32,10 @@ agent = QTableAgent(
 agent.set_encoder(q_table_state_from_minigrid_observation)
 
 try:
-    train_steps, train_episodes, _ = train(
+    train_steps = train(
         env=train_env,
         agent=agent,
         max_steps=20_000,
-        max_episodes=1_000,
         max_episode_steps=200,
         seed=42,
         print_interval=1_000,
@@ -52,7 +51,7 @@ test_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 test_env = FullyObsWrapper(test_env)
 test_env = StepPenaltyWrapper(test_env, step_penalty=0.01)
 try:
-    finished_episodes = test(
+    finished_steps = test(
         env=test_env,
         max_episodes=20,
         seed=7,
@@ -62,6 +61,5 @@ finally:
     test_env.close()
 
 print(
-    f"train_steps={train_steps} | train_episodes={train_episodes} | "
-    f"test_episodes={finished_episodes} | q_states={len(agent.q_table)}"
+    f"train_steps={train_steps} | test_steps={finished_steps} | q_states={len(agent.q_table)}"
 )

@@ -8,7 +8,7 @@ import warnings
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
-from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation, serialize_state_trajectory
+from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation, serialize_state_sequence
 from minigrid.wrappers import FullyObsWrapper
 from ice_offline.tools import stage
 
@@ -52,7 +52,7 @@ converted_state_path = state_path.with_name(f"{converted_stem}{state_path.suffix
 ###############################################################################
 stage("collect")
 env = FullyObsWrapper(gym.make(env_id, render_mode="rgb_array"))
-collect_episodes, collect_steps = collect_dataset(
+collect_steps = collect_dataset(
     env=env,
     state_output_path=state_path,
     observation_output_path=obs_path,
@@ -61,7 +61,6 @@ collect_episodes, collect_steps = collect_dataset(
 )
 print(
     "collect_done "
-    f"| episodes={collect_episodes} "
     f"| steps={collect_steps} "
     f"| info_path={state_path} "
     f"| obs_path={obs_path}"
@@ -116,14 +115,14 @@ with StateDatasetReader(state_path) as original_reader, StateDatasetReader(conve
                 f"episode length mismatch at episode={episode_index}: original={len(original_states)} converted={len(converted_states)}"
             )
 
-        no_carry0 = serialize_state_trajectory(
+        no_carry0 = serialize_state_sequence(
             original_states,
             include_payload=False,
             include_signature=True,
             ignore_carrying=True,
             normalize_agent_cell=True,
         )
-        no_carry1 = serialize_state_trajectory(
+        no_carry1 = serialize_state_sequence(
             converted_states,
             include_payload=False,
             include_signature=True,
@@ -133,8 +132,8 @@ with StateDatasetReader(state_path) as original_reader, StateDatasetReader(conve
         equal = str(no_carry0.get("signature", "")) == str(no_carry1.get("signature", ""))
         all_equal = all_equal and equal
 
-        full0 = serialize_state_trajectory(original_states, include_payload=True, include_signature=False)
-        full1 = serialize_state_trajectory(converted_states, include_payload=True, include_signature=False)
+        full0 = serialize_state_sequence(original_states, include_payload=True, include_signature=False)
+        full1 = serialize_state_sequence(converted_states, include_payload=True, include_signature=False)
         carrying_gap = 0
         payload0 = full0.get("payload", [])
         payload1 = full1.get("payload", [])

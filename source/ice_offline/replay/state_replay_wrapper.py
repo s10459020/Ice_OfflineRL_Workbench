@@ -7,38 +7,55 @@ import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 
-from .read_state_dataset import StateDatasetReader
-from .state_types import AgentState
+from ice_offline.tools.types import State, Transition
 
 
 class StateReplayWrapper(gym.Wrapper):
     """
-    Replay recorded trajectory states as a deterministic fake env rollout.
+    Replay recorded (state, action, reward, next_state) transitions.
 
     reset():
-      - selects one episode from the dataset
-      - returns the first recorded state as observation
+      - selects one episode
+      - sets env to the first state in that sequence
 
-    step(action):
-      - action is ignored by default
-      - advances to the next recorded state
-      - episode terminates at last recorded state
+    act():
+      - returns action from current transition index
+
+    step(action=None):
+      - advances by one recorded transition
+      - if action is provided, it is checked against recorded action
     """
 
     def __init__(
         self,
         env: gym.Env,
-        reader: StateDatasetReader,
+        state_sequences: list[list[State]],
+        trajectories: list[list[Transition]],
         *,
         random_episode: bool = False,
-        strict_action_check: bool = False,
     ) -> None:
         super().__init__(env)
-        self.reader = reader
+        if not state_sequences:
+            raise ValueError("state_sequences must contain at least one episode.")
+        if not trajectories:
+            raise ValueError("trajectories must contain at least one episode.")
+        if len(state_sequences) != len(trajectories):
+            raise ValueError("state_sequences and trajectories must have same episode count.")
+        if any(len(ep) == 0 for ep in state_sequences):
+            raise ValueError("Each state sequence episode must contain at least one state.")
+        for episode_index, states in enumerate(state_sequences):
+            transitions = trajectories[episode_index]
+            expected = len(states) - 1
+            if len(transitions) != expected:
+                raise ValueError(
+                    f"Episode {episode_index} transition length mismatch: "
+                    f"got {len(transitions)}, expected {expected}."
+                )
+        self.state_sequences = state_sequences
+        self.trajectories = trajectories
         self.random_episode = bool(random_episode)
-        self.strict_action_check = bool(strict_action_check)
 
-        first_state = self.reader.get_state(episode_index=0, state_index=0)
+        first_state = self.state_sequences[0][0]
         self.observation_space = spaces.Dict(
             {
                 "image": spaces.Box(
@@ -67,9 +84,9 @@ class StateReplayWrapper(gym.Wrapper):
         episode_index = self._pick_episode_index(options=options)
         self._current_episode_index = episode_index
         self._state_index = 0
-        self._episode_length = self.reader.episode_length(episode_index)
+        self._episode_length = len(self.state_sequences[episode_index])
 
-        state = self.reader.get_state(episode_index=episode_index, state_index=0)
+        state = self.state_sequences[episode_index][0]
         self._apply_state_to_env(state)
         obs = self._state_to_obs(state)
 
@@ -77,20 +94,28 @@ class StateReplayWrapper(gym.Wrapper):
         info["state"] = state
         info["episode_index"] = episode_index
         info["state_index"] = 0
-        info["trajectory_length"] = self._episode_length
+        info["state_sequence_length"] = self._episode_length
+        info["trajectory_length"] = len(self.trajectories[episode_index])
         return obs, info
 
-    def step(self, action):
+    def act(self) -> int:
         self._ensure_active_episode()
-        if self.strict_action_check and action is not None:
-            raise RuntimeError("strict_action_check=True but action labels are not stored in dataset.")
+        episode_index = int(self._current_episode_index)
+        transition_index = int(self._state_index)
+        transitions = self.trajectories[episode_index]
+        if transition_index >= len(transitions):
+            raise RuntimeError("No transition action available at terminal state. Call reset().")
+        return int(transitions[transition_index].action)
+
+    def step(self, action: int | None = None):
+        self._ensure_active_episode()
 
         next_state_index = int(self._state_index) + 1
         episode_index = int(self._current_episode_index)
-        if next_state_index >= int(self._episode_length):
-            # No more recorded transitions: keep the current state unchanged
-            # until caller triggers the next reset().
-            state = self.reader.get_state(episode_index=episode_index, state_index=int(self._state_index))
+        transitions = self.trajectories[episode_index]
+        transition_index = int(self._state_index)
+        if transition_index >= len(transitions):
+            state = self.state_sequences[episode_index][int(self._state_index)]
             obs = self._state_to_obs(state)
             reward = 0.0
             terminated = True
@@ -99,26 +124,49 @@ class StateReplayWrapper(gym.Wrapper):
                 "state": state,
                 "episode_index": episode_index,
                 "state_index": int(self._state_index),
-                "trajectory_length": int(self._episode_length),
-                "action_ignored": True,
+                "state_sequence_length": int(self._episode_length),
+                "trajectory_length": len(transitions),
                 "replay_frozen": True,
             }
             return obs, reward, terminated, truncated, info
 
-        state = self.reader.get_state(episode_index=episode_index, state_index=next_state_index)
+        transition = transitions[transition_index]
+        recorded_action = int(transition.action)
+        reward = float(transition.reward)
+        action_mismatch = action is not None and int(action) != recorded_action
+
+        if next_state_index >= int(self._episode_length):
+            state = self.state_sequences[episode_index][int(self._state_index)]
+            obs = self._state_to_obs(state)
+            terminated = True
+            truncated = False
+            info = {
+                "state": state,
+                "episode_index": episode_index,
+                "state_index": int(self._state_index),
+                "state_sequence_length": int(self._episode_length),
+                "trajectory_length": len(transitions),
+                "transition_action": recorded_action,
+                "action_mismatch": action_mismatch,
+                "replay_frozen": True,
+            }
+            return obs, reward, terminated, truncated, info
+
+        state = self.state_sequences[episode_index][next_state_index]
         self._state_index = next_state_index
         self._apply_state_to_env(state)
 
         obs = self._state_to_obs(state)
-        reward = 0.0
         terminated = next_state_index == int(self._episode_length) - 1
         truncated = False
         info = {
             "state": state,
             "episode_index": episode_index,
             "state_index": next_state_index,
-            "trajectory_length": int(self._episode_length),
-            "action_ignored": True,
+            "state_sequence_length": int(self._episode_length),
+            "trajectory_length": len(transitions),
+            "transition_action": recorded_action,
+            "action_mismatch": action_mismatch,
         }
         return obs, reward, terminated, truncated, info
 
@@ -128,30 +176,30 @@ class StateReplayWrapper(gym.Wrapper):
     def _pick_episode_index(self, options: dict[str, Any] | None) -> int:
         if options and "episode_index" in options:
             episode_index = int(options["episode_index"])
-            if episode_index < 0 or episode_index >= self.reader.num_episodes:
+            if episode_index < 0 or episode_index >= len(self.state_sequences):
                 raise IndexError(f"episode_index out of range: {episode_index}")
             return episode_index
 
         if self.random_episode:
-            return int(self._rng.integers(low=0, high=self.reader.num_episodes))
+            return int(self._rng.integers(low=0, high=len(self.state_sequences)))
 
         if self._current_episode_index is None:
             return 0
-        return (int(self._current_episode_index) + 1) % self.reader.num_episodes
+        return (int(self._current_episode_index) + 1) % len(self.state_sequences)
 
     def _ensure_active_episode(self) -> None:
         if self._current_episode_index is None or self._state_index is None or self._episode_length is None:
             raise RuntimeError("Call reset() before step().")
 
     @staticmethod
-    def _state_to_obs(state: AgentState) -> dict[str, Any]:
+    def _state_to_obs(state: State) -> dict[str, Any]:
         return {
             "image": np.asarray(state.grid, dtype=np.uint8).copy(),
             "direction": int(state.agent_dir),
             "mission": str(state.mission),
         }
 
-    def _apply_state_to_env(self, state: AgentState) -> None:
+    def _apply_state_to_env(self, state: State) -> None:
         # Force env internals to recorded values so replay follows the exact dataset state.
         base = self.env.unwrapped
         self._restore_grid(base, state.grid)

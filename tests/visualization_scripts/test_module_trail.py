@@ -11,13 +11,13 @@ env = TrailWrapper(env, clear_on_render=False, max_trails=8)
 
 print("start | env=BabyAI-OneRoomS8-v0 | trail=rolling(no-clear) | max_trails=8")
 try:
-    finished_episodes = test(
+    finished_steps = test(
         env=env,
         max_episodes=20,
         seed=None,
-        print_flag=True,
+        print_interval=1,
     )
 finally:
     env.close()
 
-print(f"finished_episodes={finished_episodes}")
+print(f"finished_steps={finished_steps}")

@@ -9,7 +9,7 @@ from ice_offline.strategy import collect_dataset
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="rgb_array")
 env = FullyObsWrapper(env)
 
-episodes, steps = collect_dataset(
+steps = collect_dataset(
     env=env,
     state_output_path="tmps/one_room_s8_info.hdf5",
     max_episodes=3,
@@ -21,7 +21,6 @@ env.close()
 
 print(
     "state_collect_done "
-    f"| episodes={episodes} "
     f"| steps={steps} "
     "| path=tmps/one_room_s8_info.hdf5"
 )

@@ -6,6 +6,7 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 import minari
 from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation
+from ice_offline.tools.types import Transition
 from ice_offline.replay.read_metadata import read_metadata, resolve_env_id
 from minigrid.wrappers import FullyObsWrapper
 from ice_offline.tools import stage
@@ -69,17 +70,18 @@ stage("replay")
 replay_env = gym.make(env_id, render_mode="human")
 replay_env = FullyObsWrapper(replay_env)
 with StateDatasetReader(state_dataset_path) as reader:
-    replay_episodes = replay(
+    state_sequences = reader.read(max_episodes=selected_count)
+    trajectories = [
+        [Transition(action=0, reward=0.0) for _ in range(max(0, len(states) - 1))]
+        for states in state_sequences
+    ]
+    replay_steps = replay(
         env=replay_env,
-        reader=reader,
-        episodes=selected_count,
-        render_flag=True,
-        print_flag=True,
+        state_sequences=state_sequences,
+        trajectories=trajectories,
+        max_episodes=selected_count,
+        render_interval=1,
+        print_interval=1,
     )
 
-print(f"replay_done | episodes={len(replay_episodes)} | path={state_dataset_path}")
-for item in replay_episodes:
-    print(
-        f"replay_episode={item['episode_index']} "
-        f"states={item['num_states']}"
-    )
+print(f"replay_done | steps={replay_steps} | path={state_dataset_path}")

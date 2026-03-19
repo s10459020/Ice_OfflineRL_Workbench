@@ -29,11 +29,10 @@ agent = QTableAgent(
 agent.set_encoder(q_table_state_from_minigrid_observation)
 
 try:
-    steps, episodes, info = train(
+    steps = train(
         env=env,
         agent=agent,
         max_steps=1_000_000,
-        max_episodes=20_000,
         max_episode_steps=200,
         seed=42,
         save_model_dir="model",
@@ -44,6 +43,6 @@ finally:
     env.close()
 
 print(
-    f"train_done | steps={steps} | episodes={episodes} | "
-    f"q_states={len(agent.q_table)} | save_dir={info.get('save_model_dir')}"
+    f"train_done | steps={steps} | "
+    f"q_states={len(agent.q_table)} | save_dir=model"
 )

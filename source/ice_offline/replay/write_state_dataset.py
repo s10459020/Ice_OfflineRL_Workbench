@@ -8,7 +8,7 @@ from typing import Iterable
 
 import numpy as np
 
-from .state_types import AgentState
+from ice_offline.tools.types import State
 
 try:
     import h5py
@@ -27,7 +27,7 @@ class _EpisodeBuffer:
     grid: list[np.ndarray] = field(default_factory=list)
     carrying: list[str] = field(default_factory=list)
 
-    def append_state(self, state: AgentState) -> None:
+    def append_state(self, state: State) -> None:
         self.missions.append(str(state.mission))
         self.agent_pos.append((int(state.agent_pos[0]), int(state.agent_pos[1])))
         self.agent_dir.append(int(state.agent_dir))
@@ -68,7 +68,7 @@ class StateDatasetWriter:
         self._current: _EpisodeBuffer | None = None
         self._closed = False
 
-    def push_state(self, state: AgentState) -> None:
+    def push_state(self, state: State) -> None:
         self._ensure_open()
         if self._current is None:
             self._current = _EpisodeBuffer()
@@ -85,7 +85,7 @@ class StateDatasetWriter:
         self._current = None
         self._auto_flush_if_needed()
 
-    def push_episode(self, states: Iterable[AgentState]) -> None:
+    def push_episode(self, states: Iterable[State]) -> None:
         self._ensure_open()
         self._current = _EpisodeBuffer()
         for state in states:
@@ -97,7 +97,7 @@ class StateDatasetWriter:
         self._current = None
         self._auto_flush_if_needed()
 
-    def push_episodes(self, episodes: Iterable[Iterable[AgentState]]) -> None:
+    def push_episodes(self, episodes: Iterable[Iterable[State]]) -> None:
         for states in episodes:
             self.push_episode(states)
 

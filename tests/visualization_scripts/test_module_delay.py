@@ -12,13 +12,13 @@ env = RenderDelayWrapper(env, fps=2)
 
 print("start | env=BabyAI-OneRoomS8-v0-fullobs | render_fps=2")
 try:
-    finished_episodes = test(
+    finished_steps = test(
         env=env,
         max_episodes=30,
         seed=None,
-        print_flag=True,
+        print_interval=1,
     )
 finally:
     env.close()
 
-print(f"finished_episodes={finished_episodes}")
+print(f"finished_steps={finished_steps}")

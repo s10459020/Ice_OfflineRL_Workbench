@@ -40,17 +40,16 @@ print(
     "env=BabyAI-OneRoomS8-v0-fullobs | step_penalty=0.01"
 )
 try:
-    steps, episodes, _ = train(
+    steps = train(
         env=env,
         agent=agent,
         max_steps=20_000,
-        max_episodes=1_000,
         max_episode_steps=200,
         seed=42,
         print_interval=1,
-        render_flag=True,
+        render_interval=1,
     )
 finally:
     env.close()
 
-print(f"train_done | steps={steps} | episodes={episodes} | q_states={len(agent.q_table)}")
+print(f"train_done | steps={steps} | q_states={len(agent.q_table)}")

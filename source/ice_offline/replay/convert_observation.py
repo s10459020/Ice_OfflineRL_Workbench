@@ -5,7 +5,7 @@ from typing import Any
 
 import numpy as np
 
-from .state_types import AgentState
+from ice_offline.tools.types import State
 
 try:
     from PIL import Image
@@ -34,7 +34,7 @@ except ImportError:  # pragma: no cover
 _AGENT_OBJECT_IDX = int(OBJECT_TO_IDX["agent"])
 
 
-def convert_observation(episode: Any) -> list[AgentState]:
+def convert_observation(episode: Any) -> list[State]:
     observations = _read_observations(episode)
     for key in ("image", "direction", "mission"):
         if key not in observations:
@@ -47,11 +47,11 @@ def convert_observation(episode: Any) -> list[AgentState]:
     if len(image_seq) != num_states or len(mission_seq) != num_states:
         raise ValueError("Inconsistent trajectory lengths among image/direction/mission.")
 
-    states: list[AgentState] = []
+    states: list[State] = []
     for index in range(num_states):
         grid = _coerce_grid(image_seq[index])
         states.append(
-            AgentState(
+            State(
                 mission=_decode_text(mission_seq[index]),
                 agent_pos=_find_agent_pos(grid, state_index=index),
                 agent_dir=int(dir_seq[index]),

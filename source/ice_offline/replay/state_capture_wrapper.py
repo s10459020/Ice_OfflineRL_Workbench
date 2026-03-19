@@ -5,7 +5,7 @@ from typing import Any
 import gymnasium as gym
 import numpy as np
 
-from .state_types import AgentState
+from ice_offline.tools.types import State
 
 
 class StateCaptureWrapper(gym.Wrapper):
@@ -28,7 +28,7 @@ class StateCaptureWrapper(gym.Wrapper):
         info["state"] = state
         return obs, reward, terminated, truncated, info
 
-    def _capture_state(self) -> AgentState:
+    def _capture_state(self) -> State:
         base = self.env.unwrapped
         x, y = base.agent_pos
         carrying = self._serialize_carrying(base.carrying)
@@ -36,7 +36,7 @@ class StateCaptureWrapper(gym.Wrapper):
         # Copy grid to snapshot the current world state at this exact step.
         grid = np.asarray(base.grid.encode(), dtype=np.uint8).copy()
 
-        return AgentState(
+        return State(
             mission=str(base.mission),
             agent_pos=(int(x), int(y)),
             agent_dir=int(base.agent_dir),
