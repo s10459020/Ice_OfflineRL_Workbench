@@ -17,7 +17,6 @@ from ice_offline.strategy import (
 
 dataset_path = Path("tmps/one_room_s8_info.hdf5")
 episodes = 3
-max_episode_steps = 20
 
 ###############################################################################
 # STAGE: COLLECT
@@ -27,16 +26,13 @@ time.sleep(1.0)
 
 collector_env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 collector_env = FullyObsWrapper(collector_env)
-collector_result = collect_dataset(
+collector_episodes_count, collector_steps = collect_dataset(
     env=collector_env,
-    collect_state=True,
-    collect_observation=False,
     state_output_path=dataset_path,
     max_episodes=episodes,
-    max_episode_steps=max_episode_steps,
     seed=42,
     flush_interval=0,
-    print_flag=True,
+    print_interval=1,
 )
 collector_env.close()
 
@@ -49,7 +45,8 @@ with StateDatasetReader(dataset_path) as reader:
             {"episode_index": episode_index, "num_states": int(serialized["length"])}
         )
 print(
-    f"collector_done | path={collector_result['collect_state']['path']} | episodes={len(collector_episodes)}"
+    f"collector_done | path={dataset_path} | episodes={len(collector_episodes)} "
+    f"| collected_episodes={collector_episodes_count} | collected_steps={collector_steps}"
 )
 for item in collector_episodes:
     print(

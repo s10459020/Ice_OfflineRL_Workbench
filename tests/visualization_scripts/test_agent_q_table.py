@@ -55,7 +55,6 @@ try:
     finished_episodes = test(
         env=test_env,
         max_episodes=20,
-        max_episode_steps=20,
         seed=7,
         policy=lambda obs: int(agent.act(obs, greedy=True)),
     )

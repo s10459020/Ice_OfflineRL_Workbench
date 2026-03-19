@@ -14,7 +14,6 @@ try:
     finished_episodes = test(
         env=env,
         max_episodes=200,
-        max_episode_steps=5000,
         seed=None,
         print_flag=True,
     )

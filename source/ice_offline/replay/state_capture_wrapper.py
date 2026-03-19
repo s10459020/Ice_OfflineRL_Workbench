@@ -56,3 +56,12 @@ class StateCaptureWrapper(gym.Wrapper):
             "state": int(encoded[2]),
             "encoded": tuple(int(v) for v in encoded),
         }
+
+
+def ensure_state_capture(env: gym.Env) -> gym.Env:
+    current = env
+    while isinstance(current, gym.Wrapper):
+        if isinstance(current, StateCaptureWrapper):
+            return env
+        current = current.env
+    return StateCaptureWrapper(env)

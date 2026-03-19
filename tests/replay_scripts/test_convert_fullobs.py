@@ -40,7 +40,6 @@ def _state_signature_no_carrying(state) -> str:
 env_id = "BabyAI-OneRoomS8-v0"
 dataset_id = "one-room-s8-local-convert-test-v0"
 episodes = 3
-max_episode_steps = 20
 
 state_path = Path("tmps/one_room_s8_info.hdf5")
 obs_path = Path("tmps/one_room_s8_data.hdf5")
@@ -53,26 +52,19 @@ converted_state_path = state_path.with_name(f"{converted_stem}{state_path.suffix
 ###############################################################################
 stage("collect")
 env = FullyObsWrapper(gym.make(env_id, render_mode="rgb_array"))
-collect_result = collect_dataset(
+collect_episodes, collect_steps = collect_dataset(
     env=env,
-    collect_state=True,
-    collect_observation=True,
     state_output_path=state_path,
     observation_output_path=obs_path,
-    dataset_id=dataset_id,
     max_episodes=episodes,
-    max_episode_steps=max_episode_steps,
     seed=42,
-    print_flag=False,
 )
-obs_result = collect_result["collect_observation"] or {}
 print(
     "collect_done "
-    f"| episodes={collect_result['episodes']} "
-    f"| steps={collect_result['steps']} "
-    f"| info_path={collect_result['collect_state']['path']} "
-    f"| obs_path={obs_result.get('path', '')} "
-    f"| local_minari_path={obs_result.get('minari_path', '')}"
+    f"| episodes={collect_episodes} "
+    f"| steps={collect_steps} "
+    f"| info_path={state_path} "
+    f"| obs_path={obs_path}"
 )
 
 
@@ -85,7 +77,7 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise ImportError("minari is required for test_convert_fullobs.py.") from exc
 
-local_dataset_id = str(obs_result.get("dataset_id", dataset_id))
+local_dataset_id = dataset_id
 dataset = minari.load_dataset(local_dataset_id)
 total_to_convert = max(0, min(int(episodes), len(dataset)))
 writer = StateDatasetWriter(output_path=converted_state_path, flush_interval=1)
