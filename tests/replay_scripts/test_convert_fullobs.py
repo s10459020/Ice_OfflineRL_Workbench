@@ -1,4 +1,3 @@
-from __future__ import annotations
 
 import hashlib
 import json
@@ -8,7 +7,7 @@ import warnings
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
-from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation, serialize_state_sequence
+from ice_offline.replay import StateDataset, convert_observation
 from minigrid.wrappers import FullyObsWrapper
 from ice_offline.tools import stage
 
@@ -79,7 +78,7 @@ except ImportError as exc:  # pragma: no cover
 local_dataset_id = dataset_id
 dataset = minari.load_dataset(local_dataset_id)
 total_to_convert = max(0, min(int(episodes), len(dataset)))
-writer = StateDatasetWriter(output_path=converted_state_path, flush_interval=1)
+writer = StateDataset(converted_state_path, mode="w", flush_interval=1)
 try:
     for episode_index in range(total_to_convert):
         states = convert_observation(dataset[episode_index].observations)
@@ -100,56 +99,36 @@ print(
 # STAGE: COMPARE
 ###############################################################################
 stage("compare")
-with StateDatasetReader(state_path) as original_reader, StateDatasetReader(converted_state_path) as converted_reader:
-    if original_reader.num_episodes != converted_reader.num_episodes:
+with StateDataset(state_path, mode="r") as original_state_manager, StateDataset(converted_state_path, mode="r") as converted_state_manager:
+    if original_state_manager.num_episodes() != converted_state_manager.num_episodes():
         raise RuntimeError(
-            f"episode count mismatch: original={original_reader.num_episodes} converted={converted_reader.num_episodes}"
+            f"episode count mismatch: original={original_state_manager.num_episodes()} converted={converted_state_manager.num_episodes()}"
         )
 
     all_equal = True
-    for episode_index in range(original_reader.num_episodes):
-        original_states = list(original_reader.iter_episode_states(episode_index))
-        converted_states = list(converted_reader.iter_episode_states(episode_index))
+    for episode_index in range(original_state_manager.num_episodes()):
+        original_states = list(original_state_manager.iter_episode_states(episode_index))
+        converted_states = list(converted_state_manager.iter_episode_states(episode_index))
         if len(original_states) != len(converted_states):
             raise RuntimeError(
                 f"episode length mismatch at episode={episode_index}: original={len(original_states)} converted={len(converted_states)}"
             )
 
-        no_carry0 = serialize_state_sequence(
-            original_states,
-            include_payload=False,
-            include_signature=True,
-            ignore_carrying=True,
-            normalize_agent_cell=True,
+        no_carry0 = original_state_manager.serialize_episode(
+            episode_index,
         )
-        no_carry1 = serialize_state_sequence(
-            converted_states,
-            include_payload=False,
-            include_signature=True,
-            ignore_carrying=True,
-            normalize_agent_cell=True,
+        no_carry1 = converted_state_manager.serialize_episode(
+            episode_index,
         )
-        equal = str(no_carry0.get("signature", "")) == str(no_carry1.get("signature", ""))
+        equal = str(no_carry0) == str(no_carry1)
         all_equal = all_equal and equal
-
-        full0 = serialize_state_sequence(original_states, include_payload=True, include_signature=False)
-        full1 = serialize_state_sequence(converted_states, include_payload=True, include_signature=False)
-        carrying_gap = 0
-        payload0 = full0.get("payload", [])
-        payload1 = full1.get("payload", [])
-        for i in range(min(len(payload0), len(payload1))):
-            c0 = payload0[i].get("carrying") if isinstance(payload0[i], dict) else None
-            c1 = payload1[i].get("carrying") if isinstance(payload1[i], dict) else None
-            if c0 != c1:
-                carrying_gap += 1
 
         mismatch = 0 if equal else len(original_states)
         print(
             f"episode={episode_index} "
             f"states={len(original_states)} "
             f"equal_no_carrying={equal} "
-            f"mismatch_no_carrying={mismatch} "
-            f"carrying_diff={carrying_gap}"
+            f"mismatch_no_carrying={mismatch}"
         )
 
 print(f"compare_done | all_equal_no_carrying={all_equal} | converted_info={converted_state_path}")

@@ -1,10 +1,11 @@
-from __future__ import annotations
 
 import json
 from typing import Any
 
 import gymnasium as gym
 from gymnasium import spaces
+from minigrid.core.grid import Grid
+from minigrid.core.world_object import WorldObj
 import numpy as np
 
 from ice_offline.tools.types import State, Transition
@@ -214,11 +215,6 @@ class StateReplayWrapper(gym.Wrapper):
 
     @staticmethod
     def _restore_grid(base_env: Any, encoded_grid: np.ndarray) -> None:
-        try:
-            from minigrid.core.grid import Grid
-        except ImportError as exc:  # pragma: no cover
-            raise ImportError("minigrid is required to restore grid state during replay.") from exc
-
         grid_array = np.asarray(encoded_grid, dtype=np.uint8)
         decoded = Grid.decode(grid_array)
         grid_obj = decoded[0] if isinstance(decoded, tuple) else decoded
@@ -237,11 +233,6 @@ class StateReplayWrapper(gym.Wrapper):
             encoded = json.loads(encoded)
         encoded_tuple = tuple(int(v) for v in encoded)
         if len(encoded_tuple) != 3:
-            return None
-
-        try:
-            from minigrid.core.world_object import WorldObj
-        except ImportError:
             return None
 
         obj = WorldObj.decode(*encoded_tuple)

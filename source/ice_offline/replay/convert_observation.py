@@ -1,36 +1,12 @@
-from __future__ import annotations
 
 import io
 from typing import Any
 
 import numpy as np
+from PIL import Image
+from minigrid.core.constants import OBJECT_TO_IDX
 
 from ice_offline.tools.types import State
-
-try:
-    from PIL import Image
-except ImportError as exc:  # pragma: no cover
-    Image = None
-    _PIL_IMPORT_ERROR = exc
-else:
-    _PIL_IMPORT_ERROR = None
-
-try:
-    from minigrid.core.constants import OBJECT_TO_IDX
-except ImportError:  # pragma: no cover
-    OBJECT_TO_IDX = {
-        "unseen": 0,
-        "empty": 1,
-        "wall": 2,
-        "floor": 3,
-        "door": 4,
-        "key": 5,
-        "ball": 6,
-        "box": 7,
-        "goal": 8,
-        "lava": 9,
-        "agent": 10,
-    }
 _AGENT_OBJECT_IDX = int(OBJECT_TO_IDX["agent"])
 
 
@@ -79,8 +55,6 @@ def _coerce_grid(image_value: Any) -> np.ndarray:
         return np.asarray(arr, dtype=np.uint8).copy()
 
     if arr.ndim == 1 and _looks_like_jpeg(arr):
-        if Image is None:  # pragma: no cover
-            raise ImportError("Pillow is required to decode JPEG-packed observations.") from _PIL_IMPORT_ERROR
         jpeg_bytes = bytes(np.asarray(arr, dtype=np.uint8).tolist())
         decoded = np.asarray(Image.open(io.BytesIO(jpeg_bytes)), dtype=np.uint8)
         if decoded.ndim == 3 and decoded.shape[-1] == 3:

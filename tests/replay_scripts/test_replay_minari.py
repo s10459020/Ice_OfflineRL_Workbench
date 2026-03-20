@@ -1,13 +1,11 @@
-from __future__ import annotations
 
 from pathlib import Path
 
 import gymnasium as gym
 import minigrid  # noqa: F401
 import minari
-from ice_offline.replay import StateDatasetReader, StateDatasetWriter, convert_observation
+from ice_offline.replay import DataMetadataManager, StateDataset, convert_observation
 from ice_offline.tools.types import Transition
-from ice_offline.replay.read_metadata import read_metadata, resolve_env_id
 from minigrid.wrappers import FullyObsWrapper
 from ice_offline.tools import stage
 
@@ -24,9 +22,10 @@ stage("load")
 if not metadata_path.exists():
     raise FileNotFoundError(f"metadata not found: {metadata_path}")
 
-metadata = read_metadata(metadata_path)
+metadata_manager = DataMetadataManager(metadata_path)
+metadata = metadata_manager.read()
 dataset_id = str(metadata.get("dataset_id", "unknown"))
-env_id = resolve_env_id(metadata)
+env_id = DataMetadataManager.resolve_env_id(metadata)
 dataset = minari.load_dataset(dataset_id)
 selected_count = len(dataset) if max_episodes is None else max(0, min(int(max_episodes), len(dataset)))
 print(
@@ -41,7 +40,7 @@ print(
 # STAGE: CONVERT
 ###############################################################################
 stage("convert")
-writer = StateDatasetWriter(output_path=state_dataset_path, flush_interval=1)
+writer = StateDataset(state_dataset_path, mode="w", flush_interval=1)
 try:
     for episode_index in range(selected_count):
         observations = dataset[episode_index].observations
@@ -69,8 +68,8 @@ print(
 stage("replay")
 replay_env = gym.make(env_id, render_mode="human")
 replay_env = FullyObsWrapper(replay_env)
-with StateDatasetReader(state_dataset_path) as reader:
-    state_sequences = reader.read(max_episodes=selected_count)
+with StateDataset(state_dataset_path, mode="r") as state_manager:
+    state_sequences = state_manager.read(max_episodes=selected_count)
     trajectories = [
         [Transition(action=0, reward=0.0) for _ in range(max(0, len(states) - 1))]
         for states in state_sequences

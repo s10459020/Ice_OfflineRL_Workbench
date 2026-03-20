@@ -3,8 +3,7 @@ from typing import Any, Callable
 
 import gymnasium as gym
 
-from ice_offline.replay import ObservationTrajectoryWriter, ensure_state_capture
-from ice_offline.replay.write_state_dataset import StateDatasetWriter
+from ice_offline.replay import DataTrajectoryManager, StateCollector
 from ice_offline.tools import ensure_render_quiet
 
 
@@ -31,18 +30,20 @@ def collect_dataset(
     if print_interval is not None and print_interval <= 0:
         raise ValueError("print_interval must be > 0 when provided.")
 
-    state_writer: StateDatasetWriter | None = None
+    state_collector: StateCollector | None = None
     if state_output_path is not None:
-        env = ensure_state_capture(env)
-        state_writer = StateDatasetWriter(
-            state_output_path, 
-            flush_interval=flush_interval
+        state_collector = StateCollector(
+            env,
+            output_path=state_output_path,
+            flush_interval=flush_interval,
         )
+        env = state_collector
 
-    observation_writer: ObservationTrajectoryWriter | None = None
+    observation_writer: DataTrajectoryManager | None = None
     if observation_output_path is not None:
-        observation_writer = ObservationTrajectoryWriter(
+        observation_writer = DataTrajectoryManager(
             observation_output_path,
+            mode="w",
             flush_interval=flush_interval,
         )
 
@@ -56,9 +57,6 @@ def collect_dataset(
             obs, info = env.reset(seed=None if seed is None else seed + episode)
             if render_interval == 1:
                 env.render()
-
-            if state_writer is not None:
-                state_writer.push_state(info["state"])
             if observation_writer is not None:
                 observation_writer.push_observation(obs)
 
@@ -69,8 +67,6 @@ def collect_dataset(
                 episode_step += 1
                 step += 1
 
-                if state_writer is not None:
-                    state_writer.push_state(info["state"])
                 if observation_writer is not None:
                     observation_writer.push_observation(next_obs)
                 if render_interval is not None and step % render_interval == 0:
@@ -83,8 +79,6 @@ def collect_dataset(
                     )
 
                 if terminated or truncated:
-                    if state_writer is not None:
-                        state_writer.end_episode()
                     if observation_writer is not None:
                         observation_writer.end_episode()
                     break
@@ -93,8 +87,7 @@ def collect_dataset(
         if observation_writer is not None:
             observation_writer.flush()
             observation_writer.close()
-        if state_writer is not None:
-            state_writer.flush()
-            state_writer.close()
+        if state_collector is not None:
+            state_collector.close_writer()
 
     return step
