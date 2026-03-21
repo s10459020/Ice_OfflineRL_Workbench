@@ -1,16 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
-
-import numpy as np
-
-
-@dataclass(frozen=True)
-class State:
-    mission: str
-    agent_pos: tuple[int, int]
-    agent_dir: int
-    grid: np.ndarray
-    carrying: dict[str, Any] | None
+from ice_offline.replay.state import State
 
 
 @dataclass(frozen=True)

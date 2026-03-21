@@ -1,5 +1,6 @@
 import gymnasium as gym
 import minigrid  # noqa: F401
+
 import minari
 from minigrid.wrappers import FullyObsWrapper
 

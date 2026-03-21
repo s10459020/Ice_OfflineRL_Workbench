@@ -4,12 +4,12 @@ import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.replay import StateCaptureWrapper
+from ice_offline.replay import StateRecordWrapper
 
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 env = FullyObsWrapper(env)
-env = StateCaptureWrapper(env)
+env = StateRecordWrapper(env)
 
 print("start | env=BabyAI-OneRoomS8-v0-fullobs | state_capture=on | render=human")
 try:
