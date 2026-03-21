@@ -3,7 +3,7 @@ from pathlib import Path
 import gymnasium as gym
 
 from ice_offline.agent import Agent
-from ice_offline.tools import ensure_render_quiet
+from ice_offline.tools import insert_render_quiet_innermost
 
 
 def train(
@@ -30,7 +30,7 @@ def train(
     if print_interval is not None and print_interval <= 0:
         raise ValueError("print_interval must be > 0 when provided.")
 
-    env = ensure_render_quiet(env)
+    env = insert_render_quiet_innermost(env)
     save_model_path = Path(save_model_dir) if save_model_dir is not None else None
 
     env_id = str(env.spec.id) if getattr(env, "spec", None) is not None else "env"

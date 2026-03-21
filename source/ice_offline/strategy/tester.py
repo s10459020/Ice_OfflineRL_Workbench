@@ -2,7 +2,7 @@ from typing import Any, Callable
 
 import gymnasium as gym
 
-from ice_offline.tools import ensure_render_quiet
+from ice_offline.tools import insert_render_quiet_innermost
 
 def test(
     env: gym.Env,
@@ -20,7 +20,7 @@ def test(
     if print_interval is not None and print_interval <= 0:
         raise ValueError("print_interval must be > 0 when provided.")
 
-    env = ensure_render_quiet(env)
+    env = insert_render_quiet_innermost(env)
     if policy is None:
         policy = lambda _obs: env.action_space.sample()
 

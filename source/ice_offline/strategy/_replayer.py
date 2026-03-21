@@ -2,7 +2,7 @@ import gymnasium as gym
 
 from ice_offline.replay import StateReplayWrapper
 from ice_offline.tools.types import State, Transition
-from ice_offline.tools import ensure_render_quiet
+from ice_offline.tools import insert_render_quiet_innermost
 
 
 def replay(
@@ -25,7 +25,7 @@ def replay(
     if not trajectories:
         raise ValueError("trajectories must contain at least one episode.")
 
-    env = ensure_render_quiet(env)
+    env = insert_render_quiet_innermost(env)
     replay_count = min(int(max_episodes), len(state_sequences), len(trajectories))
     replay_env = StateReplayWrapper(
         env=env,

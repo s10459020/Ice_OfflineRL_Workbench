@@ -22,15 +22,16 @@ class RenderQuietWrapper(gym.Wrapper):
         return self._run_without_render(self.env.step, action)
 
 
-def ensure_render_quiet(env: gym.Env) -> gym.Env:
-    """Ensure RenderQuietWrapper exists; insert closest to base env when possible."""
+def insert_render_quiet_innermost(env: gym.Env) -> gym.Env:
+    """Insert RenderQuietWrapper closest to base env.
+
+    This function always inserts (no existence check/dedup).
+    """
     if not isinstance(env, gym.Wrapper):
         return RenderQuietWrapper(env)
 
     current = env
     while isinstance(current, gym.Wrapper) and isinstance(current.env, gym.Wrapper):
         current = current.env
-
-    if not isinstance(current.env, RenderQuietWrapper):
-        current.env = RenderQuietWrapper(current.env)
+    current.env = RenderQuietWrapper(current.env)
     return env
