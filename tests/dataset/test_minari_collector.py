@@ -4,17 +4,7 @@ import minigrid  # noqa: F401
 import minari
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper
-
-
-# ====================
-# Console Helpers
-# ====================
-def print_stage(title: str) -> None:
-    bar = "=" * 52
-    print(f"\n{bar}")
-    print(f"[ {title} ]")
-    print(bar)
+from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper, print_stage
 
 
 # ====================

@@ -23,15 +23,18 @@ def run(
     print_interval: int | None = None,
     overwrite: bool = False,
 ) -> int:
+    # ---- Validate Inputs ----
     if re.fullmatch(r".+-v\d+", dataset_id) is None:
         raise ValueError("dataset_id must end with version suffix like '-v0', '-v1', ...")
 
+    # ---- Prepare Environment ----
     env = insert_render_quiet_innermost(env)
     env = MissionTextWrapper(env)
     env = NoJpegImageWrapper(env)
     env = StateRecordWrapper(env)
     env = minari.DataCollector(env, record_infos=True)
 
+    # ---- Collect Episodes ----
     steps = 0
     for episode in range(1, max_episodes + 1):
         obs, _ = env.reset(seed=None if seed is None else seed + episode)
@@ -59,6 +62,7 @@ def run(
                 break
             obs = next_obs
 
+    # ---- Create Dataset ----
     try:
         if overwrite:
             try:
@@ -78,4 +82,5 @@ def run(
     finally:
         env.close()
 
+    # ---- Return Metrics ----
     return steps

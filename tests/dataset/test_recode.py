@@ -5,24 +5,8 @@ import minari
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.replay import StateRecordWrapper
-from ice_offline.strategy import tester
-from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper
-
-
-# ====================
-# Config
-# ====================
-dataset_id = "test_recode-v0"
-
-
-# ====================
-# Console Helpers
-# ====================
-def print_stage(title: str) -> None:
-    bar = "=" * 52
-    print(f"\n{bar}")
-    print(f"[ {title} ]")
-    print(bar)
+from ice_offline.strategy import online_tester
+from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper, print_stage
 
 
 # ====================
@@ -45,7 +29,7 @@ collector = minari.DataCollector(make_env(), record_infos=True)
 
 # ---- Rollout ----
 print_stage("Rollout")
-steps = tester.run(
+steps = online_tester.run(
     collector,
     policy=lambda _obs: int(collector.action_space.sample()),
     max_episodes=3,
@@ -56,12 +40,12 @@ print(f"episode_steps={steps}")
 # ---- Create Dataset ----
 print_stage("Create Dataset")
 try:
-    minari.delete_dataset(dataset_id)
+    minari.delete_dataset("test_recode-v0")
 except Exception:
     pass
 
 dataset = collector.create_dataset(
-    dataset_id=dataset_id,
+    dataset_id="test_recode-v0",
     algorithm_name="random",
     author="local_test",
     author_email="local_test@example.com",

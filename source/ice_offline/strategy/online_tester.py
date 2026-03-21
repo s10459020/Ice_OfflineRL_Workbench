@@ -4,6 +4,7 @@ import gymnasium as gym
 
 from ice_offline.tools import insert_render_quiet_innermost
 
+
 def run(
     env: gym.Env,
     max_episodes: int = 100,
@@ -13,12 +14,16 @@ def run(
     render_interval: int | None = None,
     print_interval: int | None = None,
 ) -> int:
+    # ---- Prepare Environment ----
     env = insert_render_quiet_innermost(env)
 
+    # ---- Run Episodes ----
     step = 0
     for episode in range(1, max_episodes + 1):
         episode_seed = None if seed is None else seed + episode
         obs, _ = env.reset(seed=episode_seed)
+        if print_interval is not None:
+            print(f"reset episode={episode} seed={episode_seed}")
 
         if render_interval == 1:
             env.render()
@@ -45,4 +50,5 @@ def run(
 
             obs = next_obs
 
+    # ---- Return Metrics ----
     return step
