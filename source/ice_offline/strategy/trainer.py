@@ -6,7 +6,7 @@ from ice_offline.agent import Agent
 from ice_offline.tools import insert_render_quiet_innermost
 
 
-def train(
+def run(
     env: gym.Env,
     agent: Agent,
     max_steps: int = 100000,
@@ -19,17 +19,6 @@ def train(
     print_interval: int | None = None,
 ) -> int:
     """Generic online trainer for env-agent interaction."""
-    if max_steps <= 0:
-        raise ValueError("max_steps must be > 0.")
-    if max_episode_steps is not None and max_episode_steps <= 0:
-        raise ValueError("max_episode_steps must be > 0 when provided.")
-    if save_model_interval is not None and save_model_interval <= 0:
-        raise ValueError("save_model_interval must be > 0 when provided.")
-    if render_interval is not None and render_interval <= 0:
-        raise ValueError("render_interval must be > 0 when provided.")
-    if print_interval is not None and print_interval <= 0:
-        raise ValueError("print_interval must be > 0 when provided.")
-
     env = insert_render_quiet_innermost(env)
     save_model_path = Path(save_model_dir) if save_model_dir is not None else None
 

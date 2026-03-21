@@ -5,7 +5,7 @@ from ice_offline.tools.types import State, Transition
 from ice_offline.tools import insert_render_quiet_innermost
 
 
-def replay(
+def run(
     env: gym.Env,
     max_episodes: int = 3,
     state_sequences: list[list[State]] | None = None,
@@ -14,17 +14,6 @@ def replay(
     render_interval: int | None = None,
     print_interval: int | None = None,
 ) -> int:
-    if max_episodes <= 0:
-        raise ValueError("max_episodes must be > 0.")
-    if render_interval is not None and render_interval <= 0:
-        raise ValueError("render_interval must be > 0 when provided.")
-    if print_interval is not None and print_interval <= 0:
-        raise ValueError("print_interval must be > 0 when provided.")
-    if not state_sequences:
-        raise ValueError("state_sequences must contain at least one episode.")
-    if not trajectories:
-        raise ValueError("trajectories must contain at least one episode.")
-
     env = insert_render_quiet_innermost(env)
     replay_count = min(int(max_episodes), len(state_sequences), len(trajectories))
     replay_env = StateReplayWrapper(

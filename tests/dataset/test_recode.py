@@ -5,14 +5,14 @@ import minari
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.replay import StateRecordWrapper
-from ice_offline.strategy.tester import test as run_tester
+from ice_offline.strategy import tester
 from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper
 
 
 # ====================
 # Config
 # ====================
-dataset_id = "test_capture_dataset-v0"
+dataset_id = "test_recode-v0"
 
 
 # ====================
@@ -45,8 +45,9 @@ collector = minari.DataCollector(make_env(), record_infos=True)
 
 # ---- Rollout ----
 print_stage("Rollout")
-steps = run_tester(
+steps = tester.run(
     collector,
+    policy=lambda _obs: int(collector.action_space.sample()),
     max_episodes=3,
     seed=123,
 )

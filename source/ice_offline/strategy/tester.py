@@ -4,25 +4,16 @@ import gymnasium as gym
 
 from ice_offline.tools import insert_render_quiet_innermost
 
-def test(
+def run(
     env: gym.Env,
     max_episodes: int = 100,
     *,
     seed: int | None = None,
-    policy: Callable[[Any], int] | None = None,
+    policy: Callable[[Any], int],
     render_interval: int | None = None,
     print_interval: int | None = None,
 ) -> int:
-    if max_episodes <= 0:
-        raise ValueError("max_episodes must be > 0.")
-    if render_interval is not None and render_interval <= 0:
-        raise ValueError("render_interval must be > 0 when provided.")
-    if print_interval is not None and print_interval <= 0:
-        raise ValueError("print_interval must be > 0 when provided.")
-
     env = insert_render_quiet_innermost(env)
-    if policy is None:
-        policy = lambda _obs: env.action_space.sample()
 
     step = 0
     for episode in range(1, max_episodes + 1):

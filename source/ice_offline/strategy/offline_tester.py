@@ -9,7 +9,7 @@ def run(
     dataset: str | Any,
     max_episodes: int | None = None,
     *,
-    policy: Callable[[Any], int] | None = None,
+    policy: Callable[[Any], int],
     print_interval: int | None = None,
 ) -> dict[str, float | int]:
     """Offline test flow using a Minari dataset.
@@ -18,12 +18,8 @@ def run(
         dataset: Minari dataset id or loaded Minari dataset object.
         max_episodes: Max episodes to evaluate. `None` means all episodes.
         policy: Offline policy function `policy(observation) -> action`.
-                If None, uses behavior actions from dataset.
         print_interval: Print every N steps when provided.
     """
-    if print_interval is not None and print_interval <= 0:
-        raise ValueError("print_interval must be > 0 when provided.")
-
     ds = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
     total_episodes = int(ds.total_episodes)
     if total_episodes <= 0:
@@ -38,8 +34,6 @@ def run(
     if max_episodes is None:
         eval_episodes = total_episodes
     else:
-        if max_episodes <= 0:
-            raise ValueError("max_episodes must be > 0 when provided.")
         eval_episodes = min(int(max_episodes), total_episodes)
 
     total_steps = 0
@@ -55,7 +49,7 @@ def run(
         for t in range(len(act_seq)):
             obs_t = _obs_at(obs_seq, t)
             behavior_action = int(act_seq[t])
-            predicted_action = behavior_action if policy is None else int(policy(obs_t))
+            predicted_action = int(policy(obs_t))
             if predicted_action == behavior_action:
                 matched_actions += 1
 
@@ -84,4 +78,3 @@ def _obs_at(observations: Any, index: int) -> Any:
     if isinstance(observations, dict):
         return {k: np.asarray(v)[index] for k, v in observations.items()}
     return np.asarray(observations)[index]
-
