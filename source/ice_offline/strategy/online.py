@@ -1,4 +1,7 @@
+"""Online strategy APIs: environment-interaction train and test flows."""
+
 from pathlib import Path
+from typing import Any, Callable
 
 import gymnasium as gym
 
@@ -6,28 +9,81 @@ from ice_offline.agent import Agent
 from ice_offline.tools import insert_render_quiet_innermost
 
 
-def run(
+def test(
+    env: gym.Env,
+    policy: Callable[[Any], int],
+    max_episodes: int = 100,
+    *,
+    seed: int | None = None,
+    render_interval: int | None = None,
+    print_interval: int | None = None,
+) -> int:
+    """Run policy evaluation episodes directly on the environment."""
+    # Prepare wrappers and initialize counters.
+    env = insert_render_quiet_innermost(env)
+
+    step = 0
+    for episode in range(1, max_episodes + 1):
+        # Reset one episode with deterministic seed offset when provided.
+        episode_seed = None if seed is None else seed + episode
+        obs, _ = env.reset(seed=episode_seed)
+        
+        if print_interval == 1:
+            print(f"reset episode={episode} seed={episode_seed}")
+
+        if render_interval == 1:
+            env.render()
+
+        episode_step = 0
+        while True:
+            # Run policy action and advance one environment step.
+            action = int(policy(obs))
+            next_obs, reward, terminated, truncated, _ = env.step(action)
+            episode_step += 1
+            step += 1
+
+            if render_interval is not None and step % render_interval == 0:
+                env.render()
+
+            if print_interval is not None and step % print_interval == 0:
+                print(
+                    f"step={step} episode={episode} episode_step={episode_step} "
+                    f"action={action} reward={float(reward):.3f} "
+                    f"terminated={terminated} truncated={truncated}"
+                )
+
+            if terminated or truncated:
+                break
+
+            obs = next_obs
+
+    # Return total executed steps across episodes.
+    return step
+
+
+def train(
     env: gym.Env,
     agent: Agent,
     max_steps: int = 100000,
     *,
     seed: int | None = None,
-    max_episode_steps: int | None = None,
     save_model_dir: str | Path | None = None,
     save_model_interval: int | None = None,
     render_interval: int | None = None,
     print_interval: int | None = None,
 ) -> int:
     """Generic online trainer for env-agent interaction."""
+    # Prepare wrappers, output path, and save naming.
     env = insert_render_quiet_innermost(env)
-    save_model_path = Path(save_model_dir) if save_model_dir is not None else None
-
     env_id = str(env.spec.id) if getattr(env, "spec", None) is not None else "env"
+
+    save_model_path = Path(save_model_dir) if save_model_dir is not None else None
     save_model_name = f"{env_id}_{str(agent.agent_name)}"
 
     step = 0
     episode = 0
     while step < max_steps:
+        # Start a new episode and reset with optional deterministic seed.
         episode += 1
         episode_seed = None if seed is None else seed + episode
         obs, _ = env.reset(seed=episode_seed)
@@ -37,6 +93,7 @@ def run(
         episode_step = 0
         episode_reward = 0.0
         while True:
+            # Interact with environment and apply one TD-style agent update.
             action = int(agent.act(obs))
             next_obs, reward, terminated, truncated, _ = env.step(action)
             reward_value = float(reward)
@@ -63,11 +120,10 @@ def run(
                 break
             if done:
                 break
-            if max_episode_steps is not None and episode_step >= max_episode_steps:
-                break
 
             obs = next_obs
 
+    # Save final model snapshot after training loop completes.
     if save_model_path is not None and step > 0:
         agent.save(save_model_path, save_model_name)
 

@@ -5,7 +5,7 @@ import minari
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.replay import StateRecordWrapper
-from ice_offline.strategy import online_tester
+from ice_offline.strategy import online
 from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper, print_stage
 
 
@@ -29,7 +29,7 @@ collector = minari.DataCollector(make_env(), record_infos=True)
 
 # ---- Rollout ----
 print_stage("Rollout")
-steps = online_tester.run(
+steps = online.test(
     collector,
     policy=lambda _obs: int(collector.action_space.sample()),
     max_episodes=3,
