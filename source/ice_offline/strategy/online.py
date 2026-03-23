@@ -37,7 +37,7 @@ def test(
         episode_step = 0
         while True:
             # Run policy action and advance one environment step.
-            action = int(policy(obs))
+            action = policy(obs)
             next_obs, reward, terminated, truncated, _ = env.step(action)
             episode_step += 1
             step += 1
@@ -75,10 +75,10 @@ def train(
     """Generic online trainer for env-agent interaction."""
     # Prepare wrappers, output path, and save naming.
     env = insert_render_quiet_innermost(env)
-    env_id = str(env.spec.id) if getattr(env, "spec", None) is not None else "env"
+    env_id = env.spec.id
 
     save_model_path = Path(save_model_dir) if save_model_dir is not None else None
-    save_model_name = f"{env_id}_{str(agent.agent_name)}"
+    save_model_name = f"{env_id}_{agent.agent_name}"
 
     step = 0
     episode = 0
@@ -94,10 +94,10 @@ def train(
         episode_reward = 0.0
         while True:
             # Interact with environment and apply one TD-style agent update.
-            action = int(agent.act(obs))
+            action = agent.act(obs)
             next_obs, reward, terminated, truncated, _ = env.step(action)
-            reward_value = float(reward)
-            done = bool(terminated or truncated)
+            reward_value = reward
+            done = terminated or truncated
 
             episode_step += 1
             step += 1

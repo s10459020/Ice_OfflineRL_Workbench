@@ -13,7 +13,7 @@ from ice_offline.tools import print_stage
 print_stage("Collect")
 
 env = gym.make("BabyAI-OneRoomS8-v0")
-policy = lambda _obs: int(env.action_space.sample())
+policy = lambda _obs: env.action_space.sample()
 
 steps = data.collect(
     env=env,

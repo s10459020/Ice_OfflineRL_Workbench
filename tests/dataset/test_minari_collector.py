@@ -30,11 +30,7 @@ def _rollout_one_episode(
     steps = 0
     for _ in range(max_steps):
         action = collector.action_space.sample()
-        try:
-            obs, _, terminated, truncated, _ = collector.step(action)
-        except Exception:
-            print(f"step_exception_at={steps + 1} action={action}")
-            raise
+        obs, _, terminated, truncated, _ = collector.step(action)
 
         _ = obs
         print(f"step={steps + 1} action={action}")

@@ -42,10 +42,10 @@ def view(
         truncations = trajectory.truncations
 
         for episode_step in range(len(actions)):
-            action = int(actions[episode_step])
-            reward = float(rewards[episode_step])
-            terminated = bool(terminations[episode_step])
-            truncated = bool(truncations[episode_step])
+            action = actions[episode_step]
+            reward = rewards[episode_step]
+            terminated = terminations[episode_step]
+            truncated = truncations[episode_step]
 
             step += 1
             if print_interval is not None and step % print_interval == 0:
@@ -90,7 +90,7 @@ def collect(
 
         episode_step = 0
         while True:
-            action = int(policy(obs))
+            action = policy(obs)
             next_obs, reward, terminated, truncated, _ = env.step(action)
             episode_step += 1
             steps += 1
@@ -101,7 +101,7 @@ def collect(
             if print_interval is not None and steps % print_interval == 0:
                 print(
                     f"step={steps} episode={episode} episode_step={episode_step} "
-                    f"action={action} reward={float(reward):.3f} "
+                    f"action={action} reward={reward:.3f} "
                     f"terminated={terminated} truncated={truncated}"
                 )
 

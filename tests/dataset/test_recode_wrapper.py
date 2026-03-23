@@ -31,7 +31,7 @@ collector = minari.DataCollector(make_env(), record_infos=True)
 print_stage("Rollout")
 steps = online.test(
     collector,
-    policy=lambda _obs: int(collector.action_space.sample()),
+    policy=lambda _obs: collector.action_space.sample(),
     max_episodes=3,
     seed=123,
 )

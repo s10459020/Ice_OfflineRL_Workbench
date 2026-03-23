@@ -36,10 +36,7 @@ print(f"iterated_count={len(iterated)}")
 # ---- API: filter_episodes ----
 print_stage("API: filter_episodes")
 filtered = dataset.filter_episodes(lambda ep: len(ep.actions) >= 5)
-try:
-    filtered_count = len(filtered)  # type: ignore[arg-type]
-except Exception:
-    filtered_count = len(list(filtered))
+filtered_count = len(list(filtered))
 print(f"filtered_count={filtered_count}")
 
 # ---- API: set_seed ----
@@ -58,11 +55,8 @@ recovered_env.close()
 
 # ---- API: update_dataset_from_buffer ----
 print_stage("API: update_dataset_from_buffer")
-try:
-    dataset.update_dataset_from_buffer([])
-    print("update_dataset_from_buffer_ok=true (no-op buffer)")
-except Exception as exc:
-    print(f"update_dataset_from_buffer_ok=false reason={exc}")
+dataset.update_dataset_from_buffer([])
+print("update_dataset_from_buffer_ok=true (no-op buffer)")
 
 # ---- Done ----
 print_stage("Done")

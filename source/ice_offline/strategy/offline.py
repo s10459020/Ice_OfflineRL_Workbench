@@ -19,14 +19,14 @@ def train(
     """Train an agent from offline transitions in a Minari dataset."""
     # Resolve dataset id/object and bound episode count.
     dataset_obj = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
-    total_episodes = int(dataset_obj.total_episodes)
+    total_episodes = dataset_obj.total_episodes
     if total_episodes <= 0:
         return 0
 
     if max_episodes is None:
         train_episodes = total_episodes
     else:
-        train_episodes = min(int(max_episodes), total_episodes)
+        train_episodes = min(max_episodes, total_episodes)
         
     trajectory_indices = _select_trajectory_indices(
         dataset_obj=dataset_obj,
@@ -40,10 +40,10 @@ def train(
         # Load one episode arrays for transition-wise agent updates.
         trajectory = dataset_obj[trajectory_index]
         obs_seq = _materialize_obs_seq(trajectory.observations)
-        act_seq = np.asarray(trajectory.actions)
-        rew_seq = np.asarray(trajectory.rewards, dtype=np.float64)
-        term_seq = np.asarray(trajectory.terminations, dtype=bool)
-        trunc_seq = np.asarray(trajectory.truncations, dtype=bool)
+        act_seq = trajectory.actions
+        rew_seq = trajectory.rewards
+        term_seq = trajectory.terminations
+        trunc_seq = trajectory.truncations
 
         for episode_step in range(len(act_seq)):
             # Convert dataset row into (s, a, r, s', done) and update agent.
@@ -76,7 +76,7 @@ def validation(
     """Validation against behavior actions and rewards in a Minari dataset."""
     # Resolve dataset id/object and bound evaluation episodes.
     dataset_obj = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
-    total_episodes = int(dataset_obj.total_episodes)
+    total_episodes = dataset_obj.total_episodes
     if total_episodes <= 0:
         return {
             "episodes": 0,
@@ -89,7 +89,7 @@ def validation(
     if max_episodes is None:
         eval_episodes = total_episodes
     else:
-        eval_episodes = min(int(max_episodes), total_episodes)
+        eval_episodes = min(max_episodes, total_episodes)
         
     trajectory_indices = _select_trajectory_indices(
         dataset_obj=dataset_obj,
@@ -106,18 +106,18 @@ def validation(
         # Compare policy output with behavior actions trajectory by trajectory.
         trajectory = dataset_obj[trajectory_index]
         obs_seq = _materialize_obs_seq(trajectory.observations)
-        act_seq = np.asarray(trajectory.actions)
-        rew_seq = np.asarray(trajectory.rewards, dtype=np.float64)
+        act_seq = trajectory.actions
+        rew_seq = trajectory.rewards
 
         for episode_step in range(len(act_seq)):
             # Accumulate action agreement and reward statistics per step.
             obs = obs_seq[episode_step]
-            behavior_action = int(act_seq[episode_step])
-            predicted_action = int(policy(obs))
+            behavior_action = act_seq[episode_step]
+            predicted_action = policy(obs)
             if predicted_action == behavior_action:
                 matched_actions += 1
 
-            reward = float(rew_seq[episode_step])
+            reward = rew_seq[episode_step]
             total_reward += reward
             total_steps += 1
 
@@ -132,22 +132,21 @@ def validation(
     return {
         "episodes": eval_episodes,
         "steps": total_steps,
-        "total_reward": float(total_reward),
-        "mean_episode_reward": float(mean_episode_reward),
-        "action_match_rate": float(action_match_rate),
+        "total_reward": total_reward,
+        "mean_episode_reward": mean_episode_reward,
+        "action_match_rate": action_match_rate,
     }
 
 
 def _materialize_obs_seq(observations: Any) -> list[Any]:
     # Convert batched observation container into per-step observations once.
     if isinstance(observations, dict):
-        observation_arrays = {k: np.asarray(v) for k, v in observations.items()}
-        step_count = len(next(iter(observation_arrays.values()))) if observation_arrays else 0
+        step_count = len(next(iter(observations.values()))) if observations else 0
         return [
-            {k: observation_arrays[k][episode_step] for k in observation_arrays}
+            {k: observations[k][episode_step] for k in observations}
             for episode_step in range(step_count)
         ]
-    return list(np.asarray(observations))
+    return list(observations)
 
 
 def _select_trajectory_indices(
@@ -157,8 +156,8 @@ def _select_trajectory_indices(
     seed: int | None,
 ) -> list[int]:
     # Build deterministic front-slice or random sampled trajectory indices.
-    candidate_indices = np.asarray(dataset_obj.episode_indices, dtype=np.int64)
+    candidate_indices = list(dataset_obj.episode_indices)
     if sample_flag:
         random_generator = np.random.default_rng(seed)
         return random_generator.choice(candidate_indices, size=replay_episodes, replace=False).tolist()
-    return candidate_indices[:replay_episodes].tolist()
+    return candidate_indices[:replay_episodes]

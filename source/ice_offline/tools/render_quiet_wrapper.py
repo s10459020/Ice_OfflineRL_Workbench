@@ -6,14 +6,12 @@ class RenderQuietWrapper(gym.Wrapper):
 
     def _run_without_render(self, fn, *args, **kwargs):
         base_env = self.env.unwrapped
-        original_render_mode = getattr(base_env, "render_mode", None)
-        if hasattr(base_env, "render_mode"):
-            base_env.render_mode = None
+        original_render_mode = base_env.render_mode
+        base_env.render_mode = None
         try:
             return fn(*args, **kwargs)
         finally:
-            if hasattr(base_env, "render_mode"):
-                base_env.render_mode = original_render_mode
+            base_env.render_mode = original_render_mode
 
     def reset(self, **kwargs):
         return self._run_without_render(self.env.reset, **kwargs)
@@ -31,7 +29,7 @@ def insert_render_quiet_innermost(env: gym.Env) -> gym.Env:
         return RenderQuietWrapper(env)
 
     current = env
-    while isinstance(current, gym.Wrapper) and isinstance(current.env, gym.Wrapper):
+    while isinstance(current.env, gym.Wrapper):
         current = current.env
     current.env = RenderQuietWrapper(current.env)
     return env

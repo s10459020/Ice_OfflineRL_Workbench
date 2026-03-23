@@ -13,15 +13,11 @@ class StateIOWrapper(gym.Wrapper):
 
     def get_state(self) -> State:
         base = self.env.unwrapped
-        x, y = base.agent_pos
+        carrying = None if base.carrying is None else tuple(base.carrying.encode())
 
-        carrying = None
-        if base.carrying is not None:
-            carrying = tuple(int(v) for v in base.carrying.encode())
-            
         return State(
             mission=base.mission,
-            agent_pos=(x, y),
+            agent_pos=base.agent_pos,
             agent_dir=base.agent_dir,
             grid=np.asarray(base.grid.encode(), dtype=np.int8),
             carrying=carrying,
@@ -30,14 +26,14 @@ class StateIOWrapper(gym.Wrapper):
     def set_state(self, state: State) -> None:
         base = self.env.unwrapped
         decoded = Grid.decode(np.asarray(state.grid, dtype=np.uint8))
-        
-        carrying = None
-        if state.carrying is None:
-            carrying = WorldObj.decode(*tuple(int(v) for v in state.carrying))
 
-        base.grid = decoded[0] if isinstance(decoded, tuple) else decoded
-        base.agent_pos = tuple(state.agent_pos)
-        base.agent_dir = int(state.agent_dir)
+        carrying = None
+        if state.carrying is not None:
+            carrying = WorldObj.decode(*state.carrying)
+
+        base.grid = decoded[0]
+        base.agent_pos = state.agent_pos
+        base.agent_dir = state.agent_dir
         base.mission = state.mission
         base.carrying = carrying
 

@@ -11,7 +11,7 @@ from ice_offline.replay.state import State
 # MiniGrid default action ids.
 _ACTION_PICKUP = 3
 _ACTION_DROP = 4
-_OBJECT_EMPTY = int(OBJECT_TO_IDX["empty"])
+_OBJECT_EMPTY = OBJECT_TO_IDX["empty"]
 
 
 def convert_fullobs(
@@ -74,9 +74,9 @@ def _convert_trajectory_to_states(trajectory: Any) -> list[State]:
     for curr_index in range(num_states):
         states.append(
             State(
-                mission=str(mission_seq[curr_index]),
+                mission=mission_seq[curr_index],
                 agent_pos=agent_positions[curr_index],
-                agent_dir=int(dir_seq[curr_index]),
+                agent_dir=dir_seq[curr_index],
                 grid=grids[curr_index],
                 carrying=carrying_seq[curr_index],
             )
@@ -117,18 +117,18 @@ def _front_cell(grid: np.ndarray, agent_pos: tuple[int, int], agent_dir: int) ->
     direction = DIR_TO_VEC[agent_dir]
     x = agent_pos[0] + direction[0]
     y = agent_pos[1] + direction[1]
-    return np.asarray(grid[x, y])
+    return grid[x, y]
 
 
 def _find_agent_pos(grid: np.ndarray, curr_index: int) -> tuple[int, int]:
     agent_object_idx = OBJECT_TO_IDX["agent"]
-    agent_coords = np.argwhere(np.asarray(grid[:, :, 0]) == agent_object_idx)
+    agent_coords = np.argwhere(grid[:, :, 0] == agent_object_idx)
     x, y = agent_coords[0]
     return x, y
 
 
 def _merge_infos_with_state(trajectory: Any, states: list[State]) -> dict[str, Any]:
-    infos = dict(trajectory.infos) or {}
+    infos = trajectory.infos or {}
     serialized_states = [state.serialize() for state in states]
     infos["state"] = {
         "mission": [state["mission"] for state in serialized_states],
@@ -142,15 +142,15 @@ def _merge_infos_with_state(trajectory: Any, states: list[State]) -> dict[str, A
 
 def to_nojpeg_observations(observations: Any) -> Any:
     converted = dict(observations)
-    converted["image"] = np.asarray(converted["image"], dtype=np.int16)
+    converted["image"] = converted["image"].astype(np.int16, copy=False)
     return converted
 
 
 def to_nojpeg_observation_space(observation_space: Any) -> Any:
     spaces_dict = dict(observation_space.spaces)
     image_space = spaces_dict["image"]
-    image_low = int(np.min(image_space.low))
-    image_high = int(np.max(image_space.high))
+    image_low = image_space.low.min()
+    image_high = image_space.high.max()
     spaces_dict["image"] = spaces.Box(
         low=image_low,
         high=image_high,

@@ -11,8 +11,8 @@ class NoJpegImageWrapper(gym.ObservationWrapper):
         base = env.observation_space
         spaces_dict = dict(base.spaces)
         image_space = spaces_dict["image"]
-        image_low = int(np.min(image_space.low))
-        image_high = int(np.max(image_space.high))
+        image_low = np.min(image_space.low)
+        image_high = np.max(image_space.high)
         spaces_dict["image"] = spaces.Box(
             low=image_low,
             high=image_high,
