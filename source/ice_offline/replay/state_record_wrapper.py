@@ -16,15 +16,17 @@ class StateRecordWrapper(gym.Wrapper):
     def reset(self, **kwargs: Any):
         obs, info = self.env.reset(**kwargs)
         state = self._get_state()
+        
         info = dict(info)
-        info["state"] = state.serialize_state()
+        info["state"] = state.serialize()
         return obs, info
 
     def step(self, action):
         obs, reward, terminated, truncated, info = self.env.step(action)
         state = self._get_state()
+        
         info = dict(info)
-        info["state"] = state.serialize_state()
+        info["state"] = state.serialize()
         return obs, reward, terminated, truncated, info
 
 

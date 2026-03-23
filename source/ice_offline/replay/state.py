@@ -12,7 +12,7 @@ class State:
     grid: np.ndarray
     carrying: tuple[int, int, int] | None
 
-    def serialize_state(self) -> dict[str, Any]:
+    def serialize(self) -> dict[str, Any]:
         return {
             "mission": str(self.mission),
             "agent_pos": np.asarray(
@@ -20,12 +20,12 @@ class State:
                 dtype=np.int16,
             ),
             "agent_dir": int(self.agent_dir),
-            "grid": np.asarray(self.grid, dtype=np.uint8),
+            "grid": np.asarray(self.grid, dtype=np.int16),
             "carrying": np.asarray(self.carrying or (0, 0, 0), dtype=np.int16),
         }
 
     @classmethod
-    def deserialize_state(cls, payload: dict[str, Any]) -> "State":
+    def from_serialized(cls, payload: dict[str, Any]) -> "State":
         encoded = tuple(int(v) for v in np.asarray(payload["carrying"]).tolist())
         carrying = None if encoded == (0, 0, 0) else encoded
 
@@ -36,6 +36,6 @@ class State:
             mission=str(payload["mission"]),
             agent_pos=agent_pos_xy,
             agent_dir=int(payload["agent_dir"]),
-            grid=np.asarray(payload["grid"], dtype=np.uint8),
+            grid=np.asarray(payload["grid"], dtype=np.int16),
             carrying=carrying,
         )

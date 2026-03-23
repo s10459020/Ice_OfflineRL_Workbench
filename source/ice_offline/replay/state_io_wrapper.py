@@ -23,7 +23,7 @@ class StateIOWrapper(gym.Wrapper):
             mission=base.mission,
             agent_pos=(x, y),
             agent_dir=base.agent_dir,
-            grid=np.asarray(base.grid.encode(), dtype=np.uint8),
+            grid=np.asarray(base.grid.encode(), dtype=np.int8),
             carrying=carrying,
         )
 

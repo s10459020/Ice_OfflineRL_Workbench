@@ -40,12 +40,12 @@ print(f"episode_steps={steps}")
 # ---- Create Dataset ----
 print_stage("Create Dataset")
 try:
-    minari.delete_dataset("test_recode-v0")
+    minari.delete_dataset("test_recode_wrapper-v0")
 except Exception:
     pass
 
 dataset = collector.create_dataset(
-    dataset_id="test_recode-v0",
+    dataset_id="test_recode_wrapper-v0",
     algorithm_name="random",
     author="local_test",
     author_email="local_test@example.com",
