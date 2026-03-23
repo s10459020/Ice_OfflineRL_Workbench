@@ -7,13 +7,14 @@ import gymnasium as gym
 import minari
 
 from ice_offline.replay import StateRecordWrapper
+from ice_offline.replay.state_inject_wrapper import StateInjectWrapper
 from ice_offline.tools import (
     MissionTextWrapper,
     NoJpegImageWrapper,
     insert_render_quiet_innermost,
 )
 
-def view(
+def offline_view(
     dataset: str | Any,
     max_episodes: int | None = None,
     *,
@@ -56,6 +57,50 @@ def view(
                 )
 
     return step
+
+
+def online_view(
+    env: gym.Env,
+    dataset: str | Any,
+    max_episodes: int = 3,
+    *,
+    seed: int | None = None,
+    random_episode: bool = False,
+    render_interval: int | None = None,
+    print_interval: int | None = None,
+) -> int:
+    """Replay a dataset through an env-like online loop using StateInjectWrapper."""
+    env = insert_render_quiet_innermost(env)
+    env = StateInjectWrapper(env, dataset=dataset, random_episode=random_episode)
+
+    steps = 0
+    for episode in range(1, max_episodes + 1):
+        obs, _ = env.reset(seed=None if seed is None else seed + episode)
+        if render_interval == 1:
+            env.render()
+
+        episode_step = 0
+        while True:
+            next_obs, reward, terminated, truncated, info = env.step(None)
+            episode_step += 1
+            steps += 1
+
+            if render_interval is not None and steps % render_interval == 0:
+                env.render()
+
+            if print_interval is not None and steps % print_interval == 0:
+                print(
+                    f"step={steps} episode={episode} episode_step={episode_step} "
+                    f"action={info.get('action')} reward={reward:.3f} "
+                    f"terminated={terminated} truncated={truncated}"
+                )
+
+            if terminated or truncated:
+                break
+            obs = next_obs
+
+    env.close()
+    return steps
 
 
 def collect(
