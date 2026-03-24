@@ -60,7 +60,6 @@ def offline_view(
 
 
 def online_view(
-    env: gym.Env,
     dataset: str | Any,
     max_episodes: int = 3,
     *,
@@ -70,8 +69,10 @@ def online_view(
     print_interval: int | None = None,
 ) -> int:
     """Replay a dataset through an env-like online loop using StateInjectWrapper."""
+    minari_dataset = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
+    env = minari_dataset.recover_environment(render_mode="human")
     env = insert_render_quiet_innermost(env)
-    env = StateInjectWrapper(env, dataset=dataset, random_episode=random_episode)
+    env = StateInjectWrapper(env, dataset=minari_dataset, random_episode=random_episode)
 
     steps = 0
     for episode in range(1, max_episodes + 1):
