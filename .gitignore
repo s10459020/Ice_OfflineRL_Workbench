@@ -23,6 +23,8 @@ htmlcov/
 .venv/
 venv/
 env/
+!source/ice_offline/env/
+!source/ice_offline/env/**
 
 # Editor/OS noise
 .vscode/

@@ -6,9 +6,9 @@ from typing import Any, Callable
 import gymnasium as gym
 import minari
 
-from ice_offline.replay import StateRecordWrapper
-from ice_offline.replay.state_inject_wrapper import StateInjectWrapper
-from ice_offline.tools import (
+from ice_offline.env.replay import StateRecordWrapper
+from ice_offline.env.replay.state_inject_wrapper import StateInjectWrapper
+from ice_offline.env.common import (
     MissionTextWrapper,
     NoJpegImageWrapper,
     insert_render_quiet_innermost,

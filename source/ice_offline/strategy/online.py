@@ -6,7 +6,7 @@ from typing import Any, Callable
 import gymnasium as gym
 
 from ice_offline.agent import Agent
-from ice_offline.tools import insert_render_quiet_innermost
+from ice_offline.env.common import insert_render_quiet_innermost
 
 
 def test(

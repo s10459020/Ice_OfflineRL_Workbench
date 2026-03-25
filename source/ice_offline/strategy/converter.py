@@ -6,7 +6,7 @@ from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 import numpy as np
 from minari.data_collector.episode_buffer import EpisodeBuffer
 
-from ice_offline.replay.state import State
+from ice_offline.env.model import State
 
 # MiniGrid default action ids.
 _ACTION_PICKUP = 3
