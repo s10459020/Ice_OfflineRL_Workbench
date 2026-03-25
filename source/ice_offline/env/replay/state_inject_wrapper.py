@@ -7,7 +7,7 @@ import minari
 import numpy as np
 
 from ice_offline.env.model import State
-from ice_offline.env.replay.state_io_wrapper import ensure_state_io
+from ice_offline.env.common import ensure_state_io
 
 
 class StateInjectWrapper(gym.Wrapper):
@@ -28,7 +28,7 @@ class StateInjectWrapper(gym.Wrapper):
         self._rng = np.random.default_rng()
         self._current_episode_pos: int | None = None
 
-        self._set_state = self.get_wrapper_attr("set_state")
+        self._set_state = self.env.set_state
         self._state_index: int | None = None
 
         self._infos: list[dict[str, Any]] | None = None

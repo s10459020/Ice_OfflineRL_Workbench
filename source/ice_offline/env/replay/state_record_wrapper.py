@@ -3,7 +3,7 @@ from typing import Any
 import gymnasium as gym
 
 from ice_offline.env.model import State
-from ice_offline.env.replay.state_io_wrapper import ensure_state_io
+from ice_offline.env.common import ensure_state_io
 
 
 class StateRecordWrapper(gym.Wrapper):
@@ -11,7 +11,7 @@ class StateRecordWrapper(gym.Wrapper):
 
     def __init__(self, env: gym.Env):
         super().__init__(ensure_state_io(env))
-        self._get_state = self.get_wrapper_attr("get_state")
+        self._get_state = self.env.get_state
 
     def reset(self, **kwargs: Any):
         obs, info = self.env.reset(**kwargs)

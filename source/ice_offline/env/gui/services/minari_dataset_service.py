@@ -7,7 +7,7 @@ import numpy as np
 
 from ice_offline.env.model import EpisodeInfo
 from ice_offline.env.model import State
-from ice_offline.env.replay.state_io_wrapper import ensure_state_io
+from ice_offline.env.common import ensure_state_io
 
 
 class MinariDatasetService:
@@ -19,7 +19,7 @@ class MinariDatasetService:
         self._env = ensure_state_io(self._env)
         # OrderEnforcer requires at least one reset before render.
         self._env.reset()
-        self._set_state = self._env.get_wrapper_attr("set_state")
+        self._set_state = self._env.set_state
 
     def list_episodes(self) -> list[EpisodeInfo]:
         episodes: list[EpisodeInfo] = []
