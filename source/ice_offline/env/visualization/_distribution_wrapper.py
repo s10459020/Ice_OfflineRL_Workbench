@@ -7,7 +7,8 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from .render_overlay_wrapper import OverlayDependentWrapper
+from .distribution import DistributionOverlayInterface
+from .overlay_wrapper import UnitWrapperInterface
 
 class MiniGridDirection(IntEnum):
     """MiniGrid direction order used by environment internals."""
@@ -353,13 +354,13 @@ class _StateVRenderer(BaseRenderer):
         self._render_pickup_marker(tile_img_u8, cell_values, quantile_edges)
 
 
-class DistributionWrapper(OverlayDependentWrapper):
+class DistributionWrapper(UnitWrapperInterface):
     """
     Render-time value distribution overlay for MiniGrid.
 
     Wrapper responsibilities:
     1) Build per-state value map from a user-provided value function.
-    2) Register one overlay callback via OverlayDependentWrapper.
+    2) Register one overlay callback via UnitWrapperInterface.
     3) Delegate actual drawing to a fixed renderer chosen at initialization.
     """
 
@@ -399,6 +400,12 @@ class DistributionWrapper(OverlayDependentWrapper):
         self._value_fn = value_fn
         # Rendering style is fixed at initialization time.
         self._renderer = self._RENDERER_TYPES[style]()
+        self._overlay_unit = DistributionOverlayInterface(self._renderer)
+        self._overlay_unit.set_grid_spec(
+            grid_width=self._base_env.width,
+            grid_height=self._base_env.height,
+            tile_size=self._base_env.tile_size,
+        )
 
     # ---------------------------------------------------------------------
     # Env lifecycle
@@ -421,6 +428,7 @@ class DistributionWrapper(OverlayDependentWrapper):
             self._quantile_edges = self._renderer.compute_quantile_edges(shown_values)
         else:
             self._quantile_edges.fill(0.0)
+        self._overlay_unit.set_frame_values(self._values, self._quantile_edges)
         return self.env.render()
 
     # ---------------------------------------------------------------------
@@ -499,21 +507,5 @@ class DistributionWrapper(OverlayDependentWrapper):
     # Overlay callback
     # ---------------------------------------------------------------------
     def _overlay_callback(self, tile_img: np.ndarray, ctx: dict[str, Any]) -> None:
-        """Overlay callback invoked by RenderOverlayWrapper per tile."""
-        if self._values is None:
-            return
-        i = ctx["i"]
-        j = ctx["j"]
-        # Distribution map excludes border walls, so shift indices by -1.
-        if i == 0 or j == 0:
-            return
-        ix = i - 1
-        iy = j - 1
-        if ix < 0 or iy < 0 or ix >= self._values.shape[0] or iy >= self._values.shape[1]:
-            return
-        cell_values = self._values[ix, iy]
-        self._renderer.render(
-            tile_img,
-            cell_values,
-            self._quantile_edges,
-        )
+        """Overlay callback invoked by OverlayWrapper per tile."""
+        self._overlay_unit.overlay_tile(tile_img, ctx)

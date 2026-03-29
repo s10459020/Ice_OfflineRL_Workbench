@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class OverlayLoaderInterface(Protocol):
+    def load_points(self, points) -> None: ...
+    def load_states(self, states) -> None: ...

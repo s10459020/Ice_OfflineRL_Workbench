@@ -3,28 +3,16 @@
 **/.*/
 
 # Project outputs
-tmps/
-model/
+/tmps/
+/model/
 
 # Python caches and artifacts
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
-*.so
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-htmlcov/
-.coverage
-.coverage.*
 
-# Virtual environments
-.venv/
-venv/
 
 # Editor/OS noise
-.vscode/
-.idea/
 Thumbs.db
 Desktop.ini
