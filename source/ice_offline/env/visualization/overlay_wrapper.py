@@ -3,6 +3,7 @@ from typing import Any
 
 import gymnasium as gym
 from ice_offline.env.common.state_io_wrapper import ensure_state_io
+from ice_offline.env.model import State
 import numpy as np
 from .overlay_engine import (
     OverlayEngine,
@@ -16,13 +17,13 @@ class UnitWrapperInterface:
     def on_env(self, env: gym.Env) -> None:
         pass
 
-    def on_reset(self, state: Any) -> None:
+    def on_reset(self, state: State) -> None:
         pass
 
-    def on_step(self, state: Any, action: Any, step_out: Any) -> None:
+    def on_step(self, state: State, action: Any, step_out: Any) -> None:
         pass
 
-    def on_render(self, state: Any) -> None:
+    def on_render(self, state: State) -> None:
         pass
 
 
@@ -92,4 +93,3 @@ class OverlayWrapper(gym.Wrapper):
             grid_height=int(env_self.height),
             tile_size=tile_size,
         )
-

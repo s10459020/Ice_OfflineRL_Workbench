@@ -1,4 +1,10 @@
-from collections.abc import Iterable
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class TrailPoint:
+    pos: tuple[int, int]
+    direction: int
 
 
 class Trail:
@@ -23,10 +29,6 @@ class Trail:
         if overflow > 0:
             del self.points[:overflow]
         self._cells_dirty = True
-
-    def extend(self, points: Iterable[tuple[tuple[int, int], int]]) -> None:
-        for pos, direction in points:
-            self.push(pos, direction)
 
     def _build_cells(self) -> None:
         if not self._cells_dirty:
@@ -58,14 +60,3 @@ class Trail:
     def get_cell(self, i: int, j: int) -> list[tuple[int, int]]:
         self._build_cells()
         return self.points_by_cell.get((int(i), int(j)), [])
-
-    def get_cell_hash(self, i: int, j: int) -> int:
-        entries = self.get_cell(i, j)
-        h = 0
-        for level, trail_dir in entries:
-            token = (((int(level) & 0x7) << 2) | (int(trail_dir) & 0x3)) + 1
-            h = (h * 33) + token
-        return h
-
-    def count(self) -> int:
-        return len(self.points)
