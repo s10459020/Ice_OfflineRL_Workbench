@@ -2,8 +2,8 @@ from enum import IntEnum
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from typing import Any
-import time
 import numpy as np
+from ice_offline.tools import now_ns, ns_to_ms
 
 
 # ------------------------------------------------------------------
@@ -196,9 +196,9 @@ class OverlayEngine:
                 x1 = (i + 1) * tile_size
                 tile_img = np.zeros((tile_size, tile_size, 3), dtype=np.uint8)
                 for layer, render in self._iter_enabled_renders():
-                    t0 = time.perf_counter_ns()
+                    t0 = now_ns()
                     render.render_tile(tile_img, i=i, j=j, tile_size=tile_size)
-                    self._profile_ns_by_layer[layer] += time.perf_counter_ns() - t0
+                    self._profile_ns_by_layer[layer] += now_ns() - t0
                 frame_img[y0:y1, x0:x1, :] = tile_img
         return frame_img
 
@@ -207,13 +207,13 @@ class OverlayEngine:
         for layer, render in self._iter_enabled_renders():
             frame_fn = getattr(render, "render_frame", None)
             if callable(frame_fn):
-                t0 = time.perf_counter_ns()
+                t0 = now_ns()
                 frame_fn(frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-                self._profile_ns_by_layer[layer] += time.perf_counter_ns() - t0
+                self._profile_ns_by_layer[layer] += now_ns() - t0
                 continue
-            t0 = time.perf_counter_ns()
+            t0 = now_ns()
             self._apply_tile_loop(render.render_tile, frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-            self._profile_ns_by_layer[layer] += time.perf_counter_ns() - t0
+            self._profile_ns_by_layer[layer] += now_ns() - t0
         return frame_img
 
     # ------------------------------------------------------------------
@@ -224,10 +224,10 @@ class OverlayEngine:
             self._profile_ns_by_layer[layer] = 0
 
     def get_profile_ms_by_layer(self) -> dict[int, float]:
-        return {layer: ns / 1_000_000.0 for layer, ns in self._profile_ns_by_layer.items()}
+        return {layer: ns_to_ms(ns) for layer, ns in self._profile_ns_by_layer.items()}
 
     def get_profile_total_ms(self) -> float:
-        return sum(self._profile_ns_by_layer.values()) / 1_000_000.0
+        return ns_to_ms(sum(self._profile_ns_by_layer.values()))
 
     # ------------------------------------------------------------------
     # cache key

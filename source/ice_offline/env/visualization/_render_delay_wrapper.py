@@ -1,5 +1,5 @@
-import time
 import gymnasium as gym
+from ice_offline.tools import now_s
 
 
 class RenderDelayWrapper(gym.Wrapper):
@@ -20,7 +20,7 @@ class RenderDelayWrapper(gym.Wrapper):
 
     def _render_now(self):
         if self._interval > 0.0:
-            self._next_render_time = time.perf_counter() + self._interval
+            self._next_render_time = now_s() + self._interval
         return self.env.render()
 
     def reset(self, **kwargs):
@@ -30,7 +30,7 @@ class RenderDelayWrapper(gym.Wrapper):
         return result
 
     def render(self):
-        if time.perf_counter() < self._next_render_time:
+        if now_s() < self._next_render_time:
             return None
 
         return self._render_now()

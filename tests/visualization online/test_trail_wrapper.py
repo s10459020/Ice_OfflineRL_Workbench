@@ -1,11 +1,11 @@
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
-import time
 
 from ice_offline.env.visualization import BasicUnit, OverlayWrapper
 from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.env.visualization.unit_trail import TrailUnit
+from ice_offline.tools import now_ns, ns_to_ms
 
 
 def run_trail_wrapper(episodes: int = 3, max_steps: int = 100) -> None:
@@ -24,9 +24,11 @@ def run_trail_wrapper(episodes: int = 3, max_steps: int = 100) -> None:
 
             while not (done or truncated) and steps < max_steps:
                 action = int(np.random.randint(0, 4))
-                t0 = time.perf_counter_ns()
+
+                t0 = now_ns()
                 _, reward, done, truncated, _ = env.step(action)
-                step_ms = (time.perf_counter_ns() - t0) / 1_000_000.0
+                step_ms = ns_to_ms(now_ns() - t0)
+                
                 before_layer_ms = env.engine.get_profile_ms_by_layer()
                 env.render()
                 after_layer_ms = env.engine.get_profile_ms_by_layer()
@@ -49,7 +51,6 @@ def run_trail_wrapper(episodes: int = 3, max_steps: int = 100) -> None:
                 steps += 1
 
             per_layer = env.engine.get_profile_ms_by_layer()
-            print(f"overlay_total_ms={env.engine.get_profile_total_ms():.3f}")
             print(f"overlay_layer_ms={per_layer}")
             print(f"=== episode {episode} end: steps={steps} done={done} truncated={truncated} ===")
     finally:

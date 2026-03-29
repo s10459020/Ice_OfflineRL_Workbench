@@ -1,6 +1,6 @@
-"""Offline strategy APIs: train from dataset and validation against dataset behavior."""
+"""Offline strategy APIs: train from dataset."""
 
-from typing import Any, Callable
+from typing import Any
 
 import numpy as np
 
@@ -62,80 +62,6 @@ def train(
                 )
 
     return total_steps
-
-
-def validation(
-    dataset: str | Any,
-    max_episodes: int | None = None,
-    *,
-    policy: Callable[[Any], int],
-    seed: int | None = None,
-    sample_flag: bool = False,
-    print_interval: int | None = None,
-) -> dict[str, float | int]:
-    """Validation against behavior actions and rewards in a Minari dataset."""
-    # Resolve dataset id/object and bound evaluation episodes.
-    dataset_obj = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
-    total_episodes = dataset_obj.total_episodes
-    if total_episodes <= 0:
-        return {
-            "episodes": 0,
-            "steps": 0,
-            "total_reward": 0.0,
-            "mean_episode_reward": 0.0,
-            "action_match_rate": 0.0,
-        }
-
-    if max_episodes is None:
-        eval_episodes = total_episodes
-    else:
-        eval_episodes = min(max_episodes, total_episodes)
-        
-    trajectory_indices = _select_trajectory_indices(
-        dataset_obj=dataset_obj,
-        replay_episodes=eval_episodes,
-        sample_flag=sample_flag,
-        seed=seed,
-    )
-
-    total_steps = 0
-    total_reward = 0.0
-    matched_actions = 0
-
-    for episode_index, trajectory_index in enumerate(trajectory_indices):
-        # Compare policy output with behavior actions trajectory by trajectory.
-        trajectory = dataset_obj[trajectory_index]
-        obs_seq = _materialize_obs_seq(trajectory.observations)
-        act_seq = trajectory.actions
-        rew_seq = trajectory.rewards
-
-        for episode_step in range(len(act_seq)):
-            # Accumulate action agreement and reward statistics per step.
-            obs = obs_seq[episode_step]
-            behavior_action = act_seq[episode_step]
-            predicted_action = policy(obs)
-            if predicted_action == behavior_action:
-                matched_actions += 1
-
-            reward = rew_seq[episode_step]
-            total_reward += reward
-            total_steps += 1
-
-            if print_interval is not None and total_steps % print_interval == 0:
-                print(
-                    f"step={total_steps} episode={episode_index} episode_step={episode_step + 1} "
-                    f"action={predicted_action} behavior={behavior_action} reward={reward:.3f}"
-                )
-
-    mean_episode_reward = total_reward / eval_episodes if eval_episodes > 0 else 0.0
-    action_match_rate = matched_actions / total_steps if total_steps > 0 else 0.0
-    return {
-        "episodes": eval_episodes,
-        "steps": total_steps,
-        "total_reward": total_reward,
-        "mean_episode_reward": mean_episode_reward,
-        "action_match_rate": action_match_rate,
-    }
 
 
 def _materialize_obs_seq(observations: Any) -> list[Any]:
