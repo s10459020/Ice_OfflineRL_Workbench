@@ -5,13 +5,8 @@ from .distribution import DistributionOverlayInterface
 from .overlay_loader import OverlayLoaderInterface
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
-from .overlay_engine import UnitRenderInterface
+from .overlay_engine import UnitRenderer
 from .overlay_wrapper import OverlayWrapper, UnitWrapperInterface
-from ..model.trail import Trail
-from .trail_loader import TrailLoader
-from .trail_render import TrailRenderer
-from .trail_unit import TrailUnit
-from .trail_wrapper import TrailWrapper
 
 __all__ = [
     "BasicUnit",
@@ -20,16 +15,11 @@ __all__ = [
     "OverlayEngine",
     "OverlayLoaderInterface",
     "UnitRegisterInterface",
-    "UnitRenderInterface",
+    "UnitRenderer",
     "UnitWrapperInterface",
     "OverlayWrapper",
     "RenderDelayWrapper",
     "RenderLayer",
-    "Trail",
-    "TrailLoader",
-    "TrailRenderer",
-    "TrailUnit",
-    "TrailWrapper",
 ]
 
 

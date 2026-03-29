@@ -10,77 +10,82 @@ from minigrid.utils.rendering import (
     point_in_triangle,
     rotate_fn,
 )
+
 from ice_offline.env.model.state import State
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
-from .overlay_engine import UnitRenderInterface
+from .overlay_engine import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
 
 
-class _BackgroundRender(UnitRenderInterface):
+class _BackgroundRender(UnitRenderer):
     def __init__(self) -> None:
-        self._cached_key: tuple[int, int, int] = (0, 0, 0)
-        self._cached_frame: np.ndarray = np.zeros(0)
+        super().__init__(cache_one_tile=True, cache_one_frame=True)
 
-    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int) -> None:
+    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
         fill_coords(tile_img, point_in_rect(0.0, 0.031, 0.0, 1.0), (100, 100, 100))
         fill_coords(tile_img, point_in_rect(0.0, 1.0, 0.0, 0.031), (100, 100, 100))
 
-    def overlay_frame(self, frame_img: np.ndarray, *, w: int, h: int, tile_size: int) -> None:
-        key = (w, h, tile_size)
-        if self._cached_key == key:
-            frame_img[:, :, :] = self._cached_frame
-            return
+    def cache_tile_key(self, *, i: int, j: int, tile_size: int) -> tuple[int]:
+        return (tile_size,)
 
-        cached = np.zeros((h * tile_size, w * tile_size, 3), dtype=np.uint8)
-        super().overlay_frame(cached, w, h, tile_size)
-        self._cached_key = key
-        self._cached_frame = cached
-        frame_img[:, :, :] = cached
+    def cache_frame_key(self, *, grid_width: int, grid_height: int, tile_size: int) -> tuple[int, int, int]:
+        return (grid_width, grid_height, tile_size)
 
 
-class _ObjectsRender(UnitRenderInterface):
+class _ObjectsRender(UnitRenderer):
     def __init__(self) -> None:
+        super().__init__()
         self.grid: Grid | None = None
 
-    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int) -> None:
+    def condition_tile(self, *, i: int, j: int, tile_size: int) -> bool:
         if self.grid is None:
-            return
+            return False
+        return self.grid.get(i, j) is not None
 
+    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
         cell = self.grid.get(i, j)
-        if cell is None:
-            return
         cell.render(tile_img)
 
+    def cache_tile_key(self, *, i: int, j: int, tile_size: int) -> tuple[int, int, int, int] | None:
+        cell = self.grid.get(i, j)
+        t0, t1, t2 = cell.encode()
+        return (tile_size, int(t0), int(t1), int(t2))
 
-class _AgentRender(UnitRenderInterface):
+
+class _AgentRender(UnitRenderer):
     def __init__(self) -> None:
+        super().__init__()
         self.agent_pos: tuple[int, int] = (0, 0)
         self.agent_dir: int = 0
 
-    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int) -> None:
-        if self.agent_pos != (i, j):
-            return
+    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
         tri_fn = point_in_triangle((0.12, 0.19), (0.87, 0.50), (0.12, 0.81))
         tri_fn = rotate_fn(tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * self.agent_dir)
         fill_coords(tile_img, tri_fn, (255, 0, 0))
+
+    def condition_tile(self, *, i: int, j: int, tile_size: int) -> bool:
+        return self.agent_pos == (i, j)
+
+    def cache_tile_key(self, *, i: int, j: int, tile_size: int):
+        return (tile_size, int(self.agent_dir))
 
     def overlay_frame(self, frame_img: np.ndarray, *, grid_width: int, grid_height: int, tile_size: int) -> None:
         i, j = self.agent_pos
         y0, y1 = j * tile_size, (j + 1) * tile_size
         x0, x1 = i * tile_size, (i + 1) * tile_size
-        self.overlay_tile(frame_img[y0:y1, x0:x1, :], i=i, j=j)
+        self.overlay_tile(frame_img[y0:y1, x0:x1, :], i=i, j=j, tile_size=tile_size)
 
 
-class _HighlightRender(UnitRenderInterface):
+class _HighlightRender(UnitRenderer):
     def __init__(self) -> None:
+        super().__init__()
         self._env: gym.Env | None = None
         self.highlight_mask: np.ndarray | None = None
 
     def refresh_mask(self) -> None:
         env = self._env
-
         _, vis_mask = env.gen_obs_grid()
         f_vec = env.dir_vec
         r_vec = env.right_vec
@@ -96,7 +101,7 @@ class _HighlightRender(UnitRenderInterface):
                     mask[abs_i, abs_j] = True
         self.highlight_mask = mask
 
-    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int) -> None:
+    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
         if self.highlight_mask is None:
             return
         if self.highlight_mask[i, j]:
@@ -125,5 +130,5 @@ class BasicUnit(UnitWrapperInterface, UnitRegisterInterface):
 
         grid, _ = Grid.decode(np.asarray(state.grid, dtype=np.int16))
         self._objects.grid = grid
-        
+
         self._highlight.refresh_mask()

@@ -87,10 +87,6 @@ class OverlayWrapper(gym.Wrapper):
         tile_size: int = 32,
         agent_pov: bool = False,
     ) -> np.ndarray:
-        state = self._get_state()
-        for unit in self._units:
-            unit.on_render(state)
-
         return self.engine.render_over_tile(
             grid_width=int(env_self.width),
             grid_height=int(env_self.height),
