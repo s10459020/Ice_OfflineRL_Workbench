@@ -1,9 +1,10 @@
 from enum import IntEnum
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from types import MethodType
 from typing import Any
 import numpy as np
-from ice_offline.tools import now_ns, ns_to_ms
+from ice_offline.tools import ns_to_ms
+from .overlay_renderer import OverlayRenderer
 
 
 # ------------------------------------------------------------------
@@ -17,136 +18,6 @@ class RenderLayer(IntEnum):
     HIGHLIGHT = 50
 
 
-class UnitRenderer(ABC):
-    def __init__(
-        self,
-        *,
-        cache_one_tile: bool = False,
-        cache_one_frame: bool = False,
-    ) -> None:
-        self._cache_one_tile = bool(cache_one_tile)
-        self._cache_one_frame = bool(cache_one_frame)
-        self._tile_cache: dict[Any, tuple[np.ndarray, np.ndarray]] = {}
-        self._frame_cache: dict[Any, np.ndarray] = {}
-        self._one_tile_key: Any = None
-        self._one_tile_img: np.ndarray | None = None
-        self._one_tile_mask: np.ndarray | None = None
-        self._one_frame_key: Any = None
-        self._one_frame_img: np.ndarray | None = None
-
-    # ------------------------------------------------------------------
-    # cache
-    # ------------------------------------------------------------------
-    def condition_tile(self, *, i: int, j: int, tile_size: int) -> bool:
-        return True
-
-    def condition_frame(self, *, grid_width: int, grid_height: int, tile_size: int) -> bool:
-        return True
-
-    def cache_tile_key(self, *, i: int, j: int, tile_size: int) -> Any | None:
-        return None
-
-    def cache_frame_key(self, *, grid_width: int, grid_height: int, tile_size: int) -> Any | None:
-        return None
-
-    # ------------------------------------------------------------------
-    # render
-    # ------------------------------------------------------------------
-    def render_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
-        if not self.condition_tile(i=i, j=j, tile_size=tile_size):
-            return
-
-        key = self.cache_tile_key(i=i, j=j, tile_size=tile_size)
-        if key is None:
-            self.overlay_tile(tile_img, i=i, j=j, tile_size=tile_size)
-            return
-
-        if self._cache_one_tile:
-            if self._one_tile_key == key:
-                tile_img[self._one_tile_mask] = self._one_tile_img[self._one_tile_mask]
-                return
-            drawn = np.zeros_like(tile_img)
-            self.overlay_tile(drawn, i=i, j=j, tile_size=tile_size)
-            mask = np.any(drawn != 0, axis=2)
-            self._one_tile_key = key
-            self._one_tile_img = drawn
-            self._one_tile_mask = mask
-            tile_img[mask] = drawn[mask]
-            return
-
-        cached = self._tile_cache.get(key)
-        if cached is not None:
-            drawn, mask = cached
-            tile_img[mask] = drawn[mask]
-            return
-
-        drawn = np.zeros_like(tile_img)
-        self.overlay_tile(drawn, i=i, j=j, tile_size=tile_size)
-        mask = np.any(drawn != 0, axis=2)
-        self._tile_cache[key] = (drawn, mask)
-        tile_img[mask] = drawn[mask]
-
-    def render_frame(
-        self,
-        frame_img: np.ndarray,
-        *,
-        grid_width: int,
-        grid_height: int,
-        tile_size: int,
-    ) -> None:
-        if not self.condition_frame(grid_width=grid_width, grid_height=grid_height, tile_size=tile_size):
-            return
-
-        key = self.cache_frame_key(grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-        if key is None:
-            self.overlay_frame(frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-            return
-
-        if self._cache_one_frame:
-            if self._one_frame_key == key and self._one_frame_img is not None:
-                frame_img[:, :, :] = self._one_frame_img
-                return
-            drawn = np.zeros_like(frame_img)
-            self.overlay_frame(drawn, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-            self._one_frame_key = key
-            self._one_frame_img = drawn
-            frame_img[:, :, :] = drawn
-            return
-
-        cached = self._frame_cache.get(key)
-        if cached is not None:
-            frame_img[:, :, :] = cached
-            return
-
-        drawn = np.zeros_like(frame_img)
-        self.overlay_frame(drawn, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-        self._frame_cache[key] = drawn
-        frame_img[:, :, :] = drawn
-
-    # ------------------------------------------------------------------
-    # overlay
-    # ------------------------------------------------------------------
-    @abstractmethod
-    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None: ...
-    
-    def overlay_frame(
-        self,
-        frame_img: np.ndarray,
-        *,
-        grid_width: int,
-        grid_height: int,
-        tile_size: int,
-    ) -> None:
-        for j in range(grid_height):
-            y0 = j * tile_size
-            y1 = (j + 1) * tile_size
-            for i in range(grid_width):
-                x0 = i * tile_size
-                x1 = (i + 1) * tile_size
-                tile_view = frame_img[y0:y1, x0:x1, :]
-                self.render_tile(tile_view, i=i, j=j, tile_size=tile_size)
-
-
 class UnitRegisterInterface(ABC):
     @abstractmethod
     def register_engine(self, engine: "OverlayEngine") -> None: ...
@@ -155,11 +26,13 @@ class UnitRegisterInterface(ABC):
 class OverlayEngine:
     """Overlay render registry and execution engine (layer-ordered + enabled)."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, base_env: Any, overlay_mode: str = "tile") -> None:
         self._enabled_by_layer: dict[int, bool] = {}
         self._render_by_layer: dict[int, Any] = {}
         self._render_by_order: list[Any] = []
         self._timing_ns_by_layer: dict[int, int] = {}
+        self._renderer = OverlayRenderer()
+        self._patch_get_frame(base_env, overlay_mode=overlay_mode)
 
     def register(self, layer: int, render: Any, *, enabled: bool = True) -> None:
         tile_fn = getattr(render, "overlay_tile", None)
@@ -183,41 +56,89 @@ class OverlayEngine:
             raise KeyError(f"overlay layer not registered: {layer}")
         return self._enabled_by_layer[layer]
 
+    def _rebuild_overlay_order(self) -> None:
+        self._render_by_order = [
+            render
+            for layer, render in sorted(self._render_by_layer.items(), key=lambda item: item[0])
+            if self._enabled_by_layer.get(layer, True)
+        ]
+
     # ------------------------------------------------------------------
     # render
     # ------------------------------------------------------------------
     def render_over_tile(self, *, grid_width: int, grid_height: int, tile_size: int) -> np.ndarray:
-        frame_img = np.zeros((grid_height * tile_size, grid_width * tile_size, 3), dtype=np.uint8)
-        for j in range(grid_height):
-            y0 = j * tile_size
-            y1 = (j + 1) * tile_size
-            for i in range(grid_width):
-                x0 = i * tile_size
-                x1 = (i + 1) * tile_size
-                tile_img = np.zeros((tile_size, tile_size, 3), dtype=np.uint8)
-                for layer, render in self._iter_enabled_renders():
-                    t0 = now_ns()
-                    render.render_tile(tile_img, i=i, j=j, tile_size=tile_size)
-                    self._timing_ns_by_layer[layer] += now_ns() - t0
-                frame_img[y0:y1, x0:x1, :] = tile_img
+        renders_by_layer = self._iter_enabled_renders()
+        renders = [render for _, render in renders_by_layer]
+        frame_img, timing = self._renderer.render_over_tile(
+            renders,
+            grid_width=grid_width,
+            grid_height=grid_height,
+            tile_size=tile_size,
+        )
+        for (layer, _), elapsed in zip(renders_by_layer, timing):
+            self._timing_ns_by_layer[layer] += elapsed
         return frame_img
 
     def render_over_frame(self, *, grid_width: int, grid_height: int, tile_size: int) -> np.ndarray:
-        frame_img = np.zeros((grid_height * tile_size, grid_width * tile_size, 3), dtype=np.uint8)
-        for layer, render in self._iter_enabled_renders():
-            frame_fn = getattr(render, "render_frame", None)
-            if callable(frame_fn):
-                t0 = now_ns()
-                frame_fn(frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-                self._timing_ns_by_layer[layer] += now_ns() - t0
-                continue
-            t0 = now_ns()
-            self._apply_tile_loop(render.render_tile, frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-            self._timing_ns_by_layer[layer] += now_ns() - t0
+        renders_by_layer = self._iter_enabled_renders()
+        renders = [render for _, render in renders_by_layer]
+        frame_img, timing = self._renderer.render_over_frame(
+            renders,
+            grid_width=grid_width,
+            grid_height=grid_height,
+            tile_size=tile_size,
+        )
+        for (layer, _), elapsed in zip(renders_by_layer, timing):
+            self._timing_ns_by_layer[layer] += elapsed
         return frame_img
 
+    def _iter_enabled_renders(self) -> list[tuple[int, Any]]:
+        return [
+            (layer, render)
+            for layer, render in sorted(self._render_by_layer.items(), key=lambda item: item[0])
+            if self._enabled_by_layer.get(layer, True)
+        ]
+
     # ------------------------------------------------------------------
-    # overlay
+    # patch
+    # ------------------------------------------------------------------
+    def _overlay_get_frame_over_tile(
+        self,
+        env_self: Any,
+        _highlight: bool = True,
+        tile_size: int = 7,
+        _agent_pov: bool = False,
+    ) -> np.ndarray:
+        return self.render_over_tile(
+            grid_width=int(env_self.width),
+            grid_height=int(env_self.height),
+            tile_size=tile_size,
+        )
+
+    def _overlay_get_frame_over_frame(
+        self,
+        env_self: Any,
+        _highlight: bool = True,
+        tile_size: int = 7,
+        _agent_pov: bool = False,
+    ) -> np.ndarray:
+        return self.render_over_frame(
+            grid_width=int(env_self.width),
+            grid_height=int(env_self.height),
+            tile_size=tile_size,
+        )
+
+    def _patch_get_frame(self, base_env: Any, *, overlay_mode: str = "tile") -> None:
+        if overlay_mode == "tile":
+            base_env.get_frame = MethodType(self._overlay_get_frame_over_tile, base_env)
+            return
+        if overlay_mode == "frame":
+            base_env.get_frame = MethodType(self._overlay_get_frame_over_frame, base_env)
+            return
+        raise ValueError("overlay_mode must be 'tile' or 'frame'")
+
+    # ------------------------------------------------------------------
+    # timing
     # ------------------------------------------------------------------
     def reset_timing(self) -> None:
         for layer in self._timing_ns_by_layer:
@@ -228,38 +149,3 @@ class OverlayEngine:
 
     def get_timing_total_ms(self) -> float:
         return ns_to_ms(sum(self._timing_ns_by_layer.values()))
-
-    # ------------------------------------------------------------------
-    # cache key
-    # ------------------------------------------------------------------
-    @staticmethod
-    def _apply_tile_loop(
-        tile_fn: Callable[..., None],
-        frame_img: np.ndarray,
-        *,
-        grid_width: int,
-        grid_height: int,
-        tile_size: int,
-    ) -> None:
-        for j in range(grid_height):
-            y0 = j * tile_size
-            y1 = (j + 1) * tile_size
-            for i in range(grid_width):
-                x0 = i * tile_size
-                x1 = (i + 1) * tile_size
-                tile_view = frame_img[y0:y1, x0:x1, :]
-                tile_fn(tile_view, i=i, j=j)
-
-    def _rebuild_overlay_order(self) -> None:
-        self._render_by_order = [
-            render
-            for layer, render in sorted(self._render_by_layer.items(), key=lambda item: item[0])
-            if self._enabled_by_layer.get(layer, True)
-        ]
-
-    def _iter_enabled_renders(self) -> list[tuple[int, Any]]:
-        return [
-            (layer, render)
-            for layer, render in sorted(self._render_by_layer.items(), key=lambda item: item[0])
-            if self._enabled_by_layer.get(layer, True)
-        ]

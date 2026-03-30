@@ -15,7 +15,7 @@ from ice_offline.env.model.state import State
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
-from .overlay_engine import UnitRenderer
+from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
 
 

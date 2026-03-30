@@ -5,7 +5,7 @@ from .distribution import DistributionOverlayInterface
 from .overlay_loader import OverlayLoaderInterface
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
-from .overlay_engine import UnitRenderer
+from .overlay_renderer import OverlayRenderer, UnitRenderer
 from .overlay_wrapper import OverlayWrapper, UnitWrapperInterface
 
 __all__ = [
@@ -14,6 +14,7 @@ __all__ = [
     "DistributionOverlayInterface",
     "OverlayEngine",
     "OverlayLoaderInterface",
+    "OverlayRenderer",
     "UnitRegisterInterface",
     "UnitRenderer",
     "UnitWrapperInterface",

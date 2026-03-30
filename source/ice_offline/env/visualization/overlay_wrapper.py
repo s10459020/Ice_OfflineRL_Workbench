@@ -1,10 +1,8 @@
-from types import MethodType
 from typing import Any
 
 import gymnasium as gym
 from ice_offline.env.common.state_io_wrapper import ensure_state_io
 from ice_offline.env.model import State
-import numpy as np
 from .overlay_engine import (
     OverlayEngine,
 )
@@ -37,7 +35,7 @@ class OverlayWrapper(gym.Wrapper):
     3) Apply overlays in sorted order (layer, id).
     """
 
-    def __init__(self, env: gym.Env, units: list[Any] | None = None) -> None:
+    def __init__(self, env: gym.Env, units: list[Any] | None = None, *, overlay_mode: str = "tile") -> None:
         units = list(units or [])
         for unit in units:
             if not isinstance(unit, UnitWrapperInterface) or not isinstance(unit, UnitRegisterInterface):
@@ -48,7 +46,7 @@ class OverlayWrapper(gym.Wrapper):
         self._base_env = self.env.unwrapped
         self._get_state = self.env.env.get_state
 
-        self.engine = OverlayEngine()
+        self.engine = OverlayEngine(base_env=self._base_env, overlay_mode=overlay_mode)
         self._units: list[Any] = units
         for unit in self._units:
             unit.on_env(self._base_env)
@@ -56,7 +54,6 @@ class OverlayWrapper(gym.Wrapper):
 
     def reset(self, **kwargs):
         out = self.env.reset(**kwargs)
-        self._patch_get_frame()  # MiniGrid may recreate internals on reset.
         state = self._get_state()
         for unit in self._units:
             unit.on_reset(state)
@@ -74,22 +71,3 @@ class OverlayWrapper(gym.Wrapper):
         for unit in self._units:
             unit.on_render(state)
         return self.env.render()
-
-    # ------------------------------------------------------------------
-    # Patched MiniGridEnv.get_frame callback
-    # ------------------------------------------------------------------
-    def _patch_get_frame(self) -> None:
-        self._base_env.get_frame = MethodType(self._overlay_get_frame, self._base_env)
-
-    def _overlay_get_frame(
-        self,
-        env_self: Any,
-        highlight: bool = True,
-        tile_size: int = 32,
-        agent_pov: bool = False,
-    ) -> np.ndarray:
-        return self.engine.render_over_tile(
-            grid_width=int(env_self.width),
-            grid_height=int(env_self.height),
-            tile_size=tile_size,
-        )
