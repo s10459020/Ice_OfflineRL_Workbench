@@ -159,7 +159,7 @@ class OverlayEngine:
         self._enabled_by_layer: dict[int, bool] = {}
         self._render_by_layer: dict[int, Any] = {}
         self._render_by_order: list[Any] = []
-        self._profile_ns_by_layer: dict[int, int] = {}
+        self._timing_ns_by_layer: dict[int, int] = {}
 
     def register(self, layer: int, render: Any, *, enabled: bool = True) -> None:
         tile_fn = getattr(render, "overlay_tile", None)
@@ -169,7 +169,7 @@ class OverlayEngine:
             raise ValueError(f"overlay layer already registered: {layer}")
         self._render_by_layer[layer] = render
         self._enabled_by_layer[layer] = enabled
-        self._profile_ns_by_layer[layer] = 0
+        self._timing_ns_by_layer[layer] = 0
         self._rebuild_overlay_order()
 
     def set_enabled(self, layer: int, enabled: bool) -> None:
@@ -198,7 +198,7 @@ class OverlayEngine:
                 for layer, render in self._iter_enabled_renders():
                     t0 = now_ns()
                     render.render_tile(tile_img, i=i, j=j, tile_size=tile_size)
-                    self._profile_ns_by_layer[layer] += now_ns() - t0
+                    self._timing_ns_by_layer[layer] += now_ns() - t0
                 frame_img[y0:y1, x0:x1, :] = tile_img
         return frame_img
 
@@ -209,25 +209,25 @@ class OverlayEngine:
             if callable(frame_fn):
                 t0 = now_ns()
                 frame_fn(frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-                self._profile_ns_by_layer[layer] += now_ns() - t0
+                self._timing_ns_by_layer[layer] += now_ns() - t0
                 continue
             t0 = now_ns()
             self._apply_tile_loop(render.render_tile, frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-            self._profile_ns_by_layer[layer] += now_ns() - t0
+            self._timing_ns_by_layer[layer] += now_ns() - t0
         return frame_img
 
     # ------------------------------------------------------------------
     # overlay
     # ------------------------------------------------------------------
-    def reset_profile(self) -> None:
-        for layer in self._profile_ns_by_layer:
-            self._profile_ns_by_layer[layer] = 0
+    def reset_timing(self) -> None:
+        for layer in self._timing_ns_by_layer:
+            self._timing_ns_by_layer[layer] = 0
 
-    def get_profile_ms_by_layer(self) -> dict[int, float]:
-        return {layer: ns_to_ms(ns) for layer, ns in self._profile_ns_by_layer.items()}
+    def get_timing_ms_by_layer(self) -> dict[int, float]:
+        return {layer: ns_to_ms(ns) for layer, ns in self._timing_ns_by_layer.items()}
 
-    def get_profile_total_ms(self) -> float:
-        return ns_to_ms(sum(self._profile_ns_by_layer.values()))
+    def get_timing_total_ms(self) -> float:
+        return ns_to_ms(sum(self._timing_ns_by_layer.values()))
 
     # ------------------------------------------------------------------
     # cache key
