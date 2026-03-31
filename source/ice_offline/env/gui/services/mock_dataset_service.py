@@ -14,3 +14,6 @@ class MockDatasetService:
             EpisodeInfo(episode_id=1, step_count=10),
             EpisodeInfo(episode_id=2, step_count=15),
         ]
+
+    def set_trail_enabled(self, enabled: bool) -> None:
+        del enabled

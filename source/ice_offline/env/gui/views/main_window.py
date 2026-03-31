@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
     """Frontend-only mockup for layout validation and basic MVP interaction."""
 
     # ====================
-    # Lifecycle
+    # init & reset
     # ====================
     def __init__(self, presenter: ViewerPresenter, dataset_service: MinariDatasetService) -> None:
         super().__init__()
@@ -42,87 +42,124 @@ class MainWindow(QMainWindow):
         self._bind_presenter()
         self._initialize_view_state()
 
+    def _initialize_view_state(self) -> None:
+        # Fill episode list first, then apply default UI state.
+        self._episode_list.blockSignals(True)
+        self._episode_list.clear()
+        for label in self._presenter.episode_labels():
+            self._episode_list.addItem(QListWidgetItem(label))
+        self._episode_list.blockSignals(False)
+        self._reset_ui_state()
+
+    def _reset_ui_state(self) -> None:
+        self._episode_list.setCurrentRow(0)
+        self._visualization_panel.reset_defaults()
+        self._dataset_service.set_trail_enabled(self._visualization_panel.is_trail_enabled())
+        self._on_episode_selected(self._episode_list.currentRow())
+
+
+
     # ====================
-    # UI Build
+    # UI
     # ====================
     def _build_ui(self) -> None:
-        # +--------------------------------------+
-        # |               Root Layout            |
-        # |  +--------------------------------+  |
-        # |  | Content Row                    |  |
-        # |  +--------------------------------+  |
-        # |  +--------------------------------+  |
-        # |  | Bottom: Step Slider            |  |
-        # |  +--------------------------------+  |
-        # +--------------------------------------+
+        # ========================================
+        # ||             Root Layout            ||
+        # || +--------------------------------+ ||
+        # || | Content Row                    | ||
+        # || +--------------------------------+ ||
+        # || +--------------------------------+ ||
+        # || | Step Slider                    | ||
+        # || +--------------------------------+ ||
+        # ========================================
         root = QWidget()
         root_layout = QVBoxLayout(root)
         root_layout.setContentsMargins(24, 24, 24, 24)
         root_layout.setSpacing(20)
 
+        # ========================================
+        # ||             Content Row            ||
+        # || +----------------+ +-------------+ ||
+        # || | Grid Render    | | Right Pane  | ||
+        # || +----------------+ +-------------+ ||
+        # ========================================
+        content_row = QHBoxLayout()
+        content_row.setSpacing(24)
+        root_layout.addLayout(content_row, 1)
+
         # +--------------------------------------+
         # |              Content Row             |
-        # |  +----------------+ +-------------+  |
-        # |  | Grid Render    | | Right Pane  |  |
-        # |  +----------------+ +-------------+  |
+        # |  ==================  +-------------+ |
+        # |  || Grid Render  ||  | Right Pane  | |
+        # |  ==================  +-------------+ |
         # +--------------------------------------+
-        content_row_layout = QHBoxLayout()
-        content_row_layout.setSpacing(24)
-        root_layout.addLayout(content_row_layout, 1)
-
-        # +-------------------------+
-        # |   Left: Grid Render     |
-        # +-------------------------+
         self._grid_view = GridRenderPanel()
-        content_row_layout.addWidget(self._grid_view, 3)
+        content_row.addWidget(self._grid_view, 3)
 
+        # ===========================
+        # ||  Right: Control Pane  ||
+        # || +-------------------+ ||
+        # || | Episodes          | ||
+        # || +-------------------+ ||
+        # || | Visualization     | ||
+        # || +-------------------+ ||
+        # ===========================
+        right_pane = QWidget()
+        right_pane_layout = QVBoxLayout(right_pane)
+        right_pane_layout.setSpacing(18)
+        right_pane_layout.setContentsMargins(0, 0, 0, 0)
+
+        # +-------------------------+
+        # |   Right: Control Pane   |
+        # |  =====================  |
+        # |  || Episodes List   ||  |
+        # |  =====================  |
+        # |  +-------------------+  |
+        # |  | Visualization     |  |
+        # |  +-------------------+  |
+        # +-------------------------+
+        group_box = QGroupBox("Episodes")
+        layout = QVBoxLayout(group_box)
+        self._episode_list = QListWidget()
+        self._episode_list.setFocusPolicy(Qt.NoFocus)
+        layout.addWidget(self._episode_list)
+        right_pane_layout.addWidget(group_box)
+        
         # +-------------------------+
         # |   Right: Control Pane   |
         # |  +-------------------+  |
         # |  | Episodes          |  |
         # |  +-------------------+  |
-        # |  | Visualization     |  |
-        # |  +-------------------+  |
+        # |  =====================  |
+        # |  || Visualization   ||  |
+        # |  =====================  |
         # +-------------------------+
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        right_layout.setSpacing(18)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.addWidget(self._build_episode_list_group_box())
-        
         self._visualization_panel = VisualizationPanel()
-        right_layout.addWidget(self._visualization_panel)
-        right_layout.addStretch(1)
-        content_row_layout.addWidget(right_widget, 2)
+        right_pane_layout.addWidget(self._visualization_panel)
+        right_pane_layout.addStretch(1)
+        content_row.addWidget(right_pane, 2)
 
         # +--------------------------------------+
-        # |           Bottom: Step Slider        |
+        # |               Root Layout            |
+        # |  +--------------------------------+  |
+        # |  | Content Row                    |  |
+        # |  +--------------------------------+  |
+        # |  ==================================  |
+        # |  || Step Slider                  ||  |
+        # |  ==================================  |
         # +--------------------------------------+
-        self._step_slider = self._build_step_slider()
-        root_layout.addWidget(self._step_slider)
-
-        self.setCentralWidget(root)
-
-    def _build_step_slider(self) -> QSlider:
-        slider = QSlider(Qt.Horizontal)
-        slider.setFixedHeight(30)
-        slider.setFocusPolicy(Qt.NoFocus)
-        slider.setStyleSheet(
+        self._step_slider = QSlider(Qt.Horizontal)
+        self._step_slider.setFixedHeight(30)
+        self._step_slider.setFocusPolicy(Qt.NoFocus)
+        self._step_slider.setStyleSheet(
             """
             QSlider::groove:horizontal { background: #071427; height: 10px; border-radius: 5px; }
             QSlider::handle:horizontal { background: #6b9fd6; width: 30px; border-radius: 15px; margin: -10px 0; }
             """
         )
-        return slider
+        root_layout.addWidget(self._step_slider)
 
-    def _build_episode_list_group_box(self) -> QGroupBox:
-        group_box = QGroupBox("Episodes")
-        layout = QVBoxLayout(group_box)
-
-        self._episode_list = QListWidget()
-        self._episode_list.setFocusPolicy(Qt.NoFocus)
-        layout.addWidget(self._episode_list)
-        return group_box
+        self.setCentralWidget(root)
 
     # ====================
     # Binding
@@ -130,6 +167,7 @@ class MainWindow(QMainWindow):
     def _bind_presenter(self) -> None:
         self._episode_list.currentRowChanged.connect(self._on_episode_selected)
         self._step_slider.valueChanged.connect(self._on_step_slider_changed)
+        self._visualization_panel.bind_trail_toggled(self._on_trail_toggled)
         
     def _on_episode_selected(self, episode_index: int) -> None:
         min_step, max_step, step = self._presenter.on_episode_selected(episode_index)
@@ -148,22 +186,9 @@ class MainWindow(QMainWindow):
         frame = self._dataset_service.render_episode_step(episode_id=episode_id, step_index=step_index)
         self._grid_view.set_frame(frame)
 
-    # ====================
-    # Initialization & Reset
-    # ====================
-    def _initialize_view_state(self) -> None:
-        # Fill episode list first, then apply default UI state.
-        self._episode_list.blockSignals(True)
-        self._episode_list.clear()
-        for label in self._presenter.episode_labels():
-            self._episode_list.addItem(QListWidgetItem(label))
-        self._episode_list.blockSignals(False)
-        self._reset_ui_state()
-
-    def _reset_ui_state(self) -> None:
-        self._episode_list.setCurrentRow(0)
-        self._visualization_panel.reset_defaults()
-        self._on_episode_selected(self._episode_list.currentRow())
+    def _on_trail_toggled(self, enabled: bool) -> None:
+        self._dataset_service.set_trail_enabled(enabled)
+        self._sync_grid_view()
 
     # ====================
     # Qt Native Events

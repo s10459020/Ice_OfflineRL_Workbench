@@ -6,8 +6,9 @@ import minari
 import numpy as np
 
 from ice_offline.env.model import EpisodeInfo
-from ice_offline.env.model import State
-from ice_offline.env.common import StateIOWrapper
+from ice_offline.env.visualization import BasicUnit, RenderLayer
+from ice_offline.env.visualization.overlay_loader import OverlayLoader
+from ice_offline.env.visualization.unit_trail import TrailUnit
 
 
 class MinariDatasetService:
@@ -15,11 +16,12 @@ class MinariDatasetService:
 
     def __init__(self, dataset_id: str) -> None:
         self._dataset = minari.load_dataset(dataset_id)
-        env = self._dataset.recover_environment(eval_env=True, render_mode="rgb_array")
-        self._state_io = StateIOWrapper(env)
-        self._env = self._state_io
-        # OrderEnforcer requires at least one reset before render.
-        self._env.reset()
+        self._loader = OverlayLoader(
+            self._dataset,
+            units=[BasicUnit(), TrailUnit()],
+            render_mode="rgb_array",
+        )
+        self._loaded_episode_id: int | None = None
 
     def list_episodes(self) -> list[EpisodeInfo]:
         episodes: list[EpisodeInfo] = []
@@ -28,12 +30,14 @@ class MinariDatasetService:
         return episodes
 
     def render_episode_step(self, episode_id: int, step_index: int) -> np.ndarray:
-        trajectory = self._dataset[episode_id]
-        state_payload = trajectory.infos["state"]
-        payload = {key: state_payload[key][step_index] for key in state_payload}
-        state = State.from_serialized(payload)
-        self._state_io.set_state(state)
-        return self._env.render()
+        if self._loaded_episode_id != episode_id:
+            self._loader.load(episode_id)
+            self._loaded_episode_id = episode_id
+        self._loader.seek(step_index)
+        return self._loader.render()
+
+    def set_trail_enabled(self, enabled: bool) -> None:
+        self._loader.engine.set_enabled(int(RenderLayer.TRAIL), bool(enabled))
 
     def close(self) -> None:
-        self._env.close()
+        self._loader.close()
