@@ -1,4 +1,5 @@
 import math
+from typing import Any
 
 import gymnasium as gym
 import numpy as np
@@ -15,6 +16,7 @@ from ice_offline.env.model.state import State
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
+from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
 
@@ -60,22 +62,22 @@ class _AgentRender(UnitRenderer):
         self.agent_pos: tuple[int, int] = (0, 0)
         self.agent_dir: int = 0
 
-    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
-        tri_fn = point_in_triangle((0.12, 0.19), (0.87, 0.50), (0.12, 0.81))
-        tri_fn = rotate_fn(tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * self.agent_dir)
-        fill_coords(tile_img, tri_fn, (255, 0, 0))
-
     def condition_tile(self, *, i: int, j: int, tile_size: int) -> bool:
         return self.agent_pos == (i, j)
 
     def cache_tile_key(self, *, i: int, j: int, tile_size: int):
         return (tile_size, int(self.agent_dir))
 
+    def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
+        tri_fn = point_in_triangle((0.12, 0.19), (0.87, 0.50), (0.12, 0.81))
+        tri_fn = rotate_fn(tri_fn, cx=0.5, cy=0.5, theta=0.5 * math.pi * self.agent_dir)
+        fill_coords(tile_img, tri_fn, (255, 0, 0))
+
     def overlay_frame(self, frame_img: np.ndarray, *, grid_width: int, grid_height: int, tile_size: int) -> None:
         i, j = self.agent_pos
         y0, y1 = j * tile_size, (j + 1) * tile_size
         x0, x1 = i * tile_size, (i + 1) * tile_size
-        self.overlay_tile(frame_img[y0:y1, x0:x1, :], i=i, j=j, tile_size=tile_size)
+        self.render_tile(frame_img[y0:y1, x0:x1, :], i=i, j=j, tile_size=tile_size)
 
 
 class _HighlightRender(UnitRenderer):
@@ -108,7 +110,7 @@ class _HighlightRender(UnitRenderer):
             highlight_img(tile_img)
 
 
-class BasicUnit(UnitWrapperInterface, UnitRegisterInterface):
+class BasicUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface):
     def __init__(self) -> None:
         self._agent = _AgentRender()
         self._objects = _ObjectsRender()
@@ -124,7 +126,8 @@ class BasicUnit(UnitWrapperInterface, UnitRegisterInterface):
     def on_env(self, env: gym.Env) -> None:
         self._highlight._env = env
 
-    def on_render(self, state: State) -> None:
+    def on_render(self, state: State, info: dict[str, Any]) -> None:
+        del info
         self._agent.agent_pos = state.agent_pos
         self._agent.agent_dir = state.agent_dir
 

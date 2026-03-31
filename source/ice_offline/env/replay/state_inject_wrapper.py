@@ -2,12 +2,11 @@
 from typing import Any
 
 import gymnasium as gym
-from gymnasium import spaces
 import minari
 import numpy as np
 
 from ice_offline.env.model import State
-from ice_offline.env.common import ensure_state_io
+from ice_offline.env.common import StateIOWrapper
 
 
 class StateInjectWrapper(gym.Wrapper):
@@ -20,7 +19,8 @@ class StateInjectWrapper(gym.Wrapper):
         *,
         random_episode: bool = False,
     ) -> None:
-        super().__init__(ensure_state_io(env))
+        self._state_io = StateIOWrapper(env)
+        super().__init__(self._state_io)
         self.dataset = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
 
         self.total_episodes = self.dataset.total_episodes
@@ -28,7 +28,6 @@ class StateInjectWrapper(gym.Wrapper):
         self._rng = np.random.default_rng()
         self._current_episode_pos: int | None = None
 
-        self._set_state = self.env.set_state
         self._state_index: int | None = None
 
         self._infos: list[dict[str, Any]] | None = None
@@ -57,7 +56,7 @@ class StateInjectWrapper(gym.Wrapper):
         self._states = self._states_from_info(trajectory.infos, self._transition_count)
 
         state = self._states[0]
-        self._set_state(state)
+        self._state_io.set_state(state)
 
         observation = self._observations[0]
         info = self._infos[0]
@@ -77,7 +76,7 @@ class StateInjectWrapper(gym.Wrapper):
         truncated = False
         terminated = next_index >= self._transition_count
         
-        self._set_state(state)
+        self._state_io.set_state(state)
         self._state_index = next_index
         return obs, reward, terminated, truncated, info
 

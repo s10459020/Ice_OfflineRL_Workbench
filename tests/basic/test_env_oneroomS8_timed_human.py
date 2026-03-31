@@ -2,7 +2,7 @@ import gymnasium as gym
 import minigrid  # noqa: F401  # Ensure MiniGrid environments are registered.
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
-from ice_offline.tools import now_ns, ns_to_ms
+import time
 
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
@@ -18,13 +18,13 @@ try:
 
         for step in range(10):
             action = int(np.random.randint(0, 4))
-            t0 = now_ns()
+            t0 = time.perf_counter_ns()
             _, reward, terminated, truncated, _ = env.step(action)
-            step_ms = ns_to_ms(now_ns() - t0)
+            step_ms = (time.perf_counter_ns() - t0) / 1_000_000.0
 
-            t1 = now_ns()
+            t1 = time.perf_counter_ns()
             frame = env.render()
-            render_ms = ns_to_ms(now_ns() - t1)
+            render_ms = (time.perf_counter_ns() - t1) / 1_000_000.0
 
             total_steps += 1
 

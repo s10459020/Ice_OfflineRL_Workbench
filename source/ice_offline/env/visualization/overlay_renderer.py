@@ -1,9 +1,8 @@
 from abc import ABC, abstractmethod
+import time
 from typing import Any
 
 import numpy as np
-
-from ice_offline.tools import now_ns
 
 
 # ------------------------------------------------------------------
@@ -166,9 +165,9 @@ class OverlayRenderer:
                 x1 = (i + 1) * tile_size
                 tile_img = np.zeros((tile_size, tile_size, 3), dtype=np.uint8)
                 for idx, render in enumerate(renders):
-                    t0 = now_ns()
+                    t0 = time.perf_counter_ns()
                     render.render_tile(tile_img, i=i, j=j, tile_size=tile_size)
-                    timing_ns_list[idx] += now_ns() - t0
+                    timing_ns_list[idx] += time.perf_counter_ns() - t0
                 frame_img[y0:y1, x0:x1, :] = tile_img
         return frame_img, timing_ns_list
 
@@ -188,11 +187,11 @@ class OverlayRenderer:
         for idx, render in enumerate(renders):
             frame_fn = getattr(render, "render_frame", None)
             if callable(frame_fn):
-                t0 = now_ns()
+                t0 = time.perf_counter_ns()
                 frame_fn(frame_img, grid_width=grid_width, grid_height=grid_height, tile_size=tile_size)
-                timing_ns_list[idx] += now_ns() - t0
+                timing_ns_list[idx] += time.perf_counter_ns() - t0
                 continue
-            t0 = now_ns()
+            t0 = time.perf_counter_ns()
             for j in range(grid_height):
                 y0 = j * tile_size
                 y1 = (j + 1) * tile_size
@@ -201,5 +200,5 @@ class OverlayRenderer:
                     x1 = (i + 1) * tile_size
                     tile_view = frame_img[y0:y1, x0:x1, :]
                     render.render_tile(tile_view, i=i, j=j, tile_size=tile_size)
-            timing_ns_list[idx] += now_ns() - t0
+            timing_ns_list[idx] += time.perf_counter_ns() - t0
         return frame_img, timing_ns_list

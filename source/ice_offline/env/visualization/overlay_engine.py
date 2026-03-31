@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from types import MethodType
 from typing import Any
 import numpy as np
-from ice_offline.tools import ns_to_ms
+from ice_offline.tools import Timer
 from .overlay_renderer import OverlayRenderer
 
 
@@ -30,7 +30,6 @@ class OverlayEngine:
         self._enabled_by_layer: dict[int, bool] = {}
         self._render_by_layer: dict[int, Any] = {}
         self._render_by_order: list[Any] = []
-        self._timing_ns_by_layer: dict[int, int] = {}
         self._renderer = OverlayRenderer()
         self._patch_get_frame(base_env, overlay_mode=overlay_mode)
 
@@ -42,7 +41,6 @@ class OverlayEngine:
             raise ValueError(f"overlay layer already registered: {layer}")
         self._render_by_layer[layer] = render
         self._enabled_by_layer[layer] = enabled
-        self._timing_ns_by_layer[layer] = 0
         self._rebuild_overlay_order()
 
     def set_enabled(self, layer: int, enabled: bool) -> None:
@@ -75,8 +73,10 @@ class OverlayEngine:
             grid_height=grid_height,
             tile_size=tile_size,
         )
+        for layer in RenderLayer:
+            Timer.set(f"overlay.layer.{layer.name.lower()}", 0.0)
         for (layer, _), elapsed in zip(renders_by_layer, timing):
-            self._timing_ns_by_layer[layer] += elapsed
+            Timer.set(f"overlay.layer.{RenderLayer(layer).name.lower()}", elapsed / 1_000_000.0)
         return frame_img
 
     def render_over_frame(self, *, grid_width: int, grid_height: int, tile_size: int) -> np.ndarray:
@@ -88,8 +88,10 @@ class OverlayEngine:
             grid_height=grid_height,
             tile_size=tile_size,
         )
+        for layer in RenderLayer:
+            Timer.set(f"overlay.layer.{layer.name.lower()}", 0.0)
         for (layer, _), elapsed in zip(renders_by_layer, timing):
-            self._timing_ns_by_layer[layer] += elapsed
+            Timer.set(f"overlay.layer.{RenderLayer(layer).name.lower()}", elapsed / 1_000_000.0)
         return frame_img
 
     def _iter_enabled_renders(self) -> list[tuple[int, Any]]:
@@ -136,16 +138,3 @@ class OverlayEngine:
             base_env.get_frame = MethodType(self._overlay_get_frame_over_frame, base_env)
             return
         raise ValueError("overlay_mode must be 'tile' or 'frame'")
-
-    # ------------------------------------------------------------------
-    # timing
-    # ------------------------------------------------------------------
-    def reset_timing(self) -> None:
-        for layer in self._timing_ns_by_layer:
-            self._timing_ns_by_layer[layer] = 0
-
-    def get_timing_ms_by_layer(self) -> dict[int, float]:
-        return {layer: ns_to_ms(ns) for layer, ns in self._timing_ns_by_layer.items()}
-
-    def get_timing_total_ms(self) -> float:
-        return ns_to_ms(sum(self._timing_ns_by_layer.values()))

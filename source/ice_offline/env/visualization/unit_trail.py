@@ -7,11 +7,12 @@ from ..model.trail import Trail, TrailPoint
 from ..model.state import State
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
+from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
 
 
-class TrailUnit(UnitWrapperInterface, UnitRegisterInterface, UnitRenderer):
+class TrailUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface, UnitRenderer):
     # ------------------------------------------------------------------
     # Config
     # ------------------------------------------------------------------
@@ -34,18 +35,32 @@ class TrailUnit(UnitWrapperInterface, UnitRegisterInterface, UnitRenderer):
     def register_engine(self, engine: OverlayEngine) -> None:
         engine.register(int(RenderLayer.TRAIL), self)
 
-    def on_reset(self, state: State) -> None:
+    def on_reset(self, state: State, info: dict[str, Any]) -> None:
+        del info
         self._trail.reset()
         point = TrailPoint(pos=(int(state.agent_pos[0]), int(state.agent_pos[1])), direction=int(state.agent_dir))
         self._trail.push(point.pos, point.direction)
 
-    def on_step(self, state: State, action: Any, step_out: Any) -> None:
+    def on_step(self, state: State, action: Any, reward: float, done: bool, info: dict[str, Any]) -> None:
+        del action, reward, done, info
         point = TrailPoint(pos=(int(state.agent_pos[0]), int(state.agent_pos[1])), direction=int(state.agent_dir))
         self._trail.push(point.pos, point.direction)
 
-    def on_render(self, state: State) -> None:
+    def on_render(self, state: State, info: dict[str, Any]) -> None:
+        del state, info
         if self._trail_mode == "clear":
             self._trail.reset()
+
+    def on_load(self, states: list[State], actions: list[Any], rewards: list[float], dones: list[bool], infos: list[dict[str, Any]]) -> None:
+        del actions, rewards, dones, infos
+        self._trail.reset()
+        for state in states:
+            point = TrailPoint(pos=(int(state.agent_pos[0]), int(state.agent_pos[1])), direction=int(state.agent_dir))
+            self._trail.push(point.pos, point.direction)
+        self._trail.set_view_end(0)
+
+    def on_seek(self, transition_index: int) -> None:
+        self._trail.set_view_end(int(transition_index))
 
     # ------------------------------------------------------------------
     # Cache Hooks

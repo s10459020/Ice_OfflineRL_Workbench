@@ -1,36 +1,26 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable
+from typing import Any
 
+class Timer:
+    """Minimal in-memory timing recorder keyed by string."""
 
-def now_ns() -> int:
-    """Return a monotonic high-resolution timestamp in nanoseconds."""
-    return time.perf_counter_ns()
+    _records_ms: dict[str, float] = {}
 
+    @classmethod
+    def get(cls, key: str) -> float:
+        return cls._records_ms.get(key, 0.0)
 
-def now_s() -> float:
-    """Return a monotonic high-resolution timestamp in seconds."""
-    return time.perf_counter()
+    @classmethod
+    def set(cls, key: str, value_ms: float) -> None:
+        cls._records_ms[key] = float(value_ms)
 
-
-def ns_to_ms(duration_ns: int) -> float:
-    """Convert nanoseconds to milliseconds."""
-    return duration_ns / 1_000_000.0
-
-
-class Stopwatch:
-    """Simple start/elapsed helper based on perf_counter_ns."""
-
-    def __init__(self) -> None:
-        self._start_ns: int | None = None
-
-    def start(self) -> None:
-        self._start_ns = now_ns()
-
-    def elapsed_ns(self) -> int:
-        if self._start_ns is None:
-            raise RuntimeError("stopwatch has not been started")
-        return now_ns() - self._start_ns
-
-    def elapsed_ms(self) -> float:
-        return ns_to_ms(self.elapsed_ns())
+    @classmethod
+    def record(cls, key: str, callback: Callable[[], Any]) -> tuple[float, Any]:
+        t0 = time.perf_counter_ns()
+        value = callback()
+        elapsed_ms = (time.perf_counter_ns() - t0) / 1_000_000.0
+        cls._records_ms[key] = elapsed_ms
+        return elapsed_ms, value

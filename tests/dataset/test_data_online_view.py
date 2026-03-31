@@ -7,7 +7,7 @@ from ice_offline.tools import print_stage
 # ====================
 print_stage("Replay: Online")
 steps_online = data.online_view(
-    dataset="test_convert_fullobs-v0",
+    dataset="test_collect-v0",
     max_episodes=300,
     seed=123,
     random_episode=False,

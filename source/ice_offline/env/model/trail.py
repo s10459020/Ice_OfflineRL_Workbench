@@ -10,34 +10,53 @@ class TrailPoint:
 class Trail:
     """Trail storage + indexing."""
 
-    def __init__(self, *, max_trails: int = 64) -> None:
+    def __init__(self, *, max_trails: int = 8) -> None:
         if max_trails < 1:
             raise ValueError("max_trails must be >= 1")
         self.max_trails = int(max_trails)
         self.points: list[tuple[tuple[int, int], int]] = []
         self.points_by_cell: dict[tuple[int, int], list[tuple[int, int]]] = {}
+        self._view_end: int = 0
         self._cells_dirty = True
 
     def reset(self) -> None:
         self.points.clear()
         self.points_by_cell.clear()
+        self._view_end = 0
         self._cells_dirty = True
 
     def push(self, pos: tuple[int, int], direction: int) -> None:
         self.points.append((pos, int(direction)))
-        overflow = len(self.points) - self.max_trails
-        if overflow > 0:
-            del self.points[:overflow]
+        self._view_end = len(self.points)
         self._cells_dirty = True
 
+    def set_max_trails(self, max_trails: int) -> None:
+        if max_trails < 1:
+            raise ValueError("max_trails must be >= 1")
+        self.max_trails = int(max_trails)
+        self._cells_dirty = True
+
+    def set_view_end(self, view_end: int | None) -> None:
+        if view_end is None:
+            self._view_end = len(self.points)
+        else:
+            self._view_end = max(0, min(int(view_end), len(self.points)))
+        self._cells_dirty = True
+
+    def get_cell(self, i: int, j: int) -> list[tuple[int, int]]:
+        if self._cells_dirty:
+            self._build_cells()
+        return self.points_by_cell.get((int(i), int(j)), [])
+
     def _build_cells(self) -> None:
-        if not self._cells_dirty:
-            return
+        end = max(0, min(self._view_end, len(self.points)))
+        start = max(0, end - self.max_trails)
+        visible_points = self.points[start:end]
 
         points_by_cell_raw: dict[tuple[int, int], dict[int, tuple[int, int, int]]] = {}
-        total = len(self.points)
+        total = len(visible_points)
         den = max(1, total - 1)
-        for idx, (pos, trail_dir) in enumerate(self.points):
+        for idx, (pos, trail_dir) in enumerate(visible_points):
             ratio = idx / den
             if ratio <= 0.25:
                 bucket = 1
@@ -56,7 +75,3 @@ class Trail:
             points_by_cell[pos] = [(bucket, trail_dir) for _, bucket, trail_dir in ordered]
         self.points_by_cell = points_by_cell
         self._cells_dirty = False
-
-    def get_cell(self, i: int, j: int) -> list[tuple[int, int]]:
-        self._build_cells()
-        return self.points_by_cell.get((int(i), int(j)), [])
