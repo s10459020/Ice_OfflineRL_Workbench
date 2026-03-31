@@ -15,7 +15,7 @@ class MinariDatasetService:
 
     def __init__(self, dataset_id: str) -> None:
         self._dataset = minari.load_dataset(dataset_id)
-        env = self._dataset.recover_environment(render_mode="rgb_array")
+        env = self._dataset.recover_environment(eval_env=True, render_mode="rgb_array")
         self._state_io = StateIOWrapper(env)
         self._env = self._state_io
         # OrderEnforcer requires at least one reset before render.

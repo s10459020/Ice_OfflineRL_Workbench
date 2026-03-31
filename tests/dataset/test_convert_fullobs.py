@@ -1,17 +1,21 @@
 import minari
 
-from ice_offline.strategy import converter
+from ice_offline.dataset import converter
 from ice_offline.tools import print_stage
 
 
+# ====================
+# Config
+# ====================
 SOURCE_DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
 TARGET_DATASET_ID = "test_convert_fullobs-v0"
 
 
+
 # ====================
-# Script Main
+# Convert
 # ====================
-print_stage("Convert Fullobs -> State Infos")
+print_stage("Convert")
 target_dataset = converter.convert_fullobs(
     dataset_source_id=SOURCE_DATASET_ID,
     dataset_target_id=TARGET_DATASET_ID,
@@ -20,7 +24,11 @@ print(f"target_dataset_id={target_dataset.spec.dataset_id}")
 print(f"target_total_episodes={target_dataset.total_episodes}")
 print(f"target_total_steps={target_dataset.total_steps}")
 
-print_stage("Verify Converted Dataset")
+
+# ====================
+# Verify 
+# ====================
+print_stage("Verify")
 converted = minari.load_dataset(TARGET_DATASET_ID)
 first_trajectory = converted[0]
 infos = first_trajectory.infos

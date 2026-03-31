@@ -1,30 +1,24 @@
 from typing import Any
 
 import minari
-from gymnasium import spaces
-from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 import numpy as np
+from gymnasium import spaces
 from minari.data_collector.episode_buffer import EpisodeBuffer
+from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 
 from ice_offline.env.model import State
 
-# MiniGrid default action ids.
 _ACTION_PICKUP = 3
 _ACTION_DROP = 4
 _OBJECT_EMPTY = OBJECT_TO_IDX["empty"]
 
 
-def convert_fullobs(
-    dataset_source_id: str,
-    dataset_target_id: str,
-) -> Any:
-    """Read source dataset, convert fullobs to state, and save into target dataset."""
+def convert_fullobs(dataset_source_id: str, dataset_target_id: str) -> Any:
     source_dataset = minari.load_dataset(dataset_source_id)
 
     episode_buffers: list[EpisodeBuffer] = []
     for trajectory in source_dataset.iterate_episodes():
         states = _convert_trajectory_to_states(trajectory)
-
         buffer = EpisodeBuffer(
             observations=to_nojpeg_observations(trajectory.observations),
             actions=trajectory.actions,
@@ -90,7 +84,6 @@ def _infer_carrying_sequence(
     dir_seq: Any,
     act_seq: np.ndarray,
 ) -> list[tuple[int, int, int] | None]:
-    # Infer carrying from (t-1 -> t) front-cell changes paired with pickup/drop actions.
     num_states = len(grids)
     carrying_seq: list[tuple[int, int, int] | None] = [None] * num_states
     carrying: tuple[int, int, int] | None = None
