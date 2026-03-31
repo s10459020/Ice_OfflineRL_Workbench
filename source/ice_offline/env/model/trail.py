@@ -55,17 +55,10 @@ class Trail:
 
         points_by_cell_raw: dict[tuple[int, int], dict[int, tuple[int, int, int]]] = {}
         total = len(visible_points)
-        den = max(1, total - 1)
         for idx, (pos, trail_dir) in enumerate(visible_points):
-            ratio = idx / den
-            if ratio <= 0.25:
-                bucket = 1
-            elif ratio <= 0.50:
-                bucket = 2
-            elif ratio <= 0.75:
-                bucket = 3
-            else:
-                bucket = 4
+            # Uniform recency bucketing (1..4): newer points use darker buckets.
+            # This avoids one-off special cases while keeping monotonic behavior.
+            bucket = ((idx + 1) * 4 + total - 1) // total
             by_dir = points_by_cell_raw.setdefault(pos, {})
             by_dir[int(trail_dir)] = (idx, bucket, int(trail_dir))
 
