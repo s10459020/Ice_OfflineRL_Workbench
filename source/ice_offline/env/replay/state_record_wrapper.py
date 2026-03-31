@@ -28,12 +28,3 @@ class StateRecordWrapper(gym.Wrapper):
         info = dict(info)
         info["state"] = state.serialize()
         return obs, reward, terminated, truncated, info
-
-
-def ensure_state_record(env: gym.Env) -> gym.Env:
-    current = env
-    while isinstance(current, gym.Wrapper):
-        if isinstance(current, StateRecordWrapper):
-            return env
-        current = current.env
-    return StateRecordWrapper(env)

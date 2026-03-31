@@ -8,7 +8,7 @@ from ice_offline.tools import print_stage
 # ====================
 # Config
 # ====================
-DATASET_ID = "test_collect-v0"
+DATASET_ID = "test_collect_state-v0"
 
 
 # ====================

@@ -7,6 +7,7 @@ from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_engine import UnitRegisterInterface
 from .overlay_renderer import OverlayRenderer, UnitRenderer
 from .overlay_wrapper import OverlayWrapper, UnitWrapperInterface
+from .unit_distribution import DistributionUnit
 
 __all__ = [
     "BasicUnit",
@@ -22,6 +23,7 @@ __all__ = [
     "OverlayWrapper",
     "RenderDelayWrapper",
     "RenderLayer",
+    "DistributionUnit",
 ]
 
 

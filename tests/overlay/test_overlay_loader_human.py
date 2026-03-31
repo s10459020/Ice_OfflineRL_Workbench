@@ -5,7 +5,7 @@ from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.tools import Timer
 
 
-def main(dataset: str = "test_collect-v0") -> None:
+def main(dataset: str = "test_collect_state-v0") -> None:
     loader = OverlayLoader(dataset=dataset, units=[BasicUnit()], render_mode="human")
     try:
         total_episodes = loader.get_episode_count()

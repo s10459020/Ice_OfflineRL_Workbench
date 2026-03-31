@@ -11,7 +11,7 @@ from ice_offline.tools import Timer
 # ====================
 # Main
 # ====================
-def main(dataset: str = "test_collect-v0") -> None:
+def main(dataset: str = "test_collect_state-v0") -> None:
     # ---- Qt Display ----
     qt_app = QApplication.instance() or QApplication([])
     qt_label = QLabel()

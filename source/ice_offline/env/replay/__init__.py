@@ -1,6 +1,7 @@
-from .state_record_wrapper import StateRecordWrapper, ensure_state_record
+from .state_record_wrapper import StateRecordWrapper
+from .value_record_wrapper import ValueRecordWrapper
 
 __all__ = [
     "StateRecordWrapper",
-    "ensure_state_record",
+    "ValueRecordWrapper",
 ]

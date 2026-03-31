@@ -10,7 +10,7 @@ from ice_offline.tools import print_stage
 # ====================
 # Config
 # ====================
-DATASET_ID = "test_collect-v0"
+DATASET_ID = "test_collect_state-v0"
 MAX_EPISODES = 10
 
 
@@ -30,6 +30,7 @@ eval_env = gym.make("BabyAI-OneRoomS8-v0")
 try:
     for episode in range(1, MAX_EPISODES + 1):
         obs, _ = collector.reset()
+        episode_steps = 0
         done = False
         truncated = False
         while not (done or truncated):
@@ -37,6 +38,12 @@ try:
             obs, _, done, truncated, _ = collector.step(action)
             _ = obs
             steps += 1
+            episode_steps += 1
+            print(
+                f"episode={episode} step={episode_steps} "
+                f"global_steps={steps} action={action} done={done} truncated={truncated}"
+            )
+        print(f"episode={episode} end episode_steps={episode_steps} done={done} truncated={truncated}")
 
     try:
         minari.delete_dataset(DATASET_ID)
