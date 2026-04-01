@@ -14,7 +14,7 @@ class State:
 
     def serialize(self) -> dict[str, Any]:
         return {
-            "mission": self.mission,
+            "mission": self.mission.encode("utf-8"),
             "agent_pos": np.asarray(self.agent_pos, dtype=np.int16),
             "agent_dir": self.agent_dir,
             "grid": np.asarray(self.grid, dtype=np.int16),
@@ -27,9 +27,10 @@ class State:
         carrying = None if encoded == (0, 0, 0) else encoded
 
         agent_pos_xy = tuple(payload["agent_pos"])
+        mission_raw = payload["mission"]
 
         return cls(
-            mission=payload["mission"],
+            mission=mission_raw.decode("utf-8"),
             agent_pos=agent_pos_xy,
             agent_dir=payload["agent_dir"],
             grid=np.asarray(payload["grid"], dtype=np.int16),
