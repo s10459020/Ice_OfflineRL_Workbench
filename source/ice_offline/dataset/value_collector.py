@@ -28,27 +28,29 @@ class ValueCollector(gym.Wrapper):
         self._episodes: list[list[np.ndarray]] = []
         self._current: list[np.ndarray] | None = None
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
+        self._observation_transforms: list[Callable[[Any], Any]] = []
 
     # ====================
     # Public API
     # ====================
     def reset(self, value_fn: Callable[[Any, int], float], *args: Any, **kwargs: Any):
+        self._end_episode()
+        
         obs, info = self.env.reset(*args, **kwargs)
-        if self._current:
-            self._episodes.append(self._current)
         values = self._compute_values(value_fn)
+        info["values"] = values
         self._current = [values]
         return obs, info
 
     def step(self, value_fn: Callable[[Any, int], float], *args: Any, **kwargs: Any):
         obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
         values = self._compute_values(value_fn)
+        info["values"] = values
         self._current.append(values)
         return obs, reward, terminated, truncated, info
 
     def save(self, dataset_id: str) -> Path:
-        if self._current:
-            self._episodes.append(self._current)
+        self._end_episode()
 
         out_path = self._resolve_value_path(dataset_id)
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -86,17 +88,33 @@ class ValueCollector(gym.Wrapper):
         key = (x, y, d)
         obs_i = self._obs_cache.get(key)
         if obs_i is None:
+            if not self._observation_transforms:
+                self._observation_transforms = self._build_observation_transforms()
             old_pos = tuple(self._base_env.agent_pos)
             old_dir = self._base_env.agent_dir
             try:
                 self._base_env.agent_pos = (x, y)
                 self._base_env.agent_dir = d
                 obs_i = self._base_env.gen_obs()
+                for transform in self._observation_transforms:
+                    obs_i = transform(obs_i)
             finally:
                 self._base_env.agent_pos = old_pos
                 self._base_env.agent_dir = old_dir
             self._obs_cache[key] = obs_i
         return obs_i
+
+    def _build_observation_transforms(self) -> list[Callable[[Any], Any]]:
+        wrappers: list[gym.Wrapper] = []
+        current: gym.Env = self.env
+        while isinstance(current, gym.Wrapper):
+            wrappers.append(current)
+            current = current.env
+        transforms: list[Callable[[Any], Any]] = []
+        for wrapper in reversed(wrappers):
+            if isinstance(wrapper, gym.ObservationWrapper):
+                transforms.append(wrapper.observation)
+        return transforms
 
     # ====================
     # Path
@@ -108,3 +126,7 @@ class ValueCollector(gym.Wrapper):
         else:
             base = Path.home() / ".minari" / "datasets"
         return base / dataset_id / "data" / "value_data.hdf5"
+
+    def _end_episode(self) -> None:
+        if self._current:
+            self._episodes.append(self._current)

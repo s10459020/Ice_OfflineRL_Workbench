@@ -30,22 +30,23 @@ class StateCollector(gym.Wrapper):
     # Public API
     # ====================
     def reset(self, *args: Any, **kwargs: Any):
+        self._end_episode()
+        
         obs, info = self.env.reset(*args, **kwargs)
-        if self._current:
-            self._episodes.append(self._current)
         state = self._state_io.get_state().serialize()
+        info["state"] = state
         self._current = [state]
         return obs, info
 
     def step(self, *args: Any, **kwargs: Any):
         obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
         state = self._state_io.get_state().serialize()
+        info["state"] = state
         self._current.append(state)
         return obs, reward, terminated, truncated, info
 
     def save(self, dataset_id: str) -> Path:
-        if self._current:
-            self._episodes.append(self._current)
+        self._end_episode()
 
         out_path = self._resolve_state_path(dataset_id)
         out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -69,3 +70,7 @@ class StateCollector(gym.Wrapper):
         else:
             base = Path.home() / ".minari" / "datasets"
         return base / dataset_id / "data" / "state_data.hdf5"
+
+    def _end_episode(self) -> None:
+        if self._current:
+            self._episodes.append(self._current)
