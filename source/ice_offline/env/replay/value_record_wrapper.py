@@ -109,3 +109,12 @@ class ValueRecordWrapper(gym.Wrapper):
             if isinstance(wrapper, gym.ObservationWrapper):
                 transforms.append(wrapper.observation)
         return transforms
+
+
+def ensure_record_wrapper(env: gym.Env, value_fn: Callable[[Any, int], float]) -> gym.Env:
+    current: gym.Env = env
+    while isinstance(current, gym.Wrapper):
+        if isinstance(current, ValueRecordWrapper):
+            return env
+        current = current.env
+    return ValueRecordWrapper(env, value_fn=value_fn)

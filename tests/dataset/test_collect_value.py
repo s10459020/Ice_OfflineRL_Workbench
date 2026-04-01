@@ -5,7 +5,7 @@ import numpy as np
 from collections import defaultdict
 
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
-from ice_offline.env.replay import ValueRecordWrapper
+from ice_offline.env.replay import StateRecordWrapper, ValueRecordWrapper
 from ice_offline.tools import print_stage
 
 
@@ -31,6 +31,7 @@ steps = 0
 env = gym.make("BabyAI-OneRoomS8-v0")
 env = MissionTextWrapper(env)
 env = NoJpegImageWrapper(env)
+env = StateRecordWrapper(env)
 env = ValueRecordWrapper(env, value_fn=value_fn)
 collector = minari.DataCollector(env, record_infos=True)
 eval_env = gym.make("BabyAI-OneRoomS8-v0")

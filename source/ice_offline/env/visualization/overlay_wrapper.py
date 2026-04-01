@@ -13,7 +13,10 @@ from .overlay_engine import UnitRegisterInterface
 # Unit Interface
 # ------------------------------------------------------------------
 class UnitWrapperInterface:
-    def on_env(self, env: gym.Env) -> None:
+    def on_wrapper(self, env: gym.Env) -> gym.Env:
+        return env
+
+    def on_env(self, base_env: gym.Env) -> None:
         pass
 
     def on_reset(self, state: State, info: dict[str, Any]) -> None:
@@ -41,19 +44,28 @@ class OverlayWrapper(gym.Wrapper):
             if not isinstance(unit, UnitWrapperInterface) or not isinstance(unit, UnitRegisterInterface):
                 raise TypeError("each unit must implement UnitWrapperInterface and UnitRegisterInterface")
 
+        for unit in units:
+            env = unit.on_wrapper(env)
+
         self._state_io = StateIOWrapper(env)
         super().__init__(self._state_io)
-        self._base_env = self.env.unwrapped
 
-        self.engine = OverlayEngine(base_env=self._base_env, overlay_mode="tile")
+        self.engine = OverlayEngine(base_env=self.env.unwrapped, overlay_mode="tile")
         self._units: list[Any] = units
+        self._last_state: State | None = None
+        self._last_info: dict[str, Any] = {}
+        
         for unit in self._units:
-            unit.on_env(self._base_env)
+            unit.on_env(self.env.unwrapped)
             unit.register_engine(self.engine)
 
     def reset(self, **kwargs):
         obs, info = self.env.reset(**kwargs)
         state = self._state_io.get_state()
+
+        self._last_state = state
+        self._last_info = dict(info)
+
         for unit in self._units:
             unit.on_reset(state, dict(info))
         return obs, info
@@ -62,12 +74,15 @@ class OverlayWrapper(gym.Wrapper):
         obs, reward, terminated, truncated, info = self.env.step(action)
         done = bool(terminated or truncated)
         state = self._state_io.get_state()
+
+        self._last_state = state
+        self._last_info = dict(info)
+
         for unit in self._units:
             unit.on_step(state, action, float(reward), done, dict(info))
         return obs, reward, terminated, truncated, info
 
     def render(self):
-        state = self._state_io.get_state()
         for unit in self._units:
-            unit.on_render(state, {})
+            unit.on_render(self._last_state, self._last_info)
         return self.env.render()

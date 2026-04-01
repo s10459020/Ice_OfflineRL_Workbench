@@ -12,9 +12,9 @@ from .overlay_renderer import OverlayRenderer
 # ------------------------------------------------------------------
 class RenderLayer(IntEnum):
     BACKGROUND = 0
-    OBJECTS = 10
-    QTABLE = 20
-    TRAIL = 30
+    DISTRIBUTION = 10
+    TRAIL = 20
+    OBJECTS = 30
     AGENT = 40
     HIGHLIGHT = 50
 

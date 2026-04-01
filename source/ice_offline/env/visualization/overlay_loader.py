@@ -12,7 +12,7 @@ from .overlay_engine import OverlayEngine, UnitRegisterInterface
 # Unit Interface
 # ------------------------------------------------------------------
 class UnitLoaderInterface:
-    def on_env(self, env: gym.Env) -> None:
+    def on_env(self, base_env: gym.Env) -> None:
         pass
 
     def on_load(

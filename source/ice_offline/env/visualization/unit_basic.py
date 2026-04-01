@@ -83,11 +83,11 @@ class _AgentRender(UnitRenderer):
 class _HighlightRender(UnitRenderer):
     def __init__(self) -> None:
         super().__init__()
-        self._env: gym.Env | None = None
+        self._base_env: gym.Env | None = None
         self.highlight_mask: np.ndarray | None = None
 
     def refresh_mask(self) -> None:
-        env = self._env
+        env = self._base_env
         _, vis_mask = env.gen_obs_grid()
         f_vec = env.dir_vec
         r_vec = env.right_vec
@@ -123,8 +123,8 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface
         engine.register(int(RenderLayer.HIGHLIGHT), self._highlight)
         engine.register(int(RenderLayer.BACKGROUND), self._background)
 
-    def on_env(self, env: gym.Env) -> None:
-        self._highlight._env = env
+    def on_env(self, base_env: gym.Env) -> None:
+        self._highlight._base_env = base_env
 
     def on_render(self, state: State, info: dict[str, Any]) -> None:
         del info
