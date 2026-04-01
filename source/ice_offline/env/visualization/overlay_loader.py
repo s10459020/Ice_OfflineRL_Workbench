@@ -74,6 +74,8 @@ class OverlayLoader:
         self._rewards: list[float] = []
         self._terminations: list[bool] = []
         self._truncations: list[bool] = []
+        self._last_state: State | None = None
+        self._last_info: dict[str, Any] = {}
 
         if self.total_episodes > 0:
             self.load(0)
@@ -95,6 +97,8 @@ class OverlayLoader:
         # Ensure wrapper order checks (e.g., OrderEnforcer) are satisfied before rendering.
         self.env.reset()
         self._state_io.set_state(self._states[0])
+        self._last_state = self._states[0]
+        self._last_info = self._infos[0]
         self._current_episode = int(ep)
         self._current_step = 0
 
@@ -103,31 +107,29 @@ class OverlayLoader:
             unit.on_load(self._states, self._actions, self._rewards, dones, self._infos)
         return self._observations[0], self._infos[0]
 
-    def seek(self, t: int) -> tuple[Any, Any, float, bool, bool, dict[str, Any]] | None:
-        if t == 0:
-            self._state_io.set_state(self._states[0])
-            self._current_step = 0
-            for unit in self._units:
-                unit.on_seek(0)
-            return None
-
+    def seek(self, t: int) -> tuple[Any, Any, float, bool, bool, dict[str, Any]]:
         obs = self._observations[t]
+        self._state_io.set_state(self._states[t])
+        self._last_state = self._states[t]
+        self._last_info = self._infos[t]
+        self._current_step = t
+        for unit in self._units:
+            unit.on_seek(t)
+
+        if t == 0:
+            return (obs, None, 0.0, False, False, self._infos[t])
+
         reward = float(self._rewards[t - 1])
         terminated = bool(self._terminations[t - 1])
         truncated = bool(self._truncations[t - 1])
-        info = dict(self._infos[t])
         action = self._actions[t - 1]
-
-        self._state_io.set_state(self._states[t])
-        self._current_step = t
-        for unit in self._units:
-            unit.on_seek(int(t))
-        return (obs, action, reward, terminated, truncated, info)
+        return (obs, action, reward, terminated, truncated, self._infos[t])
 
     def render(self) -> Any:
-        state = self._state_io.get_state()
+        state = self._last_state
+        info = self._last_info
         for unit in self._units:
-            unit.on_render(state, {})
+            unit.on_render(state, info)
         return self.env.render()
 
     def close(self) -> None:

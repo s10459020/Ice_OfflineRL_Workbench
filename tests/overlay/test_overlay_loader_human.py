@@ -15,8 +15,6 @@ def main(dataset: str = "test_collect_state-v0") -> None:
             t = 1
             while True:
                 seek_ms, out = Timer.record("overlay_loader_human.seek", lambda: loader.seek(t))
-                if out is None:
-                    break
                 _, _, _, terminated, truncated, _ = out
                 render_ms, _ = Timer.record("overlay_loader_human.render", loader.render)
                 layer_text = " ".join(

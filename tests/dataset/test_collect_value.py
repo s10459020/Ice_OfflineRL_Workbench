@@ -32,7 +32,7 @@ env = gym.make("BabyAI-OneRoomS8-v0")
 env = MissionTextWrapper(env)
 env = NoJpegImageWrapper(env)
 env = StateRecordWrapper(env)
-env = ValueRecordWrapper(env, value_fn=value_fn)
+env = ValueRecordWrapper(env)
 collector = minari.DataCollector(env, record_infos=True)
 eval_env = gym.make("BabyAI-OneRoomS8-v0")
 
@@ -44,15 +44,17 @@ value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
 try:
     for episode in range(1, MAX_EPISODES + 1):
         obs, _ = collector.reset()
+        env.record(value_fn)
         episode_steps = 0
         done = False
         truncated = False
         while not (done or truncated):
-            action = collector.action_space.sample()
+            action = int(np.random.randint(0, 4))
             obs, _, done, truncated, _ = collector.step(action)
             steps += 1
             episode_steps += 1
             value = value_fn(obs, action, set_value=steps)
+            env.record(value_fn)
             print(
                 f"episode={episode} step={episode_steps} "
                 f"global_steps={steps} action={action} value={value}"

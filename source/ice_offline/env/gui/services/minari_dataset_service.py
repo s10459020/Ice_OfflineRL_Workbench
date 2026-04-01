@@ -6,7 +6,7 @@ import minari
 import numpy as np
 
 from ice_offline.env.model import EpisodeInfo
-from ice_offline.env.visualization import BasicUnit, RenderLayer
+from ice_offline.env.visualization import BasicUnit, DistributionUnit, RenderLayer
 from ice_offline.env.visualization.overlay_loader import OverlayLoader
 from ice_offline.env.visualization.unit_trail import TrailUnit
 
@@ -18,7 +18,7 @@ class MinariDatasetService:
         self._dataset = minari.load_dataset(dataset_id)
         self._loader = OverlayLoader(
             self._dataset,
-            units=[BasicUnit(), TrailUnit()],
+            units=[BasicUnit(), TrailUnit(), DistributionUnit(style="rect")],
             render_mode="rgb_array",
         )
         self._loaded_episode_id: int | None = None
@@ -37,7 +37,10 @@ class MinariDatasetService:
         return self._loader.render()
 
     def set_trail_enabled(self, enabled: bool) -> None:
-        self._loader.engine.set_enabled(int(RenderLayer.TRAIL), bool(enabled))
+        self._loader.engine.set_enabled(RenderLayer.TRAIL, enabled)
+
+    def set_distribution_enabled(self, enabled: bool) -> None:
+        self._loader.engine.set_enabled(RenderLayer.DISTRIBUTION, enabled)
 
     def close(self) -> None:
         self._loader.close()

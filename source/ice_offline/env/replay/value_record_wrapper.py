@@ -23,39 +23,43 @@ class MiniGridAction(IntEnum):
 
 
 class ValueRecordWrapper(gym.Wrapper):
-    """Record per-state distribution values into info['values'] on reset/step."""
+    """Record per-state distribution values into info['values'].
+
+    Behavior:
+    - reset: auto record once
+    - step: no auto record
+    - record(): manual trigger after external learning/update
+    """
 
     def __init__(
         self,
         env: gym.Env,
-        value_fn: Callable[[Any, int], float],
     ) -> None:
         super().__init__(env)
         self._base_env = self.env.unwrapped
-        self._value_fn = value_fn
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
         self._observation_transforms: list[Callable[[Any], Any]] = []
+        self._last_info: dict[str, Any] = {}
 
     def reset(self, **kwargs: Any):
         obs, info = self.env.reset(**kwargs)
-        self._obs_cache.clear()
-
-        values = self._compute_distribution_values()
-        info = dict(info)
-        info["values"] = values
+        self._last_info = info
         return obs, info
 
     def step(self, action: Any):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        values = self._compute_distribution_values()
-        info = dict(info)
-        info["values"] = values
+        self._last_info = info
         return obs, reward, terminated, truncated, info
+
+    def record(self, value_fn: Callable[[Any, int], float]) -> np.ndarray:
+        values = self._compute_distribution_values(value_fn)
+        self._last_info["values"] = values
+        return values
 
     # ------------------------------------------------------------------
     # Value Map Build
     # ------------------------------------------------------------------
-    def _compute_distribution_values(self) -> np.ndarray:
+    def _compute_distribution_values(self, value_fn: Callable[[Any, int], float]) -> np.ndarray:
         width = int(self._base_env.width)
         height = int(self._base_env.height)
         inner_w = max(0, width - 2)
@@ -71,7 +75,7 @@ class ValueRecordWrapper(gym.Wrapper):
                 for d in MiniGridDirection:
                     obs_i = self._get_cached_observation(x, y, int(d))
                     for action in MiniGridAction:
-                        values[ix, iy, int(d), int(action)] = self._value_fn(obs_i, int(action))
+                        values[ix, iy, int(d), int(action)] = value_fn(obs_i, int(action))
         return values
 
     def _get_cached_observation(self, x: int, y: int, d: int) -> Any:
@@ -111,10 +115,10 @@ class ValueRecordWrapper(gym.Wrapper):
         return transforms
 
 
-def ensure_record_wrapper(env: gym.Env, value_fn: Callable[[Any, int], float]) -> gym.Env:
+def ensure_record_wrapper(env: gym.Env) -> gym.Env:
     current: gym.Env = env
     while isinstance(current, gym.Wrapper):
         if isinstance(current, ValueRecordWrapper):
             return env
         current = current.env
-    return ValueRecordWrapper(env, value_fn=value_fn)
+    return ValueRecordWrapper(env)

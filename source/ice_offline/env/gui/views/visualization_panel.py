@@ -76,3 +76,9 @@ class VisualizationPanel(QGroupBox):
 
     def bind_trail_toggled(self, callback: Callable[[bool], None]) -> None:
         self._trail_toggle.toggled.connect(callback)
+
+    def is_q_table_enabled(self) -> bool:
+        return self._q_table_toggle.isChecked()
+
+    def bind_q_table_toggled(self, callback: Callable[[bool], None]) -> None:
+        self._q_table_toggle.toggled.connect(callback)

@@ -126,13 +126,13 @@ class RingStateActionRenderer(_StateActionRendererBase):
         self._ring_color = (70, 190, 255)
         self._pickup_color = (80, 220, 120)
         self._ring_sector_cache: dict[int, np.ndarray] = {}
-        self._pickup_mask_cache: dict[int, tuple[np.ndarray, np.ndarray, np.ndarray]] = {}
+        self._pickup_edge_mask_cache: dict[int, np.ndarray] = {}
 
     def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
         bins = self._distribution.cell_bins(i, j)
         self._render_ring(tile_img, bins)
-        pickup_bin = int(np.rint(np.mean(bins[:, MiniGridAction.PICKUP])))
-        self._render_pickup(tile_img, pickup_bin)
+        pickup_bins = bins[:, MiniGridAction.PICKUP]
+        self._render_pickup(tile_img, pickup_bins)
 
     def _render_ring(self, tile_img: np.ndarray, bins: np.ndarray) -> None:
         tile_size = tile_img.shape[0]
@@ -152,18 +152,11 @@ class RingStateActionRenderer(_StateActionRendererBase):
                 255.0,
             ).astype(np.uint8)
 
-    def _render_pickup(self, tile_img: np.ndarray, pickup_bin: int) -> None:
-        if pickup_bin <= 0:
-            return
-        circle_mask, square_mask, square_max_mask = self._get_pickup_masks(tile_img.shape[0])
-        if pickup_bin == 1:
-            self._blend_mask(tile_img, circle_mask, self._pickup_color, 0.45)
-        elif pickup_bin == 2:
-            self._blend_mask(tile_img, circle_mask, self._pickup_color, 0.90)
-        elif pickup_bin == 3:
-            self._blend_mask(tile_img, square_mask, self._pickup_color, 0.90)
-        else:
-            self._blend_mask(tile_img, square_max_mask, self._pickup_color, 0.95)
+    def _render_pickup(self, tile_img: np.ndarray, pickup_bins: np.ndarray) -> None:
+        masks = self._get_pickup_edge_masks(tile_img.shape[0])
+        alpha_palette = (0.0, 0.25, 0.45, 0.65, 0.85)
+        for d_idx in MiniGridDirection:
+            self._blend_mask(tile_img, masks[d_idx], self._pickup_color, alpha_palette[int(pickup_bins[d_idx])])
 
     def _get_ring_sector_map(self, tile_size: int) -> np.ndarray:
         sector_map = self._ring_sector_cache.get(tile_size)
@@ -185,24 +178,22 @@ class RingStateActionRenderer(_StateActionRendererBase):
         self._ring_sector_cache[tile_size] = sector_map
         return sector_map
 
-    def _get_pickup_masks(self, tile_size: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        masks = self._pickup_mask_cache.get(tile_size)
+    def _get_pickup_edge_masks(self, tile_size: int) -> np.ndarray:
+        masks = self._pickup_edge_mask_cache.get(tile_size)
         if masks is not None:
             return masks
-        yy, xx = np.indices((tile_size, tile_size), dtype=np.float32)
-        cx = (tile_size - 1) * 0.5
-        cy = (tile_size - 1) * 0.5
-        dx = (xx - cx) / max(cx, 1.0)
-        dy = (yy - cy) / max(cy, 1.0)
-        circle_mask = (dx * dx + dy * dy) <= (0.16 * 0.16)
-        square_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
-        fill_coords(square_img, point_in_rect(0.42, 0.58, 0.42, 0.58), 1)
-        square_mask = square_img.astype(bool)
-        square_max_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
-        fill_coords(square_max_img, point_in_rect(0.36, 0.64, 0.36, 0.64), 1)
-        square_max_mask = square_max_img.astype(bool)
-        masks = (circle_mask, square_mask, square_max_mask)
-        self._pickup_mask_cache[tile_size] = masks
+        masks = np.zeros((4, tile_size, tile_size), dtype=bool)
+        rects = {
+            MiniGridDirection.UP: (0.42, 0.58, 0.08, 0.20),
+            MiniGridDirection.RIGHT: (0.80, 0.92, 0.42, 0.58),
+            MiniGridDirection.DOWN: (0.42, 0.58, 0.80, 0.92),
+            MiniGridDirection.LEFT: (0.08, 0.20, 0.42, 0.58),
+        }
+        for d_idx, (xmin, xmax, ymin, ymax) in rects.items():
+            mask_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
+            fill_coords(mask_img, point_in_rect(xmin, xmax, ymin, ymax), 1)
+            masks[d_idx] = mask_img.astype(bool)
+        self._pickup_edge_mask_cache[tile_size] = masks
         return masks
 
     def _blend_mask(self, tile_img: np.ndarray, mask: np.ndarray, color: tuple[int, int, int], alpha: float) -> None:
@@ -222,12 +213,13 @@ class RectStateActionRenderer(_StateActionRendererBase):
         self._rect_color = (255, 180, 60)
         self._pickup_color = (80, 220, 120)
         self._rect_mask_cache: dict[int, np.ndarray] = {}
+        self._pickup_edge_mask_cache: dict[int, np.ndarray] = {}
 
     def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
         bins = self._distribution.cell_bins(i, j)
         self._render_rect(tile_img, bins)
-        pickup_bin = int(np.rint(np.mean(bins[:, MiniGridAction.PICKUP])))
-        self._render_pickup(tile_img, pickup_bin)
+        pickup_bins = bins[:, MiniGridAction.PICKUP]
+        self._render_pickup(tile_img, pickup_bins)
 
     def _render_rect(self, tile_img: np.ndarray, bins: np.ndarray) -> None:
         masks = self._get_rect_masks(tile_img.shape[0])
@@ -237,23 +229,29 @@ class RectStateActionRenderer(_StateActionRendererBase):
                 level = bins[d_idx, a_real]
                 tile_img[masks[d_idx, slot_idx, level]] = self._rect_color
 
-    def _render_pickup(self, tile_img: np.ndarray, pickup_bin: int) -> None:
-        if pickup_bin <= 0:
-            return
-        mask_img = np.zeros((tile_img.shape[0], tile_img.shape[1]), dtype=np.uint8)
-        if pickup_bin <= 2:
-            cx0 = 0.46 if pickup_bin == 1 else 0.43
-            cx1 = 0.54 if pickup_bin == 1 else 0.57
-            cy0 = 0.46 if pickup_bin == 1 else 0.43
-            cy1 = 0.54 if pickup_bin == 1 else 0.57
-            fill_coords(mask_img, point_in_rect(cx0, cx1, cy0, cy1), 1)
-        elif pickup_bin == 3:
-            fill_coords(mask_img, point_in_rect(0.40, 0.60, 0.40, 0.60), 1)
-        else:
-            fill_coords(mask_img, point_in_rect(0.36, 0.64, 0.36, 0.64), 1)
-        mask = mask_img.astype(bool)
+    def _render_pickup(self, tile_img: np.ndarray, pickup_bins: np.ndarray) -> None:
+        masks = self._get_pickup_edge_masks(tile_img.shape[0])
         alpha_palette = (0.0, 0.25, 0.45, 0.65, 0.85)
-        self._blend_mask(tile_img, mask, self._pickup_color, alpha_palette[pickup_bin])
+        for d_idx in MiniGridDirection:
+            self._blend_mask(tile_img, masks[d_idx], self._pickup_color, alpha_palette[int(pickup_bins[d_idx])])
+
+    def _get_pickup_edge_masks(self, tile_size: int) -> np.ndarray:
+        masks = self._pickup_edge_mask_cache.get(tile_size)
+        if masks is not None:
+            return masks
+        masks = np.zeros((4, tile_size, tile_size), dtype=bool)
+        rects = {
+            MiniGridDirection.UP: (0.42, 0.58, 0.08, 0.20),
+            MiniGridDirection.RIGHT: (0.80, 0.92, 0.42, 0.58),
+            MiniGridDirection.DOWN: (0.42, 0.58, 0.80, 0.92),
+            MiniGridDirection.LEFT: (0.08, 0.20, 0.42, 0.58),
+        }
+        for d_idx, (xmin, xmax, ymin, ymax) in rects.items():
+            mask_img = np.zeros((tile_size, tile_size), dtype=np.uint8)
+            fill_coords(mask_img, point_in_rect(xmin, xmax, ymin, ymax), 1)
+            masks[d_idx] = mask_img.astype(bool)
+        self._pickup_edge_mask_cache[tile_size] = masks
+        return masks
 
     def _get_rect_masks(self, tile_size: int) -> np.ndarray:
         masks = self._rect_mask_cache.get(tile_size)
@@ -325,40 +323,15 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterIn
             self._sa_renderer = RectStateActionRenderer(self._distribution)
         else:
             raise ValueError("style must be 'ring' or 'rect'")
-        self._infos: list[dict[str, Any]] = []
-        self._transition_index: int = 0
 
     # ------------------------------------------------------------------
     # Wrapper Hooks
     # ------------------------------------------------------------------
     def on_wrapper(self, env: gym.Env) -> gym.Env:
-        if self._value_fn is None:
-            raise RuntimeError("DistributionUnit wrapper path requires value_fn")
-        return ensure_record_wrapper(env, self._value_fn)
+        return ensure_record_wrapper(env)
 
     def on_render(self, state: State, info: dict[str, Any]) -> None:
-        del state
-        if "values" not in info and self._infos:
-            info = self._infos[self._transition_index]
         self._distribution.update(info["values"])
-
-    # ------------------------------------------------------------------
-    # Loader Hooks
-    # ------------------------------------------------------------------
-    def on_load(
-        self,
-        states: list[State],
-        actions: list[Any],
-        rewards: list[float],
-        dones: list[bool],
-        infos: list[dict[str, Any]],
-    ) -> None:
-        del states, actions, rewards, dones
-        self._infos = infos
-        self._transition_index = 0
-
-    def on_seek(self, transition_index: int) -> None:
-        self._transition_index = transition_index
 
     # ------------------------------------------------------------------
     # Engine Registration
