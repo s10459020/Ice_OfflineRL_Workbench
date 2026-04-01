@@ -9,7 +9,7 @@ import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
 from ..model.state import State
-from ..replay.value_record_wrapper import MiniGridAction, MiniGridDirection, ensure_record_wrapper
+from ..replay.value_collector import MiniGridAction, MiniGridDirection, ValueCollector
 from .overlay_engine import OverlayEngine, RenderLayer, UnitRegisterInterface
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
@@ -297,7 +297,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterIn
     """Collect values and register state-action renderer(s).
 
     Responsibilities:
-    - ensure ValueRecordWrapper exists on wrapper path
+    - ensure ValueCollector exists on wrapper path
     - ingest info["values"] during on_render
     - register renderer(s) into OverlayEngine
     """
@@ -328,7 +328,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterIn
     # Wrapper Hooks
     # ------------------------------------------------------------------
     def on_wrapper(self, env: gym.Env) -> gym.Env:
-        return ensure_record_wrapper(env)
+        return ValueCollector(env, self._value_fn)
 
     def on_render(self, state: State, info: dict[str, Any]) -> None:
         self._distribution.update(info["values"])

@@ -5,7 +5,7 @@ import numpy as np
 from collections import defaultdict
 
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
-from ice_offline.env.replay import StateRecordWrapper, ValueRecordWrapper
+from ice_offline.env.replay import StateCollector, ValueCollector
 from ice_offline.tools import print_stage
 
 
@@ -30,34 +30,31 @@ print_stage("Collect")
 env = gym.make("BabyAI-OneRoomS8-v0")
 env = MissionTextWrapper(env)
 env = NoJpegImageWrapper(env)
-env = StateRecordWrapper(env)
-env = ValueRecordWrapper(env)
-collector = minari.DataCollector(env, record_infos=True)
+state_collector = StateCollector(env)
 eval_env = gym.make("BabyAI-OneRoomS8-v0")
-steps = 0
-
-ACTION_DIM = collector.action_space.n
+ACTION_DIM = state_collector.action_space.n
 value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
     lambda: np.zeros(ACTION_DIM, dtype=np.float32)
 )
+value_collector = ValueCollector(state_collector, value_fn)
+collector = minari.DataCollector(value_collector, record_infos=False)
+steps = 0
 
 try:
     for episode in range(1, MAX_EPISODES + 1):
         obs, _ = collector.reset()
-        values = env.record(value_fn)
         episode_steps = 0
         done = False
         truncated = False
         while not (done or truncated):
             action = int(np.random.randint(0, 4))
+            value = value_fn(obs, action, set_value=steps + 1)
             obs, _, done, truncated, _ = collector.step(action)
             episode_steps += 1
             steps += 1
-            value = value_fn(obs, action, set_value=steps)
-            values = env.record(value_fn)
             print(
                 f"episode={episode} step={episode_steps} "
-                f"global_steps={steps} action={action} value={value} values_max={np.max(values):.1f}"
+                f"global_steps={steps} action={action} value={value}"
             )
         print(f"episode={episode} end episode_steps={episode_steps} done={done} truncated={truncated}")
 
@@ -75,6 +72,10 @@ try:
         eval_env=eval_env,
         description="collect value-info dataset smoke script",
     )
+    state_path = state_collector.save(DATASET_ID)
+    value_path = value_collector.save(DATASET_ID)
+    print(f"state_data_path={state_path}")
+    print(f"value_data_path={value_path}")
 finally:
     eval_env.close()
     collector.close()
@@ -87,9 +88,6 @@ print(f"collect_steps={steps}")
 # ====================
 print_stage("Verify Dataset")
 dataset = minari.load_dataset(DATASET_ID)
-episode0 = dataset[0]
-values = episode0.infos["values"]
 print(f"dataset_id={dataset.spec.dataset_id}")
 print(f"total_episodes={dataset.total_episodes}")
 print(f"total_steps={dataset.total_steps}")
-print(f"values_shape={np.asarray(values).shape}")

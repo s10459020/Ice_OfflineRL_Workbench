@@ -3,15 +3,14 @@ import minigrid  # noqa: F401
 import numpy as np
 from collections import defaultdict
 
-from ice_offline.dataset.value_loader import ValueLoader
-from ice_offline.dataset.value_collector import ValueCollector
+from ice_offline.env.replay import ValueCollector, ValueLoader
 from ice_offline.tools import print_stage
 
 
 # ====================
 # Config
 # ====================
-DATASET_ID = "test_value_data-v0"
+DATASET_ID = "test_value_dataset-v0"
 MAX_EPISODES = 10
 
 
@@ -21,7 +20,6 @@ MAX_EPISODES = 10
 # ====================
 print_stage("Build Value Data")
 env = gym.make("BabyAI-OneRoomS8-v0")
-recorder = ValueCollector(env.unwrapped)
 steps = 0
 
 value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
@@ -34,16 +32,18 @@ def value_fn(obs, action: int, set_value: float | None = None) -> float:
         value_table[key][action] = set_value
     return value_table[key][action]
 
+recorder = ValueCollector(env.unwrapped, value_fn)
+
 try:
     for episode in range(1, MAX_EPISODES + 1):
-        obs, _ = recorder.reset(value_fn, seed=episode)
+        obs, _ = recorder.reset(seed=episode)
 
         done = False
         truncated = False
         ep_steps = 0
         while not (done or truncated):
             action = int(np.random.randint(0, 4))
-            obs, _, done, truncated, _ = recorder.step(value_fn, action)
+            obs, _, done, truncated, _ = recorder.step(action)
             steps += 1
             ep_steps += 1
             value_fn(obs, action, set_value=steps)

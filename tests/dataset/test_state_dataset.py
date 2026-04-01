@@ -2,15 +2,14 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
 
-from ice_offline.dataset.state_collector import StateCollector
-from ice_offline.dataset.state_loader import StateLoader
+from ice_offline.env.replay import StateCollector, StateLoader
 from ice_offline.tools import print_stage
 
 
 # ====================
 # Config
 # ====================
-DATASET_ID = "test_state_data-v0"
+DATASET_ID = "test_state_dataset-v0"
 MAX_EPISODES = 10
 
 

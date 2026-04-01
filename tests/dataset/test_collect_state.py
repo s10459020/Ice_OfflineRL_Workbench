@@ -3,7 +3,7 @@ import minigrid  # noqa: F401
 import minari
 
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
-from ice_offline.env.replay import StateRecordWrapper
+from ice_offline.env.replay import StateCollector
 from ice_offline.tools import print_stage
 
 
@@ -23,8 +23,8 @@ steps = 0
 env = gym.make("BabyAI-OneRoomS8-v0")
 env = MissionTextWrapper(env)
 env = NoJpegImageWrapper(env)
-env = StateRecordWrapper(env)
-collector = minari.DataCollector(env, record_infos=True)
+state_collector = StateCollector(env)
+collector = minari.DataCollector(state_collector, record_infos=False)
 eval_env = gym.make("BabyAI-OneRoomS8-v0")
 
 try:
@@ -59,6 +59,8 @@ try:
         eval_env=eval_env,
         description="collect smoke script",
     )
+    state_path = state_collector.save(DATASET_ID)
+    print(f"state_data_path={state_path}")
 finally:
     eval_env.close()
     collector.close()

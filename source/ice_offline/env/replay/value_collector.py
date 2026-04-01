@@ -3,13 +3,26 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from collections.abc import Callable
+from enum import IntEnum
 from typing import Any
 
 import gymnasium as gym
 import h5py
 import numpy as np
 
-from ice_offline.env.replay.value_record_wrapper import MiniGridAction, MiniGridDirection
+
+class MiniGridDirection(IntEnum):
+    RIGHT = 0
+    DOWN = 1
+    LEFT = 2
+    UP = 3
+
+
+class MiniGridAction(IntEnum):
+    LEFT = 0
+    RIGHT = 1
+    FORWARD = 2
+    PICKUP = 3
 
 
 class ValueCollector(gym.Wrapper):
@@ -22,8 +35,9 @@ class ValueCollector(gym.Wrapper):
     # ====================
     # Init
     # ====================
-    def __init__(self, env: Any) -> None:
+    def __init__(self, env: Any, value_fn: Callable[[Any, int], float]) -> None:
         super().__init__(env)
+        self._value_fn = value_fn
         self._base_env = self.env.unwrapped
         self._episodes: list[list[np.ndarray]] = []
         self._current: list[np.ndarray] | None = None
@@ -33,18 +47,18 @@ class ValueCollector(gym.Wrapper):
     # ====================
     # Public API
     # ====================
-    def reset(self, value_fn: Callable[[Any, int], float], *args: Any, **kwargs: Any):
+    def reset(self, *args: Any, **kwargs: Any):
         self._end_episode()
         
         obs, info = self.env.reset(*args, **kwargs)
-        values = self._compute_values(value_fn)
+        values = self._compute_values(self._value_fn)
         info["values"] = values
         self._current = [values]
         return obs, info
 
-    def step(self, value_fn: Callable[[Any, int], float], *args: Any, **kwargs: Any):
+    def step(self, *args: Any, **kwargs: Any):
         obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
-        values = self._compute_values(value_fn)
+        values = self._compute_values(self._value_fn)
         info["values"] = values
         self._current.append(values)
         return obs, reward, terminated, truncated, info
