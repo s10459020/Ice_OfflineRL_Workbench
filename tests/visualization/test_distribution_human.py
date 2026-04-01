@@ -14,7 +14,7 @@ value_table: defaultdict[tuple[bytes, int], dict[int, float]] = defaultdict(dict
 def value_fn(obs, action: int, set_value: float | None = None) -> float:
     key = (obs["image"].tobytes(), obs["direction"])
     if set_value is not None:
-        value_table[key][int(action)] = float(set_value)
+        value_table[key][int(action)] = set_value
     return value_table[key].get(int(action), 0.0)
 
 

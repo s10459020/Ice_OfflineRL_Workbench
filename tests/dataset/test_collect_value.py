@@ -26,7 +26,6 @@ def value_fn(obs, action: int, set_value: float | None = None) -> float:
 # Collect
 # ====================
 print_stage("Collect")
-steps = 0
 
 env = gym.make("BabyAI-OneRoomS8-v0")
 env = MissionTextWrapper(env)
@@ -35,6 +34,7 @@ env = StateRecordWrapper(env)
 env = ValueRecordWrapper(env)
 collector = minari.DataCollector(env, record_infos=True)
 eval_env = gym.make("BabyAI-OneRoomS8-v0")
+steps = 0
 
 ACTION_DIM = collector.action_space.n
 value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
@@ -44,20 +44,20 @@ value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
 try:
     for episode in range(1, MAX_EPISODES + 1):
         obs, _ = collector.reset()
-        env.record(value_fn)
+        values = env.record(value_fn)
         episode_steps = 0
         done = False
         truncated = False
         while not (done or truncated):
             action = int(np.random.randint(0, 4))
             obs, _, done, truncated, _ = collector.step(action)
-            steps += 1
             episode_steps += 1
+            steps += 1
             value = value_fn(obs, action, set_value=steps)
-            env.record(value_fn)
+            values = env.record(value_fn)
             print(
                 f"episode={episode} step={episode_steps} "
-                f"global_steps={steps} action={action} value={value}"
+                f"global_steps={steps} action={action} value={value} values_max={np.max(values):.1f}"
             )
         print(f"episode={episode} end episode_steps={episode_steps} done={done} truncated={truncated}")
 

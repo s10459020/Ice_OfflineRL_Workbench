@@ -23,13 +23,7 @@ class MiniGridAction(IntEnum):
 
 
 class ValueRecordWrapper(gym.Wrapper):
-    """Record per-state distribution values into info['values'].
-
-    Behavior:
-    - reset: auto record once
-    - step: no auto record
-    - record(): manual trigger after external learning/update
-    """
+    """Record per-state distribution values into info['values']."""
 
     def __init__(
         self,
@@ -40,21 +34,34 @@ class ValueRecordWrapper(gym.Wrapper):
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
         self._observation_transforms: list[Callable[[Any], Any]] = []
         self._last_info: dict[str, Any] = {}
+        self._dummy_values = self._build_dummy()
 
     def reset(self, **kwargs: Any):
         obs, info = self.env.reset(**kwargs)
-        self._last_info = info
-        return obs, info
+        self._last_info = dict(info)
+        self._last_info["values"] = self._dummy_values
+        return obs, self._last_info
 
     def step(self, action: Any):
         obs, reward, terminated, truncated, info = self.env.step(action)
-        self._last_info = info
-        return obs, reward, terminated, truncated, info
+        self._last_info = dict(info)
+        self._last_info["values"] = self._dummy_values
+        return obs, reward, terminated, truncated, self._last_info
 
     def record(self, value_fn: Callable[[Any, int], float]) -> np.ndarray:
         values = self._compute_distribution_values(value_fn)
         self._last_info["values"] = values
         return values
+
+    def _build_dummy(self) -> np.ndarray:
+        width = self._base_env.width
+        height = self._base_env.height
+        inner_w = max(0, width - 2)
+        inner_h = max(0, height - 2)
+        return np.zeros(
+            (inner_w, inner_h, len(MiniGridDirection), len(MiniGridAction)),
+            dtype=np.float32,
+        )
 
     # ------------------------------------------------------------------
     # Value Map Build
@@ -115,7 +122,9 @@ class ValueRecordWrapper(gym.Wrapper):
         return transforms
 
 
-def ensure_record_wrapper(env: gym.Env) -> gym.Env:
+def ensure_record_wrapper(
+    env: gym.Env,
+) -> gym.Env:
     current: gym.Env = env
     while isinstance(current, gym.Wrapper):
         if isinstance(current, ValueRecordWrapper):

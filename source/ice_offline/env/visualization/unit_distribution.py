@@ -92,8 +92,8 @@ class StateActionDistribution:
         return np.quantile(flat, self._quantile_levels).astype(np.float32)
 
     def _compute_fixed_edges(self, values: np.ndarray) -> np.ndarray:
-        v_min = float(np.min(values)) if self._value_min is None else self._value_min
-        v_max = float(np.max(values)) if self._value_max is None else self._value_max
+        v_min = np.min(values) if self._value_min is None else self._value_min
+        v_max = np.max(values) if self._value_max is None else self._value_max
         return np.linspace(v_min, v_max, 6, dtype=np.float32)[1:-1]
 
     def _quantize_values(self, values: np.ndarray, edges: np.ndarray) -> np.ndarray:

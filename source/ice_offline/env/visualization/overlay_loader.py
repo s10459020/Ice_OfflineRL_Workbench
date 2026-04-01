@@ -102,7 +102,7 @@ class OverlayLoader:
         self._current_episode = int(ep)
         self._current_step = 0
 
-        dones = [bool(t or u) for t, u in zip(self._terminations, self._truncations)]
+        dones = [t or u for t, u in zip(self._terminations, self._truncations)]
         for unit in self._units:
             unit.on_load(self._states, self._actions, self._rewards, dones, self._infos)
         return self._observations[0], self._infos[0]
@@ -119,9 +119,9 @@ class OverlayLoader:
         if t == 0:
             return (obs, None, 0.0, False, False, self._infos[t])
 
-        reward = float(self._rewards[t - 1])
-        terminated = bool(self._terminations[t - 1])
-        truncated = bool(self._truncations[t - 1])
+        reward = self._rewards[t - 1]
+        terminated = self._terminations[t - 1]
+        truncated = self._truncations[t - 1]
         action = self._actions[t - 1]
         return (obs, action, reward, terminated, truncated, self._infos[t])
 
