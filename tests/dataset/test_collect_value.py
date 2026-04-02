@@ -3,6 +3,7 @@ import minigrid  # noqa: F401
 import minari
 import numpy as np
 from collections import defaultdict
+from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
 from ice_offline.env.replay import StateCollector, ValueCollector
@@ -27,22 +28,23 @@ def value_fn(obs, action: int, set_value: float | None = None) -> float:
 # ====================
 print_stage("Collect")
 
-env = gym.make("BabyAI-OneRoomS8-v0")
+eval_env = gym.make("BabyAI-OneRoomS8-v0")
+env = FullyObsWrapper(gym.make("BabyAI-OneRoomS8-v0"))
 env = MissionTextWrapper(env)
 env = NoJpegImageWrapper(env)
 state_collector = StateCollector(env)
-eval_env = gym.make("BabyAI-OneRoomS8-v0")
-ACTION_DIM = state_collector.action_space.n
-value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
-    lambda: np.zeros(ACTION_DIM, dtype=np.float32)
-)
 value_collector = ValueCollector(state_collector, value_fn)
 collector = minari.DataCollector(value_collector, record_infos=False)
 steps = 0
 
+ACTION_DIM = state_collector.action_space.n
+value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
+    lambda: np.zeros(ACTION_DIM, dtype=np.float32)
+)
+
 try:
     for episode in range(1, MAX_EPISODES + 1):
-        obs, _ = collector.reset()
+        obs, _ = collector.reset(seed=42+episode)
         episode_steps = 0
         done = False
         truncated = False

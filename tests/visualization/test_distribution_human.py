@@ -2,6 +2,7 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
 from collections import defaultdict
+from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.env.visualization import BasicUnit, DistributionUnit, OverlayWrapper
 from ice_offline.env.visualization.overlay_engine import RenderLayer
@@ -20,6 +21,7 @@ def value_fn(obs, action: int, set_value: float | None = None) -> float:
 
 def main(episodes: int = 3) -> None:
     env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
+    env = FullyObsWrapper(env)
     env = insert_render_quiet_innermost(env)
     env = OverlayWrapper(env, units=[BasicUnit(), DistributionUnit(value_fn=value_fn, style="rect")])  # ring12
     try:

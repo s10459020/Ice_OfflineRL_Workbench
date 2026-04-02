@@ -50,6 +50,7 @@ class ValueCollector(gym.Wrapper):
     # ====================
     def reset(self, *args: Any, **kwargs: Any):
         self._end_episode()
+        self._obs_cache.clear()
         
         obs, info = self.env.reset(*args, **kwargs)
         values = self._compute_values(self._value_fn)

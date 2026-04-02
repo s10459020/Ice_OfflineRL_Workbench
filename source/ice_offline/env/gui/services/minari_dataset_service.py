@@ -18,7 +18,7 @@ class MinariDatasetService:
         self._dataset = minari.load_dataset(dataset_id)
         self._loader = OverlayLoader(
             self._dataset,
-            units=[BasicUnit(), TrailUnit(), DistributionUnit(style="rect")],
+            units=[BasicUnit(), TrailUnit(), DistributionUnit()],
             render_mode="rgb_array",
         )
         self._loaded_episode_id: int | None = None

@@ -16,23 +16,9 @@ from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
 
 
-# 12-ring sector ordering for state-action distribution visualization.
-# Each sector maps to one (direction, action) pair from Q(s, d, a).
-STATE_ACTION_SECTOR_ORDER: tuple[tuple[MiniGridDirection, MiniGridAction], ...] = (
-    (MiniGridDirection.RIGHT, MiniGridAction.LEFT),
-    (MiniGridDirection.RIGHT, MiniGridAction.FORWARD),
-    (MiniGridDirection.RIGHT, MiniGridAction.RIGHT),
-    (MiniGridDirection.DOWN, MiniGridAction.RIGHT),
-    (MiniGridDirection.DOWN, MiniGridAction.FORWARD),
-    (MiniGridDirection.DOWN, MiniGridAction.LEFT),
-    (MiniGridDirection.LEFT, MiniGridAction.RIGHT),
-    (MiniGridDirection.LEFT, MiniGridAction.FORWARD),
-    (MiniGridDirection.LEFT, MiniGridAction.LEFT),
-    (MiniGridDirection.UP, MiniGridAction.LEFT),
-    (MiniGridDirection.UP, MiniGridAction.FORWARD),
-    (MiniGridDirection.UP, MiniGridAction.RIGHT),
-)
-
+# ====================
+# Constants
+# ====================
 ACTION_ORDER_BY_DIRECTION: dict[MiniGridDirection, tuple[MiniGridAction, MiniGridAction, MiniGridAction]] = {
     MiniGridDirection.UP: (MiniGridAction.LEFT, MiniGridAction.FORWARD, MiniGridAction.RIGHT),
     MiniGridDirection.RIGHT: (MiniGridAction.LEFT, MiniGridAction.FORWARD, MiniGridAction.RIGHT),
@@ -40,14 +26,30 @@ ACTION_ORDER_BY_DIRECTION: dict[MiniGridDirection, tuple[MiniGridAction, MiniGri
     MiniGridDirection.LEFT: (MiniGridAction.RIGHT, MiniGridAction.FORWARD, MiniGridAction.LEFT),
 }
 
+STATE_ACTION_SECTOR_ORDER: tuple[tuple[MiniGridDirection, MiniGridAction], ...] = (
+    (MiniGridDirection.UP, MiniGridAction.LEFT),
+    (MiniGridDirection.UP, MiniGridAction.FORWARD),
+    (MiniGridDirection.UP, MiniGridAction.RIGHT),
+    (MiniGridDirection.RIGHT, MiniGridAction.LEFT),
+    (MiniGridDirection.RIGHT, MiniGridAction.FORWARD),
+    (MiniGridDirection.RIGHT, MiniGridAction.RIGHT),
+    (MiniGridDirection.DOWN, MiniGridAction.LEFT),
+    (MiniGridDirection.DOWN, MiniGridAction.FORWARD),
+    (MiniGridDirection.DOWN, MiniGridAction.RIGHT),
+    (MiniGridDirection.LEFT, MiniGridAction.LEFT),
+    (MiniGridDirection.LEFT, MiniGridAction.FORWARD),
+    (MiniGridDirection.LEFT, MiniGridAction.RIGHT),
+)
 
-class StateActionDistribution:
-    """Shared state-action distribution data and quantization.
 
-    This layer is renderer-agnostic:
-    - stores raw values from info["values"]
-    - computes quantile edges once per frame
-    - computes per-cell quantized bins for all styles to reuse
+# ====================
+# Base Renderer
+# ====================
+class BasicStateActionRenderer(UnitRenderer):
+    """State-action distribution base renderer.
+
+    This base handles data ingestion and quantization.
+    Subclasses only implement drawing style.
     """
 
     def __init__(
@@ -57,97 +59,100 @@ class StateActionDistribution:
         value_min: float | None = None,
         value_max: float | None = None,
     ) -> None:
-        if quantize_mode not in {"percentile", "fixed"}:
-            raise ValueError("quantize_mode must be 'percentile' or 'fixed'")
-        self.values: np.ndarray | None = None
-        self.bin_grid: np.ndarray | None = None
-        self.quantile_edges = np.zeros(4, dtype=np.float32)
-        self._quantize_mode = quantize_mode
+        super().__init__()
+        assert quantize_mode in {"percentile", "fixed"}, "quantize_mode must be 'percentile' or 'fixed'"
+        
+        self._bins: np.ndarray | None = None
+        self._edges: np.ndarray = np.empty((4,), dtype=np.float32)
+        self._values: np.ndarray = np.empty((0,), dtype=np.float32)
         self._value_min = value_min
         self._value_max = value_max
-        self._quantile_levels = np.asarray([0.2, 0.4, 0.6, 0.8], dtype=np.float32)
+        self._quantize_mode = quantize_mode
+        self._quantize_levels = np.asarray([0.2, 0.4, 0.6, 0.8], dtype=np.float32)
 
-    # ------------------------------------------------------------------
-    # Update
-    # ------------------------------------------------------------------
+    # ====================
+    # Data Update
+    # ====================
     def update(self, values: np.ndarray) -> None:
-        # One frame update point for all renderer styles.
-        self.values = np.asarray(values, dtype=np.float32)
-        self.quantile_edges = self._compute_quantile_edges(self.values)
-        self.bin_grid = self._quantize_values(self.values, self.quantile_edges)
+        self._values = values
+        self._edges = self._compute_edges(self._values)
+        self._bins = np.digitize(self._values, self._edges, right=True)
 
-    # ------------------------------------------------------------------
-    # Cell Access
-    # ------------------------------------------------------------------
-    def has_cell(self, i: int, j: int) -> bool:
+    # ====================
+    # Data Access
+    # ====================
+    def in_map(self, i: int, j: int) -> bool:
         ix, iy = i - 1, j - 1
-        return 0 <= ix < self.values.shape[0] and 0 <= iy < self.values.shape[1]
-
-    def cell_values(self, i: int, j: int) -> np.ndarray:
-        return self.values[i - 1, j - 1]
+        return 0 <= ix < self._bins.shape[0] and 0 <= iy < self._bins.shape[1]
 
     def cell_bins(self, i: int, j: int) -> np.ndarray:
-        return self.bin_grid[i - 1, j - 1]
+        return self._bins[i - 1, j - 1]
 
-    # ------------------------------------------------------------------
+    # ====================
     # Quantize
-    # ------------------------------------------------------------------
-    def _compute_quantile_edges(self, values: np.ndarray) -> np.ndarray:
+    # ====================
+    def _compute_edges(self, values: np.ndarray) -> np.ndarray:
         if self._quantize_mode == "fixed":
-            return self._compute_fixed_edges(values)
-        flat = values.reshape(-1)
-        return np.quantile(flat, self._quantile_levels).astype(np.float32)
+            v_min = np.min(values) if self._value_min is None else self._value_min
+            v_max = np.max(values) if self._value_max is None else self._value_max
+            return (v_min + (v_max - v_min) * self._quantize_levels).astype(np.float32)
+        else:
+            flat = values.reshape(-1)
+            v_min = np.min(flat)
+            filtered = flat[flat > v_min]
+            base = filtered if filtered.size > 0 else flat
+            return np.quantile(base, self._quantize_levels).astype(np.float32)
 
-    def _compute_fixed_edges(self, values: np.ndarray) -> np.ndarray:
-        v_min = np.min(values) if self._value_min is None else self._value_min
-        v_max = np.max(values) if self._value_max is None else self._value_max
-        return np.linspace(v_min, v_max, 6, dtype=np.float32)[1:-1]
-
-    def _quantize_values(self, values: np.ndarray, edges: np.ndarray) -> np.ndarray:
-        bins = np.digitize(values, edges, right=True)
-        return np.clip(bins, 0, 4).astype(np.int8)
-
-
-class _StateActionRendererBase(UnitRenderer):
-    """Minimal shared hooks for state-action renderers."""
-
-    def __init__(self, distribution: StateActionDistribution) -> None:
-        super().__init__()
-        self._distribution = distribution
-
-    # ------------------------------------------------------------------
+    # ====================
     # UnitRenderer Hooks
-    # ------------------------------------------------------------------
+    # ====================
     def condition_tile(self, *, i: int, j: int, tile_size: int) -> bool:
-        return self._distribution.has_cell(i, j)
+        return self.in_map(i, j)
 
     def cache_tile_key(self, *, i: int, j: int, tile_size: int) -> tuple[int, ...]:
-        bins = self._distribution.cell_bins(i, j)
-        return tuple(bins.reshape(-1))
+        bins = self.cell_bins(i, j)
+        return (tile_size, *tuple(bins.flatten()))
 
-class RingStateActionRenderer(_StateActionRendererBase):
+
+# ====================
+# Ring Renderer
+# ====================
+class RingStateActionRenderer(BasicStateActionRenderer):
     """Ring style state-action renderer."""
 
-    def __init__(self, distribution: StateActionDistribution) -> None:
-        super().__init__(distribution)
+    def __init__(
+        self,
+        *,
+        quantize_mode: str = "percentile",
+        value_min: float | None = None,
+        value_max: float | None = None,
+    ) -> None:
+        super().__init__(quantize_mode=quantize_mode, value_min=value_min, value_max=value_max)
         self._ring_color = (70, 190, 255)
         self._pickup_color = (80, 220, 120)
+        self._alpha_palette = (0.08, 0.2725, 0.465, 0.6575, 0.85)
+        self._pickup_alpha_palette = (0.0, 0.25, 0.45, 0.65, 0.85)
         self._ring_sector_cache: dict[int, np.ndarray] = {}
         self._pickup_edge_mask_cache: dict[int, np.ndarray] = {}
 
+    # ====================
+    # UnitRenderer Hooks
+    # ====================
     def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
-        bins = self._distribution.cell_bins(i, j)
-        self._render_ring(tile_img, bins)
+        bins = self.cell_bins(i, j)
+        self._render_ring(tile_img, bins, tile_size)
         pickup_bins = bins[:, MiniGridAction.PICKUP]
-        self._render_pickup(tile_img, pickup_bins)
+        self._render_pickup(tile_img, pickup_bins, tile_size)
 
-    def _render_ring(self, tile_img: np.ndarray, bins: np.ndarray) -> None:
-        tile_size = tile_img.shape[0]
+    # ====================
+    # Style Render
+    # ====================
+    def _render_ring(self, tile_img: np.ndarray, bins: np.ndarray, tile_size: int) -> None:
+        # 5-level bin -> alpha palette, then mapped into 12 ring sectors.
         sector_map = self._get_ring_sector_map(tile_size)
-        alpha_palette = np.asarray([0.08 + (0.85 - 0.08) * (k / 4.0) for k in range(5)], dtype=np.float32)
         alpha_values = np.zeros(12, dtype=np.float32)
         for sector_idx, (d_idx, a_idx) in enumerate(STATE_ACTION_SECTOR_ORDER):
-            alpha_values[sector_idx] = alpha_palette[bins[d_idx, a_idx]]
+            alpha_values[sector_idx] = self._alpha_palette[bins[d_idx, a_idx]]
         valid = sector_map >= 0
         if np.any(valid):
             alpha_map = np.zeros((tile_size, tile_size), dtype=np.float32)
@@ -159,30 +164,28 @@ class RingStateActionRenderer(_StateActionRendererBase):
                 255.0,
             ).astype(np.uint8)
 
-    def _render_pickup(self, tile_img: np.ndarray, pickup_bins: np.ndarray) -> None:
-        masks = self._get_pickup_edge_masks(tile_img.shape[0])
-        alpha_palette = (0.0, 0.25, 0.45, 0.65, 0.85)
+    def _render_pickup(self, tile_img: np.ndarray, pickup_bins: np.ndarray, tile_size: int) -> None:
+        masks = self._get_pickup_edge_masks(tile_size)
         for d_idx in MiniGridDirection:
-            self._blend_mask(tile_img, masks[d_idx], self._pickup_color, alpha_palette[int(pickup_bins[d_idx])])
+            self._blend_mask(tile_img, masks[d_idx], self._pickup_color, self._pickup_alpha_palette[int(pickup_bins[d_idx])])
 
     def _get_ring_sector_map(self, tile_size: int) -> np.ndarray:
         sector_map = self._ring_sector_cache.get(tile_size)
-        if sector_map is not None:
-            return sector_map
-        yy, xx = np.indices((tile_size, tile_size), dtype=np.float32)
-        cx = (tile_size - 1) * 0.5
-        cy = (tile_size - 1) * 0.5
-        dx = (xx - cx) / max(cx, 1.0)
-        dy = (yy - cy) / max(cy, 1.0)
-        r = np.sqrt(dx * dx + dy * dy)
-        theta = np.arctan2(-dy, dx)
-        clock = np.mod((math.pi / 2.0) - theta + 2.0 * math.pi, 2.0 * math.pi)
-        step = 2.0 * math.pi / 12.0
-        sector0_boundary = (math.pi / 6.0) - (step / 2.0)
-        sector = np.floor(np.mod(clock - sector0_boundary, 2.0 * math.pi) / step).astype(np.int16)
-        ring_mask = (r >= 0.24) & (r <= 0.46)
-        sector_map = np.where(ring_mask, sector, -1).astype(np.int16)
-        self._ring_sector_cache[tile_size] = sector_map
+        if sector_map is None:
+            yy, xx = np.indices((tile_size, tile_size), dtype=np.float32)
+            cx = (tile_size - 1) * 0.5
+            cy = (tile_size - 1) * 0.5
+            dx = (xx - cx) / max(cx, 1.0)
+            dy = (yy - cy) / max(cy, 1.0)
+            r = np.sqrt(dx * dx + dy * dy)
+            theta = np.arctan2(-dy, dx)
+            clock = np.mod((math.pi / 2.0) - theta + 2.0 * math.pi, 2.0 * math.pi)
+            step = 2.0 * math.pi / 12.0
+            sector0_boundary = -((step+1) / 2.0)
+            sector = np.floor(np.mod(clock - sector0_boundary, 2.0 * math.pi) / step).astype(np.int16)
+            ring_mask = (r >= 0.24) & (r <= 0.46)
+            sector_map = np.where(ring_mask, sector, -1).astype(np.int16)
+            self._ring_sector_cache[tile_size] = sector_map
         return sector_map
 
     def _get_pickup_edge_masks(self, tile_size: int) -> np.ndarray:
@@ -212,23 +215,40 @@ class RingStateActionRenderer(_StateActionRendererBase):
         tile_img[:, :, :] = np.clip(tile, 0.0, 255.0).astype(np.uint8)
 
 
-class RectStateActionRenderer(_StateActionRendererBase):
+# ====================
+# Rect Renderer
+# ====================
+class RectStateActionRenderer(BasicStateActionRenderer):
     """Rect style state-action renderer."""
 
-    def __init__(self, distribution: StateActionDistribution) -> None:
-        super().__init__(distribution)
+    def __init__(
+        self,
+        *,
+        quantize_mode: str = "percentile",
+        value_min: float | None = None,
+        value_max: float | None = None,
+    ) -> None:
+        super().__init__(quantize_mode=quantize_mode, value_min=value_min, value_max=value_max)
         self._rect_color = (255, 180, 60)
         self._pickup_color = (80, 220, 120)
+        self._pickup_alpha_palette = (0.0, 0.25, 0.45, 0.65, 0.85)
         self._rect_mask_cache: dict[int, np.ndarray] = {}
         self._pickup_edge_mask_cache: dict[int, np.ndarray] = {}
 
+    # ====================
+    # UnitRenderer Hooks
+    # ====================
     def overlay_tile(self, tile_img: np.ndarray, *, i: int, j: int, tile_size: int) -> None:
-        bins = self._distribution.cell_bins(i, j)
+        bins = self.cell_bins(i, j)
         self._render_rect(tile_img, bins)
         pickup_bins = bins[:, MiniGridAction.PICKUP]
         self._render_pickup(tile_img, pickup_bins)
 
+    # ====================
+    # Style Render
+    # ====================
     def _render_rect(self, tile_img: np.ndarray, bins: np.ndarray) -> None:
+        # For each direction, draw 3 action strips with level-based width.
         masks = self._get_rect_masks(tile_img.shape[0])
         for d_idx in MiniGridDirection:
             action_order = ACTION_ORDER_BY_DIRECTION[d_idx]
@@ -238,9 +258,8 @@ class RectStateActionRenderer(_StateActionRendererBase):
 
     def _render_pickup(self, tile_img: np.ndarray, pickup_bins: np.ndarray) -> None:
         masks = self._get_pickup_edge_masks(tile_img.shape[0])
-        alpha_palette = (0.0, 0.25, 0.45, 0.65, 0.85)
         for d_idx in MiniGridDirection:
-            self._blend_mask(tile_img, masks[d_idx], self._pickup_color, alpha_palette[int(pickup_bins[d_idx])])
+            self._blend_mask(tile_img, masks[d_idx], self._pickup_color, self._pickup_alpha_palette[int(pickup_bins[d_idx])])
 
     def _get_pickup_edge_masks(self, tile_size: int) -> np.ndarray:
         masks = self._pickup_edge_mask_cache.get(tile_size)
@@ -300,6 +319,9 @@ class RectStateActionRenderer(_StateActionRendererBase):
         tile_img[:, :, :] = np.clip(tile, 0.0, 255.0).astype(np.uint8)
 
 
+# ====================
+# Unit
+# ====================
 class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     """Collect values and register state-action renderer(s).
 
@@ -319,15 +341,20 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
         value_max: float | None = None,
     ) -> None:
         self._value_fn = value_fn
-        self._distribution = StateActionDistribution(
-            quantize_mode=quantize_mode,
-            value_min=value_min,
-            value_max=value_max,
-        )
+        # Unit chooses style renderer and acts as bridge between
+        # runtime data source (wrapper/loader) and renderer update.
         if style == "ring":
-            self._sa_renderer = RingStateActionRenderer(self._distribution)
+            self._sa_renderer = RingStateActionRenderer(
+                quantize_mode=quantize_mode,
+                value_min=value_min,
+                value_max=value_max,
+            )
         elif style == "rect":
-            self._sa_renderer = RectStateActionRenderer(self._distribution)
+            self._sa_renderer = RectStateActionRenderer(
+                quantize_mode=quantize_mode,
+                value_min=value_min,
+                value_max=value_max,
+            )
         else:
             raise ValueError("style must be 'ring' or 'rect'")
 
@@ -335,6 +362,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     # Wrapper Hooks
     # ====================
     def on_wrapper(self, env: gym.Env, wrapper: Any, engine: OverlayEngine) -> gym.Env:
+        # Online mode: register renderer and ensure values source exists.
         engine.register(int(RenderLayer.DISTRIBUTION), self._sa_renderer)
         collector = ValueCollector(env, self._value_fn)
         wrapper.register("values", collector.get_last)
@@ -344,6 +372,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     # Loader Hooks
     # ====================
     def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
+        # Offline mode: register renderer and load per-episode values list.
         engine.register(int(RenderLayer.DISTRIBUTION), self._sa_renderer)
         value_loader = ValueLoader(loader.dataset_id)
         loader.register_list("values", lambda episode_index: value_loader.load_episode(episode_index))
@@ -352,5 +381,5 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     # Shared Hooks
     # ====================
     def on_render(self, data: dict[str, Any]) -> None:
-        self._distribution.update(data["values"])
+        self._sa_renderer.update(data["values"])
 
