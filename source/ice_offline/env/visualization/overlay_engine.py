@@ -1,5 +1,4 @@
 from enum import IntEnum
-from abc import ABC, abstractmethod
 from types import MethodType
 from typing import Any
 import numpy as np
@@ -17,11 +16,6 @@ class RenderLayer(IntEnum):
     OBJECTS = 30
     AGENT = 40
     HIGHLIGHT = 50
-
-
-class UnitRegisterInterface(ABC):
-    @abstractmethod
-    def register_engine(self, engine: "OverlayEngine") -> None: ...
 
 
 class OverlayEngine:

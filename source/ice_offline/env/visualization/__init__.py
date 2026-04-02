@@ -4,7 +4,6 @@ from .unit_basic import BasicUnit
 from .distribution import DistributionOverlayInterface
 from .overlay_loader import OverlayLoader, UnitLoaderInterface
 from .overlay_engine import OverlayEngine, RenderLayer
-from .overlay_engine import UnitRegisterInterface
 from .overlay_renderer import OverlayRenderer, UnitRenderer
 from .overlay_wrapper import OverlayWrapper, UnitWrapperInterface
 from .unit_distribution import DistributionUnit
@@ -17,7 +16,6 @@ __all__ = [
     "OverlayLoader",
     "UnitLoaderInterface",
     "OverlayRenderer",
-    "UnitRegisterInterface",
     "UnitRenderer",
     "UnitWrapperInterface",
     "OverlayWrapper",

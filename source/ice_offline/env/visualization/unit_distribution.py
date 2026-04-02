@@ -8,9 +8,9 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from ..model.state import State
 from ..replay.value_collector import MiniGridAction, MiniGridDirection, ValueCollector
-from .overlay_engine import OverlayEngine, RenderLayer, UnitRegisterInterface
+from ..replay.value_loader import ValueLoader
+from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
@@ -22,16 +22,23 @@ STATE_ACTION_SECTOR_ORDER: tuple[tuple[MiniGridDirection, MiniGridAction], ...] 
     (MiniGridDirection.RIGHT, MiniGridAction.LEFT),
     (MiniGridDirection.RIGHT, MiniGridAction.FORWARD),
     (MiniGridDirection.RIGHT, MiniGridAction.RIGHT),
-    (MiniGridDirection.DOWN, MiniGridAction.LEFT),
-    (MiniGridDirection.DOWN, MiniGridAction.FORWARD),
     (MiniGridDirection.DOWN, MiniGridAction.RIGHT),
-    (MiniGridDirection.LEFT, MiniGridAction.LEFT),
-    (MiniGridDirection.LEFT, MiniGridAction.FORWARD),
+    (MiniGridDirection.DOWN, MiniGridAction.FORWARD),
+    (MiniGridDirection.DOWN, MiniGridAction.LEFT),
     (MiniGridDirection.LEFT, MiniGridAction.RIGHT),
+    (MiniGridDirection.LEFT, MiniGridAction.FORWARD),
+    (MiniGridDirection.LEFT, MiniGridAction.LEFT),
     (MiniGridDirection.UP, MiniGridAction.LEFT),
     (MiniGridDirection.UP, MiniGridAction.FORWARD),
     (MiniGridDirection.UP, MiniGridAction.RIGHT),
 )
+
+ACTION_ORDER_BY_DIRECTION: dict[MiniGridDirection, tuple[MiniGridAction, MiniGridAction, MiniGridAction]] = {
+    MiniGridDirection.UP: (MiniGridAction.LEFT, MiniGridAction.FORWARD, MiniGridAction.RIGHT),
+    MiniGridDirection.RIGHT: (MiniGridAction.LEFT, MiniGridAction.FORWARD, MiniGridAction.RIGHT),
+    MiniGridDirection.DOWN: (MiniGridAction.RIGHT, MiniGridAction.FORWARD, MiniGridAction.LEFT),
+    MiniGridDirection.LEFT: (MiniGridAction.RIGHT, MiniGridAction.FORWARD, MiniGridAction.LEFT),
+}
 
 
 class StateActionDistribution:
@@ -223,8 +230,8 @@ class RectStateActionRenderer(_StateActionRendererBase):
 
     def _render_rect(self, tile_img: np.ndarray, bins: np.ndarray) -> None:
         masks = self._get_rect_masks(tile_img.shape[0])
-        action_order = (MiniGridAction.LEFT, MiniGridAction.FORWARD, MiniGridAction.RIGHT)
         for d_idx in MiniGridDirection:
+            action_order = ACTION_ORDER_BY_DIRECTION[d_idx]
             for slot_idx, a_real in enumerate(action_order):
                 level = bins[d_idx, a_real]
                 tile_img[masks[d_idx, slot_idx, level]] = self._rect_color
@@ -293,7 +300,7 @@ class RectStateActionRenderer(_StateActionRendererBase):
         tile_img[:, :, :] = np.clip(tile, 0.0, 255.0).astype(np.uint8)
 
 
-class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface):
+class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     """Collect values and register state-action renderer(s).
 
     Responsibilities:
@@ -324,17 +331,26 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterIn
         else:
             raise ValueError("style must be 'ring' or 'rect'")
 
-    # ------------------------------------------------------------------
+    # ====================
     # Wrapper Hooks
-    # ------------------------------------------------------------------
-    def on_wrapper(self, env: gym.Env) -> gym.Env:
-        return ValueCollector(env, self._value_fn)
-
-    def on_render(self, state: State, info: dict[str, Any]) -> None:
-        self._distribution.update(info["values"])
-
-    # ------------------------------------------------------------------
-    # Engine Registration
-    # ------------------------------------------------------------------
-    def register_engine(self, engine: OverlayEngine) -> None:
+    # ====================
+    def on_wrapper(self, env: gym.Env, wrapper: Any, engine: OverlayEngine) -> gym.Env:
         engine.register(int(RenderLayer.DISTRIBUTION), self._sa_renderer)
+        collector = ValueCollector(env, self._value_fn)
+        wrapper.register("values", collector.get_last)
+        return collector
+
+    # ====================
+    # Loader Hooks
+    # ====================
+    def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
+        engine.register(int(RenderLayer.DISTRIBUTION), self._sa_renderer)
+        value_loader = ValueLoader(loader.dataset_id)
+        loader.register_list("values", lambda episode_index: value_loader.load_episode(episode_index))
+
+    # ====================
+    # Shared Hooks
+    # ====================
+    def on_render(self, data: dict[str, Any]) -> None:
+        self._distribution.update(data["values"])
+

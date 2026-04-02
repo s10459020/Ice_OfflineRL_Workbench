@@ -41,6 +41,7 @@ class ValueCollector(gym.Wrapper):
         self._base_env = self.env.unwrapped
         self._episodes: list[list[np.ndarray]] = []
         self._current: list[np.ndarray] | None = None
+        self._last_values: np.ndarray | None = None
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
         self._observation_transforms: list[Callable[[Any], Any]] = []
 
@@ -54,6 +55,7 @@ class ValueCollector(gym.Wrapper):
         values = self._compute_values(self._value_fn)
         info["values"] = values
         self._current = [values]
+        self._last_values = values
         return obs, info
 
     def step(self, *args: Any, **kwargs: Any):
@@ -61,7 +63,11 @@ class ValueCollector(gym.Wrapper):
         values = self._compute_values(self._value_fn)
         info["values"] = values
         self._current.append(values)
+        self._last_values = values
         return obs, reward, terminated, truncated, info
+
+    def get_last(self) -> np.ndarray | None:
+        return self._last_values
 
     def save(self, dataset_id: str) -> Path:
         self._end_episode()

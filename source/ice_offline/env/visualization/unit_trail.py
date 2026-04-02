@@ -4,15 +4,15 @@ import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_triangle, rotate_fn
 
 from ..model.trail import Trail, TrailPoint
-from ..model.state import State
+from ..replay.state_collector import StateCollector
+from ..replay.state_loader import StateLoader
 from .overlay_engine import OverlayEngine, RenderLayer
-from .overlay_engine import UnitRegisterInterface
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
 
 
-class TrailUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface, UnitRenderer):
+class TrailUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRenderer):
     # ------------------------------------------------------------------
     # Config
     # ------------------------------------------------------------------
@@ -29,38 +29,51 @@ class TrailUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface
         self._trail_color = np.asarray((70, 160, 255), dtype=np.float32)
         self._arrow_masks_cache: dict[int, dict[int, np.ndarray]] = {}
 
-    # ------------------------------------------------------------------
+    # ====================
     # Wrapper Hooks
-    # ------------------------------------------------------------------
-    def register_engine(self, engine: OverlayEngine) -> None:
+    # ====================
+    def on_wrapper(self, env: Any, wrapper: Any, engine: OverlayEngine):
         engine.register(int(RenderLayer.TRAIL), self)
+        collector = StateCollector(env)
+        wrapper.register("state", collector.get_last)
+        return collector
 
-    def on_reset(self, state: State, info: dict[str, Any]) -> None:
-        del info
+    def on_reset(self, data: dict[str, Any]) -> None:
+        state = data["state"]
         self._trail.reset()
         point = TrailPoint(pos=(int(state.agent_pos[0]), int(state.agent_pos[1])), direction=int(state.agent_dir))
         self._trail.push(point.pos, point.direction)
 
-    def on_step(self, state: State, action: Any, reward: float, done: bool, info: dict[str, Any]) -> None:
-        del action, reward, done, info
+    def on_step(self, data: dict[str, Any]) -> None:
+        state = data["state"]
         point = TrailPoint(pos=(int(state.agent_pos[0]), int(state.agent_pos[1])), direction=int(state.agent_dir))
         self._trail.push(point.pos, point.direction)
 
-    def on_render(self, state: State, info: dict[str, Any]) -> None:
-        del state, info
-        if self._trail_mode == "clear":
-            self._trail.reset()
+    # ====================
+    # Loader Hooks
+    # ====================
+    def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
+        engine.register(int(RenderLayer.TRAIL), self)
+        state_loader = StateLoader(loader.dataset_id)
+        loader.register_list("state", lambda episode_index: state_loader.load_episode(episode_index))
 
-    def on_load(self, states: list[State], actions: list[Any], rewards: list[float], dones: list[bool], infos: list[dict[str, Any]]) -> None:
-        del actions, rewards, dones, infos
+    def on_load(self, datas: list[dict[str, Any]]) -> None:
         self._trail.reset()
-        for state in states:
+        for data in datas:
+            state = data["state"]
             point = TrailPoint(pos=(int(state.agent_pos[0]), int(state.agent_pos[1])), direction=int(state.agent_dir))
             self._trail.push(point.pos, point.direction)
         self._trail.set_view_end(0)
 
-    def on_seek(self, transition_index: int) -> None:
-        self._trail.set_view_end(int(transition_index))
+    def on_seek(self, data: dict[str, Any]) -> None:
+        self._trail.set_view_end(data["step_index"])
+
+    # ====================
+    # Shared Hooks
+    # ====================
+    def on_render(self, _data: dict[str, Any]) -> None:
+        if self._trail_mode == "clear":
+            self._trail.reset()
 
     # ------------------------------------------------------------------
     # Cache Hooks

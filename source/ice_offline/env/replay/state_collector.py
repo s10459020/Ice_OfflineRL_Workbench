@@ -9,6 +9,7 @@ import h5py
 import numpy as np
 
 from ice_offline.env.common import StateIOWrapper
+from ice_offline.env.model import State
 
 class StateCollector(gym.Wrapper):
     """Collect episode-wise states and save to Minari dataset folder.
@@ -25,6 +26,7 @@ class StateCollector(gym.Wrapper):
         super().__init__(self._state_io)
         self._episodes: list[list[dict[str, Any]]] = []
         self._current: list[dict[str, Any]] | None = None
+        self._last_state: State | None = None
 
     # ====================
     # Public API
@@ -33,17 +35,24 @@ class StateCollector(gym.Wrapper):
         self._end_episode()
         
         obs, info = self.env.reset(*args, **kwargs)
-        state = self._state_io.get_state().serialize()
+        state = self._state_io.get_state()
         info["state"] = state
-        self._current = [state]
+        self._last_state = state
+        
+        self._current = [state.serialize()]
         return obs, info
 
     def step(self, *args: Any, **kwargs: Any):
         obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
-        state = self._state_io.get_state().serialize()
+        state = self._state_io.get_state()
         info["state"] = state
-        self._current.append(state)
+        self._last_state = state
+
+        self._current.append(state.serialize())
         return obs, reward, terminated, truncated, info
+
+    def get_last(self) -> State | None:
+        return self._last_state
 
     def save(self, dataset_id: str) -> Path:
         self._end_episode()

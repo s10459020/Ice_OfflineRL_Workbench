@@ -12,10 +12,10 @@ from minigrid.utils.rendering import (
     rotate_fn,
 )
 
-from ice_offline.env.model.state import State
+from ice_offline.env.common import StateIOWrapper
+from ice_offline.env.replay import StateCollector, StateLoader
 
 from .overlay_engine import OverlayEngine, RenderLayer
-from .overlay_engine import UnitRegisterInterface
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
 from .overlay_wrapper import UnitWrapperInterface
@@ -110,24 +110,49 @@ class _HighlightRender(UnitRenderer):
             highlight_img(tile_img)
 
 
-class BasicUnit(UnitWrapperInterface, UnitLoaderInterface, UnitRegisterInterface):
+class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
     def __init__(self) -> None:
         self._agent = _AgentRender()
         self._objects = _ObjectsRender()
         self._highlight = _HighlightRender()
         self._background = _BackgroundRender()
+        self._state_io: StateIOWrapper | None = None
 
-    def register_engine(self, engine: OverlayEngine) -> None:
+    def _register_engine(self, engine: OverlayEngine) -> None:
         engine.register(int(RenderLayer.AGENT), self._agent)
         engine.register(int(RenderLayer.OBJECTS), self._objects)
         engine.register(int(RenderLayer.HIGHLIGHT), self._highlight)
         engine.register(int(RenderLayer.BACKGROUND), self._background)
 
+    # ====================
+    # Wrapper Hooks
+    # ====================
+    def on_wrapper(self, env: gym.Env, wrapper: Any, engine: OverlayEngine) -> gym.Env:
+        self._register_engine(engine)
+        collector = StateCollector(env)
+        wrapper.register("state", collector.get_last)
+        return collector
+
+    # ====================
+    # Loader Hooks
+    # ====================
+    def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
+        self._register_engine(engine)
+        state_loader = StateLoader(loader.dataset_id)
+        loader.register_list("state", lambda episode_index: state_loader.load_episode(episode_index))
+
+    # ====================
+    # Shared Hooks
+    # ====================
     def on_env(self, base_env: gym.Env) -> None:
         self._highlight._base_env = base_env
+        self._state_io = StateIOWrapper(base_env)
 
-    def on_render(self, state: State, info: dict[str, Any]) -> None:
-        del info
+    def on_seek(self, data: dict[str, Any]) -> None:
+        self._state_io.set_state(data["state"])
+
+    def on_render(self, data: dict[str, Any]) -> None:
+        state = data["state"]
         self._agent.agent_pos = state.agent_pos
         self._agent.agent_dir = state.agent_dir
 
