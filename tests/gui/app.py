@@ -10,8 +10,10 @@ from ice_offline.env.gui.views.main_window import MainWindow
 
 
 def main() -> int:
+    dataset_id = "train_agent_q_table_state_value-v0"
+    #dataset_id = "test_collect_value-v0"
+
     app = QApplication(sys.argv)
-    dataset_id = "test_collect_value-v0"
     service = MinariDatasetService(dataset_id=dataset_id)
     episodes = service.list_episodes()
     presenter = ViewerPresenter(episodes)

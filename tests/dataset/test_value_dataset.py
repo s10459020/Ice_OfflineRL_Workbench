@@ -19,8 +19,6 @@ MAX_EPISODES = 10
 # Build Value Data
 # ====================
 print_stage("Build Value Data")
-env = gym.make("BabyAI-OneRoomS8-v0")
-steps = 0
 
 value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
     lambda: np.zeros(env.action_space.n, dtype=np.float32)
@@ -32,21 +30,26 @@ def value_fn(obs, action: int, set_value: float | None = None) -> float:
         value_table[key][action] = set_value
     return value_table[key][action]
 
-recorder = ValueCollector(env.unwrapped, value_fn)
+env = gym.make("BabyAI-OneRoomS8-v0")
+recorder = ValueCollector(env, value_fn)
+steps = 0
 
 try:
     for episode in range(1, MAX_EPISODES + 1):
         obs, _ = recorder.reset(seed=episode)
+        recorder.record()
 
         done = False
         truncated = False
         ep_steps = 0
         while not (done or truncated):
             action = int(np.random.randint(0, 4))
+            prev_obs = obs
             obs, _, done, truncated, _ = recorder.step(action)
             steps += 1
             ep_steps += 1
-            value_fn(obs, action, set_value=steps)
+            value_fn(prev_obs, action, set_value=steps)
+            recorder.record()
             print(f"episode={episode} step={ep_steps} action={action} global_steps={steps}")
             
     out_path = recorder.save(DATASET_ID)

@@ -15,12 +15,14 @@ def q_table_state_from_minigrid_observation(obs: Any) -> Any:
     return direction, image.tobytes()
 
 
-agent = QTableAgent.load("model/BabyAI-OneRoomS8-v0_QTableAgent.pkl")
-agent.set_encoder(q_table_state_from_minigrid_observation)
-agent.epsilon = 0.05
+agent = QTableAgent.load(
+    "model/BabyAI-OneRoomS8-v0_QTableAgent.pkl",
+    encoder=q_table_state_from_minigrid_observation,
+)
+policy_epsilon = 0.05
 
 print("loaded model: model/BabyAI-OneRoomS8-v0_QTableAgent.pkl")
-print(f"q_states={len(agent.q_table)} | env=BabyAI-OneRoomS8-v0-fullobs | policy_epsilon={agent.epsilon:.3f}")
+print(f"q_states={len(agent.Q)} | env=BabyAI-OneRoomS8-v0-fullobs | policy_epsilon={policy_epsilon:.3f}")
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 env = FullyObsWrapper(env)
@@ -30,10 +32,16 @@ try:
         env=env,
         max_episodes=20,
         seed=None,
-        policy=lambda obs: int((0, 1, 2, 3)[agent.act(obs, greedy=False)]),
+        policy=lambda obs: int((0, 1, 2, 3)[agent.policy(obs, epsilon=policy_epsilon)]),
         print_interval=1,
     )
 finally:
     env.close()
 
 print(f"finished_steps={finished_steps}")
+
+
+
+
+
+

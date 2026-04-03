@@ -45,13 +45,16 @@ value_table: defaultdict[tuple[bytes, int], np.ndarray] = defaultdict(
 try:
     for episode in range(1, MAX_EPISODES + 1):
         obs, _ = collector.reset(seed=42+episode)
+        value_collector.record()
         episode_steps = 0
         done = False
         truncated = False
         while not (done or truncated):
             action = int(np.random.randint(0, 4))
-            value = value_fn(obs, action, set_value=steps + 1)
+            prev_obs = obs
             obs, _, done, truncated, _ = collector.step(action)
+            value = value_fn(prev_obs, action, set_value=steps + 1)
+            value_collector.record()
             episode_steps += 1
             steps += 1
             print(

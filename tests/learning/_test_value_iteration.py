@@ -113,12 +113,12 @@ def run_value_iteration(
 
 agent = QTableAgent(
     n_actions=4,
+    encoder=minigrid_q_encoder,
     alpha=0.1,
     gamma=0.99,
     epsilon=0.0,
     seed=42,
 )
-agent.set_encoder(minigrid_q_encoder)
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")
 env = FullyObsWrapper(env)
@@ -128,7 +128,7 @@ env = RenderOverlayWrapper(env)
 env = TrailWrapper(env, clear_on_render=False, max_trails=8)
 env = DistributionWrapper(
     env,
-    value_fn=lambda obs, action: agent.q(obs, action),
+    value_fn=lambda obs, action: agent.Q(obs, action),
     style="rect12",
 )
 env = RenderDelayWrapper(env, fps=4, render_on_done=True)
@@ -146,4 +146,7 @@ try:
 finally:
     env.close()
 
-print(f"train_done | steps={steps} | sweeps={sweeps} | q_states={len(agent.q_table)}")
+print(f"train_done | steps={steps} | sweeps={sweeps} | q_states={len(agent.Q)}")
+
+
+

@@ -21,12 +21,12 @@ env = FullyObsWrapper(env)
 env = StepPenaltyWrapper(env, step_penalty=0.01)
 agent = QTableAgent(
     n_actions=4,
+    encoder=q_table_state_from_minigrid_observation,
     alpha=0.1,
     gamma=0.99,
     epsilon=0.3,
     seed=42,
 )
-agent.set_encoder(q_table_state_from_minigrid_observation)
 
 try:
     steps = train(
@@ -44,5 +44,7 @@ finally:
 
 print(
     f"train_done | steps={steps} | "
-    f"q_states={len(agent.q_table)} | save_dir=model"
+    f"q_states={len(agent.Q)} | save_dir=model"
 )
+
+

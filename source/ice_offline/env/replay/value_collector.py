@@ -43,6 +43,7 @@ class ValueCollector(gym.Wrapper):
         self._current: list[np.ndarray] | None = None
         self._last_values: np.ndarray | None = None
         self._obs_cache: dict[tuple[int, int, int], Any] = {}
+        self._last_carrying_obj: Any = None
         self._observation_transforms: list[Callable[[Any], Any]] = []
 
     # ====================
@@ -51,21 +52,16 @@ class ValueCollector(gym.Wrapper):
     def reset(self, *args: Any, **kwargs: Any):
         self._end_episode()
         self._obs_cache.clear()
-        
-        obs, info = self.env.reset(*args, **kwargs)
-        values = self._compute_values(self._value_fn)
-        info["values"] = values
-        self._current = [values]
-        self._last_values = values
-        return obs, info
+        self._last_carrying_obj = None
+        self._current = []
+        self._last_values = None
+        return self.env.reset(*args, **kwargs)
 
-    def step(self, *args: Any, **kwargs: Any):
-        obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
+    def record(self) -> np.ndarray:
         values = self._compute_values(self._value_fn)
-        info["values"] = values
         self._current.append(values)
         self._last_values = values
-        return obs, reward, terminated, truncated, info
+        return values
 
     def get_last(self) -> np.ndarray | None:
         return self._last_values
@@ -87,6 +83,11 @@ class ValueCollector(gym.Wrapper):
     # Internal
     # ====================
     def _compute_values(self, value_fn: Callable[[Any, int], float]) -> np.ndarray:
+        #carrying_obj = self._base_env.carrying
+        #if self._last_carrying_obj is not carrying_obj:
+        #    self._obs_cache.clear()
+        #    self._last_carrying_obj = carrying_obj
+ 
         width = self._base_env.width
         height = self._base_env.height
         inner_w = max(0, width - 2)

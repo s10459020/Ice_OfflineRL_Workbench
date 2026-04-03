@@ -98,9 +98,7 @@ class BasicStateActionRenderer(UnitRenderer):
             return (v_min + (v_max - v_min) * self._quantize_levels).astype(np.float32)
         else:
             flat = values.reshape(-1)
-            v_min = np.min(flat)
-            filtered = flat[flat > v_min]
-            base = filtered if filtered.size > 0 else flat
+            base = np.unique(flat)
             return np.quantile(base, self._quantize_levels).astype(np.float32)
 
     # ====================
