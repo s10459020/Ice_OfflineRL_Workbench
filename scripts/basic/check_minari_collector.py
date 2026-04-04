@@ -60,9 +60,17 @@ def step_init_collector() -> minari.DataCollector:
     return minari.DataCollector(make_env(), record_infos=False)
 
 
-def step_reset_and_step(collector: minari.DataCollector) -> None:
+def step_reset_and_step(
+    collector: minari.DataCollector,
+    seed: int,
+    num_episodes: int,
+) -> None:
     print_stage("API: reset + step")
-    episodes_0, total_steps_0 = _rollout_episodes(collector, seed=55, num_episodes=10)
+    episodes_0, total_steps_0 = _rollout_episodes(
+        collector,
+        seed=seed,
+        num_episodes=num_episodes,
+    )
     print(f"episodes={episodes_0} total_steps={total_steps_0}")
 
 
@@ -90,10 +98,18 @@ def step_create_dataset(
     return dataset
 
 
-def step_add_to_dataset(dataset: minari.MinariDataset) -> minari.DataCollector:
+def step_add_to_dataset(
+    dataset: minari.MinariDataset,
+    seed: int,
+    num_episodes: int,
+) -> minari.DataCollector:
     print_stage("API: add_to_dataset")
     extra_collector = minari.DataCollector(make_env(), record_infos=False)
-    episodes_1, total_steps_1 = _rollout_episodes(extra_collector, seed=99, num_episodes=10)
+    episodes_1, total_steps_1 = _rollout_episodes(
+        extra_collector,
+        seed=seed,
+        num_episodes=num_episodes,
+    )
     print(f"extra_episodes={episodes_1} extra_total_steps={total_steps_1}")
     extra_collector.add_to_dataset(dataset)
     print(f"after_add_total_episodes={dataset.total_episodes}")
@@ -107,13 +123,27 @@ def step_close(*collectors: minari.DataCollector) -> None:
         collector.close()
 
 
-def main(dataset_id: str = "minari_collector-v0") -> None:
+def main() -> None:
+    dataset_id = "minari_collector-v0"
+    reset_seed = 55
+    reset_episodes = 10
+    add_seed = 99
+    add_episodes = 10
+
     collector = step_init_collector()
     extra_collector = None
     try:
-        step_reset_and_step(collector)
+        step_reset_and_step(
+            collector,
+            seed=reset_seed,
+            num_episodes=reset_episodes,
+        )
         dataset = step_create_dataset(collector, dataset_id)
-        extra_collector = step_add_to_dataset(dataset)
+        extra_collector = step_add_to_dataset(
+            dataset,
+            seed=add_seed,
+            num_episodes=add_episodes,
+        )
     finally:
         if extra_collector is not None:
             step_close(extra_collector, collector)

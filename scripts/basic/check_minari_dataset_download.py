@@ -2,13 +2,6 @@ import minari
 
 from ice_offline.tools import print_stage
 
-
-# ====================
-# Config
-# ====================
-DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
-
-
 def step_load_dataset(dataset_id: str) -> minari.MinariDataset:
     print_stage("Load Dataset")
     print(f"dataset_id={dataset_id}")
@@ -57,7 +50,8 @@ def step_update_dataset_from_buffer(dataset: minari.MinariDataset) -> None:
     print("update_dataset_from_buffer_ok=true (no-op buffer)")
 
 
-def main(dataset_id: str = DATASET_ID) -> None:
+def main() -> None:
+    dataset_id = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
     dataset = step_load_dataset(dataset_id)
     step_attributes(dataset)
     step_sample_episodes(dataset)

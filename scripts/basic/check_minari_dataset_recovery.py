@@ -2,13 +2,6 @@ import minari
 
 from ice_offline.tools import print_stage
 
-
-# ====================
-# Config
-# ====================
-DATASET_ID = "minari_collector-v0"
-
-
 def step_load_dataset(dataset_id: str) -> minari.MinariDataset:
     print_stage("Load Dataset")
     print(f"dataset_id={dataset_id}")
@@ -22,7 +15,8 @@ def step_recover_environment(dataset: minari.MinariDataset) -> None:
     recovered_env.close()
 
 
-def main(dataset_id: str = DATASET_ID) -> None:
+def main() -> None:
+    dataset_id = "minari_collector-v0"
     dataset = step_load_dataset(dataset_id)
     step_recover_environment(dataset)
     print_stage("Done")
