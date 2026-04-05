@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import minari
 import numpy as np
 
 from ice_offline.env.model import EpisodeInfo
@@ -14,14 +13,14 @@ from ice_offline.env.visualization.unit_trail import TrailUnit
 class MinariDatasetService:
     """Loads episode metadata from a Minari dataset."""
 
-    def __init__(self, dataset_id: str) -> None:
-        self._dataset = minari.load_dataset(dataset_id)
+    def __init__(self, dataset_id: str, distribution_style: str = "ring") -> None:
         self._loader = OverlayLoader(
-            self._dataset,
-            units=[BasicUnit(), TrailUnit(), DistributionUnit()],
+            dataset_id,
+            units=[BasicUnit(), TrailUnit(), DistributionUnit(style=distribution_style)],
             #units=[BasicUnit(), TrailUnit(), DistributionUnit(quantize_mode="fixed")],
             render_mode="rgb_array",
         )
+        self._dataset = self._loader.get_dataset()
         self._loaded_episode_id: int | None = None
 
     def list_episodes(self) -> list[EpisodeInfo]:

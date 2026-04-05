@@ -65,23 +65,19 @@ class QTableAgent:
         encoder: ObservationEncoder,
         alpha: float = 0.1,
         gamma: float = 0.99,
-        epsilon: float = 1.0,
         seed: int = 42,
     ) -> None:
         self.n_actions = n_actions
         self.alpha = alpha
         self.gamma = gamma
-        self._last_epsilon = epsilon
         self._rng = random.Random(seed)
         self.Q = _QTable(self.n_actions, encoder)
 
     # ====================
     # Public API
     # ====================
-    def policy(self, o: Any, epsilon: float | None = None) -> int:
-        if epsilon is not None:
-            self._last_epsilon = epsilon
-        if epsilon is not None and self._rng.random() < epsilon:
+    def policy(self, o: Any, epsilon: float = 0.0) -> int:
+        if self._rng.random() < epsilon:
             return self._rng.randrange(self.n_actions)
         
         q_row = self.Q[o]
@@ -112,7 +108,6 @@ class QTableAgent:
             "n_actions": self.n_actions,
             "alpha": self.alpha,
             "gamma": self.gamma,
-            "epsilon": self._last_epsilon,
             "q_table": self.Q.to_dict(),
         }
         with model_path.open("wb") as f:
@@ -134,7 +129,6 @@ class QTableAgent:
             encoder=encoder,
             alpha=payload["alpha"],
             gamma=payload["gamma"],
-            epsilon=payload["epsilon"],
         )
         agent.Q.load_dict(payload["q_table"])
         return agent

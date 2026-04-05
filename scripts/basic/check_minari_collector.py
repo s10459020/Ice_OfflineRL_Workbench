@@ -144,6 +144,12 @@ def main() -> None:
             seed=add_seed,
             num_episodes=add_episodes,
         )
+    except Exception:
+        try:
+            minari.delete_dataset(dataset_id)
+        except Exception:
+            pass
+        raise
     finally:
         if extra_collector is not None:
             step_close(extra_collector, collector)

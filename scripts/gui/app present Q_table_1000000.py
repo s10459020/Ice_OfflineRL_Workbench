@@ -10,10 +10,8 @@ from ice_offline.env.gui.views.main_window import MainWindow
 
 
 def main() -> int:
-    dataset_id = "train_Q_table_modeled_collect-v0"
+    dataset_id = "present_Q_table_1000000-v0"
     distribution_style = "ring"  # "ring" or "rect"
-    #dataset_id = "train_agent_q_table_state_value-v0"
-    #dataset_id = "test_collect_value-v0"
 
     app = QApplication(sys.argv)
     service = MinariDatasetService(dataset_id=dataset_id, distribution_style=distribution_style)

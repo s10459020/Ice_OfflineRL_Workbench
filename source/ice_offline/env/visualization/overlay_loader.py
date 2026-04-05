@@ -39,7 +39,7 @@ class OverlayLoader:
     # ------------------------------------------------------------------
     def __init__(
         self,
-        dataset: str | Any,
+        dataset_id: str,
         *,
         units: list[Any],
         render_mode: str = "rgb_array",
@@ -48,8 +48,8 @@ class OverlayLoader:
             if not isinstance(unit, UnitLoaderInterface):
                 raise TypeError("each unit must implement UnitLoaderInterface")
 
-        self.dataset = minari.load_dataset(dataset) if isinstance(dataset, str) else dataset
-        self.dataset_id: str = self.dataset.spec.dataset_id
+        self.dataset_id = dataset_id
+        self.dataset = minari.load_dataset(dataset_id)
         self.total_episodes: int = int(self.dataset.total_episodes)
 
         self.env = self.dataset.recover_environment(eval_env=True, render_mode=render_mode)
@@ -139,6 +139,9 @@ class OverlayLoader:
     # ------------------------------------------------------------------
     def get_episode_count(self) -> int:
         return self.total_episodes
+
+    def get_dataset(self) -> Any:
+        return self.dataset
 
     def get_current(self) -> dict[str, int | None]:
         return {"episode": self._current_episode, "transition": self._current_step}
