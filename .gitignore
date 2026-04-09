@@ -4,7 +4,7 @@
 
 # Project outputs
 /tmps/
-/model/
+/d3rlpy*/
 
 # Python caches and artifacts
 __pycache__/

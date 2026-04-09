@@ -31,16 +31,15 @@ def main(
     log_every_steps: int = 50,
 ) -> None:
     print_stage("Init")
-    eval_env = gym.make(env_id)
     env = make_env(env_id)
+    state_collector = StateCollector(env)
+    value_collector = ValueCollector(state_collector, lambda obs, action: agent.Q(obs, action))
+    collector = minari.DataCollector(value_collector, record_infos=False)
 
     agent = QTableAgent.load(
         model_path,
         encoder=lambda obs: (int(obs["direction"]), np.asarray(obs["image"], dtype=np.uint8).tobytes()),
     )
-    state_collector = StateCollector(env)
-    value_collector = ValueCollector(state_collector, lambda obs, action: agent.Q(obs, action))
-    collector = minari.DataCollector(value_collector, record_infos=False)
 
     total_steps = 0
     episode = 0
@@ -78,7 +77,7 @@ def main(
                 author="local_test",
                 author_email="local_test@example.com",
                 code_permalink="https://example.com/train_q_table_modeled_collect",
-                eval_env=eval_env,
+                eval_env=gym.make(env_id),
                 description="Load pretrained Q-table and continue training with state/value recording",
             )
             state_path = state_collector.save(dataset_id)
