@@ -16,12 +16,12 @@ def q_table_state_from_minigrid_observation(obs: Any) -> Any:
 
 
 agent = QTableAgent.load(
-    "model/BabyAI-OneRoomS8-v0_QTableAgent.pkl",
+    "data/BabyAI-OneRoomS8-v0_QTableAgent.pkl",
     encoder=q_table_state_from_minigrid_observation,
 )
 policy_epsilon = 0.05
 
-print("loaded model: model/BabyAI-OneRoomS8-v0_QTableAgent.pkl")
+print("loaded model: data/BabyAI-OneRoomS8-v0_QTableAgent.pkl")
 print(f"q_states={len(agent.Q)} | env=BabyAI-OneRoomS8-v0-fullobs | policy_epsilon={policy_epsilon:.3f}")
 
 env = gym.make("BabyAI-OneRoomS8-v0", render_mode="human")

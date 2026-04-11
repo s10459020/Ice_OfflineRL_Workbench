@@ -5,7 +5,7 @@ import gymnasium as gym
 import minari
 import numpy as np
 
-from ice_offline.env.model import State
+from ice_offline.data import State
 from ice_offline.env.common import StateIOWrapper
 
 

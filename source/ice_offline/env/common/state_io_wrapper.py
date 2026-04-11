@@ -3,7 +3,7 @@ import numpy as np
 from minigrid.core.grid import Grid
 from minigrid.core.world_object import WorldObj
 
-from ice_offline.env.model import State
+from ice_offline.data import State
 
 
 class StateIOWrapper(gym.Wrapper):

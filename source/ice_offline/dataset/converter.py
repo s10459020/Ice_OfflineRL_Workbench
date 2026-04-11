@@ -6,7 +6,7 @@ from gymnasium import spaces
 from minari.data_collector.episode_buffer import EpisodeBuffer
 from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 
-from ice_offline.env.model import State
+from ice_offline.data import State
 
 _ACTION_PICKUP = 3
 _ACTION_DROP = 4

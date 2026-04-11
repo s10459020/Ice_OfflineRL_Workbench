@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from ice_offline.env.model import EpisodeInfo
+from ice_offline.data import EpisodeInfo
 from ice_offline.env.visualization import BasicUnit, DistributionUnit, RenderLayer
 from ice_offline.env.visualization.overlay_loader import OverlayLoader
 from ice_offline.env.visualization.unit_trail import TrailUnit

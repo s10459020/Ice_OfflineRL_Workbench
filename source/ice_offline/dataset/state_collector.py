@@ -9,7 +9,7 @@ import h5py
 import numpy as np
 
 from ice_offline.env.common import StateIOWrapper
-from ice_offline.env.model import State
+from ice_offline.data import State
 
 class StateCollector(gym.Wrapper):
     """Collect episode-wise states and save to Minari dataset folder.

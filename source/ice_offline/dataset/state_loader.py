@@ -6,7 +6,7 @@ from typing import Any
 
 import h5py
 
-from ice_offline.env.model import State
+from ice_offline.data import State
 
 
 class StateLoader:

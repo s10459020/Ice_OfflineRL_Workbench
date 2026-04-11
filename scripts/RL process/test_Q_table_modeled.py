@@ -47,7 +47,7 @@ def main(
 
 if __name__ == "__main__":
     env_id = "BabyAI-OneRoomS8-v0"
-    model_path = "model/BabyAI-OneRoomS8-v0_QTableAgent_step1000000.pkl"
+    model_path = "data/BabyAI-OneRoomS8-v0_QTableAgent_step1000000.pkl"
     max_episodes = 20
 
     main(

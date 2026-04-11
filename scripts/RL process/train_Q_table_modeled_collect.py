@@ -104,7 +104,7 @@ def main(
 if __name__ == "__main__":
     env_id = "BabyAI-OneRoomS8-v0"
     dataset_id = f"{Path(__file__).stem}-v0"
-    model_path = "model/BabyAI-OneRoomS8-v0_QTableAgent_step500000.pkl"
+    model_path = "data/BabyAI-OneRoomS8-v0_QTableAgent_step500000.pkl"
 
     main(
         env_id=env_id,

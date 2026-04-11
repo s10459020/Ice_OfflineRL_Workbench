@@ -3,9 +3,9 @@ from typing import Any
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_triangle, rotate_fn
 
-from ..model.trail import Trail, TrailPoint
-from ..replay.state_collector import StateCollector
-from ..replay.state_loader import StateLoader
+from ice_offline.data.trail import Trail, TrailPoint
+from ice_offline.dataset.state_collector import StateCollector
+from ice_offline.dataset.state_loader import StateLoader
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer

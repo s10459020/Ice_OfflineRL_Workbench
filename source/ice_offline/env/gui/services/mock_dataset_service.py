@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ice_offline.env.model import EpisodeInfo
+from ice_offline.data import EpisodeInfo
 
 
 class MockDatasetService:
