@@ -1,6 +1,6 @@
 import minari
 
-from ice_offline.dataset import converter
+from ice_offline.dataset import state_convertor
 from ice_offline.tools import print_stage
 
 
@@ -16,7 +16,7 @@ TARGET_DATASET_ID = "test_convert_fullobs-v0"
 # Convert
 # ====================
 print_stage("Convert")
-target_dataset = converter.convert_fullobs(
+target_dataset = state_convertor.convert_fullobs(
     dataset_source_id=SOURCE_DATASET_ID,
     dataset_target_id=TARGET_DATASET_ID,
 )
