@@ -8,6 +8,7 @@ import numpy as np
 
 QTableState = Any
 ObservationEncoder = Callable[[Any], QTableState]
+MODEL_ROOT = Path("tmps/model")
 
 
 class _QTable:
@@ -97,11 +98,16 @@ class QTableAgent:
     # ====================
     # Persistence
     # ====================
-    def save(self, model_dir: str | Path, model_name: str) -> Path:
-        model_dir_path = Path(model_dir)
-        model_path = model_dir_path / model_name
-        if model_path.suffix == "":
-            model_path = model_path.with_suffix(".pkl")
+    @staticmethod
+    def model_name(step: int) -> str:
+        return f"model_{step}.pkl"
+
+    @staticmethod
+    def model_path(model_id: str | Path, step: int) -> Path:
+        return MODEL_ROOT / Path(model_id) / QTableAgent.model_name(step)
+
+    def save(self, model_id: str | Path, step: int) -> Path:
+        model_path = self.model_path(model_id, step)
         model_path.parent.mkdir(parents=True, exist_ok=True)
 
         payload = {
@@ -115,7 +121,7 @@ class QTableAgent:
         return model_path
 
     @classmethod
-    def load(
+    def _load_from_path(
         cls,
         path: str | Path,
         encoder: ObservationEncoder,
@@ -132,3 +138,12 @@ class QTableAgent:
         )
         agent.Q.load_dict(payload["q_table"])
         return agent
+
+    @classmethod
+    def load(
+        cls,
+        model_id: str | Path,
+        step: int,
+        encoder: ObservationEncoder,
+    ) -> "QTableAgent":
+        return cls._load_from_path(path=cls.model_path(model_id, step), encoder=encoder)

@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from pathlib import Path
+﻿from __future__ import annotations
 
 import gymnasium as gym
 import minari
@@ -33,7 +31,7 @@ def main(
     eval_env = gym.make(env_id)
     agent = QTableAgent(
         n_actions=4,
-        encoder=lambda obs: (int(obs["direction"]), np.asarray(obs["image"], dtype=np.uint8).tobytes()),
+        encoder=lambda obs: np.asarray(obs["image"], dtype=np.uint8).tobytes(),
         alpha=1.0,
         gamma=0.99,
         seed=42,
@@ -109,7 +107,7 @@ def main(
 
 if __name__ == "__main__":
     env_id = "BabyAI-OneRoomS8-v0"
-    dataset_id = f"{Path(__file__).stem}-v0"
+    dataset_id = "train_Step_collect-v0"
 
     main(
         env_id=env_id,
