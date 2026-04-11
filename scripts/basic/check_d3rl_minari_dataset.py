@@ -1,41 +1,80 @@
+from typing import Any
+
 import d3rlpy
-import numpy as np
 import minari
+import numpy as np
 
-DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
+# mute logging
+d3rlpy.logging.LOG.info = lambda *args, **kwargs: None
+
+DATASET_ID = "minigrid-fourrooms-v0"
 DEVICE = "cuda:0"
-N_STEPS = 200
+RUN_FIT = False
 
-def to_d3rl_dataset(n_steps: int = 1000) -> d3rlpy.dataset.MDPDataset:
-    observations = np.random.random((n_steps, 100)).astype(np.float32)
-    actions = np.random.random((n_steps, 4)).astype(np.float32)  # continuous action
-    rewards = np.random.random(n_steps).astype(np.float32)
 
-    terminals = np.zeros(n_steps, dtype=np.float32)
-    timeouts = np.zeros(n_steps, dtype=np.float32)
-    timeouts[199::200] = 1.0  # episode boundary every 200 steps
+def _extract_observations(episode: Any) -> np.ndarray:
+    """Pick a numeric observation stream from Minari episode."""
+    obs = episode.observations
+    if isinstance(obs, dict):
+        if "image" in obs:
+            return np.asarray(obs["image"], dtype=np.float32)
+        first_key = next(iter(obs.keys()))
+        return np.asarray(obs[first_key], dtype=np.float32)
+    return np.asarray(obs, dtype=np.float32)
 
-    return d3rlpy.dataset.MDPDataset(
-        observations=observations,
-        actions=actions,
-        rewards=rewards,
-        terminals=terminals,
-        timeouts=timeouts,
-    )
+
+def to_d3rl_replay_buffer(dataset_id: str) -> d3rlpy.dataset.ReplayBuffer:
+    minari_dataset = minari.load_dataset(dataset_id)
+    episodes: list[d3rlpy.dataset.Episode] = []
+
+    for episode in minari_dataset.iterate_episodes():
+        observations = _extract_observations(episode)
+        actions = np.asarray(episode.actions)
+        rewards = np.asarray(episode.rewards, dtype=np.float32).reshape(-1, 1)
+        terminations = np.asarray(episode.terminations, dtype=np.float32)
+        truncations = np.asarray(episode.truncations, dtype=np.float32)
+
+        # d3rlpy Episode expects one flag for whole episode.
+        # True means environment termination, False means timeout/truncation.
+        terminated = bool(terminations[-1]) if len(terminations) > 0 else False
+        clipped = bool((terminations[-1] or truncations[-1])) if len(terminations) > 0 else False
+
+        if not clipped:
+            # Minari episodes should end with termination or truncation.
+            continue
+
+        episodes.append(
+            d3rlpy.dataset.Episode(
+                observations=observations,
+                actions=actions,
+                rewards=rewards,
+                terminated=terminated,
+            )
+        )
+
+    return d3rlpy.dataset.create_infinite_replay_buffer(episodes=episodes)
 
 
 def main() -> None:
-    minari_dataset = minari.load_dataset("minigrid-fourrooms-v0")
-    dataset = to_d3rl_dataset(minari_dataset)
+    dataset = to_d3rl_replay_buffer(DATASET_ID)
 
+    print("dataset_type:", type(dataset))
+    print("episode_count:", len(dataset.episodes))
     print("transition_count:", dataset.transition_count)
     print("action_space:", dataset.dataset_info.action_space)
     print("action_size:", dataset.dataset_info.action_size)
 
-    # Use SAC for continuous actions.
-    algo = d3rlpy.algos.SACConfig(batch_size=32).create(device=DEVICE)
-    algo.fit(dataset)
-    print("fit finished")
+    for i, episode in enumerate(dataset.episodes[:3]):
+        print(
+            f"episode={i} size={episode.size()} "
+            f"terminated={episode.terminated} "
+            f"transition_count={episode.transition_count}"
+        )
+
+    if RUN_FIT:
+        algo = d3rlpy.algos.DQNConfig(batch_size=32).create(device=DEVICE)
+        algo.fit(dataset, n_steps=max(100, dataset.transition_count), n_steps_per_epoch=100)
+        print("fit finished")
 
 
 if __name__ == "__main__":
