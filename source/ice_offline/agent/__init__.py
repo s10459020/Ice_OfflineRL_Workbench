@@ -1,6 +1,6 @@
 from ._agent_interface import Agent
-from .policy_gradient_agent import PolicyGradientAgent
-from .q_table_agent import (
+from .action_continuous.policy_gradient_agent import PolicyGradientAgent
+from .action_discrete.q_table_agent import (
     QTableAgent,
     QTableState,
 )
