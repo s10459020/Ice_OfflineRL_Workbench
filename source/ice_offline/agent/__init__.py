@@ -1,4 +1,5 @@
 from ._agent_interface import Agent
+from .policy_gradient_agent import PolicyGradientAgent
 from .q_table_agent import (
     QTableAgent,
     QTableState,
@@ -6,6 +7,7 @@ from .q_table_agent import (
 
 __all__ = [
     "Agent",
+    "PolicyGradientAgent",
     "QTableAgent",
     "QTableState",
 ]

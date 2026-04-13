@@ -11,7 +11,11 @@ requires-python = ">=3.10"
 dependencies = [
     "gymnasium",
     "minigrid",
-    "numpy",
+    "numpy<2",
+    "d3rlpy",
+    "minari",
+    "h5py",
+    "PySide6",
 ]
 
 [tool.setuptools]

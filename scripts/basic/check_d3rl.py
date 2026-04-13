@@ -7,7 +7,7 @@ import numpy as np
 def main():
     ## Load environment and agent
     dataset, env = get_cartpole()
-    dqn = DQNConfig().create(device="cuda:0")
+    dqn = DQNConfig().create(device="cpu:0")
     dqn.build_with_dataset(dataset)
 
     ## Load evaluator 
