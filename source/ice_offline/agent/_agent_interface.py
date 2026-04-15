@@ -2,6 +2,17 @@ from pathlib import Path
 from typing import Any, Protocol
 
 
+MODEL_ROOT = Path("tmps/model")
+
+
+def model_name(step: int, suffix: str) -> str:
+    return f"model_{step}{suffix}"
+
+
+def model_path(model_id: str | Path, step: int, suffix: str) -> Path:
+    return MODEL_ROOT / Path(model_id) / model_name(step, suffix)
+
+
 class Agent(Protocol):
     """Minimal interface required by the generic online trainer."""
 

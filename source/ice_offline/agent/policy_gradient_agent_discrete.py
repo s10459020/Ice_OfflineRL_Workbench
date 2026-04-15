@@ -1,4 +1,7 @@
 import numpy as np
+from pathlib import Path
+
+from ._agent_interface import model_path
 
 
 class PolicyGradientAgent:
@@ -33,8 +36,9 @@ class PolicyGradientAgent:
     
     def act(self, observation: np.ndarray) -> int:
         # a ~ Categorical(pi(a|s))
-        policy = self._pi(observation)
-        return int(self._rng.choice(self.n_actions, p=policy))
+        obs_vector = np.asarray(observation, dtype=np.float32).reshape(-1)
+        categorical = self._pi(obs_vector)
+        return int(self._rng.choice(self.n_actions, p=categorical))
     
     def record_step(self, observation: np.ndarray, action: int, reward: float) -> None:
         self.episode_observations.append(np.asarray(observation, dtype=np.float32).copy())
@@ -47,9 +51,41 @@ class PolicyGradientAgent:
         self.episode_rewards.clear()
         
     def update(self) -> None:
-        grad_W, grad_b = self._estimate_grad_estimate()
+        grad_W, grad_b = self._estimate_nabla_J()
         self._gradient_ascent(grad_W, grad_b)
         self.clear_episode()
+
+    # ====================
+    # Persistence
+    # ====================
+    def save(self, model_id: str | Path, step: int) -> Path:
+        path = model_path(model_id, step, ".npz")
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        np.savez(
+            path,
+            n_actions=np.asarray(self.n_actions, dtype=np.int32),
+            obs_dim=np.asarray(self.obs_dim, dtype=np.int32),
+            gamma=np.asarray(self.gamma, dtype=np.float32),
+            alpha=np.asarray(self.alpha, dtype=np.float32),
+            W=self.W,
+            b=self.b,
+        )
+        return path
+
+    @classmethod
+    def load(cls, model_id: str | Path, step: int) -> "PolicyGradientAgent":
+        payload = np.load(model_path(model_id, step, ".npz"))
+
+        agent = cls(
+            n_actions=int(payload["n_actions"]),
+            obs_dim=int(payload["obs_dim"]),
+            gamma=float(payload["gamma"]),
+            alpha=float(payload["alpha"]),
+        )
+        agent.W = np.asarray(payload["W"], dtype=np.float32)
+        agent.b = np.asarray(payload["b"], dtype=np.float32)
+        return agent
 
     # ====================
     # mathmatics
@@ -64,47 +100,41 @@ class PolicyGradientAgent:
 
         return returns
     
-    def _pi(self, observation: np.ndarray, action: int | None = None) -> np.ndarray | np.float32:
-        # logits = z(s_t) = s_t @ W + b
+    def _pi(self, obs_vector: np.ndarray) -> np.ndarray:
+        # z = logits(s_t) = s_t @ W + b
         #
-        # pi( . |s_t) = softmax(z(s_t))
-        # pi(a_i|s_t) = softmax_i(z(s_t))
-        #             = exp(z(s_t)[a_i]) / sum[exp(z(s_t)[a_j])]
-        #             = exp(z_i) / sum[exp(z_j)]
-        obs_vector = np.asarray(observation, dtype=np.float32).reshape(-1)
+        # pi(.|s_t) = Categorical(a; z)
+        #           = softmax(z)
+        #           = exp(z_a) / sum[exp(z_j)]
         logits = obs_vector @ self.W + self.b
         shifted_logits = logits - np.max(logits)
 
         # softmax_i = exp(z_i) / sum[exp(z_j)]
         exp_logits = np.exp(shifted_logits)
-        policy = exp_logits / np.sum(exp_logits)
+        distribution = exp_logits / np.sum(exp_logits)
+        return distribution
 
-        if action is None:
-            return policy
-        return np.float32(policy[action])
-
-    def _nabla_log_pi(self, observation: np.ndarray, action: int) -> tuple[np.ndarray, np.ndarray]:
-        # nabla_log_pi(.|s_t) = d/d{theta} {log pi(a_t|s_t)} 
-        #                     = d/d{z} {log pi(a_t|s_t)}                * d/d{theta} {z} 
-        #                     = d/d{z} {log(exp(z_i) / sum[exp(z_j)]) } * [d/d{W} {z}, d/d{b} {z}]
-        #                     = d/d{z} {z_i - log(sum[exp(z_j)])}       * [s_t, 1]
-        #                     = (one_hot(a_t) - softmax(z_i))           * [s_t, 1]
-        #                     = (one_hot(a_t) - pi(.|s_t))              * [s_t, 1]  
-        #                     = [nabla_W_log_pi, nabla_b_log_pi]
-        policy = self._pi(observation)
+    def _nabla_log_pi(self, obs_vector: np.ndarray, action: int) -> tuple[np.ndarray, np.ndarray]:
+        # nabla_log_pi(a_t|s_t) = d/d{theta} {log pi(a_t|s_t)} 
+        #                       = d/d{z} {log pi(a_t|s_t)}                * d/d{theta} {z} 
+        #                       = d/d{z} {log(exp(z_i) / sum[exp(z_j)]) } * [d/d{W} {z}, d/d{b} {z}]
+        #                       = d/d{z} {z_i - log(sum[exp(z_j)])}       * [s_t, 1]
+        #                       = (one_hot(a_t) - softmax(z_i))           * [s_t, 1]
+        #                       = (one_hot(a_t) - pi(.|s_t))              * [s_t, 1]  
+        #                       = [nabla_W_log_pi, nabla_b_log_pi]
+        policy = self._pi(obs_vector)
         one_hot = np.zeros(self.n_actions, dtype=np.float32)
         one_hot[action] = 1.0
         nabla_log = one_hot - policy
 
-        obs_vector = np.asarray(observation, dtype=np.float32).reshape(-1)
         nabla_W_log_pi = np.outer(obs_vector, nabla_log)
         nabla_b_log_pi = nabla_log 
         return (nabla_W_log_pi, nabla_b_log_pi)
 
-    def _estimate_grad_estimate(self) -> tuple[np.ndarray, np.ndarray]:
-        #    nabla_J = E { sum[ nabla_log_pi(a_t|s_t) * G_t ] }
-        # estimate_J =     sum[ nabla_log_pi(a_t|s_t) * G_t ] 
-        #            =     sum[                [W, b] * G_t ]
+    def _estimate_nabla_J(self) -> tuple[np.ndarray, np.ndarray]:
+        #  nabla_J = E { sum[ nabla_log_pi(a_t|s_t) * G_t ] }
+        # estimate =     sum[ nabla_log_pi(a_t|s_t) * G_t ] 
+        #          =     sum[                [W, b] * G_t ]
 
         grad_W = np.zeros_like(self.W)
         grad_b = np.zeros_like(self.b)

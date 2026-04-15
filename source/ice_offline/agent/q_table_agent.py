@@ -5,10 +5,11 @@ from typing import Any, Callable
 
 import numpy as np
 
+from ._agent_interface import model_path
+
 
 QTableState = Any
 ObservationEncoder = Callable[[Any], QTableState]
-MODEL_ROOT = Path("tmps/model")
 
 
 class _QTable:
@@ -98,17 +99,9 @@ class QTableAgent:
     # ====================
     # Persistence
     # ====================
-    @staticmethod
-    def model_name(step: int) -> str:
-        return f"model_{step}.pkl"
-
-    @staticmethod
-    def model_path(model_id: str | Path, step: int) -> Path:
-        return MODEL_ROOT / Path(model_id) / QTableAgent.model_name(step)
-
     def save(self, model_id: str | Path, step: int) -> Path:
-        model_path = self.model_path(model_id, step)
-        model_path.parent.mkdir(parents=True, exist_ok=True)
+        path = model_path(model_id, step, ".pkl")
+        path.parent.mkdir(parents=True, exist_ok=True)
 
         payload = {
             "n_actions": self.n_actions,
@@ -116,9 +109,9 @@ class QTableAgent:
             "gamma": self.gamma,
             "q_table": self.Q.to_dict(),
         }
-        with model_path.open("wb") as f:
+        with path.open("wb") as f:
             pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
-        return model_path
+        return path
 
     @classmethod
     def _load_from_path(
@@ -146,4 +139,7 @@ class QTableAgent:
         step: int,
         encoder: ObservationEncoder,
     ) -> "QTableAgent":
-        return cls._load_from_path(path=cls.model_path(model_id, step), encoder=encoder)
+        return cls._load_from_path(
+            path=model_path(model_id, step, ".pkl"),
+            encoder=encoder,
+        )

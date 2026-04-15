@@ -1,13 +1,16 @@
 from ._agent_interface import Agent
-from .action_continuous.policy_gradient_agent import PolicyGradientAgent
-from .action_discrete.q_table_agent import (
-    QTableAgent,
-    QTableState,
+from .policy_gradient_agent_continuous import (
+    PolicyGradientAgent as ContinuousPolicyGradientAgent,
 )
+from .policy_gradient_agent_discrete import (
+    PolicyGradientAgent as DiscretePolicyGradientAgent,
+)
+from .q_table_agent import QTableAgent, QTableState
 
 __all__ = [
     "Agent",
-    "PolicyGradientAgent",
+    "ContinuousPolicyGradientAgent",
+    "DiscretePolicyGradientAgent",
     "QTableAgent",
     "QTableState",
 ]
