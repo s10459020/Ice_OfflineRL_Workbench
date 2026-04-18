@@ -22,7 +22,7 @@ class PolicyGradientAgent:
         self.episode_observations: list[np.ndarray] = []
         self.episode_actions: list[np.ndarray] = []
         self.episode_rewards: list[float] = []
-        
+
     # ====================
     # Public API
     # ====================
@@ -32,25 +32,34 @@ class PolicyGradientAgent:
         mean, std = self._pi(obs_vector)
         return self._rng.normal(loc=mean, scale=std).astype(np.float32)
 
-    def record_step(self, observation: np.ndarray, action: np.ndarray, reward: float) -> None:
-        self.episode_observations.append(np.asarray(observation, dtype=np.float32).copy())
-        self.episode_actions.append(np.asarray(action, dtype=np.float32).copy())
-        self.episode_rewards.append(float(reward))
-
     def clear_episode(self) -> None:
         self.episode_observations.clear()
         self.episode_actions.clear()
         self.episode_rewards.clear()
 
-    def update(self) -> None:
-        grad_W, grad_b = self._estimate_nabla_J()
-        self._gradient_ascent(grad_W, grad_b)
+    def update(self, o: np.ndarray, a: np.ndarray, r: float, o_: np.ndarray, done: bool) -> None:
+        self._record_step(o, a, r)
+
+        if not done:
+            return
+
+       # p_theta <= theta + alpha * nabla_J
+        nabla_W, nabla_b = self._nabla_J()
+        self.W += self.alpha * nabla_W
+        self.b += self.alpha * nabla_b
         self.clear_episode()
 
     # ====================
-    # mathmatics
+    # return mathmatics
     # ====================
-    def _G(self, rewards: list[float]) -> np.ndarray:
+    def _record_step(self, observation: np.ndarray, action: np.ndarray, reward: float) -> None:
+        self.episode_observations.append(np.asarray(observation, dtype=np.float32).copy())
+        self.episode_actions.append(np.asarray(action, dtype=np.float32).copy())
+        self.episode_rewards.append(float(reward))
+
+    def _G(self) -> np.ndarray:
+        # G_t = sum[(gamma ** k) * r_{t+k}]
+        rewards = self.episode_rewards
         returns = np.zeros(len(rewards), dtype=np.float32)
         running_return = 0.0
 
@@ -59,20 +68,16 @@ class PolicyGradientAgent:
             returns[idx] = running_return
 
         return returns
-    
-    def _mean(self, obs_vector: np.ndarray) -> np.ndarray:
-        # mu(s) = s @ W + b
-        return obs_vector @ self.W + self.b
 
+    # ====================
+    # actor mathmatics
+    # ====================
     def _pi(self, obs_vector: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         # mean(s) = s @ W + b
         # var = 1 # fixed
         #
         # pi(.|s) = Normal(x; mean, var)
-        #         = 1 / sqrt(2*pi*var) * exp( -(x-mean)**2 / 2*var )
-        #
-        # return parameters for stochastic sample (Normal) and greedy action (mean)
-        mean = self._mean(obs_vector)
+        mean = obs_vector @ self.W + self.b
         std = self.std
         return mean, std
 
@@ -87,23 +92,27 @@ class PolicyGradientAgent:
         #                   = -[-2(a - mean)] / (2*var) * [s, 1]
         #                   =    ((a - mean)  /    var) * [s, 1]
         #                   = [nabla_W_log_pi, nabla_b_log_pi]
-
-        mean = self._mean(obs_vector)
-        std = self.std
+        mean, std = self._pi(obs_vector)
         var = std ** 2
 
         nabla_mean_log_pi = (act_vector - mean) / var
         nabla_W_log_pi = np.outer(obs_vector, nabla_mean_log_pi)
         nabla_b_log_pi = nabla_mean_log_pi
-        return (nabla_W_log_pi, nabla_b_log_pi)
+        return nabla_W_log_pi, nabla_b_log_pi
 
-    def _estimate_nabla_J(self) -> tuple[np.ndarray, np.ndarray]:
-        #  nabla_J = E { sum[ nabla_log_pi(a|s) * G_t ] }
-        # estimate =     sum[ nabla_log_pi(a|s) * G_t ] 
-        #          =     sum[            [W, b] * G_t ]
-        grad_W = np.zeros_like(self.W)
-        grad_b = np.zeros_like(self.b)
-        returns = self._G(self.episode_rewards)
+    def _nabla_J(self) -> tuple[np.ndarray, np.ndarray]:
+        # J(theta) =   E_tau[R(tau)]
+        #          = sum_tau[p(tau) * R(tau)]
+        #
+        # nabla_J(theta) = d/d{theta}{sum_tau[p * R]}
+        #                = sum_tau[d/d{theta}{p * R}]
+        #                = sum_tau[p * R * d/d{theta}{log p}]
+        #                = E[ R * d/d{theta}{sum_t[log pi]}]
+        #                = E[ R * sum_t[nabla_log_pi]]
+        #                = E[ sum_t[G * nabla_log_pi]]
+        nabla_W = np.zeros_like(self.W)
+        nabla_b = np.zeros_like(self.b)
+        returns = self._G()
 
         for observation, action, return_t in zip(
             self.episode_observations,
@@ -112,13 +121,8 @@ class PolicyGradientAgent:
         ):
             obs_vector = np.asarray(observation, dtype=np.float32).reshape(-1)
             act_vector = np.asarray(action, dtype=np.float32).reshape(-1)
-            W, b = self._nabla_log_pi(obs_vector, act_vector)
-            grad_W += W * return_t
-            grad_b += b * return_t
+            grad_W, grad_b = self._nabla_log_pi(obs_vector, act_vector)
+            nabla_W += return_t * grad_W
+            nabla_b += return_t * grad_b
 
-        return grad_W, grad_b
-
-    def _gradient_ascent(self, grad_W: np.ndarray, grad_b: np.ndarray) -> None:
-        self.W += self.alpha * grad_W
-        self.b += self.alpha * grad_b
-
+        return nabla_W, nabla_b

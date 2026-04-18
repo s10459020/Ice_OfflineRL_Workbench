@@ -34,13 +34,14 @@ class ActorCriticAgent:
         obs_vector = np.asarray(o, dtype=np.float32).reshape(-1)
         next_obs_vector = np.asarray(o_, dtype=np.float32).reshape(-1)
 
-        # weight = Q(s, a) = r + gamma * V(s')
-        # pi_theta <= theta + alpha * nabla_log_pi(a|s) * weight
-        #           = theta + alpha * nabla[pW, pb]     * weight
-        weight = self._Q(obs_vector, float(r), next_obs_vector, bool(done))
-        grad_pW, grad_pb = self._nabla_log_pi(obs_vector, int(a))
-        self.pW += self.actor_alpha * (weight * grad_pW)
-        self.pb += self.actor_alpha * (weight * grad_pb)
+        # nabla_J = E[sum_t[nabla_log_pi(a_t|s_t) * Q_t]]
+        #         = E[sum_t[nabla_J_step]]
+        # p_theta <= theta + rate * nabla_J
+        #          = theta + (rate * T) * (1/T * nabla_J)
+        #         ~= theta + alpha * nabla_J_step
+        nabla_pW, nabla_pb = self._nabla_J_step(obs_vector, int(a), float(r), next_obs_vector, bool(done))
+        self.pW += self.actor_alpha * nabla_pW
+        self.pb += self.actor_alpha * nabla_pb
 
         # v_theta <= theta - alpha * nabla_L
         #          = theta - alpha * nabla[vw, vb]
@@ -122,3 +123,20 @@ class ActorCriticAgent:
         grad_pW = np.outer(obs_vector, nabla_log_z)
         grad_pb = nabla_log_z
         return grad_pW, grad_pb
+
+    def _nabla_J_step(self, obs_vector: np.ndarray, action: int, reward: float, next_obs_vector: np.ndarray, done: bool) -> tuple[np.ndarray, np.ndarray]:
+        # J(theta) =   E_tau[R(tau)]
+        #          = sum_tau[p(tau) * R(tau)]
+        #
+        # nabla_J(theta) = d/d{theta}{sum_tau[p * R]}
+        #                = sum_tau[d/d{theta}{p * R}]
+        #                = sum_tau[p * R * d/d{theta}{log p}]
+        #                = E[ R * d/d{theta}{sum_t[log pi]}]
+        #                = E[ R * sum_t[nabla_log_pi]]
+        #                = E[ sum_t[G * nabla_log_pi]]
+        #                = E[ sum_t[Q * nabla_log_pi]]
+        #
+        # nabla_J_step = Q * nabla_log_pi
+        q_weight = self._Q(obs_vector, reward, next_obs_vector, done)
+        grad_pW, grad_pb = self._nabla_log_pi(obs_vector, action)
+        return q_weight * grad_pW, q_weight * grad_pb
