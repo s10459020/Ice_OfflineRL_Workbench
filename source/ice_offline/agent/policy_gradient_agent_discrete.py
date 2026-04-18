@@ -1,21 +1,11 @@
-import numpy as np
-from pathlib import Path
-
-from ._agent_interface import model_path
+﻿import numpy as np
 
 
 class PolicyGradientAgent:
     # ====================
     # Init
     # ====================
-    def __init__(
-        self,
-        n_actions: int,
-        obs_dim: int,
-        gamma: float = 0.99,
-        alpha: float = 0.01,
-        seed: int = 42,
-    ) -> None:
+    def __init__(self, n_actions: int, obs_dim: int, gamma: float = 0.99, alpha: float = 0.01, seed: int = 42,) -> None:
         self.n_actions = n_actions
         self.obs_dim = obs_dim
         self.gamma = gamma
@@ -54,38 +44,6 @@ class PolicyGradientAgent:
         grad_W, grad_b = self._estimate_nabla_J()
         self._gradient_ascent(grad_W, grad_b)
         self.clear_episode()
-
-    # ====================
-    # Persistence
-    # ====================
-    def save(self, model_id: str | Path, step: int) -> Path:
-        path = model_path(model_id, step, ".npz")
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        np.savez(
-            path,
-            n_actions=np.asarray(self.n_actions, dtype=np.int32),
-            obs_dim=np.asarray(self.obs_dim, dtype=np.int32),
-            gamma=np.asarray(self.gamma, dtype=np.float32),
-            alpha=np.asarray(self.alpha, dtype=np.float32),
-            W=self.W,
-            b=self.b,
-        )
-        return path
-
-    @classmethod
-    def load(cls, model_id: str | Path, step: int) -> "PolicyGradientAgent":
-        payload = np.load(model_path(model_id, step, ".npz"))
-
-        agent = cls(
-            n_actions=int(payload["n_actions"]),
-            obs_dim=int(payload["obs_dim"]),
-            gamma=float(payload["gamma"]),
-            alpha=float(payload["alpha"]),
-        )
-        agent.W = np.asarray(payload["W"], dtype=np.float32)
-        agent.b = np.asarray(payload["b"], dtype=np.float32)
-        return agent
 
     # ====================
     # mathmatics
@@ -155,3 +113,4 @@ class PolicyGradientAgent:
     def _gradient_ascent(self, grad_W: np.ndarray, grad_b: np.ndarray) -> None:
         self.W += self.alpha * grad_W
         self.b += self.alpha * grad_b
+

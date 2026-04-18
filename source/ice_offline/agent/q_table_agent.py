@@ -1,4 +1,4 @@
-import pickle
+﻿import pickle
 import random
 from pathlib import Path
 from typing import Any, Callable
@@ -61,14 +61,7 @@ class QTableAgent:
     # ====================
     # Init
     # ====================
-    def __init__(
-        self,
-        n_actions: int,
-        encoder: ObservationEncoder,
-        alpha: float = 0.1,
-        gamma: float = 0.99,
-        seed: int = 42,
-    ) -> None:
+    def __init__(self, n_actions: int, encoder: ObservationEncoder, alpha: float = 0.1, gamma: float = 0.99, seed: int = 42,) -> None:
         self.n_actions = n_actions
         self.alpha = alpha
         self.gamma = gamma
@@ -114,11 +107,7 @@ class QTableAgent:
         return path
 
     @classmethod
-    def _load_from_path(
-        cls,
-        path: str | Path,
-        encoder: ObservationEncoder,
-    ) -> "QTableAgent":
+    def _load_from_path(cls, path: str | Path, encoder: ObservationEncoder,) -> "QTableAgent":
         model_path = Path(path)
         with model_path.open("rb") as f:
             payload = pickle.load(f)
@@ -133,13 +122,9 @@ class QTableAgent:
         return agent
 
     @classmethod
-    def load(
-        cls,
-        model_id: str | Path,
-        step: int,
-        encoder: ObservationEncoder,
-    ) -> "QTableAgent":
+    def load(cls, model_id: str | Path, step: int, encoder: ObservationEncoder,) -> "QTableAgent":
         return cls._load_from_path(
             path=model_path(model_id, step, ".pkl"),
             encoder=encoder,
         )
+

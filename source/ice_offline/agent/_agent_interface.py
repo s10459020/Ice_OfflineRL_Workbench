@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 from typing import Any, Protocol
 
 
@@ -20,13 +20,7 @@ class Agent(Protocol):
 
     def act(self, observation: Any) -> int: ...
 
-    def update(
-        self,
-        observation: Any,
-        action: int,
-        reward: float,
-        next_observation: Any,
-        done: bool,
-    ) -> None: ...
+    def update(self, observation: Any, action: int, reward: float, next_observation: Any, done: bool,) -> None: ...
 
     def save(self, model_id: str | Path) -> Path: ...
+

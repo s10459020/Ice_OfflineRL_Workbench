@@ -1,5 +1,5 @@
 from ._agent_interface import Agent
-from .actor_critic_agent_discrete import ActorCriticAgent as DiscreteActorCriticAgent
+from .actor_critic_agent_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
 from .policy_gradient_agent_continuous import (
     PolicyGradientAgent as ContinuousPolicyGradientAgent,
 )

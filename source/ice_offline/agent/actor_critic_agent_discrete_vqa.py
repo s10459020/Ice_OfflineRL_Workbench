@@ -1,0 +1,175 @@
+import numpy as np
+
+
+class ActorCriticAgent:
+    # ====================
+    # Init
+    # ====================
+    def __init__(self, n_actions: int, obs_dim: int, gamma: float = 0.99, actor_alpha: float = 0.01, critic_alpha: float = 0.01, seed: int = 42,) -> None:
+        self.n_actions = n_actions
+        self.obs_dim = obs_dim
+        self.gamma = gamma
+        self.actor_alpha = actor_alpha
+        self.critic_alpha = critic_alpha
+        self._rng = np.random.default_rng(seed)
+
+        # Linear categorical actor parameters: logits = observation @ pW + pb
+        self.pW = np.zeros((self.obs_dim, self.n_actions), dtype=np.float32)
+        self.pb = np.zeros(self.n_actions, dtype=np.float32)
+
+        # Linear critic parameters: Q(s, .) = s @ qW + qb
+        self.qW = np.zeros((self.obs_dim, self.n_actions), dtype=np.float32)
+        self.qb = np.zeros(self.n_actions, dtype=np.float32)
+
+        # Linear critic parameters: V(s) = s @ vw + vb
+        self.vw = np.zeros(self.obs_dim, dtype=np.float32)
+        self.vb = np.float32(0.0)
+
+    # ====================
+    # Public API
+    # ====================
+    def act(self, observation: np.ndarray) -> int:
+        # a ~ Categorical(pi(a|s))
+        obs_vector = np.asarray(observation, dtype=np.float32).reshape(-1)
+        categorical = self._pi(obs_vector)
+        return int(self._rng.choice(self.n_actions, p=categorical))
+
+    def update(self, o: np.ndarray, a: int, r: float, o_: np.ndarray, done: bool) -> None:
+        obs_vector = np.asarray(o, dtype=np.float32).reshape(-1)
+        next_obs_vector = np.asarray(o_, dtype=np.float32).reshape(-1)
+
+        # weight = A(s, a) = Q(s, a) - V(s)
+        # pi_theta <= theta + alpha * nabla_log_pi(a|s) * weight
+        #           = theta + alpha * nabla[pW, pb]     * weight
+        weight = self._A(obs_vector, int(a))
+        pW, pb = self._nabla_log_pi(obs_vector, int(a))
+        self.pW += self.actor_alpha * (weight * pW)
+        self.pb += self.actor_alpha * (weight * pb)
+
+        # q_theta <= theta - alpha * nabla_Lq
+        #          = theta - alpha * nabla[qW, qb]
+        nabla_qW, nabla_qb = self._nabla_Lq(obs_vector, int(a), r, next_obs_vector, done)
+        self.qW -= self.critic_alpha * nabla_qW
+        self.qb -= self.critic_alpha * nabla_qb
+
+        # v_theta <= theta - alpha * nabla_Lv
+        #          = theta - alpha * nabla[vw, vb]
+        nabla_vw, nabla_vb = self._nabla_Lv(obs_vector, r, next_obs_vector, done)
+        self.vw -= self.critic_alpha * nabla_vw
+        self.vb -= self.critic_alpha * nabla_vb
+
+    # ====================
+    # critic mathmatics
+    # ====================
+    def _Q(self, obs_vector: np.ndarray, action: int) -> np.float32:
+        # Q(s, a) = [s @ qW + qb][a]
+        return np.float32((obs_vector @ self.qW + self.qb)[action])
+
+    def _V(self, obs_vector: np.ndarray) -> np.float32:
+        # V(s) = s @ vw + vb
+        return np.float32(obs_vector @ self.vw + self.vb)
+    
+    def _A(self, obs_vector: np.ndarray, action: int) -> np.float32:
+        # A(s, a) = Q(s, a) - V(s)
+        q_t = self._Q(obs_vector, action)
+        v_t = self._V(obs_vector)
+        return np.float32(q_t - v_t)
+
+    def _delta_q(self, obs_vector: np.ndarray, action: int, reward: float, next_obs_vector: np.ndarray, done: bool) -> np.float32:
+        # Q(s, a) = E[r + grama * V(s')]
+        #
+        # delta_q = Q_target - Q
+        #         = Q_target(s, a) - Q(s, a)
+        #         = r + gamma * V(s') - Q(s, a)
+        q_t = self._Q(obs_vector, action)
+        next_v = np.float32(0.0) if done else self._V(next_obs_vector)
+        return np.float32(reward + self.gamma * next_v - q_t)
+
+    def _delta_v(self, obs_vector: np.ndarray, reward: float, next_obs_vector: np.ndarray, done: bool) -> np.float32:
+        # V(s) = E[Q(s,a)]
+        #      = E[r + grama*V(s')]
+        #
+        # delta_v = Q - V
+        #         = r + gamma * V(s') - V(s)
+        value = self._V(obs_vector)
+        next_value = np.float32(0.0) if done else self._V(next_obs_vector)
+        return np.float32(reward + self.gamma * next_value - value)
+
+    def _nabla_Q(self, obs_vector: np.ndarray, action: int) -> tuple[np.ndarray, np.ndarray]:
+        # d/d{theta}{Q(s,a)} = d/d{Q(s)}{Q(s,a)} * [d/d{qW}{Q(s)}, d/d{qb}{Q(s)}]
+        #                    = one_hot(a) * [s, 1]
+        #                    = [grad_qW, grad_qb]
+        one_hot = np.zeros(self.n_actions, dtype=np.float32)
+        one_hot[action] = 1.0
+
+        grad_qW = np.outer(obs_vector, one_hot)
+        grad_qb = one_hot
+        return grad_qW, grad_qb
+    
+    def _nabla_V(self, obs_vector: np.ndarray) -> tuple[np.ndarray, np.float32]:
+        # d/d{theta} {V} = [d/d{vw}{V}, d/d{vb}{V}]
+        #                = [s, 1]
+        grad_vw = obs_vector
+        grad_vb = np.float32(1.0)
+        return grad_vw, grad_vb
+
+    def _nabla_Lq(self, obs_vector: np.ndarray, action: int, reward: float, next_obs_vector: np.ndarray, done: bool) -> tuple[np.ndarray, np.ndarray]:
+        # Loss Q = MSE(delta_q) 
+        #        = 1/2(r + grama*V(s') - Q(s, a))**2
+        #
+        # nabla_Lq(s, a) = d/d{theta} {Lq}
+        #                = d/d{Q} {Lq}                                * d/d{theta} {Q(s, a)}
+        #                = d/d{Q} 1/2{delta_q}**2                     * nabla_Q
+        #                = delta_q * d/d{Q} {delta_q}                 * nabla_Q
+        #                = delta_q * d/d{Q}{r + grama*V(s') - Q(s,a)} * nabla_Q
+        #                = delta_q * -1                               * nabla_Q
+        #                = -delta_q * [grad_qW, grad_qb]
+        delta_q = self._delta_q(obs_vector, action, reward, next_obs_vector, done)
+        grad_qW, grad_qb = self._nabla_Q(obs_vector, action)
+        return -delta_q * grad_qW, -delta_q * grad_qb
+
+    def _nabla_Lv(self, obs_vector: np.ndarray, reward: float, next_obs_vector: np.ndarray, done: bool) -> tuple[np.ndarray, np.float32]:
+        # Loss V = MSE(delta_v) 
+        #        = 1/2(r + grama*V(s') - V(s))**2
+        #
+        # nabla_Lv(s) = d/d{theta} {Lv}
+        #             = d/d{V} {Lv}                              * d/d{theta} {V}
+        #             = d/d{V} 1/2{delta_v}**2                   * nabla_V
+        #             = delta_v * d/d{V} {delta_v}               * nabla_V
+        #             = delta_v * d/d{V}{r + gamma*V(s') - V(s)} * nabla_V
+        #             = delta_v * -1                             * nabla_V
+        #             = -delta_v * [grad_vw, grad_vb]
+        delta_v = self._delta_v(obs_vector, reward, next_obs_vector, done)
+        grad_vw, grad_vb = self._nabla_V(obs_vector)
+        return -delta_v * grad_vw, -delta_v * grad_vb
+
+    # ====================
+    # actor mathmatics
+    # ====================    
+    def _pi(self, obs_vector: np.ndarray) -> np.ndarray:
+        # z = logits(s_t) = s_t @ pW + pb
+        #
+        # pi(.|s_t) = Categorical(a; z)
+        #           = softmax(z)
+        #           = exp(z_a) / sum[exp(z_j)]
+        logits = obs_vector @ self.pW + self.pb
+        shifted_logits = logits - np.max(logits)
+        exp_logits = np.exp(shifted_logits)
+        return exp_logits / np.sum(exp_logits)
+
+    def _nabla_log_pi(self, obs_vector: np.ndarray, action: int) -> tuple[np.ndarray, np.ndarray]:
+        # nabla_log_pi(a_t|s_t) = d/d{theta} {log pi(a_t|s_t)}
+        #                       = d/d{z} {log pi(a_t|s_t)}                * d/d{theta} {z}
+        #                       = d/d{z} {log(exp(z_i) / sum[exp(z_j)]) } * [d/d{pW} {z}, d/d{pb} {z}]
+        #                       = d/d{z} {z_i - log(sum[exp(z_j)])}       * [s_t, 1]
+        #                       = (one_hot(a_t) - softmax(z_i))           * [s_t, 1]
+        #                       = (one_hot(a_t) - pi(.|s_t))              * [s_t, 1]
+        #                       = [grad_pW, grad_pb]
+        policy = self._pi(obs_vector)
+        one_hot = np.zeros(self.n_actions, dtype=np.float32)
+        one_hot[action] = 1.0
+        nabla_log_z = one_hot - policy
+
+        grad_pW = np.outer(obs_vector, nabla_log_z)
+        grad_pb = nabla_log_z
+        return grad_pW, grad_pb

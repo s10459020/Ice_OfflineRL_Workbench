@@ -1,21 +1,11 @@
-import numpy as np
-from pathlib import Path
-
-from ._agent_interface import model_path
+﻿import numpy as np
 
 
 class PolicyGradientAgent:
     # ====================
     # Init
     # ====================
-    def __init__(
-        self,
-        action_dim: int,
-        obs_dim: int,
-        gamma: float = 0.99,
-        alpha: float = 0.01,
-        seed: int = 42,
-    ) -> None:
+    def __init__(self, action_dim: int, obs_dim: int, gamma: float = 0.99, alpha: float = 0.01, seed: int = 42,) -> None:
         self.action_dim = action_dim
         self.obs_dim = obs_dim
         self.gamma = gamma
@@ -58,40 +48,6 @@ class PolicyGradientAgent:
         self.clear_episode()
 
     # ====================
-    # Persistence
-    # ====================
-    def save(self, model_id: str | Path, step: int) -> Path:
-        path = model_path(model_id, step, ".npz")
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        np.savez(
-            path,
-            action_dim=np.asarray(self.action_dim, dtype=np.int32),
-            obs_dim=np.asarray(self.obs_dim, dtype=np.int32),
-            gamma=np.asarray(self.gamma, dtype=np.float32),
-            alpha=np.asarray(self.alpha, dtype=np.float32),
-            W=self.W,
-            b=self.b,
-            std=self.std,
-        )
-        return path
-
-    @classmethod
-    def load(cls, model_id: str | Path, step: int) -> "PolicyGradientAgent":
-        payload = np.load(model_path(model_id, step, ".npz"))
-
-        agent = cls(
-            action_dim=int(payload["action_dim"]),
-            obs_dim=int(payload["obs_dim"]),
-            gamma=float(payload["gamma"]),
-            alpha=float(payload["alpha"]),
-        )
-        agent.W = np.asarray(payload["W"], dtype=np.float32)
-        agent.b = np.asarray(payload["b"], dtype=np.float32)
-        agent.std = np.asarray(payload["std"], dtype=np.float32)
-        return agent
-
-    # ====================
     # mathmatics
     # ====================
     def _G(self, rewards: list[float]) -> np.ndarray:
@@ -108,13 +64,13 @@ class PolicyGradientAgent:
         # mu(s) = s @ W + b
         return obs_vector @ self.W + self.b
 
-    def _pi(self, obs_vector: np.ndarray):
+    def _pi(self, obs_vector: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         # mean(s) = s @ W + b
         # var = 1 # fixed
         #
         # pi(.|s) = Normal(x; mean, var)
         #         = 1 / sqrt(2*pi*var) * exp( -(x-mean)**2 / 2*var )
-        #         
+        #
         # return parameters for stochastic sample (Normal) and greedy action (mean)
         mean = self._mean(obs_vector)
         std = self.std
@@ -165,3 +121,4 @@ class PolicyGradientAgent:
     def _gradient_ascent(self, grad_W: np.ndarray, grad_b: np.ndarray) -> None:
         self.W += self.alpha * grad_W
         self.b += self.alpha * grad_b
+
