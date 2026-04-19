@@ -1,15 +1,17 @@
 from ._agent_interface import Agent
-from .actor_critic_agent_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
-from .policy_gradient_agent_continuous import (
+from .bc_d3rl_discrete import DiscreteBCAgent
+from .ac_agent_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
+from .pg_agent_continuous import (
     PolicyGradientAgent as ContinuousPolicyGradientAgent,
 )
-from .policy_gradient_agent_discrete import (
+from .pg_agent_discrete import (
     PolicyGradientAgent as DiscretePolicyGradientAgent,
 )
 from .q_table_agent import QTableAgent, QTableState
 
 __all__ = [
     "Agent",
+    "DiscreteBCAgent",
     "DiscreteActorCriticAgent",
     "ContinuousPolicyGradientAgent",
     "DiscretePolicyGradientAgent",
