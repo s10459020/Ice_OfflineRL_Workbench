@@ -1,4 +1,4 @@
-"""Behavior Cloning continuous agent (stochastic)."""
+﻿"""Behavior Cloning continuous agent (stochastic)."""
 
 import torch
 import torch.nn.functional as F
@@ -76,7 +76,8 @@ class BCAgentContinuousStochastic:
         obs_t = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
         act_t = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
 
-        loss = self._loss_from_obs(obs_t, act_t)
+        squashed_mean, logstd = self.policy(obs_t)
+        loss = self._loss(squashed_mean, logstd, act_t)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -92,7 +93,3 @@ class BCAgentContinuousStochastic:
             Normal(squashed_mean, logstd.exp()).rsample().clamp(-1.0, 1.0)
         )
         return F.mse_loss(pred_action_t, act_t)
-
-    def _loss_from_obs(self, obs_t: torch.Tensor, act_t: torch.Tensor) -> torch.Tensor:
-        squashed_mean, logstd = self.policy(obs_t)
-        return self._loss(squashed_mean, logstd, act_t)
