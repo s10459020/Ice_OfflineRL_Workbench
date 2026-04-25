@@ -36,8 +36,8 @@ class _Pi(torch.nn.Module):
         self.min_logstd = -20.0
         self.max_logstd = 2.0
 
-    def forward(self, obs_t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        h = self.hidden(obs_t)
+    def forward(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        h = self.hidden(o)
         mean = self.mean_head(h)
         logstd = self.logstd_head(h).clamp(self.min_logstd, self.max_logstd)
         return mean, logstd
@@ -54,8 +54,8 @@ class _Q(torch.nn.Module):
             torch.nn.Linear(256, 1),
         )
 
-    def forward(self, obs_t: torch.Tensor, act_t: torch.Tensor) -> torch.Tensor:
-        x = torch.cat([obs_t, act_t], dim=1)
+    def forward(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        x = torch.cat([o, a], dim=1)
         return self.network(x)
 
 
@@ -94,9 +94,9 @@ class CQLAgentContinuous:
     # act
     # ====================
     def action_best_batch(self, obs_batch):
-        obs_t = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
+        o = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            mean, _ = self.policy(obs_t)
+            mean, _ = self.policy(o)
             action = torch.tanh(mean)
         return action.cpu().numpy()
 
@@ -104,14 +104,17 @@ class CQLAgentContinuous:
         return self.action_best_batch([obs])[0]
 
     def action_sample_batch(self, obs_batch):
-        obs_t = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
+        o = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            action, _ = self._sample_a(obs_t)
+            action, _ = self._sample_a(o)
         return action.cpu().numpy()
 
     def action_sample(self, obs):
         return self.action_sample_batch([obs])[0]
 
+    # ====================
+    # helper function
+    # ====================
     def _sample_a(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         # 對 E_pi[a]{ ... } 的樣本近似，取得a與log pi(a)用於後續計算
         # target_Q: r + gamma* E_pi[a]{ targ_Q(s',a')_min - alpha* log_pi(a'|s') }
@@ -120,35 +123,45 @@ class CQLAgentContinuous:
         a, log_prob = dist.sample_with_log_prob()
         return a, log_prob
 
-    def _sample_policy_q_values(self, policy_obs_t: torch.Tensor, value_obs_t: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # 對 1/N sun_N[ ... ] 的樣本近似
-        batch = policy_obs_t.shape[0]
-        mean, logstd = self.policy(policy_obs_t)  # (B, A)
+    def sample_a_n(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        # E_pi[a]{ ... } 樣本近似的N個抽樣版本，回傳(B*N, A)格式的資料
+        mean, logstd = self.policy(o)
         dist = SquashedGaussianDistribution(loc=mean, std=logstd.exp())
-        action, log_prob = dist.sample_n_with_log_prob(self.n_action_samples)  # (B,N,A), (B,N,1)
+        a, log_prob = dist.sample_n_with_log_prob(self.n_action_samples)
 
-        repeated_value_obs = value_obs_t.unsqueeze(1).repeat(1, self.n_action_samples, 1)
-        flat_value_obs = repeated_value_obs.reshape(-1, value_obs_t.shape[1])
-        flat_action = action.reshape(-1, action.shape[-1])
-        q1 = self.q1(flat_value_obs, flat_action).view(batch, self.n_action_samples, 1)
-        q2 = self.q2(flat_value_obs, flat_action).view(batch, self.n_action_samples, 1)
-        q = torch.cat([q1, q2], dim=2).permute(2, 0, 1)  # (2, B, N)
-        lp = log_prob.view(1, batch, self.n_action_samples)  # (1,B,N)
-        return q, lp
+        a = a.reshape(-1, a.shape[-1])                  # (B, N, A) => (B*N, A)
+        log_prob = log_prob.reshape(-1, 1)              # (B, N, 1) => (B*N, 1)
+        return a, log_prob
 
-    def _sample_random_q_values(self, obs_t: torch.Tensor) -> tuple[torch.Tensor, float]:
-        batch = obs_t.shape[0]
-        repeated_obs = obs_t.unsqueeze(1).repeat(1, self.n_action_samples, 1)
-        flat_obs = repeated_obs.reshape(-1, obs_t.shape[1])
+    def sample_rand_n(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        batch = o.shape[0]
         zero_tensor = torch.zeros(
             (batch * self.n_action_samples, self.act_size), device=self.device
-        )
-        random_actions = zero_tensor.uniform_(-1.0, 1.0)
-        q1 = self.q1(flat_obs, random_actions).view(batch, self.n_action_samples, 1)
-        q2 = self.q2(flat_obs, random_actions).view(batch, self.n_action_samples, 1)
-        q = torch.cat([q1, q2], dim=2).permute(2, 0, 1)  # (2,B,N)
-        random_log_prob = math.log(0.5**self.act_size)
-        return q, random_log_prob
+        ) # (B*N, A)
+
+        a_rand = zero_tensor.uniform_(-1.0, 1.0)
+        random_log_prob = torch.full(
+            (batch * self.n_action_samples, 1),
+            math.log(0.5**self.act_size),
+            device=self.device,
+        ) # (B*N, A)
+        return a_rand, random_log_prob
+
+    def eval_q_n(self, o: torch.Tensor, a_sample: torch.Tensor) -> torch.Tensor:
+        o = o.repeat_interleave(self.n_action_samples, dim=0)  # (B, O) => (B*N, O)
+        a = a_sample.reshape(-1, a_sample.shape[-1])           # (B*N, A)
+        qq = self._QQ(o, a)                                    # (2, B*N, 1)
+        return qq
+
+    def _QQ(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        q1 = self.q1(o, a)
+        q2 = self.q2(o, a)
+        return torch.stack([q1, q2], dim=0)
+
+    def _targ_QQ(self, on: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        q1 = self.targ_q1(on, a)
+        q2 = self.targ_q2(on, a)
+        return torch.stack([q1, q2], dim=0)
 
     # ====================
     # update
@@ -174,9 +187,11 @@ class CQLAgentContinuous:
         actor_loss.backward()
         self.actor_optim.step()
 
-        self._soft_update_targets()
+        self._update_target_soft()
 
-    def _soft_update_targets(self) -> None:
+    def _update_target_soft(self) -> None:
+        # DDPG soft target: theta_target <= (1 - tau)theta_target + (tau)theta
+        # TD3 double Q: theta_target_i, theta_i
         with torch.no_grad():
             for p_targ, p in zip(self.targ_q1.parameters(), self.q1.parameters()):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
@@ -217,20 +232,18 @@ class CQLAgentContinuous:
         # SAC target: r + gamma* ( targ_Q2_min - alpha* log_pi2 )* (1-done) # maximum entropy
         with torch.no_grad():
             an, next_log_prob = self._sample_a(on)
-            next_q = torch.minimum(
-                self.targ_q1(on, an),
-                self.targ_q2(on, an),
-            )
+            next_q = self._targ_QQ(on, an).min(dim=0).values
             target = next_q - self._alpha_sac() * next_log_prob
             return r + self.gamma * target * (1.0 - d)
 
     def _loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # TD3 Double Q 
         # loss_i = E_D[ (Qi-y)^2 ]
-        # loss   = loss_1 + loss_2
         target = self._target_q(on, r, d)
-        q1, q2 = self.q1(o, a), self.q2(o, a)
-        return F.mse_loss(q1, target) + F.mse_loss(q2, target)
+        qq = self._QQ(o, a)
+        loss_td_1 = F.mse_loss(qq[0], target)
+        loss_td_2 = F.mse_loss(qq[1], target)
+        return torch.stack([loss_td_1, loss_td_2], dim=0)
 
     def _loss_cql(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
         # L_CQL(H) = E_D[s]{log *              sum_a[exp(Q)] } - E_D[s,a]{Q}
@@ -239,33 +252,37 @@ class CQLAgentContinuous:
         #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # continuous sample
         #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss
         #
-        # TD3 double Q =>
-        policy_q_t, logp_t = self._sample_policy_q_values(o, o)
-        policy_q_tp1, logp_tp1 = self._sample_policy_q_values(on, o)
-        random_q, random_logp = self._sample_random_q_values(o)
-        target_values = torch.cat(
-            [
-                policy_q_t - logp_t,
-                policy_q_tp1 - logp_tp1,
-                random_q - random_logp,
-            ],
-            dim=2,
-        )  # (2,B,3N)
-        logsumexp = torch.logsumexp(target_values, dim=2, keepdim=True)  # (2,B,1)
-        data_q1 = self.q1(o, a)
-        data_q2 = self.q2(o, a)
-        data_q = torch.cat([data_q1, data_q2], dim=1).T.unsqueeze(-1)  # (2,B,1)
-        return (logsumexp - data_q).mean(dim=[1, 2])  # batch mean
+        # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') 三種N次
+        batch = o.shape[0]
+
+        a_s, logp = self.sample_a_n(o)
+        an, logpn = self.sample_a_n(on)
+        ar, logpr = self.sample_rand_n(o)
+
+        q = self.eval_q_n(o, a_s).view(2, batch, self.n_action_samples)
+        qn = self.eval_q_n(o, an).view(2, batch, self.n_action_samples)
+        qr = self.eval_q_n(o, ar).view(2, batch, self.n_action_samples)
+        q_cat = torch.cat([q, qn, qr], dim=2)               # (2,B,3N)
+
+        logp = logp.view(1, batch, self.n_action_samples)   # (1,B,N)
+        logpn = logpn.view(1, batch, self.n_action_samples) # (1,B,N)
+        logpr = logpr.view(1, batch, self.n_action_samples) # (1,B,N)
+        logp_cat = torch.cat([logp, logpn, logpr], dim=2)   # (1,B,3N)
+
+        logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2,B,1)
+        data_q = self._QQ(o, a)                             # (2,B,1)
+        return (logsumexp - data_q).mean(dim=[1, 2])        # (2), double Q
 
     def _loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        # CQL loss = loss_td + alpha * loss_cql
+        # CQL loss: loss_td + alpha * loss_cql
+        # TD3 double Q: sum_i[ loss_td + alpha * loss_cql ]
         # Lagrange 乘子: alpha
-        loss_td = self._loss_td(o, a, r, on, d)
-        loss_cql = self._loss_cql(o, a, on)  # (2,)
-        loss_cql = 5.0 * (loss_cql - self.alpha_threshold)
+        loss_td = self._loss_td(o, a, r, on, d)             # (2,)
+        loss_cql = self._loss_cql(o, a, on)                 # (2,)
+        loss_cql = 5.0 * (loss_cql - self.alpha_threshold)  # fix weight
 
         self._update_alpha_cql(loss_cql.detach())
-        loss_critic = loss_td + (self._alpha_cql() * loss_cql).sum()
+        loss_critic = loss_td.sum() + (self._alpha_cql() * loss_cql).sum() # d3rl design
         return loss_critic
 
     # ====================
@@ -274,6 +291,6 @@ class CQLAgentContinuous:
     def _loss_actor(self, o: torch.Tensor, a: torch.Tensor, log_prob: torch.Tensor) -> torch.Tensor:
         # TD3 Clipped Double Q: Q_min = min(Q1, Q2)
         # SAC loss = E_D[s],pi[a]{ temp * log_pi - Q_min }
-        q_t = torch.minimum(self.q1(o, a), self.q2(o, a))
+        q_t = self._QQ(o, a).min(dim=0).values
         loss_actor = (self._alpha_sac() * log_prob - q_t).mean()   # batch mean
         return loss_actor
