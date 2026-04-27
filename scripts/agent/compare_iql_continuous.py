@@ -120,37 +120,37 @@ def _all_pairs(our: IQLAgentContinuous, algo):
     d3_t2 = algo.impl.modules.targ_q_funcs[1]
     d3_v = algo.impl.modules.value_func
     return [
-        (our.policy.hidden[0].weight, d3_policy._encoder._layers[0].weight),
-        (our.policy.hidden[0].bias, d3_policy._encoder._layers[0].bias),
-        (our.policy.hidden[2].weight, d3_policy._encoder._layers[2].weight),
-        (our.policy.hidden[2].bias, d3_policy._encoder._layers[2].bias),
-        (our.policy.mean_head.weight, d3_policy._mu.weight),
-        (our.policy.mean_head.bias, d3_policy._mu.bias),
-        (our.policy.logstd, d3_policy._logstd),
-        (our.q1.network[0].weight, d3_q1._encoder._layers[0].weight),
-        (our.q1.network[0].bias, d3_q1._encoder._layers[0].bias),
-        (our.q1.network[2].weight, d3_q1._encoder._layers[2].weight),
-        (our.q1.network[2].bias, d3_q1._encoder._layers[2].bias),
-        (our.q1.network[4].weight, d3_q1._fc.weight),
-        (our.q1.network[4].bias, d3_q1._fc.bias),
-        (our.q2.network[0].weight, d3_q2._encoder._layers[0].weight),
-        (our.q2.network[0].bias, d3_q2._encoder._layers[0].bias),
-        (our.q2.network[2].weight, d3_q2._encoder._layers[2].weight),
-        (our.q2.network[2].bias, d3_q2._encoder._layers[2].bias),
-        (our.q2.network[4].weight, d3_q2._fc.weight),
-        (our.q2.network[4].bias, d3_q2._fc.bias),
-        (our.targ_q1.network[0].weight, d3_t1._encoder._layers[0].weight),
-        (our.targ_q1.network[0].bias, d3_t1._encoder._layers[0].bias),
-        (our.targ_q1.network[2].weight, d3_t1._encoder._layers[2].weight),
-        (our.targ_q1.network[2].bias, d3_t1._encoder._layers[2].bias),
-        (our.targ_q1.network[4].weight, d3_t1._fc.weight),
-        (our.targ_q1.network[4].bias, d3_t1._fc.bias),
-        (our.targ_q2.network[0].weight, d3_t2._encoder._layers[0].weight),
-        (our.targ_q2.network[0].bias, d3_t2._encoder._layers[0].bias),
-        (our.targ_q2.network[2].weight, d3_t2._encoder._layers[2].weight),
-        (our.targ_q2.network[2].bias, d3_t2._encoder._layers[2].bias),
-        (our.targ_q2.network[4].weight, d3_t2._fc.weight),
-        (our.targ_q2.network[4].bias, d3_t2._fc.bias),
+        (our.actor.hidden[0].weight, d3_policy._encoder._layers[0].weight),
+        (our.actor.hidden[0].bias, d3_policy._encoder._layers[0].bias),
+        (our.actor.hidden[2].weight, d3_policy._encoder._layers[2].weight),
+        (our.actor.hidden[2].bias, d3_policy._encoder._layers[2].bias),
+        (our.actor.mean_head.weight, d3_policy._mu.weight),
+        (our.actor.mean_head.bias, d3_policy._mu.bias),
+        (our.actor.logstd, d3_policy._logstd),
+        (our.critic.q1.network[0].weight, d3_q1._encoder._layers[0].weight),
+        (our.critic.q1.network[0].bias, d3_q1._encoder._layers[0].bias),
+        (our.critic.q1.network[2].weight, d3_q1._encoder._layers[2].weight),
+        (our.critic.q1.network[2].bias, d3_q1._encoder._layers[2].bias),
+        (our.critic.q1.network[4].weight, d3_q1._fc.weight),
+        (our.critic.q1.network[4].bias, d3_q1._fc.bias),
+        (our.critic.q2.network[0].weight, d3_q2._encoder._layers[0].weight),
+        (our.critic.q2.network[0].bias, d3_q2._encoder._layers[0].bias),
+        (our.critic.q2.network[2].weight, d3_q2._encoder._layers[2].weight),
+        (our.critic.q2.network[2].bias, d3_q2._encoder._layers[2].bias),
+        (our.critic.q2.network[4].weight, d3_q2._fc.weight),
+        (our.critic.q2.network[4].bias, d3_q2._fc.bias),
+        (our.critic.targ_q1.network[0].weight, d3_t1._encoder._layers[0].weight),
+        (our.critic.targ_q1.network[0].bias, d3_t1._encoder._layers[0].bias),
+        (our.critic.targ_q1.network[2].weight, d3_t1._encoder._layers[2].weight),
+        (our.critic.targ_q1.network[2].bias, d3_t1._encoder._layers[2].bias),
+        (our.critic.targ_q1.network[4].weight, d3_t1._fc.weight),
+        (our.critic.targ_q1.network[4].bias, d3_t1._fc.bias),
+        (our.critic.targ_q2.network[0].weight, d3_t2._encoder._layers[0].weight),
+        (our.critic.targ_q2.network[0].bias, d3_t2._encoder._layers[0].bias),
+        (our.critic.targ_q2.network[2].weight, d3_t2._encoder._layers[2].weight),
+        (our.critic.targ_q2.network[2].bias, d3_t2._encoder._layers[2].bias),
+        (our.critic.targ_q2.network[4].weight, d3_t2._fc.weight),
+        (our.critic.targ_q2.network[4].bias, d3_t2._fc.bias),
         (our.v.network[0].weight, d3_v._encoder._layers[0].weight),
         (our.v.network[0].bias, d3_v._encoder._layers[0].bias),
         (our.v.network[2].weight, d3_v._encoder._layers[2].weight),
@@ -177,19 +177,21 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(algo, obs_t)
-        our_act = our.action_best_batch(obs_t)
+        with torch.no_grad():
+            our_act = our.actor.sample(obs_t, greedy=True).cpu().numpy()
         _assert_equal([(d3_act, our_act)])
 
         torch.manual_seed(SEED + 5000 + i)
         d3_sample = d3rl_action_sample_batch(algo, obs_t)
         torch.manual_seed(SEED + 5000 + i)
-        our_sample = our.action_sample_batch(obs_t)
+        with torch.no_grad():
+            our_sample = our.actor.sample(obs_t, greedy=False).cpu().numpy()
         _assert_equal([(d3_sample, our_sample)])
 
         torch.manual_seed(SEED + 7000 + i)
-        single_sample_batch = our.action_sample_batch(obs_t[:1])[0]
+        single_sample_batch = our.act(obs_t[0].cpu().numpy(), greddy=False)
         torch.manual_seed(SEED + 7000 + i)
-        single_sample = our.action_sample(obs_t[0].cpu().numpy())
+        single_sample = our.act(obs_t[0].cpu().numpy(), greddy=False)
         _assert_equal([
             (single_sample, single_sample_batch),
         ])

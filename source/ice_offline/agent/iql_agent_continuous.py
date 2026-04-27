@@ -21,8 +21,10 @@ class _Adam:
 
 
 class _Pi(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int):
+    def __init__(self, obs_size: int, act_size: int, beta: float, max_weight: float):
         super().__init__()
+        self.beta = beta
+        self.max_weight = max_weight
         self.hidden = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
@@ -36,11 +38,24 @@ class _Pi(torch.nn.Module):
 
     def forward(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         h = self.hidden(o)
-        mu = self.mean_head(h)
-        squashed_mu = torch.tanh(mu)
+        mean = self.mean_head(h)
+        squashed_mean = torch.tanh(mean)
         base = self.max_logstd - self.min_logstd
         clipped_logstd = self.min_logstd + torch.sigmoid(self.logstd) * base
-        return mu, squashed_mu, clipped_logstd
+        return mean, squashed_mean, clipped_logstd
+
+    def sample(self, o: torch.Tensor, greedy: bool = False) -> torch.Tensor:
+        if greedy:
+            _, squashed_mean, _ = self(o)
+            return squashed_mean
+        mean, squashed_mean, logstd = self(o)
+        dist = GaussianDistribution(loc=squashed_mean, std=logstd.exp(), raw_loc=mean)
+        return dist.sample()
+
+    def log_prob(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        mean, squashed_mean, logstd = self(o)
+        dist = GaussianDistribution(loc=squashed_mean, std=logstd.exp(), raw_loc=mean)
+        return dist.log_prob(a)
 
 
 class _Q(torch.nn.Module):
@@ -59,8 +74,9 @@ class _Q(torch.nn.Module):
 
 
 class _V(torch.nn.Module):
-    def __init__(self, obs_size: int):
+    def __init__(self, obs_size: int, tau: float):
         super().__init__()
+        self.tau = tau
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
@@ -73,6 +89,31 @@ class _V(torch.nn.Module):
         return self.network(o)
 
 
+class _QQ(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int, tau: float):
+        super().__init__()
+        self.tau = tau
+        self.q1 = _Q(obs_size, act_size)
+        self.q2 = _Q(obs_size, act_size)
+        self.targ_q1 = _Q(obs_size, act_size)
+        self.targ_q2 = _Q(obs_size, act_size)
+        self.targ_q1.load_state_dict(self.q1.state_dict())
+        self.targ_q2.load_state_dict(self.q2.state_dict())
+
+    def qq(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return torch.stack([self.q1(o, a), self.q2(o, a)], dim=0)
+
+    def targ_qq(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return torch.stack([self.targ_q1(o, a), self.targ_q2(o, a)], dim=0)
+
+    def update_target_soft(self) -> None:
+        with torch.no_grad():
+            for p_targ, p in zip(self.targ_q1.parameters(), self.q1.parameters()):
+                p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
+            for p_targ, p in zip(self.targ_q2.parameters(), self.q2.parameters()):
+                p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
+
+
 class IQLAgentContinuous:
     def __init__(
         self,
@@ -81,78 +122,38 @@ class IQLAgentContinuous:
         actor_learning_rate: float = 3e-4,
         critic_learning_rate: float = 3e-4,
         gamma: float = 0.99,
-        rho: float = 0.005,
-        tau: float = 0.7,
-        weight_temp: float = 3.0,
+        q_tau: float = 0.005,
+        v_tau: float = 0.7,
+        beta: float = 3.0,
         max_weight: float = 100.0,
     ):
         self.device = "cpu"
         self.act_size = act_size
         self.gamma = gamma
-        self.rho = rho
-        self.tau = tau
-        self.weight_temp = weight_temp
-        self.max_weight = max_weight
 
-        self.policy = _Pi(obs_size, act_size).to(self.device)
-        self.q1 = _Q(obs_size, act_size).to(self.device)
-        self.q2 = _Q(obs_size, act_size).to(self.device)
-        self.targ_q1 = _Q(obs_size, act_size).to(self.device)
-        self.targ_q2 = _Q(obs_size, act_size).to(self.device)
-        self.v = _V(obs_size).to(self.device)
-        self.targ_q1.load_state_dict(self.q1.state_dict())
-        self.targ_q2.load_state_dict(self.q2.state_dict())
+        self.actor = _Pi(obs_size, act_size, beta=beta, max_weight=max_weight).to(self.device)
+        self.critic = _QQ(obs_size, act_size, tau=q_tau).to(self.device)
+        self.v = _V(obs_size, tau=v_tau).to(self.device)
 
-        self.actor_optim = _Adam(actor_learning_rate)(self.policy.parameters())
+        self.actor_optim = _Adam(actor_learning_rate)(
+            self.actor.parameters()
+        )
         self.critic_optim = _Adam(critic_learning_rate)(
-            list(self.q1.parameters()) + list(self.q2.parameters()) + list(self.v.parameters())
+              list(self.critic.q1.parameters())
+            + list(self.critic.q2.parameters())
+            + list(self.v.parameters())
         )
 
     # ====================
-    # act
+    # public API
     # ====================
-    def action_best_batch(self, obs_batch):
-        o = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
-        with torch.no_grad():
-            _, squashed_mu, _ = self.policy(o)
-        return squashed_mu.cpu().numpy()
-
-    def action_best(self, obs):
+    def act(self, obs, greddy: bool = True):
         obs_np = np.asarray(obs, dtype=np.float32)[None, :]
-        return self.action_best_batch(obs_np)[0]
-
-    def action_sample_batch(self, obs_batch):
-        o = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
+        o = torch.as_tensor(obs_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            action = self._sample_a(o)
-        return action.cpu().numpy()
+            action = self.actor.sample(o, greedy=greddy)
+        return action.cpu().numpy()[0]
 
-    def action_sample(self, obs):
-        obs_np = np.asarray(obs, dtype=np.float32)[None, :]
-        return self.action_sample_batch(obs_np)[0]
-
-    # ====================
-    # helper
-    # ====================
-    def _build_dist(self, o: torch.Tensor) -> GaussianDistribution:
-        mu, squashed_mu, logstd = self.policy(o)
-        return GaussianDistribution(loc=squashed_mu, std=logstd.exp(), raw_loc=mu)
-
-    def _sample_a(self, o: torch.Tensor) -> torch.Tensor:
-        return self._build_dist(o).sample()
-
-    def _log_pi(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        return self._build_dist(o).log_prob(a)
-
-    def _QQ(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        return torch.stack([self.q1(o, a), self.q2(o, a)], dim=0)
-
-    def _targ_QQ(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        return torch.stack([self.targ_q1(o, a), self.targ_q2(o, a)], dim=0)
-
-    # ====================
-    # update
-    # ====================
     def update(self, batch):
         o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
         a = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
@@ -170,14 +171,7 @@ class IQLAgentContinuous:
         actor_loss.backward()
         self.actor_optim.step()
 
-        self._update_target_soft()
-
-    def _update_target_soft(self) -> None:
-        with torch.no_grad():
-            for p_targ, p in zip(self.targ_q1.parameters(), self.q1.parameters()):
-                p_targ.data.mul_(1.0 - self.rho).add_(self.rho * p.data)
-            for p_targ, p in zip(self.targ_q2.parameters(), self.q2.parameters()):
-                p_targ.data.mul_(1.0 - self.rho).add_(self.rho * p.data)
+        self.critic.update_target_soft()
 
     # ====================
     # critic
@@ -186,25 +180,22 @@ class IQLAgentContinuous:
         with torch.no_grad():
             return r + self.gamma * self.v(on) * (1.0 - d)
 
-    def _l2_tau(self, u: torch.Tensor) -> torch.Tensor:
-        # L2_tau = |tau - 1(u<0)| * u^2
-        weight = (self.tau - (u < 0.0).float()).abs().detach()
-        return weight * u.pow(2)
-
     def _loss_q(
         self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor
     ) -> torch.Tensor:
-        # loss_q = E_batch{(target - Q)^2}
         target = self._target_q(on, r, d)
-        qq = self._QQ(o, a)
+        qq = self.critic.qq(o, a)
+        # loss_q = E_batch{(target - Q)^2}
         return (qq[0] - target).pow(2).mean() + (qq[1] - target).pow(2).mean()
 
     def _loss_v(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        # loss_v = E_batch{L2(Q-V)}
-        q_t = self._targ_QQ(o, a).min(dim=0).values
+        # L2_tau = |tau - 1(u<0)| * u^2
+        # loss_v = E_batch{ L2_tau(Q-V) }
+        q_t = self.critic.targ_qq(o, a).min(dim=0).values
         v_t = self.v(o)
         diff = q_t.detach() - v_t
-        return self._l2_tau(diff).mean()
+        weight = (self.v.tau - (diff < 0.0).float()).abs().detach()
+        return (weight * diff.pow(2)).mean()
 
     def _loss_critic(
         self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor
@@ -215,14 +206,15 @@ class IQLAgentContinuous:
     # actor
     # ====================
     def _weight(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        # weight = -exp( beta * (Q - V))
         with torch.no_grad():
-            q_t = self._targ_QQ(o, a).min(dim=0).values
+            q_t = self.critic.targ_qq(o, a).min(dim=0).values
             v_t = self.v(o)
             adv = q_t - v_t
-            return (self.weight_temp * adv).exp().clamp(max=self.max_weight)
+            return -(self.actor.beta * adv).exp().clamp(max=self.actor.max_weight)
 
     def _loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        # loss_pi = E_batch{-weight * log_pi}
-        log_probs = self._log_pi(o, a)
+        # loss_pi = E_batch{weight * log_pi}
         weight = self._weight(o, a)
-        return -(weight * log_probs).mean()
+        log_pi = self.actor.log_prob(o, a)
+        return (weight * log_pi).mean()
