@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import numpy as np
 import torch
@@ -6,7 +6,7 @@ import torch
 import d3rlpy
 from d3rlpy.torch_utility import TorchMiniBatch
 
-from ice_offline.agent.cql_agent_continuous import CQLAgentContinuous
+from ice_offline.agent.iql_agent_continuous import IQLAgentContinuous
 from ice_offline.tools.printer import print_stage
 
 OBS_DIM = 8
@@ -20,17 +20,17 @@ N_TEST_BATCHES = 30
 # ====================
 # 1) Flow Function
 # ====================
-def build_our_agent() -> CQLAgentContinuous:
-    return CQLAgentContinuous(obs_size=OBS_DIM, act_size=ACT_DIM)
+def build_our_agent() -> IQLAgentContinuous:
+    return IQLAgentContinuous(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_d3rl():
-    config = d3rlpy.algos.CQLConfig(soft_q_backup=True)
+    config = d3rlpy.algos.IQLConfig()
     algo = config.create(device=DEVICE)
     algo.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert algo.impl is not None
     return algo
 
-def copy_d3rl_weights_to_our(algo, our: CQLAgentContinuous) -> None:
+def copy_d3rl_weights_to_our(algo, our: IQLAgentContinuous) -> None:
     with torch.no_grad():
         for our_param, d3_param in _all_pairs(our, algo):
             our_param.copy_(d3_param)
@@ -87,31 +87,38 @@ def d3rl_action_best_batch(algo, obs_t: torch.Tensor) -> np.ndarray:
     with torch.no_grad():
         return algo.impl.modules.policy(obs_t).squashed_mu.cpu().numpy()
 
+def d3rl_action_sample_batch(algo, obs_t: torch.Tensor) -> np.ndarray:
+    with torch.no_grad():
+        return algo.impl.inner_sample_action(obs_t).cpu().numpy()
+
 def _our_losses(
-    our: CQLAgentContinuous,
+    our: IQLAgentContinuous,
     obs_t: torch.Tensor,
     act_t: torch.Tensor,
     rew_t: torch.Tensor,
     next_obs_t: torch.Tensor,
     done_t: torch.Tensor,
 ) -> torch.Tensor:
-    critic = our._loss_critic(obs_t, act_t, rew_t, next_obs_t, done_t)
-    actor = our._loss_actor(obs_t)
-    return torch.stack([critic, actor])
+    q_loss = our._loss_q(obs_t, act_t, rew_t, next_obs_t, done_t)
+    v_loss = our._loss_v(obs_t, act_t)
+    critic = q_loss + v_loss
+    actor = our._loss_actor(obs_t, act_t)
+    return torch.stack([critic, q_loss, v_loss, actor])
 
 def _d3rl_losses(d3rl, batch: TorchMiniBatch, obs_t: torch.Tensor) -> torch.Tensor:
     q_tpn = d3rl.impl.compute_target(batch)
-    critic = d3rl.impl.compute_critic_loss(batch, q_tpn).critic_loss
+    critic_obj = d3rl.impl.compute_critic_loss(batch, q_tpn)
     action = d3rl.impl.modules.policy(obs_t)
     actor = d3rl.impl.compute_actor_loss(batch, action).actor_loss
-    return torch.stack([critic, actor])
+    return torch.stack([critic_obj.critic_loss, critic_obj.q_loss, critic_obj.v_loss, actor])
 
-def _all_pairs(our: CQLAgentContinuous, algo):
+def _all_pairs(our: IQLAgentContinuous, algo):
     d3_policy = algo.impl.modules.policy
     d3_q1 = algo.impl.modules.q_funcs[0]
     d3_q2 = algo.impl.modules.q_funcs[1]
     d3_t1 = algo.impl.modules.targ_q_funcs[0]
     d3_t2 = algo.impl.modules.targ_q_funcs[1]
+    d3_v = algo.impl.modules.value_func
     return [
         (our.policy.hidden[0].weight, d3_policy._encoder._layers[0].weight),
         (our.policy.hidden[0].bias, d3_policy._encoder._layers[0].bias),
@@ -119,8 +126,7 @@ def _all_pairs(our: CQLAgentContinuous, algo):
         (our.policy.hidden[2].bias, d3_policy._encoder._layers[2].bias),
         (our.policy.mean_head.weight, d3_policy._mu.weight),
         (our.policy.mean_head.bias, d3_policy._mu.bias),
-        (our.policy.logstd_head.weight, d3_policy._logstd.weight),
-        (our.policy.logstd_head.bias, d3_policy._logstd.bias),
+        (our.policy.logstd, d3_policy._logstd),
         (our.q1.network[0].weight, d3_q1._encoder._layers[0].weight),
         (our.q1.network[0].bias, d3_q1._encoder._layers[0].bias),
         (our.q1.network[2].weight, d3_q1._encoder._layers[2].weight),
@@ -145,8 +151,12 @@ def _all_pairs(our: CQLAgentContinuous, algo):
         (our.targ_q2.network[2].bias, d3_t2._encoder._layers[2].bias),
         (our.targ_q2.network[4].weight, d3_t2._fc.weight),
         (our.targ_q2.network[4].bias, d3_t2._fc.bias),
-        (our.log_alpha_sac, algo.impl.modules.log_temp._parameter),
-        (our.log_alpha_cql, algo.impl.modules.log_alpha._parameter),
+        (our.v.network[0].weight, d3_v._encoder._layers[0].weight),
+        (our.v.network[0].bias, d3_v._encoder._layers[0].bias),
+        (our.v.network[2].weight, d3_v._encoder._layers[2].weight),
+        (our.v.network[2].bias, d3_v._encoder._layers[2].bias),
+        (our.v.network[4].weight, d3_v._fc.weight),
+        (our.v.network[4].bias, d3_v._fc.bias),
     ]
 
 # ====================
@@ -169,6 +179,20 @@ def main() -> None:
         d3_act = d3rl_action_best_batch(algo, obs_t)
         our_act = our.action_best_batch(obs_t)
         _assert_equal([(d3_act, our_act)])
+
+        torch.manual_seed(SEED + 5000 + i)
+        d3_sample = d3rl_action_sample_batch(algo, obs_t)
+        torch.manual_seed(SEED + 5000 + i)
+        our_sample = our.action_sample_batch(obs_t)
+        _assert_equal([(d3_sample, our_sample)])
+
+        torch.manual_seed(SEED + 7000 + i)
+        single_sample_batch = our.action_sample_batch(obs_t[:1])[0]
+        torch.manual_seed(SEED + 7000 + i)
+        single_sample = our.action_sample(obs_t[0].cpu().numpy())
+        _assert_equal([
+            (single_sample, single_sample_batch),
+        ])
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
 
@@ -179,9 +203,7 @@ def main() -> None:
             rng, BATCH_SIZE, OBS_DIM, ACT_DIM
         )
 
-        torch.manual_seed(SEED + 1000 + i)
         our_losses = _our_losses(our, obs_t, act_t, rew_t, next_obs_t, done_t)
-        torch.manual_seed(SEED + 1000 + i)
         d3rl_losses = _d3rl_losses(algo, batch, obs_t)
 
         _assert_equal([(d3rl_losses, our_losses)])
@@ -195,10 +217,7 @@ def main() -> None:
             rng, BATCH_SIZE, OBS_DIM, ACT_DIM
         )
 
-        # param (actual update path)
-        torch.manual_seed(SEED + 2000 + i)
         _ = algo.impl.inner_update(batch, i)
-        torch.manual_seed(SEED + 2000 + i)
         our.update(
             {
                 "obs": obs_t,

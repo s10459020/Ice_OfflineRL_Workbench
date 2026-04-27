@@ -180,9 +180,7 @@ class CQLAgentContinuous:
         self.critic_optim.step()
 
         # actor
-        actor_action, actor_log_prob = self._sample_a(o)
-        self._update_alpha_sac(actor_log_prob.detach())
-        actor_loss = self._loss_actor(o, actor_action, actor_log_prob)
+        actor_loss = self._loss_actor(o)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
@@ -239,6 +237,7 @@ class CQLAgentContinuous:
     def _loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # TD3 Double Q 
         # loss_i = E_D[ (Qi-y)^2 ]
+        # E_D[...]: input ...
         target = self._target_q(on, r, d)
         qq = self._QQ(o, a)
         loss_td_1 = F.mse_loss(qq[0], target)
@@ -249,9 +248,11 @@ class CQLAgentContinuous:
         # L_CQL(H) = E_D[s]{log *              sum_a[exp(Q)] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
-        #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # continuous sample
-        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss
+        #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # sample approximation
+        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss     
         #
+        # E_D[s]: input o
+        # E_D[s,a]: input o,a
         # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') 三種N次
         batch = o.shape[0]
 
@@ -288,9 +289,12 @@ class CQLAgentContinuous:
     # ====================
     # actor mathmatics
     # ====================
-    def _loss_actor(self, o: torch.Tensor, a: torch.Tensor, log_prob: torch.Tensor) -> torch.Tensor:
+    def _loss_actor(self, o: torch.Tensor) -> torch.Tensor:
         # TD3 Clipped Double Q: Q_min = min(Q1, Q2)
         # SAC loss = E_D[s],pi[a]{ temp * log_pi - Q_min }
+        # E_D[s]: input o
+        # E_pi[a]: sample a
+        a, log_prob = self._sample_a(o)
+        self._update_alpha_sac(log_prob.detach())
         q_t = self._QQ(o, a).min(dim=0).values
-        loss_actor = (self._alpha_sac() * log_prob - q_t).mean()   # batch mean
-        return loss_actor
+        return (self._alpha_sac() * log_prob - q_t).mean()
