@@ -6,7 +6,7 @@ import torch
 import d3rlpy
 from d3rlpy.torch_utility import TorchMiniBatch
 
-from ice_offline.agent.iql_agent_continuous import IQLAgentContinuous
+from ice_offline.agent.iql_continuous import IQLAgentContinuous
 from ice_offline.tools.printer import print_stage
 
 OBS_DIM = 8
@@ -237,3 +237,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

@@ -1,11 +1,11 @@
-﻿import pickle
+import pickle
 import random
 from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
 
-from ._agent_interface import model_path
+from ._interface import model_path
 
 
 QTableState = Any
@@ -127,4 +127,5 @@ class QTableAgent:
             path=model_path(model_id, step, ".pkl"),
             encoder=encoder,
         )
+
 

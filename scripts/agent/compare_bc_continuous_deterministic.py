@@ -8,7 +8,7 @@ from d3rlpy.models.torch.imitators import compute_deterministic_imitation_loss
 from d3rlpy.models.torch.policies import DeterministicPolicy
 from d3rlpy.torch_utility import TorchMiniBatch
 
-from ice_offline.agent.bc_agent_continuous_deterministic import (
+from ice_offline.agent.bc_continuous_deterministic import (
     BCAgentContinuousDeterministic,
 )
 from ice_offline.tools.printer import print_stage
@@ -167,3 +167,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

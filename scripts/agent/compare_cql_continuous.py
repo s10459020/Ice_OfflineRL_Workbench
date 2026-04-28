@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import numpy as np
 import torch
@@ -6,7 +6,7 @@ import torch
 import d3rlpy
 from d3rlpy.torch_utility import TorchMiniBatch
 
-from ice_offline.agent.cql_agent_continuous import CQLAgentContinuous
+from ice_offline.agent.cql_continuous import CQLAgentContinuous
 from ice_offline.tools.printer import print_stage
 
 OBS_DIM = 8
@@ -218,3 +218,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

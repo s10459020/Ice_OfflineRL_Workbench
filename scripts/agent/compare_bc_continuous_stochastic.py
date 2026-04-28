@@ -8,7 +8,7 @@ from d3rlpy.models.torch.imitators import compute_stochastic_imitation_loss
 from d3rlpy.models.torch.policies import NormalPolicy
 from d3rlpy.torch_utility import TorchMiniBatch
 
-from ice_offline.agent.bc_agent_continuous_stochastic import (
+from ice_offline.agent.bc_continuous_stochastic import (
     BCAgentContinuousStochastic,
 )
 from ice_offline.tools.printer import print_stage
@@ -179,3 +179,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

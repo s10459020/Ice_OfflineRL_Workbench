@@ -6,7 +6,7 @@ import torch
 import d3rlpy
 from d3rlpy.torch_utility import TorchMiniBatch
 
-from ice_offline.agent.cql_agent_discrete import CQLAgentDiscrete
+from ice_offline.agent.cql_discrete import CQLAgentDiscrete
 from ice_offline.tools.printer import print_stage
 
 OBS_DIM = 8
@@ -202,3 +202,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

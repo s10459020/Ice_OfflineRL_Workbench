@@ -1,23 +1,23 @@
-from ._agent_interface import Agent
-from .bc_agent_continuous_deterministic import (
+from ._interface import Agent
+from .bc_continuous_deterministic import (
     BCAgentContinuousDeterministic as ContinuousBCDeterministicAgent,
 )
-from .bc_agent_continuous_stochastic import (
+from .bc_continuous_stochastic import (
     BCAgentContinuousStochastic as ContinuousBCStochasticAgent,
 )
-from .bc_agent_discrete import BCAgentDiscrete as DiscreteBCAgent
-from .cql_agent_continuous import CQLAgentContinuous
-from .cql_agent_discrete import CQLAgentDiscrete
-from .iql_agent_continuous import IQLAgentContinuous
-from .iql_agent_discrete import IQLAgentDiscrete
-from .ac_agent_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
-from .pg_agent_continuous import (
+from .bc_discrete import BCAgentDiscrete as DiscreteBCAgent
+from .cql_continuous import CQLAgentContinuous
+from .cql_discrete import CQLAgentDiscrete
+from .iql_continuous import IQLAgentContinuous
+from .iql_discrete import IQLAgentDiscrete
+from .ac_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
+from .pg_continuous import (
     PolicyGradientAgent as ContinuousPolicyGradientAgent,
 )
-from .pg_agent_discrete import (
+from .pg_discrete import (
     PolicyGradientAgent as DiscretePolicyGradientAgent,
 )
-from .q_table_agent import QTableAgent, QTableState
+from .q_table import QTableAgent, QTableState
 
 __all__ = [
     "Agent",
@@ -34,3 +34,4 @@ __all__ = [
     "QTableAgent",
     "QTableState",
 ]
+
