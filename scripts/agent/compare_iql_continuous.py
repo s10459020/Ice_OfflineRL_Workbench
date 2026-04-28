@@ -177,21 +177,19 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(algo, obs_t)
-        with torch.no_grad():
-            our_act = our.actor.sample(obs_t, greedy=True).cpu().numpy()
+        our_act = our.act_batch(obs_t, greedy=True)
         _assert_equal([(d3_act, our_act)])
 
         torch.manual_seed(SEED + 5000 + i)
         d3_sample = d3rl_action_sample_batch(algo, obs_t)
         torch.manual_seed(SEED + 5000 + i)
-        with torch.no_grad():
-            our_sample = our.actor.sample(obs_t, greedy=False).cpu().numpy()
+        our_sample = our.act_batch(obs_t, greedy=False)
         _assert_equal([(d3_sample, our_sample)])
 
         torch.manual_seed(SEED + 7000 + i)
-        single_sample_batch = our.act(obs_t[0].cpu().numpy(), greddy=False)
+        single_sample_batch = our.act(obs_t[0].cpu().numpy(), greedy=False)
         torch.manual_seed(SEED + 7000 + i)
-        single_sample = our.act(obs_t[0].cpu().numpy(), greddy=False)
+        single_sample = our.act(obs_t[0].cpu().numpy(), greedy=False)
         _assert_equal([
             (single_sample, single_sample_batch),
         ])

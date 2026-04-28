@@ -24,7 +24,7 @@ def build_our_agent() -> CQLAgentContinuous:
     return CQLAgentContinuous(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_d3rl():
-    config = d3rlpy.algos.CQLConfig(soft_q_backup=True)
+    config = d3rlpy.algos.CQLConfig()
     algo = config.create(device=DEVICE)
     algo.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert algo.impl is not None
@@ -121,32 +121,32 @@ def _all_pairs(our: CQLAgentContinuous, algo):
         (our.policy.mean_head.bias, d3_policy._mu.bias),
         (our.policy.logstd_head.weight, d3_policy._logstd.weight),
         (our.policy.logstd_head.bias, d3_policy._logstd.bias),
-        (our.q1.network[0].weight, d3_q1._encoder._layers[0].weight),
-        (our.q1.network[0].bias, d3_q1._encoder._layers[0].bias),
-        (our.q1.network[2].weight, d3_q1._encoder._layers[2].weight),
-        (our.q1.network[2].bias, d3_q1._encoder._layers[2].bias),
-        (our.q1.network[4].weight, d3_q1._fc.weight),
-        (our.q1.network[4].bias, d3_q1._fc.bias),
-        (our.q2.network[0].weight, d3_q2._encoder._layers[0].weight),
-        (our.q2.network[0].bias, d3_q2._encoder._layers[0].bias),
-        (our.q2.network[2].weight, d3_q2._encoder._layers[2].weight),
-        (our.q2.network[2].bias, d3_q2._encoder._layers[2].bias),
-        (our.q2.network[4].weight, d3_q2._fc.weight),
-        (our.q2.network[4].bias, d3_q2._fc.bias),
-        (our.targ_q1.network[0].weight, d3_t1._encoder._layers[0].weight),
-        (our.targ_q1.network[0].bias, d3_t1._encoder._layers[0].bias),
-        (our.targ_q1.network[2].weight, d3_t1._encoder._layers[2].weight),
-        (our.targ_q1.network[2].bias, d3_t1._encoder._layers[2].bias),
-        (our.targ_q1.network[4].weight, d3_t1._fc.weight),
-        (our.targ_q1.network[4].bias, d3_t1._fc.bias),
-        (our.targ_q2.network[0].weight, d3_t2._encoder._layers[0].weight),
-        (our.targ_q2.network[0].bias, d3_t2._encoder._layers[0].bias),
-        (our.targ_q2.network[2].weight, d3_t2._encoder._layers[2].weight),
-        (our.targ_q2.network[2].bias, d3_t2._encoder._layers[2].bias),
-        (our.targ_q2.network[4].weight, d3_t2._fc.weight),
-        (our.targ_q2.network[4].bias, d3_t2._fc.bias),
-        (our.log_alpha_sac, algo.impl.modules.log_temp._parameter),
-        (our.log_alpha_cql, algo.impl.modules.log_alpha._parameter),
+        (our.critic.q1.network[0].weight, d3_q1._encoder._layers[0].weight),
+        (our.critic.q1.network[0].bias, d3_q1._encoder._layers[0].bias),
+        (our.critic.q1.network[2].weight, d3_q1._encoder._layers[2].weight),
+        (our.critic.q1.network[2].bias, d3_q1._encoder._layers[2].bias),
+        (our.critic.q1.network[4].weight, d3_q1._fc.weight),
+        (our.critic.q1.network[4].bias, d3_q1._fc.bias),
+        (our.critic.q2.network[0].weight, d3_q2._encoder._layers[0].weight),
+        (our.critic.q2.network[0].bias, d3_q2._encoder._layers[0].bias),
+        (our.critic.q2.network[2].weight, d3_q2._encoder._layers[2].weight),
+        (our.critic.q2.network[2].bias, d3_q2._encoder._layers[2].bias),
+        (our.critic.q2.network[4].weight, d3_q2._fc.weight),
+        (our.critic.q2.network[4].bias, d3_q2._fc.bias),
+        (our.critic.targ_q1.network[0].weight, d3_t1._encoder._layers[0].weight),
+        (our.critic.targ_q1.network[0].bias, d3_t1._encoder._layers[0].bias),
+        (our.critic.targ_q1.network[2].weight, d3_t1._encoder._layers[2].weight),
+        (our.critic.targ_q1.network[2].bias, d3_t1._encoder._layers[2].bias),
+        (our.critic.targ_q1.network[4].weight, d3_t1._fc.weight),
+        (our.critic.targ_q1.network[4].bias, d3_t1._fc.bias),
+        (our.critic.targ_q2.network[0].weight, d3_t2._encoder._layers[0].weight),
+        (our.critic.targ_q2.network[0].bias, d3_t2._encoder._layers[0].bias),
+        (our.critic.targ_q2.network[2].weight, d3_t2._encoder._layers[2].weight),
+        (our.critic.targ_q2.network[2].bias, d3_t2._encoder._layers[2].bias),
+        (our.critic.targ_q2.network[4].weight, d3_t2._fc.weight),
+        (our.critic.targ_q2.network[4].bias, d3_t2._fc.bias),
+        (our.policy.log_alpha, algo.impl.modules.log_temp._parameter),
+        (our.critic.log_alpha, algo.impl.modules.log_alpha._parameter),
     ]
 
 # ====================
@@ -167,7 +167,7 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(algo, obs_t)
-        our_act = our.action_best_batch(obs_t)
+        our_act = our.act_batch(obs_t, greedy=True)
         _assert_equal([(d3_act, our_act)])
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 

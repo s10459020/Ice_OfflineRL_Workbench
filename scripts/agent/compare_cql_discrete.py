@@ -120,19 +120,21 @@ def _our_losses(our_agent: CQLAgentDiscrete, obs_t, act_t, rew_t, next_obs_t, do
 def _all_pairs(our_agent: CQLAgentDiscrete, algo):
     d3_q = algo.impl.modules.q_funcs[0]
     d3_targ_q = algo.impl.modules.targ_q_funcs[0]
+    our_q = our_agent.critic._q
+    our_tq = our_agent.critic._targ_q
     return [
-        (our_agent.q_network.network[0].weight, d3_q._encoder._layers[0].weight),
-        (our_agent.q_network.network[0].bias, d3_q._encoder._layers[0].bias),
-        (our_agent.q_network.network[2].weight, d3_q._encoder._layers[2].weight),
-        (our_agent.q_network.network[2].bias, d3_q._encoder._layers[2].bias),
-        (our_agent.q_network.network[4].weight, d3_q._fc.weight),
-        (our_agent.q_network.network[4].bias, d3_q._fc.bias),
-        (our_agent.target_q_network.network[0].weight, d3_targ_q._encoder._layers[0].weight),
-        (our_agent.target_q_network.network[0].bias, d3_targ_q._encoder._layers[0].bias),
-        (our_agent.target_q_network.network[2].weight, d3_targ_q._encoder._layers[2].weight),
-        (our_agent.target_q_network.network[2].bias, d3_targ_q._encoder._layers[2].bias),
-        (our_agent.target_q_network.network[4].weight, d3_targ_q._fc.weight),
-        (our_agent.target_q_network.network[4].bias, d3_targ_q._fc.bias),
+        (our_q.network[0].weight, d3_q._encoder._layers[0].weight),
+        (our_q.network[0].bias, d3_q._encoder._layers[0].bias),
+        (our_q.network[2].weight, d3_q._encoder._layers[2].weight),
+        (our_q.network[2].bias, d3_q._encoder._layers[2].bias),
+        (our_q.network[4].weight, d3_q._fc.weight),
+        (our_q.network[4].bias, d3_q._fc.bias),
+        (our_tq.network[0].weight, d3_targ_q._encoder._layers[0].weight),
+        (our_tq.network[0].bias, d3_targ_q._encoder._layers[0].bias),
+        (our_tq.network[2].weight, d3_targ_q._encoder._layers[2].weight),
+        (our_tq.network[2].bias, d3_targ_q._encoder._layers[2].bias),
+        (our_tq.network[4].weight, d3_targ_q._fc.weight),
+        (our_tq.network[4].bias, d3_targ_q._fc.bias),
     ]
 
 
@@ -154,7 +156,7 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(d3rl, obs_t)
-        our_act = our_agent.action_best_batch(obs_t)
+        our_act = our_agent.act_batch(obs_t, epsilon=0.0)
         _assert_equal([(d3_act, our_act)])
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
@@ -186,7 +188,8 @@ def main() -> None:
                 "rew": rew_t,
                 "next_obs": next_obs_t,
                 "done": done_t,
-            }
+            },
+            i,
         )
         _ = d3rl.impl.inner_update(batch, i)
 

@@ -41,19 +41,27 @@ class _Pi(torch.nn.Module):
         mean = self.mean_head(h)
         squashed_mean = torch.tanh(mean)
         base = self.max_logstd - self.min_logstd
+        # use_std_parameter
         clipped_logstd = self.min_logstd + torch.sigmoid(self.logstd) * base
         return mean, squashed_mean, clipped_logstd
 
-    def sample(self, o: torch.Tensor, greedy: bool = False) -> torch.Tensor:
-        if greedy:
-            _, squashed_mean, _ = self(o)
-            return squashed_mean
-        mean, squashed_mean, logstd = self(o)
+    def dist(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        mean, _, logstd = self(o)
+        return mean, logstd
+
+    def mode(self, o: torch.Tensor) -> torch.Tensor:
+        mean, _ = self.dist(o)
+        return torch.tanh(mean)
+
+    def sample(self, o: torch.Tensor) -> torch.Tensor:
+        mean, logstd = self.dist(o)
+        squashed_mean = torch.tanh(mean)
         dist = GaussianDistribution(loc=squashed_mean, std=logstd.exp(), raw_loc=mean)
         return dist.sample()
 
     def log_prob(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        mean, squashed_mean, logstd = self(o)
+        mean, logstd = self.dist(o)
+        squashed_mean = torch.tanh(mean)
         dist = GaussianDistribution(loc=squashed_mean, std=logstd.exp(), raw_loc=mean)
         return dist.log_prob(a)
 
@@ -106,6 +114,12 @@ class _QQ(torch.nn.Module):
     def targ_qq(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return torch.stack([self.targ_q1(o, a), self.targ_q2(o, a)], dim=0)
 
+    def qq_min(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self.qq(o, a).min(dim=0).values
+
+    def tqq_min(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self.targ_qq(o, a).min(dim=0).values
+
     def update_target_soft(self) -> None:
         with torch.no_grad():
             for p_targ, p in zip(self.targ_q1.parameters(), self.q1.parameters()):
@@ -147,19 +161,31 @@ class IQLAgentContinuous:
     # ====================
     # public API
     # ====================
-    def act(self, obs, greddy: bool = True):
-        obs_np = np.asarray(obs, dtype=np.float32)[None, :]
-        o = torch.as_tensor(obs_np, dtype=torch.float32, device=self.device)
+    def act(self, observation, greedy: bool = True):
+        observation_np = np.asarray(observation, dtype=np.float32)[None, :]
+        o = torch.as_tensor(observation_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            action = self.actor.sample(o, greedy=greddy)
+            action = self.actor.mode(o) if greedy else self.actor.sample(o)
         return action.cpu().numpy()[0]
 
+    def act_batch(self, observation_batch, greedy: bool = True):
+        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            a = self.actor.mode(o) if greedy else self.actor.sample(o)
+        return a.cpu().numpy()
+
     def update(self, batch):
-        o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
-        r = torch.as_tensor(batch["rew"], dtype=torch.float32, device=self.device).view(-1, 1)
-        on = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=self.device)
-        d = torch.as_tensor(batch["done"], dtype=torch.float32, device=self.device).view(-1, 1)
+        observation = batch["obs"]
+        action = batch["act"]
+        reward = batch["rew"]
+        next_observation = batch["next_obs"]
+        done = batch["done"]
+
+        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(action, dtype=torch.float32, device=self.device)
+        r = torch.as_tensor(reward, dtype=torch.float32, device=self.device).view(-1, 1)
+        on = torch.as_tensor(next_observation, dtype=torch.float32, device=self.device)
+        d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
 
         critic_loss = self._loss_critic(o, a, r, on, d)
         self.critic_optim.zero_grad()
@@ -176,14 +202,14 @@ class IQLAgentContinuous:
     # ====================
     # critic
     # ====================
-    def _target_q(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def _target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             return r + self.gamma * self.v(on) * (1.0 - d)
 
     def _loss_q(
         self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor
     ) -> torch.Tensor:
-        target = self._target_q(on, r, d)
+        target = self._target(on, r, d)
         qq = self.critic.qq(o, a)
         # loss_q = E_batch{(target - Q)^2}
         return (qq[0] - target).pow(2).mean() + (qq[1] - target).pow(2).mean()
@@ -191,7 +217,7 @@ class IQLAgentContinuous:
     def _loss_v(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # L2_tau = |tau - 1(u<0)| * u^2
         # loss_v = E_batch{ L2_tau(Q-V) }
-        q_t = self.critic.targ_qq(o, a).min(dim=0).values
+        q_t = self.critic.tqq_min(o, a)
         v_t = self.v(o)
         diff = q_t.detach() - v_t
         weight = (self.v.tau - (diff < 0.0).float()).abs().detach()
@@ -208,7 +234,7 @@ class IQLAgentContinuous:
     def _weight(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # weight = -exp( beta * (Q - V))
         with torch.no_grad():
-            q_t = self.critic.targ_qq(o, a).min(dim=0).values
+            q_t = self.critic.tqq_min(o, a)
             v_t = self.v(o)
             adv = q_t - v_t
             return -(self.actor.beta * adv).exp().clamp(max=self.actor.max_weight)
@@ -218,3 +244,4 @@ class IQLAgentContinuous:
         weight = self._weight(o, a)
         log_pi = self.actor.log_prob(o, a)
         return (weight * log_pi).mean()
+

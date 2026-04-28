@@ -28,7 +28,7 @@ def build_our_agent() -> BCAgentContinuousDeterministic:
     return BCAgentContinuousDeterministic(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_d3rl():
-    config = d3rlpy.algos.BCConfig(policy_type="deterministic")
+    config = d3rlpy.algos.BCConfig()
     algo = config.create(device=DEVICE)
     algo.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert algo.impl is not None
@@ -93,8 +93,7 @@ def _our_losses(
     obs_t: torch.Tensor,
     act_t: torch.Tensor,
 ) -> torch.Tensor:
-    pred = our_agent.policy(obs_t)
-    return torch.stack([our_agent._loss(pred, act_t)])
+    return torch.stack([our_agent._loss(obs_t, act_t)])
 
 def _d3rl_losses(
     d3_policy: DeterministicPolicy,
@@ -137,7 +136,7 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(d3_policy, obs_t)
-        our_act = our_agent.action_best_batch(obs_t)
+        our_act = our_agent.act_batch(obs_t, greedy=True)
         _assert_equal([(d3_act, our_act)])
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 

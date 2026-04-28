@@ -1,10 +1,11 @@
 """Behavior Cloning continuous agent (deterministic)."""
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 
 
-class BCPolicyContinuousDeterministic(torch.nn.Module):
+class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
         self.network = torch.nn.Sequential(
@@ -15,9 +16,17 @@ class BCPolicyContinuousDeterministic(torch.nn.Module):
             torch.nn.Linear(256, act_size),
         )
 
-    def forward(self, obs_t: torch.Tensor) -> torch.Tensor:
-        mean = self.network(obs_t)
-        return torch.tanh(mean)
+    def dist(self, o: torch.Tensor) -> torch.Tensor:
+        return self.network(o)
+
+    def mode(self, o: torch.Tensor) -> torch.Tensor:
+        return torch.tanh(self.dist(o))
+
+    def sample(self, o: torch.Tensor) -> torch.Tensor:
+        return self.mode(o)
+
+    def forward(self, o: torch.Tensor) -> torch.Tensor:
+        return self.mode(o)
 
 
 class BCAgentContinuousDeterministic:
@@ -27,8 +36,9 @@ class BCAgentContinuousDeterministic:
     def __init__(self, obs_size: int, act_size: int):
         self.device = "cpu"
         self.learning_rate = 1e-3
+        self.expl_noise_std = 0.1
 
-        self.policy = BCPolicyContinuousDeterministic(obs_size, act_size).to(
+        self.policy = _Pi(obs_size, act_size).to(
             self.device
         )
 
@@ -44,21 +54,25 @@ class BCAgentContinuousDeterministic:
     # ====================
     # Public API
     # ====================
-    def action_best_batch(self, obs_batch):
-        obs_t = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
-        with torch.no_grad():
-            action = self.policy(obs_t)
-        return action.cpu().numpy()
+    def act(self, observation, greedy: bool = True):
+        return self.act_batch([observation], greedy=greedy)[0]
 
-    def action_best(self, obs):
-        return self.action_best_batch([obs])[0]
+    def act_batch(self, observation_batch, greedy: bool = True):
+        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            a = self.policy.mode(o)
+            if not greedy:
+                a = (a + torch.randn_like(a) * self.expl_noise_std).clamp(-1.0, 1.0)
+        return a.cpu().numpy()
 
     def update(self, batch):
-        obs_t = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        act_t = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
+        observation = batch["obs"]
+        action = batch["act"]
 
-        pred_act_t = self.policy(obs_t)
-        loss = self._loss(pred_act_t, act_t)
+        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(action, dtype=torch.float32, device=self.device)
+
+        loss = self._loss(o, a)
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -67,5 +81,8 @@ class BCAgentContinuousDeterministic:
     # ====================
     # bc mathmatics
     # ====================
-    def _loss(self, pred_action_t: torch.Tensor, act_t: torch.Tensor) -> torch.Tensor:
-        return F.mse_loss(pred_action_t, act_t)
+    def _loss(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        # loss_BC = E{log pi(a|s)}
+        # if pi is gaussian, loss_BC => MSE(a, pi(s))
+        a_pred = self.policy.mode(o)
+        return F.mse_loss(a_pred, a)

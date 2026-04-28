@@ -9,6 +9,7 @@ from .bc_agent_discrete import BCAgentDiscrete as DiscreteBCAgent
 from .cql_agent_continuous import CQLAgentContinuous
 from .cql_agent_discrete import CQLAgentDiscrete
 from .iql_agent_continuous import IQLAgentContinuous
+from .iql_agent_discrete import IQLAgentDiscrete
 from .ac_agent_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
 from .pg_agent_continuous import (
     PolicyGradientAgent as ContinuousPolicyGradientAgent,
@@ -26,6 +27,7 @@ __all__ = [
     "CQLAgentContinuous",
     "CQLAgentDiscrete",
     "IQLAgentContinuous",
+    "IQLAgentDiscrete",
     "DiscreteActorCriticAgent",
     "ContinuousPolicyGradientAgent",
     "DiscretePolicyGradientAgent",

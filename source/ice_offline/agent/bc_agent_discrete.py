@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 
-class BCPolicy(torch.nn.Module):
+class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
         self.network = torch.nn.Sequential(
@@ -17,9 +17,17 @@ class BCPolicy(torch.nn.Module):
             torch.nn.Linear(256, act_size),
         )
 
-    def forward(self, obs_t: torch.Tensor) -> Categorical:
-        logits = self.network(obs_t)
-        return Categorical(logits=logits)
+    def dist(self, o: torch.Tensor) -> Categorical:
+        return Categorical(logits=self.network(o))
+
+    def mode(self, o: torch.Tensor) -> torch.Tensor:
+        return self.dist(o).logits.argmax(dim=1).long()
+
+    def sample(self, o: torch.Tensor) -> torch.Tensor:
+        return self.dist(o).sample()
+
+    def forward(self, o: torch.Tensor) -> Categorical:
+        return self.dist(o)
 
 
 class BCAgentDiscrete:
@@ -31,7 +39,7 @@ class BCAgentDiscrete:
         self.beta = 0.5
         self.learning_rate = 1e-3
 
-        self.policy = BCPolicy(obs_size, act_size).to(self.device)
+        self.policy = _Pi(obs_size, act_size).to(self.device)
 
         self.optimizer = torch.optim.Adam(
             self.policy.parameters(),
@@ -45,24 +53,28 @@ class BCAgentDiscrete:
     # ====================
     # Public API
     # ====================
-    def action_best_batch(self, obs_batch):
-        obs_t = torch.as_tensor(obs_batch, dtype=torch.float32, device=self.device)
-        with torch.no_grad():
-            dist = self.policy(obs_t)
-            action = torch.argmax(dist.logits, dim=1).long()
-        return action.cpu().numpy()
+    def act(self, observation, epsilon: float = 0.0):
+        return int(self.act_batch([observation], epsilon=epsilon)[0])
 
-    def action_best(self, obs):
-        return int(self.action_best_batch([obs])[0])
-    
+    def act_batch(self, observation_batch, epsilon: float = 0.0):
+        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            dist = self.policy.dist(o)
+            a = self.policy.mode(o)
+            if epsilon > 0.0:
+                rand_a = torch.randint(0, dist.logits.shape[1], (o.shape[0],), device=self.device)
+                mask = torch.rand((o.shape[0],), device=self.device) < epsilon
+                a = torch.where(mask, rand_a, a)
+        return a.cpu().numpy()
 
     def update(self, batch):
-        obs_t = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        act_t = torch.as_tensor(batch["act"], dtype=torch.long, device=self.device).view(-1)
+        observation = batch["obs"]
+        action = batch["act"]
 
-        dist = self.policy(obs_t)
-        loss = self._loss(dist.logits, act_t)
+        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(action, dtype=torch.long, device=self.device).view(-1)
 
+        loss = self._loss(o, a)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
@@ -70,17 +82,18 @@ class BCAgentDiscrete:
     # ====================
     # bc mathmatics
     # ====================
-    def _loss_bc(self, logits: torch.Tensor, act_t: torch.Tensor) -> torch.Tensor:
+    def _loss_bc(self, logits: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # theta* = max E[log pi]
         #        = min E[-log pi]
         # loss   = -log pi
         #        = -log_softmax(logits)
         log_softmax = F.log_softmax(logits, dim=1)
-        return F.nll_loss(log_softmax, act_t)
+        return F.nll_loss(log_softmax, a)
 
     def _loss_regular(self, logits: torch.Tensor) -> torch.Tensor:
         # loss = beta * ||logits||^2
         return self.beta * (logits**2).mean()
 
-    def _loss(self, logits: torch.Tensor, act_t: torch.Tensor) -> torch.Tensor:
-        return self._loss_bc(logits, act_t) + self._loss_regular(logits)
+    def _loss(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        logits = self.policy.dist(o).logits
+        return self._loss_bc(logits, a) + self._loss_regular(logits)
