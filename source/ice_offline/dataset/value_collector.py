@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from collections.abc import Callable
 from enum import IntEnum
@@ -9,6 +8,7 @@ from typing import Any
 import gymnasium as gym
 import h5py
 import numpy as np
+from ice_offline.paths import minari_root
 
 
 class MiniGridDirection(IntEnum):
@@ -142,11 +142,7 @@ class ValueCollector(gym.Wrapper):
     # Path
     # ====================
     def _resolve_value_path(self, dataset_id: str) -> Path:
-        root = os.getenv("MINARI_DATASETS_PATH")
-        if root:
-            base = Path(root)
-        else:
-            base = Path.home() / ".minari" / "datasets"
+        base = minari_root()
         return base / dataset_id / "data" / "value_data.hdf5"
 
     def _end_episode(self) -> None:

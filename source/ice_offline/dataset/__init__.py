@@ -1,15 +1,6 @@
-from .batch_loader import (
-    MinariTransitionDataset,
-    TransitionBuffer,
-    load_minari,
-    load_transitions_from_minari,
-    sample_batch,
-)
+from .batch_loader import BatchLoader, TransitionBuffer
 
 __all__ = [
-    "MinariTransitionDataset",
+    "BatchLoader",
     "TransitionBuffer",
-    "load_minari",
-    "load_transitions_from_minari",
-    "sample_batch",
 ]

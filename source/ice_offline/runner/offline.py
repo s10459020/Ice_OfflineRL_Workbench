@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import csv
 from dataclasses import dataclass
+from dataclasses import field
+from pathlib import Path
 from typing import Any, Callable
 
 import numpy as np
 import torch
 
-from ice_offline.dataset import MinariTransitionDataset, load_minari
+from ice_offline.dataset import BatchLoader
+from ice_offline.paths import eval_root
 
 BatchType = dict[str, Any]
 TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
@@ -21,13 +25,18 @@ class OfflineRunner:
     obs_encode: Callable[[Any], Any]
     batch_size: int
     train_steps: int
-    log_every_steps: int
+    eval_interval: int
     eval_batches: int = 8
     eval_episodes: int = 5
     dataset_seed: int = 42
+    eval_dir: str = str(eval_root())
+    _csv_path: Path = field(init=False, repr=False)
+    _metric_keys: list[str] = field(default_factory=list, init=False, repr=False)
 
-    def load_dataset(self) -> MinariTransitionDataset:
-        return load_minari(
+    def load_dataset(self) -> BatchLoader:
+        self._csv_path = Path(self.eval_dir) / f"{self.dataset_id.replace('/', '__')}.csv"
+        self._csv_path.parent.mkdir(parents=True, exist_ok=True)
+        return BatchLoader.from_minari(
             dataset_id=self.dataset_id,
             obs_transform=self.obs_encode,
             seed=self.dataset_seed,
@@ -36,7 +45,7 @@ class OfflineRunner:
     def train(
         self,
         agent: Any,
-        dataset: MinariTransitionDataset,
+        dataset: BatchLoader,
         eval_offline_fns: list[OfflineEvalFn] | None = None,
         eval_online_fns: list[OnlineEvalFn] | None = None,
         eval_env_fn: EvalEnvFn | None = None,
@@ -45,24 +54,40 @@ class OfflineRunner:
             batch: BatchType = dataset.sample_batch(self.batch_size)
             agent.update(batch, grad_step=step)
 
-            if step % self.log_every_steps != 0:
+            if step % self.eval_interval != 0:
                 continue
 
-            metrics: list[str] = [f"step={step}/{self.train_steps}"]
+            row: dict[str, float] = {"step": float(step)}
             if eval_offline_fns:
                 reduced = self._evaluate_offline(agent, dataset, eval_offline_fns)
-                for k, v in reduced.items():
-                    metrics.append(f"{k}={v:.6f}")
+                row.update(reduced)
             if eval_online_fns and eval_env_fn is not None:
                 online = self._evaluate_online(agent, eval_online_fns, eval_env_fn)
-                for k, v in online.items():
-                    metrics.append(f"{k}={v:.6f}")
+                row.update(online)
+            self._append_eval_row(row)
+            metrics = [f"step={step}/{self.train_steps}"] + [
+                f"{k}={v:.6f}" for k, v in row.items() if k != "step"
+            ]
             print(" ".join(metrics))
+
+    def _append_eval_row(self, row: dict[str, float]) -> None:
+        metric_keys = sorted([k for k in row.keys() if k != "step"])
+        if not self._metric_keys:
+            self._metric_keys = metric_keys
+            with self._csv_path.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=["step"] + self._metric_keys)
+                writer.writeheader()
+        out = {"step": int(row["step"])}
+        for k in self._metric_keys:
+            out[k] = row.get(k, float("nan"))
+        with self._csv_path.open("a", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["step"] + self._metric_keys)
+            writer.writerow(out)
 
     def _evaluate_offline(
         self,
         agent: Any,
-        dataset: MinariTransitionDataset,
+        dataset: BatchLoader,
         eval_offline_fns: list[OfflineEvalFn],
     ) -> dict[str, float]:
         bucket: dict[str, list[float]] = {}
@@ -123,3 +148,5 @@ class OfflineRunner:
         finally:
             env.close()
         return {k: float(np.mean(vs)) for k, vs in bucket.items()}
+
+

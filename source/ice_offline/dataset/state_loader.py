@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
 import h5py
 
 from ice_offline.data import State
+from ice_offline.paths import minari_root
 
 
 class StateLoader:
@@ -45,11 +45,7 @@ class StateLoader:
     # Internal
     # ====================
     def _resolve_state_path(self, dataset_id: str) -> Path:
-        root = os.getenv("MINARI_DATASETS_PATH")
-        if root:
-            base = Path(root)
-        else:
-            base = Path.home() / ".minari" / "datasets"
+        base = minari_root()
         return base / dataset_id / "data" / "state_data.hdf5"
 
     def _list_episode_keys(self) -> list[str]:

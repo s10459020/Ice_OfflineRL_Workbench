@@ -1,8 +1,10 @@
-﻿from pathlib import Path
+from pathlib import Path
 from typing import Any, Protocol
 
+from ice_offline.paths import model_root
 
-MODEL_ROOT = Path("tmps/model")
+
+MODEL_ROOT = model_root()
 
 
 def model_name(step: int, suffix: str) -> str:
@@ -23,4 +25,3 @@ class Agent(Protocol):
     def update(self, observation: Any, action: int, reward: float, next_observation: Any, done: bool,) -> None: ...
 
     def save(self, model_id: str | Path) -> Path: ...
-

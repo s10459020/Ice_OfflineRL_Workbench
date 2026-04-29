@@ -13,7 +13,7 @@ DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
 ENV_ID = "BabyAI-OneRoomS8-v0"
 BATCH_SIZE = 64
 TRAIN_STEPS = 50_000
-LOG_EVERY_STEPS = 1_000
+EVAL_INTERVAL = 1_000
 EVAL_BATCHES = 8
 EVAL_EPISODES = 5
 
@@ -49,9 +49,9 @@ def main() -> None:
         obs_encode=obs_encode,
         batch_size=BATCH_SIZE,
         train_steps=TRAIN_STEPS,
-        log_every_steps=LOG_EVERY_STEPS,
         eval_batches=EVAL_BATCHES,
         eval_episodes=EVAL_EPISODES,
+        eval_interval=EVAL_INTERVAL,
     )
     dataset = runner.load_dataset()
     agent = CQLAgentDiscrete(obs_size=dataset.obs_size, act_size=dataset.act_size)
@@ -75,4 +75,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
