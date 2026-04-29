@@ -54,18 +54,15 @@ class BCAgentDiscrete:
     # Public API
     # ====================
     def act(self, observation, epsilon: float = 0.0):
-        return int(self.act_batch([observation], epsilon=epsilon)[0])
-
-    def act_batch(self, observation_batch, epsilon: float = 0.0):
-        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        o = torch.as_tensor(np.asarray(observation, dtype=np.float32)[None, :], dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            dist = self.policy.dist(o)
-            a = self.policy.mode(o)
+            q = self.critic.q(o)
+            a = q.argmax(dim=1).long()
             if epsilon > 0.0:
-                rand_a = torch.randint(0, dist.logits.shape[1], (o.shape[0],), device=self.device)
-                mask = torch.rand((o.shape[0],), device=self.device) < epsilon
-                a = torch.where(mask, rand_a, a)
-        return a.cpu().numpy()
+                rand_a = torch.randint(0, self.critic._q.action_size, (1,), device=self.device)
+                if torch.rand((1,), device=self.device).item() < epsilon:
+                    a = rand_a
+        return int(a.item())
 
     def update(self, batch):
         observation = batch["obs"]

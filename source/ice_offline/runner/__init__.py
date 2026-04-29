@@ -1,3 +1,3 @@
-from .offline import OfflineRunner
+from .offline import TorchBatchOfflineRunner
 
-__all__ = ["OfflineRunner"]
+__all__ = ["TorchBatchOfflineRunner"]

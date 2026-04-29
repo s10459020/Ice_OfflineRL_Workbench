@@ -55,15 +55,13 @@ class BCAgentContinuousDeterministic:
     # Public API
     # ====================
     def act(self, observation, greedy: bool = True):
-        return self.act_batch([observation], greedy=greedy)[0]
-
-    def act_batch(self, observation_batch, greedy: bool = True):
-        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        observation_np = np.asarray(observation, dtype=np.float32)[None, :]
+        o = torch.as_tensor(observation_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
             a = self.policy.mode(o)
             if not greedy:
                 a = (a + torch.randn_like(a) * self.expl_noise_std).clamp(-1.0, 1.0)
-        return a.cpu().numpy()
+        return a.cpu().numpy()[0]
 
     def update(self, batch):
         observation = batch["obs"]

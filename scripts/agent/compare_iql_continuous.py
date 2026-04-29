@@ -177,13 +177,13 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(algo, obs_t)
-        our_act = our.act_batch(obs_t, greedy=True)
+        our_act = np.asarray([our.act(x, greedy=True) for x in obs_t])
         _assert_equal([(d3_act, our_act)])
 
         torch.manual_seed(SEED + 5000 + i)
         d3_sample = d3rl_action_sample_batch(algo, obs_t)
         torch.manual_seed(SEED + 5000 + i)
-        our_sample = our.act_batch(obs_t, greedy=False)
+        our_sample = np.asarray([our.act(x, greedy=False) for x in obs_t])
         _assert_equal([(d3_sample, our_sample)])
 
         torch.manual_seed(SEED + 7000 + i)

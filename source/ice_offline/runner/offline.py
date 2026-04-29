@@ -9,7 +9,6 @@ from typing import Any, Callable
 import numpy as np
 import torch
 
-from ice_offline.dataset import BatchLoader
 from ice_offline.agent._interface import model_ref
 from ice_offline.paths import eval_root
 
@@ -21,8 +20,7 @@ EvalEnvFn = Callable[[], Any]
 
 
 @dataclass
-class OfflineRunner:
-    dataset_id: str
+class TorchBatchOfflineRunner:
     obs_encode: Callable[[Any], Any]
     batch_size: int
     train_steps: int
@@ -32,28 +30,21 @@ class OfflineRunner:
     model_id: str = "default"
     model_load_step: int = 0
     model_save_interval: int = 0
-    dataset_seed: int = 42
     eval_dir: str = str(eval_root())
     _csv_path: Path = field(init=False, repr=False)
     _metric_keys: list[str] = field(default_factory=list, init=False, repr=False)
 
-    def load_dataset(self) -> BatchLoader:
-        self._csv_path = Path(self.eval_dir) / f"{self.dataset_id.replace('/', '__')}.csv"
-        self._csv_path.parent.mkdir(parents=True, exist_ok=True)
-        return BatchLoader.from_minari(
-            dataset_id=self.dataset_id,
-            obs_transform=self.obs_encode,
-            seed=self.dataset_seed,
-        )
-
     def train(
         self,
         agent: Any,
-        dataset: BatchLoader,
+        dataset: Any,
         eval_offline_fns: list[OfflineEvalFn] | None = None,
         eval_online_fns: list[OnlineEvalFn] | None = None,
         eval_env_fn: EvalEnvFn | None = None,
     ) -> None:
+        dataset_id = str(getattr(dataset, "dataset_id", "minari_dataset")).replace("/", "__")
+        self._csv_path = Path(self.eval_dir) / f"{dataset_id}.csv"
+        self._csv_path.parent.mkdir(parents=True, exist_ok=True)
         if self.model_load_step > 0:
             agent.load(model_ref(self.model_id, self.model_load_step))
         for step in range(1, self.train_steps + 1):
@@ -97,7 +88,7 @@ class OfflineRunner:
     def _evaluate_offline(
         self,
         agent: Any,
-        dataset: BatchLoader,
+        dataset: Any,
         eval_offline_fns: list[OfflineEvalFn],
     ) -> dict[str, float]:
         bucket: dict[str, list[float]] = {}

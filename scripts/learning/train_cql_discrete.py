@@ -6,7 +6,8 @@ import torch
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.agent import CQLAgentDiscrete
-from ice_offline.runner import OfflineRunner
+from ice_offline.dataset import BatchLoader
+from ice_offline.runner import TorchBatchOfflineRunner
 from ice_offline.tools.printer import print_stage
 
 DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
@@ -47,8 +48,8 @@ def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 def main() -> None:
     print_stage("Load")
-    runner = OfflineRunner(
-        dataset_id=DATASET_ID,
+    dataset = BatchLoader.from_minari(dataset_id=DATASET_ID, obs_transform=obs_encode)
+    runner = TorchBatchOfflineRunner(
         obs_encode=obs_encode,
         batch_size=BATCH_SIZE,
         train_steps=TRAIN_STEPS,
@@ -59,7 +60,6 @@ def main() -> None:
         model_load_step=MODEL_LOAD_STEP,
         model_save_interval=MODEL_SAVE_INTERVAL,
     )
-    dataset = runner.load_dataset()
     agent = CQLAgentDiscrete(obs_size=dataset.obs_size, act_size=dataset.act_size)
 
     print(f"dataset_id={DATASET_ID}")

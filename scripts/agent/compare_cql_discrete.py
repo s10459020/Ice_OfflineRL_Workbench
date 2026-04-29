@@ -156,7 +156,7 @@ def main() -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
         d3_act = d3rl_action_best_batch(d3rl, obs_t)
-        our_act = our_agent.act_batch(obs_t, epsilon=0.0)
+        our_act = np.asarray([our_agent.act(x, epsilon=0.0) for x in obs_t])
         _assert_equal([(d3_act, our_act)])
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 

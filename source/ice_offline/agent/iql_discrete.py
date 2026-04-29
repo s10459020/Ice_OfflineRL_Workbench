@@ -81,21 +81,6 @@ class IQLAgentDiscrete:
                 a = q.argmax(dim=1).long()
         return int(a.cpu().numpy()[0])
 
-    def act_batch(self, observation_batch, epsilon: float = 0.0):
-        o = torch.as_tensor(
-            np.asarray(observation_batch),
-            dtype=torch.float32,
-            device=self.device,
-        )
-        with torch.no_grad():
-            q = self.q(o)
-            a = q.argmax(dim=1).long()
-            if epsilon > 0.0:
-                rand_a = torch.randint(0, self.q.action_size, (o.shape[0],), device=self.device)
-                mask = torch.rand((o.shape[0],), device=self.device) < epsilon
-                a = torch.where(mask, rand_a, a)
-        return a.cpu().numpy()
-
     def update(self, batch):
         o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
         a = torch.as_tensor(batch["act"], dtype=torch.long, device=self.device).view(-1)
