@@ -5,8 +5,6 @@ from typing import Any, Callable
 
 import numpy as np
 
-from ._interface import model_path
-
 
 QTableState = Any
 ObservationEncoder = Callable[[Any], QTableState]
@@ -92,19 +90,32 @@ class QTableAgent:
     # ====================
     # Persistence
     # ====================
-    def save(self, model_id: str | Path, step: int) -> Path:
-        path = model_path(model_id, step, ".pkl")
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        payload = {
+    def _state_dict(self) -> dict[str, Any]:
+        return {
             "n_actions": self.n_actions,
             "alpha": self.alpha,
             "gamma": self.gamma,
             "q_table": self.Q.to_dict(),
         }
+
+    def _load_state_dict(self, payload: dict[str, Any]) -> None:
+        self.n_actions = payload["n_actions"]
+        self.alpha = payload["alpha"]
+        self.gamma = payload["gamma"]
+        self.Q.load_dict(payload["q_table"])
+
+    def save(self, model_name: str | Path) -> Path:
+        path = Path(model_name).with_suffix(".pkl")
+        path.parent.mkdir(parents=True, exist_ok=True)
         with path.open("wb") as f:
-            pickle.dump(payload, f, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self._state_dict(), f, protocol=pickle.HIGHEST_PROTOCOL)
         return path
+
+    def load(self, model_name: str | Path) -> None:
+        path = Path(model_name).with_suffix(".pkl")
+        with path.open("rb") as f:
+            payload = pickle.load(f)
+        self._load_state_dict(payload)
 
     @classmethod
     def _load_from_path(cls, path: str | Path, encoder: ObservationEncoder,) -> "QTableAgent":
@@ -120,12 +131,5 @@ class QTableAgent:
         )
         agent.Q.load_dict(payload["q_table"])
         return agent
-
-    @classmethod
-    def load(cls, model_id: str | Path, step: int, encoder: ObservationEncoder,) -> "QTableAgent":
-        return cls._load_from_path(
-            path=model_path(model_id, step, ".pkl"),
-            encoder=encoder,
-        )
 
 

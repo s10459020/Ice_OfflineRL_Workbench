@@ -1,5 +1,9 @@
+from __future__ import annotations
+
 from pathlib import Path
 from typing import Any, Protocol
+
+import torch
 
 from ice_offline.paths import model_root
 
@@ -7,21 +11,34 @@ from ice_offline.paths import model_root
 MODEL_ROOT = model_root()
 
 
-def model_name(step: int, suffix: str) -> str:
-    return f"model_{step}{suffix}"
-
-
-def model_path(model_id: str | Path, step: int, suffix: str) -> Path:
-    return MODEL_ROOT / Path(model_id) / model_name(step, suffix)
+def model_ref(model_id: str | Path, step: int) -> Path:
+    return MODEL_ROOT / Path(model_id) / str(step)
 
 
 class Agent(Protocol):
-    """Minimal interface required by the generic online trainer."""
-
     agent_name: str
 
-    def act(self, observation: Any) -> int: ...
+    def save(self, model_name: str | Path) -> Path: ...
 
-    def update(self, observation: Any, action: int, reward: float, next_observation: Any, done: bool,) -> None: ...
+    def load(self, model_name: str | Path) -> None: ...
 
-    def save(self, model_id: str | Path) -> Path: ...
+
+class TorchAgent:
+    device: str
+
+    def _save(self) -> dict[str, Any]:
+        raise NotImplementedError
+
+    def _load(self, state: dict[str, Any]) -> None:
+        raise NotImplementedError
+
+    def save(self, model_name: str | Path) -> Path:
+        path = Path(model_name).with_suffix(".pt")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        torch.save(self._save(), path)
+        return path
+
+    def load(self, model_name: str | Path) -> None:
+        path = Path(model_name).with_suffix(".pt")
+        state = torch.load(path, map_location=self.device)
+        self._load(state)

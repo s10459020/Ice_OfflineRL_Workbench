@@ -16,6 +16,9 @@ TRAIN_STEPS = 50_000
 EVAL_INTERVAL = 1_000
 EVAL_BATCHES = 8
 EVAL_EPISODES = 5
+MODEL_ID = "cql_discrete_onerooms8"
+MODEL_LOAD_STEP = 25_000
+MODEL_SAVE_INTERVAL = 5_000
 
 
 def obs_encode(obs: dict[str, np.ndarray]) -> np.ndarray:
@@ -52,6 +55,9 @@ def main() -> None:
         eval_batches=EVAL_BATCHES,
         eval_episodes=EVAL_EPISODES,
         eval_interval=EVAL_INTERVAL,
+        model_id=MODEL_ID,
+        model_load_step=MODEL_LOAD_STEP,
+        model_save_interval=MODEL_SAVE_INTERVAL,
     )
     dataset = runner.load_dataset()
     agent = CQLAgentDiscrete(obs_size=dataset.obs_size, act_size=dataset.act_size)

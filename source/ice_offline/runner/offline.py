@@ -10,6 +10,7 @@ import numpy as np
 import torch
 
 from ice_offline.dataset import BatchLoader
+from ice_offline.agent._interface import model_ref
 from ice_offline.paths import eval_root
 
 BatchType = dict[str, Any]
@@ -28,6 +29,9 @@ class OfflineRunner:
     eval_interval: int
     eval_batches: int = 8
     eval_episodes: int = 5
+    model_id: str = "default"
+    model_load_step: int = 0
+    model_save_interval: int = 0
     dataset_seed: int = 42
     eval_dir: str = str(eval_root())
     _csv_path: Path = field(init=False, repr=False)
@@ -50,9 +54,15 @@ class OfflineRunner:
         eval_online_fns: list[OnlineEvalFn] | None = None,
         eval_env_fn: EvalEnvFn | None = None,
     ) -> None:
+        if self.model_load_step > 0:
+            agent.load(model_ref(self.model_id, self.model_load_step))
         for step in range(1, self.train_steps + 1):
             batch: BatchType = dataset.sample_batch(self.batch_size)
             agent.update(batch, grad_step=step)
+            total_step = self.model_load_step + step
+
+            if self.model_save_interval > 0 and total_step % self.model_save_interval == 0:
+                agent.save(model_ref(self.model_id, total_step))
 
             if step % self.eval_interval != 0:
                 continue

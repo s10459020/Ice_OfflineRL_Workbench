@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ._interface import TorchAgent
 
 
 class _Adam:
@@ -54,7 +55,7 @@ class _TQ(torch.nn.Module):
         return self._targ_q(o)
 
 
-class CQLAgentDiscrete:
+class CQLAgentDiscrete(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -105,6 +106,16 @@ class CQLAgentDiscrete:
         if grad_step % self.target_update_interval == 0:
             self.critic.update_target()
 
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "critic": self.critic.state_dict(),
+            "optim": self.optim.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        self.critic.load_state_dict(state["critic"])
+        self.optim.load_state_dict(state["optim"])
+
     # ====================
     # cql mathmatics
     # ====================
@@ -146,5 +157,3 @@ class CQLAgentDiscrete:
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a, r, on, d)
-
-        return torch.zeros((), dtype=torch.float32, device=self.device)
