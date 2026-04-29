@@ -78,3 +78,8 @@ class BCAgentContinuousStochastic:
     def _loss(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         a_pred = self.policy.sample(o)
         return F.mse_loss(a_pred, a)
+
+    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self._loss(o, a)
+
+        return torch.zeros((), dtype=torch.float32, device=self.device)

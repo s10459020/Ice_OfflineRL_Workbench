@@ -245,3 +245,9 @@ class IQLAgentContinuous:
         log_pi = self.actor.log_prob(o, a)
         return (weight * log_pi).mean()
 
+    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+        return self._loss_critic(o, a, r, on, d)
+
+    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self._loss_actor(o, a)
+

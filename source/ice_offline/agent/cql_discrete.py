@@ -143,3 +143,8 @@ class CQLAgentDiscrete:
         loss_td = self._loss_td(o, a, r, on, d)
         loss_cql = self._loss_cql(o, a)
         return loss_td + self.alpha * loss_cql
+
+    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+        return self._loss(o, a, r, on, d)
+
+        return torch.zeros((), dtype=torch.float32, device=self.device)

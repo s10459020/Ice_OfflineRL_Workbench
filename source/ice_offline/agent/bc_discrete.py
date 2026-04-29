@@ -97,3 +97,6 @@ class BCAgentDiscrete:
     def _loss(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         logits = self.policy.dist(o).logits
         return self._loss_bc(logits, a) + self._loss_regular(logits)
+
+    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self._loss(o, a)

@@ -86,3 +86,8 @@ class BCAgentContinuousDeterministic:
         # if pi is gaussian, loss_BC => MSE(a, pi(s))
         a_pred = self.policy.mode(o)
         return F.mse_loss(a_pred, a)
+
+    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self._loss(o, a)
+
+        return torch.zeros((), dtype=torch.float32, device=self.device)

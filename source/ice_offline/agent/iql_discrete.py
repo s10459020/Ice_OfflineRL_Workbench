@@ -130,4 +130,9 @@ class IQLAgentDiscrete:
     def _loss(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
 
+    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+        return self._loss(o, a, r, on, d)
+
+        return torch.zeros((), dtype=torch.float32, device=self.device)
+
 
