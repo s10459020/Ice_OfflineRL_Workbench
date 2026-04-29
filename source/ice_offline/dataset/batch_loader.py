@@ -9,7 +9,7 @@ import numpy as np
 
 ObsType = np.ndarray | dict[str, np.ndarray]
 BatchType = dict[str, Any]
-ObsTransform = Callable[[ObsType], np.ndarray]
+EncodeFn = Callable[[ObsType], np.ndarray]
 
 
 def _slice_obs(obs: ObsType, idx: np.ndarray) -> ObsType:
@@ -46,9 +46,8 @@ class TransitionBuffer:
     next_obs: np.ndarray
     done: np.ndarray
 
-    def sample_batch(self, batch_size: int, rng: np.random.Generator | None = None) -> BatchType:
-        if rng is None:
-            rng = np.random.default_rng(42)
+    def sample_batch(self, batch_size: int, seed: int | None = None) -> BatchType:
+        rng = np.random.default_rng(seed) if seed is not None else np.random.default_rng(42)
         idx = rng.integers(0, _obs_len(self.obs), size=(batch_size,))
         return {
             "obs": _slice_obs(self.obs, idx),
@@ -62,33 +61,26 @@ class TransitionBuffer:
 @dataclass
 class BatchLoader:
     dataset_id: str
+    obs_shape: tuple[int, ...]
+    obs_size: int
+    act_shape: tuple[int, ...]
     act_size: int
     buffer: TransitionBuffer
     seed: int = 42
-
-    def __post_init__(self) -> None:
-        self._rng = np.random.default_rng(self.seed)
 
     @property
     def num_transitions(self) -> int:
         return _obs_len(self.buffer.obs)
 
-    @property
-    def obs_size(self) -> int:
-        return int(self.buffer.obs.shape[1])
-
-    def sample_batch(self, batch_size: int, rng: np.random.Generator | None = None) -> BatchType:
-        return self.buffer.sample_batch(batch_size=batch_size, rng=rng or self._rng)
-
-    @staticmethod
-    def _default_obs_transform(obs: ObsType) -> np.ndarray:
-        return np.asarray(obs, dtype=np.float32).reshape(_obs_len(obs), -1)
+    def sample_batch(self, batch_size: int, seed: int | None = None) -> BatchType:
+        return self.buffer.sample_batch(batch_size=batch_size, seed=(42 if seed is None else seed))
 
     @classmethod
     def _build_buffer_from_minari(
         cls,
         dataset_id: str,
-        obs_transform: ObsTransform | None = None,
+        obs_encode: EncodeFn | None = None,
+        act_encode: EncodeFn | None = None,
     ) -> TransitionBuffer:
         dataset = minari.load_dataset(dataset_id, download=True)
 
@@ -116,14 +108,20 @@ class BatchLoader:
             rew_list.append(rew)
             done_list.append(done)
 
+        obs_encode = obs_encode or (lambda obs: np.asarray(obs, dtype=np.float32))
+        act_encode = act_encode or (lambda act: np.asarray(act))
+
         obs_all = _concat_obs(obs_list)
         next_obs_all = _concat_obs(next_obs_list)
-        obs_transform = obs_transform or cls._default_obs_transform
-        obs_all = obs_transform(obs_all).astype(np.float32)
-        next_obs_all = obs_transform(next_obs_all).astype(np.float32)
         act_all = np.concatenate(act_list, axis=0)
-        rew_all = np.concatenate(rew_list, axis=0).astype(np.float32)
-        done_all = np.concatenate(done_list, axis=0).astype(np.float32)
+        rew_all = np.concatenate(rew_list, axis=0)
+        done_all = np.concatenate(done_list, axis=0)
+
+        obs_all = obs_encode(obs_all).astype(np.float32)
+        next_obs_all = obs_encode(next_obs_all).astype(np.float32)
+        act_all = act_encode(act_all)
+        rew_all = rew_all.astype(np.float32)
+        done_all = done_all.astype(np.float32)
 
         return TransitionBuffer(
             obs=obs_all,
@@ -137,17 +135,30 @@ class BatchLoader:
     def from_minari(
         cls,
         dataset_id: str,
-        obs_transform: ObsTransform | None = None,
+        obs_encode: EncodeFn | None = None,
+        act_encode: EncodeFn | None = None,
         seed: int = 42,
     ) -> "BatchLoader":
         dataset = minari.load_dataset(dataset_id, download=True)
         action_space = dataset.spec.action_space
-        if not hasattr(action_space, "n"):
-            raise ValueError(f"Expected discrete action space, got: {type(action_space).__name__}")
-        buffer = cls._build_buffer_from_minari(dataset_id, obs_transform=obs_transform)
+        observation_space = dataset.spec.observation_space
+        buffer = cls._build_buffer_from_minari(
+            dataset_id,
+            obs_encode=obs_encode,
+            act_encode=act_encode,
+        )
+        obs_arr = np.asarray(buffer.obs)
+        act_arr = np.asarray(buffer.act)
+        obs_shape = tuple(int(x) for x in obs_arr.shape[1:]) if obs_arr.ndim > 1 else ()
+        act_shape = tuple(int(x) for x in act_arr.shape[1:]) if act_arr.ndim > 1 else ()
+        obs_size = int(getattr(observation_space, "n", 0))
+        act_size = int(getattr(action_space, "n", 0))
         return cls(
             dataset_id=dataset_id,
-            act_size=int(action_space.n),
+            obs_shape=obs_shape,
+            obs_size=obs_size,
+            act_shape=act_shape,
+            act_size=act_size,
             buffer=buffer,
             seed=seed,
         )

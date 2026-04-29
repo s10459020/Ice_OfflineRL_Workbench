@@ -107,13 +107,15 @@ class CQLAgentDiscrete(TorchAgent):
 
     def _save(self) -> dict[str, torch.Tensor]:
         return {
-            "critic": self.critic.state_dict(),
-            "optim": self.optim.state_dict(),
+            "q": self.critic.state_dict(),
+            "optimizer": self.optim.state_dict(),
         }
 
     def _load(self, state: dict[str, torch.Tensor]) -> None:
-        self.critic.load_state_dict(state["critic"])
-        self.optim.load_state_dict(state["optim"])
+        q_key = "q" if "q" in state else "critic"
+        optim_key = "optimizer" if "optimizer" in state else "optim"
+        self.critic.load_state_dict(state[q_key])
+        self.optim.load_state_dict(state[optim_key])
 
     # ====================
     # cql mathmatics

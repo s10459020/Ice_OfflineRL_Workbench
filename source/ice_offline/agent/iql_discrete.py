@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ._interface import TorchAgent
 
 
 class _Adam:
@@ -52,7 +53,7 @@ class _V(torch.nn.Module):
         return self.network(o)
 
 
-class IQLAgentDiscrete:
+class IQLAgentDiscrete(TorchAgent):
     def __init__(
         self,
         obs_size: int,
@@ -93,6 +94,19 @@ class IQLAgentDiscrete:
         loss.backward()
         self.optim.step()
 
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "q": self.q.state_dict(),
+            "v": self.v.state_dict(),
+            "optimizer": self.optim.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        self.q.load_state_dict(state["q"])
+        self.v.load_state_dict(state["v"])
+        optim_key = "optimizer" if "optimizer" in state else "optim"
+        self.optim.load_state_dict(state[optim_key])
+
     def _target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             return r + self.gamma * self.v(on) * (1.0 - d)
@@ -117,7 +131,5 @@ class IQLAgentDiscrete:
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a, r, on, d)
-
-        return torch.zeros((), dtype=torch.float32, device=self.device)
 
 

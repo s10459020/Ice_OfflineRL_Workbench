@@ -19,7 +19,7 @@ TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, 
 
 class RunnerAgent(Protocol):
     device: str
-    def act(self, observation: Any, epsilon: float = 0.0) -> int: ...
+    def act(self, observation: Any, epsilon: float = 0.0) -> Any: ...
     def update(self, batch: BatchType) -> None: ...
     def save(self, model_name: str | Path) -> Path: ...
     def load(self, model_name: str | Path) -> None: ...
@@ -38,7 +38,7 @@ class TorchBatchOfflineRunner:
     eval_interval: int
     eval_batches: int = 8
     eval_episodes: int = 5
-    model_id: str = "default"
+    runner_id: str = "default"
     model_load_step: int = 0
     model_save_interval: int = 0
     eval_dir: str = str(eval_root())
@@ -53,18 +53,18 @@ class TorchBatchOfflineRunner:
         eval_online_fns: list[OnlineEvalFn] | None = None,
         eval_env_fn: EvalEnvFn | None = None,
     ) -> None:
-        dataset_id = str(dataset.dataset_id).replace("/", "__")
-        self._csv_path = Path(self.eval_dir) / f"{dataset_id}.csv"
+        run_id = str(self.runner_id).replace("/", "__")
+        self._csv_path = Path(self.eval_dir) / f"{run_id}.csv"
         self._csv_path.parent.mkdir(parents=True, exist_ok=True)
         if self.model_load_step > 0:
-            agent.load(model_ref(self.model_id, self.model_load_step))
+            agent.load(model_ref(self.runner_id, self.model_load_step))
         for step in range(1, self.train_steps + 1):
             batch: BatchType = dataset.sample_batch(self.batch_size)
             agent.update(batch)
             model_step = self.model_load_step + step
 
             if self.model_save_interval > 0 and model_step % self.model_save_interval == 0:
-                agent.save(model_ref(self.model_id, model_step))
+                agent.save(model_ref(self.runner_id, model_step))
 
             if step % self.eval_interval != 0:
                 continue
@@ -107,7 +107,10 @@ class TorchBatchOfflineRunner:
             for _ in range(self.eval_batches):
                 batch = dataset.sample_batch(self.batch_size)
                 o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=agent.device)
-                a = torch.as_tensor(batch["act"], dtype=torch.long, device=agent.device).view(-1)
+                act_dtype = torch.long if np.issubdtype(np.asarray(batch["act"]).dtype, np.integer) else torch.float32
+                a = torch.as_tensor(batch["act"], dtype=act_dtype, device=agent.device)
+                if act_dtype == torch.long:
+                    a = a.view(-1)
                 r = torch.as_tensor(batch["rew"], dtype=torch.float32, device=agent.device).view(-1, 1)
                 on = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=agent.device)
                 d = torch.as_tensor(batch["done"], dtype=torch.float32, device=agent.device).view(-1, 1)
@@ -136,19 +139,42 @@ class TorchBatchOfflineRunner:
                 next_obs_list: list[torch.Tensor] = []
                 done_list: list[torch.Tensor] = []
                 while not done:
-                    o = self.obs_encode({"image": np.asarray([obs["image"]])})[0]
-                    a = int(agent.act(o, epsilon=0.0))
-                    next_obs, r, terminated, truncated, _ = env.step(a)
+                    obs_batch = (
+                        {k: np.asarray([v]) for k, v in obs.items()}
+                        if isinstance(obs, dict)
+                        else np.asarray([obs])
+                    )
+                    o = self.obs_encode(obs_batch)[0]
+                    try:
+                        a_raw = agent.act(o, epsilon=0.0)
+                    except TypeError:
+                        try:
+                            a_raw = agent.act(o, greedy=True)
+                        except TypeError:
+                            a_raw = agent.act(o)
+                    if hasattr(env.action_space, "n"):
+                        env_action = int(np.asarray(a_raw).item())
+                    else:
+                        env_action = np.asarray(a_raw, dtype=np.float32).reshape(env.action_space.shape)
+                    next_obs, r, terminated, truncated, _ = env.step(env_action)
                     done = bool(terminated or truncated)
-                    on = self.obs_encode({"image": np.asarray([next_obs["image"]])})[0]
+                    next_obs_batch = (
+                        {k: np.asarray([v]) for k, v in next_obs.items()}
+                        if isinstance(next_obs, dict)
+                        else np.asarray([next_obs])
+                    )
+                    on = self.obs_encode(next_obs_batch)[0]
+                    act_dtype = torch.long if np.issubdtype(np.asarray(a_raw).dtype, np.integer) else torch.float32
                     obs_list.append(torch.as_tensor(o, dtype=torch.float32, device=agent.device))
-                    act_list.append(torch.as_tensor(a, dtype=torch.long, device=agent.device))
+                    act_list.append(torch.as_tensor(a_raw, dtype=act_dtype, device=agent.device))
                     rew_list.append(torch.as_tensor(float(r), dtype=torch.float32, device=agent.device))
                     next_obs_list.append(torch.as_tensor(on, dtype=torch.float32, device=agent.device))
                     done_list.append(torch.as_tensor(done, dtype=torch.float32, device=agent.device))
                     obs = next_obs
                 o_batch = torch.stack(obs_list, dim=0)
-                a_batch = torch.stack(act_list, dim=0).view(-1)
+                a_batch = torch.stack(act_list, dim=0)
+                if a_batch.ndim == 1:
+                    a_batch = a_batch.view(-1)
                 r_batch = torch.stack(rew_list, dim=0).view(-1, 1)
                 on_batch = torch.stack(next_obs_list, dim=0)
                 d_batch = torch.stack(done_list, dim=0).view(-1, 1)

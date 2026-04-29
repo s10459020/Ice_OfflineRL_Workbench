@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
+from ._interface import TorchAgent
 
 
 class _Pi(torch.nn.Module):
@@ -30,7 +31,7 @@ class _Pi(torch.nn.Module):
         return self.dist(o)
 
 
-class BCAgentDiscrete:
+class BCAgentDiscrete(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -56,10 +57,10 @@ class BCAgentDiscrete:
     def act(self, observation, epsilon: float = 0.0):
         o = torch.as_tensor(np.asarray(observation, dtype=np.float32)[None, :], dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            q = self.critic.q(o)
-            a = q.argmax(dim=1).long()
+            a = self.policy.mode(o)
             if epsilon > 0.0:
-                rand_a = torch.randint(0, self.critic._q.action_size, (1,), device=self.device)
+                act_size = int(self.policy.dist(o).logits.shape[1])
+                rand_a = torch.randint(0, act_size, (1,), device=self.device)
                 if torch.rand((1,), device=self.device).item() < epsilon:
                     a = rand_a
         return int(a.item())
@@ -75,6 +76,17 @@ class BCAgentDiscrete:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "pi": self.policy.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        pi_key = "pi" if "pi" in state else "policy"
+        self.policy.load_state_dict(state[pi_key])
+        self.optimizer.load_state_dict(state["optimizer"])
 
     # ====================
     # bc mathmatics

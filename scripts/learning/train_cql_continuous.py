@@ -1,0 +1,90 @@
+from __future__ import annotations
+
+import gymnasium as gym
+import numpy as np
+import torch
+
+from ice_offline.agent import CQLAgentContinuous
+from ice_offline.dataset.batch_loader import BatchLoader
+from ice_offline.runner import TorchBatchOfflineRunner
+from ice_offline.tools.printer import print_stage
+
+
+
+
+DATASET_ID = "mujoco/invertedpendulum/expert-v0"
+ENV_ID = "InvertedPendulum-v5"
+RUNNER_ID = "cql_continuous_invertedpendulum"
+BATCH_SIZE = 64
+TRAIN_STEPS = 1_000_000
+EVAL_INTERVAL = 1_000
+EVAL_BATCHES = 8
+EVAL_EPISODES = 5
+MODEL_LOAD_STEP = 0
+MODEL_SAVE_INTERVAL = 50_000
+
+def obs_encode(obs: np.ndarray) -> np.ndarray:
+    obs_arr = np.asarray(obs, dtype=np.float32)
+    return obs_arr.reshape(obs_arr.shape[0], -1)
+
+
+
+def eval_loss_q(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+    o, a, r, on, d = episode_batch
+    with torch.no_grad():
+        return {"loss_q": float(agent.loss_critic(o, a, r, on, d).item())}
+
+
+def eval_loss_pi(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+    o, _, _, _, _ = episode_batch
+    with torch.no_grad():
+        return {"loss_pi": float(agent.loss_actor(o).item())}
+
+
+def eval_env() -> gym.Env:
+    return gym.make(ENV_ID)
+
+
+def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+    _, _, r, _, _ = episode_batch
+    return {"reward_sum": float(r.sum().item())}
+
+
+def main() -> None:
+    print_stage("Load")
+    dataset = BatchLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
+    obs_dim = int(np.prod(dataset.obs_shape))
+    act_dim = int(np.prod(dataset.act_shape))
+    runner = TorchBatchOfflineRunner(
+        obs_encode=obs_encode,
+        batch_size=BATCH_SIZE,
+        train_steps=TRAIN_STEPS,
+        eval_batches=EVAL_BATCHES,
+        eval_episodes=5,
+        eval_interval=EVAL_INTERVAL,
+        runner_id=RUNNER_ID,
+        model_load_step=MODEL_LOAD_STEP,
+        model_save_interval=MODEL_SAVE_INTERVAL,
+    )
+    agent = CQLAgentContinuous(obs_size=obs_dim, act_size=act_dim)
+
+    print_stage("Train")
+    runner.train(
+        agent=agent,
+        dataset=dataset,
+        eval_offline_fns=[eval_loss_q, eval_loss_pi],
+        eval_online_fns=[eval_reward],
+        eval_env_fn=eval_env,
+    )
+
+    print_stage("Done")
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+
+
