@@ -1,82 +1,86 @@
 from __future__ import annotations
 
-import minari
+import gymnasium as gym
 import numpy as np
+import torch
+from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.agent import CQLAgentDiscrete
+from ice_offline.dataset import load_minari
 from ice_offline.tools.printer import print_stage
 
 DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
 BATCH_SIZE = 64
 TRAIN_STEPS = 50_000
 LOG_EVERY_STEPS = 1_000
+EVAL_BATCHES = 8
+EVAL_EPISODES = 5
+ENV_ID = "BabyAI-OneRoomS8-v0"
 
 
-def _build_transitions(dataset: minari.MinariDataset) -> dict[str, np.ndarray]:
-    obs_list: list[np.ndarray] = []
-    act_list: list[np.ndarray] = []
-    rew_list: list[np.ndarray] = []
-    next_obs_list: list[np.ndarray] = []
-    done_list: list[np.ndarray] = []
-
-    for episode in dataset.iterate_episodes():
-        obs = np.asarray(episode.observations, dtype=np.float32)
-        act = np.asarray(episode.actions)
-        rew = np.asarray(episode.rewards, dtype=np.float32)
-        term = np.asarray(episode.terminations, dtype=np.float32)
-        trunc = np.asarray(episode.truncations, dtype=np.float32)
-
-        done = np.clip(term + trunc, 0.0, 1.0)
-        obs_list.append(obs[:-1])
-        next_obs_list.append(obs[1:])
-        act_list.append(act)
-        rew_list.append(rew)
-        done_list.append(done)
-
-    return {
-        "obs": np.concatenate(obs_list, axis=0).astype(np.float32),
-        "act": np.concatenate(act_list, axis=0).astype(np.int64),
-        "rew": np.concatenate(rew_list, axis=0).astype(np.float32),
-        "next_obs": np.concatenate(next_obs_list, axis=0).astype(np.float32),
-        "done": np.concatenate(done_list, axis=0).astype(np.float32),
-    }
+def encode_obs(obs: np.ndarray | dict[str, np.ndarray]) -> np.ndarray:
+    obs_arr = np.asarray(obs["image"], dtype=np.float32)
+    return obs_arr.reshape(obs_arr.shape[0], -1)
 
 
-def _sample_batch(data: dict[str, np.ndarray], batch_size: int, rng: np.random.Generator) -> dict[str, np.ndarray]:
-    idx = rng.integers(0, data["obs"].shape[0], size=(batch_size,))
-    return {
-        "obs": data["obs"][idx],
-        "act": data["act"][idx],
-        "rew": data["rew"][idx],
-        "next_obs": data["next_obs"][idx],
-        "done": data["done"][idx],
-    }
+def evaluate_loss(algo: CQLAgentDiscrete, dataset, batch_size: int, n_batches: int) -> float:
+    losses: list[float] = []
+    with torch.no_grad():
+        for _ in range(n_batches):
+            batch = dataset.sample_batch(batch_size)
+            o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=algo.device)
+            a = torch.as_tensor(batch["act"], dtype=torch.long, device=algo.device).view(-1)
+            r = torch.as_tensor(batch["rew"], dtype=torch.float32, device=algo.device).view(-1, 1)
+            on = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=algo.device)
+            d = torch.as_tensor(batch["done"], dtype=torch.float32, device=algo.device).view(-1, 1)
+            losses.append(float(algo._loss(o, a, r, on, d).item()))
+    return float(np.mean(losses))
+
+
+def evaluate_reward(algo: CQLAgentDiscrete, env_id: str, n_episodes: int) -> float:
+    env = FullyObsWrapper(gym.make(env_id))
+    returns: list[float] = []
+    try:
+        for _ in range(n_episodes):
+            obs, _ = env.reset()
+            done = False
+            ep_return = 0.0
+            while not done:
+                obs_vec = encode_obs({"image": np.asarray([obs["image"]])})[0]
+                action = algo.act(obs_vec, epsilon=0.0)
+                obs, reward, terminated, truncated, _ = env.step(action)
+                ep_return += float(reward)
+                done = bool(terminated or truncated)
+            returns.append(ep_return)
+    finally:
+        env.close()
+    return float(np.mean(returns))
 
 
 def main() -> None:
     print_stage("Load")
-    dataset = minari.load_dataset(DATASET_ID)
-    data = _build_transitions(dataset)
-
-    obs_size = int(np.prod(data["obs"].shape[1:]))
-    act_size = int(data["act"].max()) + 1
-    data["obs"] = data["obs"].reshape(data["obs"].shape[0], -1)
-    data["next_obs"] = data["next_obs"].reshape(data["next_obs"].shape[0], -1)
+    dataset = load_minari(DATASET_ID, obs_transform=encode_obs)
+    obs_size = dataset.obs_size
+    act_size = dataset.act_size
 
     print(f"dataset_id={DATASET_ID}")
-    print(f"transitions={data['obs'].shape[0]}")
+    print(f"transitions={dataset.num_transitions}")
     print(f"obs_size={obs_size} act_size={act_size}")
 
     print_stage("Train")
     algo = CQLAgentDiscrete(obs_size=obs_size, act_size=act_size)
-    rng = np.random.default_rng(42)
 
     for step in range(1, TRAIN_STEPS + 1):
-        batch = _sample_batch(data, BATCH_SIZE, rng)
+        batch = dataset.sample_batch(BATCH_SIZE)
         algo.update(batch, grad_step=step)
 
         if step % LOG_EVERY_STEPS == 0:
-            print(f"step={step}/{TRAIN_STEPS}")
+            eval_loss = evaluate_loss(algo, dataset, BATCH_SIZE, EVAL_BATCHES)
+            eval_return = evaluate_reward(algo, ENV_ID, EVAL_EPISODES)
+            print(
+                f"step={step}/{TRAIN_STEPS} "
+                f"eval_loss={eval_loss:.6f} eval_return={eval_return:.4f}"
+            )
 
     print_stage("Done")
     print("train_complete=True")
