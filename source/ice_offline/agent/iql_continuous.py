@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from d3rlpy.models.torch.distributions import GaussianDistribution
+from torch.distributions import Normal
 
 
 class _Adam:
@@ -46,24 +46,20 @@ class _Pi(torch.nn.Module):
         return mean, squashed_mean, clipped_logstd
 
     def dist(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        mean, _, logstd = self(o)
-        return mean, logstd
+        _, squashed_mean, logstd = self(o)
+        return squashed_mean, logstd.exp()
 
     def mode(self, o: torch.Tensor) -> torch.Tensor:
-        mean, _ = self.dist(o)
-        return torch.tanh(mean)
+        squashed_mean, _ = self.dist(o)
+        return squashed_mean
 
     def sample(self, o: torch.Tensor) -> torch.Tensor:
-        mean, logstd = self.dist(o)
-        squashed_mean = torch.tanh(mean)
-        dist = GaussianDistribution(loc=squashed_mean, std=logstd.exp(), raw_loc=mean)
-        return dist.sample()
+        squashed_mean, std = self.dist(o)
+        return Normal(squashed_mean, std).rsample().clamp(-1.0, 1.0)
 
     def log_prob(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        mean, logstd = self.dist(o)
-        squashed_mean = torch.tanh(mean)
-        dist = GaussianDistribution(loc=squashed_mean, std=logstd.exp(), raw_loc=mean)
-        return dist.log_prob(a)
+        squashed_mean, std = self.dist(o)
+        return Normal(squashed_mean, std).log_prob(a).sum(dim=-1, keepdims=True)
 
 
 class _Q(torch.nn.Module):

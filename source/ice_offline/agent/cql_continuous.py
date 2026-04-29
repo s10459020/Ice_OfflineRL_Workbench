@@ -5,7 +5,7 @@ import math
 import numpy as np
 import torch
 import torch.nn.functional as F
-from d3rlpy.models.torch.distributions import SquashedGaussianDistribution
+from torch.distributions import Normal
 
 
 class _Adam:
@@ -48,27 +48,34 @@ class _Pi(torch.nn.Module):
     def temp(self) -> torch.Tensor:
         return self.log_alpha.exp()
 
-    def dist(self, o: torch.Tensor) -> SquashedGaussianDistribution:
+    def dist(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         mean, logstd = self(o)
-        return SquashedGaussianDistribution(loc=mean, std=logstd.exp())
+        return mean, logstd.exp()
 
     def mode(self, o: torch.Tensor) -> torch.Tensor:
         return torch.tanh(self(o)[0])
 
     def sample(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # 對 E_pi[a]{ ... } 的樣本近似，取得a與log pi(a)用於後續計算
-        # target_Q: r + gamma* E_pi[a]{ targ_Q(s',a')_min - alpha* log_pi(a'|s') }
-        dist = self.dist(o)
-        a, log_prob = dist.sample_with_log_prob()
+        # sample from Gaussion(mean, std)
+        mean, std = self.dist(o)
+        dist = Normal(mean, std)
+        raw_y = dist.rsample()
+        a = torch.tanh(raw_y)
+        jacob = 2 * (math.log(2) - raw_y - F.softplus(-2 * raw_y))
+        log_prob = (dist.log_prob(raw_y) - jacob).sum(dim=-1, keepdims=True)
         return a, log_prob
 
     def sample_n(self, o: torch.Tensor, n_action_samples: int) -> tuple[torch.Tensor, torch.Tensor]:
-        # E_pi[a]{ ... } 樣本近似的N個抽樣版本，回傳(B*N, A)格式的資料
-        dist = self.dist(o)
-        a, log_prob = dist.sample_n_with_log_prob(n_action_samples)
-
-        a = a.reshape(-1, a.shape[-1])                  # (B, N, A) => (B*N, A)
-        log_prob = log_prob.reshape(-1, 1)              # (B, N, 1) => (B*N, 1)
+        # sample n times from Gaussion(mean, std)
+        mean, std = self.dist(o)
+        dist = Normal(mean, std)
+        raw_y_nba = dist.rsample((n_action_samples,))
+        a = torch.tanh(raw_y_nba).transpose(0, 1)
+        a = a.reshape(-1, a.shape[-1])
+        jacob = 2 * (math.log(2) - raw_y_nba - F.softplus(-2 * raw_y_nba))
+        log_prob = (dist.log_prob(raw_y_nba) - jacob).sum(dim=-1, keepdims=True)
+        log_prob = log_prob.transpose(0, 1)
+        log_prob = log_prob.reshape(-1, 1)
         return a, log_prob
 
 
