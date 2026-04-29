@@ -4,17 +4,28 @@ import csv
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
 import numpy as np
 import torch
 
+from ice_offline.dataset import BatchLoader
 from ice_offline.agent._interface import model_ref
 from ice_offline.paths import eval_root
 
 BatchType = dict[str, Any]
 TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
-OfflineEvalFn = Callable[[Any, TransitionBatch], dict[str, float]]
+
+
+class RunnerAgent(Protocol):
+    device: str
+    def act(self, observation: Any, epsilon: float = 0.0) -> int: ...
+    def update(self, batch: BatchType) -> None: ...
+    def save(self, model_name: str | Path) -> Path: ...
+    def load(self, model_name: str | Path) -> None: ...
+
+
+OfflineEvalFn = Callable[[RunnerAgent, TransitionBatch], dict[str, float]]
 OnlineEvalFn = Callable[[TransitionBatch], dict[str, float]]
 EvalEnvFn = Callable[[], Any]
 
@@ -36,24 +47,24 @@ class TorchBatchOfflineRunner:
 
     def train(
         self,
-        agent: Any,
-        dataset: Any,
+        agent: RunnerAgent,
+        dataset: BatchLoader,
         eval_offline_fns: list[OfflineEvalFn] | None = None,
         eval_online_fns: list[OnlineEvalFn] | None = None,
         eval_env_fn: EvalEnvFn | None = None,
     ) -> None:
-        dataset_id = str(getattr(dataset, "dataset_id", "minari_dataset")).replace("/", "__")
+        dataset_id = str(dataset.dataset_id).replace("/", "__")
         self._csv_path = Path(self.eval_dir) / f"{dataset_id}.csv"
         self._csv_path.parent.mkdir(parents=True, exist_ok=True)
         if self.model_load_step > 0:
             agent.load(model_ref(self.model_id, self.model_load_step))
         for step in range(1, self.train_steps + 1):
             batch: BatchType = dataset.sample_batch(self.batch_size)
-            agent.update(batch, grad_step=step)
-            total_step = self.model_load_step + step
+            agent.update(batch)
+            model_step = self.model_load_step + step
 
-            if self.model_save_interval > 0 and total_step % self.model_save_interval == 0:
-                agent.save(model_ref(self.model_id, total_step))
+            if self.model_save_interval > 0 and model_step % self.model_save_interval == 0:
+                agent.save(model_ref(self.model_id, model_step))
 
             if step % self.eval_interval != 0:
                 continue
@@ -87,8 +98,8 @@ class TorchBatchOfflineRunner:
 
     def _evaluate_offline(
         self,
-        agent: Any,
-        dataset: Any,
+        agent: RunnerAgent,
+        dataset: BatchLoader,
         eval_offline_fns: list[OfflineEvalFn],
     ) -> dict[str, float]:
         bucket: dict[str, list[float]] = {}
@@ -109,7 +120,7 @@ class TorchBatchOfflineRunner:
 
     def _evaluate_online(
         self,
-        agent: Any,
+        agent: RunnerAgent,
         eval_online_fns: list[OnlineEvalFn],
         eval_env_fn: EvalEnvFn,
     ) -> dict[str, float]:

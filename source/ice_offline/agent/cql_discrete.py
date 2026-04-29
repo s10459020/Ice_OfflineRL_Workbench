@@ -64,6 +64,7 @@ class CQLAgentDiscrete(TorchAgent):
         self.gamma = gamma
         self.alpha = alpha
         self.target_update_interval = target_update_interval
+        self._grad_step = 0
 
         self.critic = _TQ(obs_size=obs_size, act_size=act_size).to(self.device)
         self.optim = _Adam(learning_rate)(self.critic._q.parameters())
@@ -82,7 +83,8 @@ class CQLAgentDiscrete(TorchAgent):
                     a = rand_a
         return int(a.item())
 
-    def update(self, batch, grad_step: int):
+    def update(self, batch):
+        self._grad_step += 1
         observation = batch["obs"]
         action = batch["act"]
         reward = batch["rew"]
@@ -100,7 +102,7 @@ class CQLAgentDiscrete(TorchAgent):
         loss.backward()
         self.optim.step()
 
-        if grad_step % self.target_update_interval == 0:
+        if self._grad_step % self.target_update_interval == 0:
             self.critic.update_target()
 
     def _save(self) -> dict[str, torch.Tensor]:
