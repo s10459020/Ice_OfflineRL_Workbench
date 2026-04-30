@@ -6,10 +6,12 @@ from .cql_continuous import CQLAgentContinuous
 from .cql_discrete import CQLAgentDiscrete
 from .iql_continuous import IQLAgentContinuous
 from .iql_discrete import IQLAgentDiscrete
+from .qv_discrete import QVAgentDiscrete
 from .ac_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
 from .pg_continuous import PolicyGradientAgent as ContinuousPolicyGradientAgent
 from .pg_discrete import PolicyGradientAgent as DiscretePolicyGradientAgent
 from .q_table import QTableAgent, QTableState
+from .q_discrete import QAgentDiscrete
 
 __all__ = [
     "Agent",
@@ -22,9 +24,11 @@ __all__ = [
     "CQLAgentDiscrete",
     "IQLAgentContinuous",
     "IQLAgentDiscrete",
+    "QVAgentDiscrete",
     "DiscreteActorCriticAgent",
     "ContinuousPolicyGradientAgent",
     "DiscretePolicyGradientAgent",
     "QTableAgent",
     "QTableState",
+    "QAgentDiscrete",
 ]
