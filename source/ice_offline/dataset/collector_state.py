@@ -59,7 +59,6 @@ class StateCollector(gym.Wrapper):
         
         obs, info = self.env.reset(*args, **kwargs)
         state = self._state_io.get_state()
-        info["state"] = state
         self._last_state = state
         
         self._current = [state.serialize()]
@@ -69,7 +68,6 @@ class StateCollector(gym.Wrapper):
         """Advance env one step and append the resulting state."""
         obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
         state = self._state_io.get_state()
-        info["state"] = state
         self._last_state = state
 
         self._current.append(state.serialize())

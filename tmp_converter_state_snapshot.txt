@@ -1,33 +1,53 @@
-﻿from pathlib import Path
-from typing import Any
+﻿from typing import Any
 
-import h5py
 import minari
 import numpy as np
+from gymnasium import spaces
+from minari.data_collector.episode_buffer import EpisodeBuffer
 from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 
 from ice_offline.data import State
-from ice_offline.tools.paths import minari_root
 
 _ACTION_PICKUP = 3
 _ACTION_DROP = 4
 _OBJECT_EMPTY = OBJECT_TO_IDX["empty"]
 
 
-def convert_fullobs(dataset_source_id: str) -> Path:
-    """Convert fullobs Minari trajectories into sidecar state_data.hdf5.
-
-    The converter does not create a new Minari dataset. It only reads source
-    episodes and writes state_data.hdf5 under source dataset folder.
-    """
+def convert_fullobs(dataset_source_id: str, dataset_target_id: str) -> Any:
     source_dataset = minari.load_dataset(dataset_source_id)
 
-    state_episodes: list[list[dict[str, Any]]] = []
+    episode_buffers: list[EpisodeBuffer] = []
     for trajectory in source_dataset.iterate_episodes():
         states = _convert_trajectory_to_states(trajectory)
-        state_episodes.append([state.serialize() for state in states])
+        buffer = EpisodeBuffer(
+            observations=to_nojpeg_observations(trajectory.observations),
+            actions=trajectory.actions,
+            rewards=list(trajectory.rewards),
+            terminations=list(trajectory.terminations),
+            truncations=list(trajectory.truncations),
+            infos=_merge_infos_with_state(trajectory, states),
+        )
+        episode_buffers.append(buffer)
 
-    return _save_state_data(dataset_source_id, state_episodes)
+    try:
+        minari.delete_dataset(dataset_target_id)
+    except Exception:
+        pass
+
+    target_dataset = minari.create_dataset_from_buffers(
+        dataset_id=dataset_target_id,
+        env=source_dataset.spec.env_spec,
+        eval_env=source_dataset.spec.env_spec,
+        buffer=episode_buffers,
+        algorithm_name="fullobs_to_state",
+        author="ice_offline",
+        author_email="local_test@example.com",
+        code_permalink="https://example.com/ice-offline-converter",
+        description=f"Converted from {dataset_source_id}",
+        observation_space=to_nojpeg_observation_space(source_dataset.observation_space),
+        action_space=source_dataset.action_space,
+    )
+    return target_dataset
 
 
 def _convert_trajectory_to_states(trajectory: Any) -> list[State]:
@@ -100,20 +120,34 @@ def _find_agent_pos(grid: np.ndarray, curr_index: int) -> tuple[int, int]:
     return x, y
 
 
-def _save_state_data(dataset_id: str, episodes: list[list[dict[str, Any]]]) -> Path:
-    out_path = _resolve_state_path(dataset_id)
-    out_path.parent.mkdir(parents=True, exist_ok=True)
+def _merge_infos_with_state(trajectory: Any, states: list[State]) -> dict[str, Any]:
+    infos = trajectory.infos or {}
+    serialized_states = [state.serialize() for state in states]
+    infos["state"] = {
+        "mission": [state["mission"] for state in serialized_states],
+        "agent_pos": [state["agent_pos"] for state in serialized_states],
+        "agent_dir": [state["agent_dir"] for state in serialized_states],
+        "grid": [state["grid"] for state in serialized_states],
+        "carrying": [state["carrying"] for state in serialized_states],
+    }
+    return infos
 
-    with h5py.File(out_path, "w") as f:
-        for ep_idx, seq in enumerate(episodes):
-            ep_group = f.require_group(f"episode_{ep_idx}")
-            keys = seq[0].keys()
-            for key in keys:
-                values = [item[key] for item in seq]
-                ep_group.create_dataset(key, data=np.asarray(values))
-    return out_path
+
+def to_nojpeg_observations(observations: Any) -> Any:
+    converted = dict(observations)
+    converted["image"] = converted["image"].astype(np.int16, copy=False)
+    return converted
 
 
-def _resolve_state_path(dataset_id: str) -> Path:
-    base = minari_root()
-    return base / dataset_id / "data" / "state_data.hdf5"
+def to_nojpeg_observation_space(observation_space: Any) -> Any:
+    spaces_dict = dict(observation_space.spaces)
+    image_space = spaces_dict["image"]
+    image_low = image_space.low.min()
+    image_high = image_space.high.max()
+    spaces_dict["image"] = spaces.Box(
+        low=image_low,
+        high=image_high,
+        shape=image_space.shape,
+        dtype=np.int16,
+    )
+    return spaces.Dict(spaces_dict)
