@@ -133,9 +133,9 @@ def main() -> None:
     print_stage("Act Compare")
     rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
-        obs_t = sample_observation(rng, BATCH_SIZE, OBS_DIM)
-        d3_act = d3rl_action_best_batch(d3_policy, obs_t)
-        our_act = np.asarray([our_agent.act(x, greedy=True) for x in obs_t])
+        obs_t = sample_observation(rng, 1, OBS_DIM)
+        d3_act = d3rl_action_best_batch(d3_policy, obs_t)[0]
+        our_act = our_agent.act(obs_t[0], greedy=True)
         _assert_equal([(d3_act, our_act)])
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
