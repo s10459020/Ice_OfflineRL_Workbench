@@ -54,6 +54,9 @@ class _V(torch.nn.Module):
 
 
 class IQLAgentDiscrete(TorchAgent):
+    # ====================
+    # Init
+    # ====================
     def __init__(
         self,
         obs_size: int,
@@ -71,6 +74,9 @@ class IQLAgentDiscrete(TorchAgent):
             list(self.q.parameters()) + list(self.v.parameters())
         )
 
+    # ====================
+    # Public API
+    # ====================
     def act(self, observation, epsilon: float = 0.0):
         observation_np = np.asarray(observation, dtype=np.float32)[None, :]
         o = torch.as_tensor(observation_np, dtype=torch.float32, device=self.device)
@@ -89,7 +95,7 @@ class IQLAgentDiscrete(TorchAgent):
         on = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=self.device)
         d = torch.as_tensor(batch["done"], dtype=torch.float32, device=self.device).view(-1, 1)
 
-        loss = self._loss(o, a, r, on, d)
+        loss = self.loss_critic(o, a, r, on, d)
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
@@ -107,11 +113,16 @@ class IQLAgentDiscrete(TorchAgent):
         optim_key = "optimizer" if "optimizer" in state else "optim"
         self.optim.load_state_dict(state[optim_key])
 
+    # ====================
+    # critic mathmatics
+    # ====================
     def _target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+        # target = r + gamma * V(s') * (1-done)
         with torch.no_grad():
             return r + self.gamma * self.v(on) * (1.0 - d)
 
     def _loss_q(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+        # loss_q = Huber(Q(s,a) - target)
         q_sa = self.q(o).gather(1, a.view(-1, 1))
         target = self._target(on, r, d)
         delta = target - q_sa
@@ -120,16 +131,14 @@ class IQLAgentDiscrete(TorchAgent):
         return huber.mean()
 
     def _loss_v(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        # loss_v = E[ |tau - 1(Q-V<0)| * (Q-V)^2 ]
         q_sa = self.q(o).gather(1, a.view(-1, 1)).detach()
         v_t = self.v(o)
         diff = q_sa - v_t
         weight = (self.v.tau - (diff < 0.0).float()).abs().detach()
         return (weight * diff.pow(2)).mean()
 
-    def _loss(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
-
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        return self._loss(o, a, r, on, d)
+        return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
 
 

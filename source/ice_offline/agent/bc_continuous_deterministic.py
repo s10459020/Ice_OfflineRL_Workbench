@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ice_offline.agent._interface import TorchAgent
 
 
 class _Pi(torch.nn.Module):
@@ -29,7 +30,7 @@ class _Pi(torch.nn.Module):
         return self.mode(o)
 
 
-class BCAgentContinuousDeterministic:
+class BCAgentContinuousDeterministic(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -76,6 +77,16 @@ class BCAgentContinuousDeterministic:
         loss.backward()
         self.optimizer.step()
 
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "pi": self.policy.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        self.policy.load_state_dict(state["pi"])
+        self.optimizer.load_state_dict(state["optimizer"])
+
     # ====================
     # bc mathmatics
     # ====================
@@ -87,5 +98,3 @@ class BCAgentContinuousDeterministic:
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a)
-
-        return torch.zeros((), dtype=torch.float32, device=self.device)

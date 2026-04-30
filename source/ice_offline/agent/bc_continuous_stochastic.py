@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Normal
+from ice_offline.agent._interface import TorchAgent
 
 
 class _Pi(torch.nn.Module):
@@ -40,7 +41,7 @@ class _Pi(torch.nn.Module):
         return a_mean, logstd
 
 
-class BCAgentContinuousStochastic:
+class BCAgentContinuousStochastic(TorchAgent):
     def __init__(self, obs_size: int, act_size: int):
         self.device = "cpu"
         self.learning_rate = 1e-3
@@ -73,11 +74,19 @@ class BCAgentContinuousStochastic:
         loss.backward()
         self.optimizer.step()
 
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "pi": self.policy.state_dict(),
+            "optimizer": self.optimizer.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        self.policy.load_state_dict(state["pi"])
+        self.optimizer.load_state_dict(state["optimizer"])
+
     def _loss(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         a_pred = self.policy.sample(o)
         return F.mse_loss(a_pred, a)
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a)
-
-        return torch.zeros((), dtype=torch.float32, device=self.device)

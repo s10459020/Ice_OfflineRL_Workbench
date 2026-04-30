@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 from torch.distributions import Normal
+from ice_offline.agent._interface import TorchAgent
 
 
 class _Adam:
@@ -124,7 +125,7 @@ class _QQ(torch.nn.Module):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
 
-class IQLAgentContinuous:
+class IQLAgentContinuous(TorchAgent):
     def __init__(
         self,
         obs_size: int,
@@ -188,6 +189,22 @@ class IQLAgentContinuous:
         self.actor_optim.step()
 
         self.critic.update_target_soft()
+
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "actor": self.actor.state_dict(),
+            "q": self.critic.state_dict(),
+            "v": self.v.state_dict(),
+            "actor_optimizer": self.actor_optim.state_dict(),
+            "critic_optimizer": self.critic_optim.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        self.actor.load_state_dict(state["actor"])
+        self.critic.load_state_dict(state["q"])
+        self.v.load_state_dict(state["v"])
+        self.actor_optim.load_state_dict(state["actor_optimizer"])
+        self.critic_optim.load_state_dict(state["critic_optimizer"])
 
     # ====================
     # critic

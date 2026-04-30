@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import gymnasium as gym
 import numpy as np
 import torch
@@ -7,7 +9,9 @@ import torch
 from ice_offline.agent import CQLAgentContinuous
 from ice_offline.dataset.batch_loader import BatchLoader
 from ice_offline.runner import TorchBatchOfflineRunner
+from ice_offline.paths import eval_root
 from ice_offline.tools.printer import print_stage
+from ice_offline.tools.timing import Timer
 
 
 
@@ -69,12 +73,21 @@ def main() -> None:
     agent = CQLAgentContinuous(obs_size=obs_dim, act_size=act_dim)
 
     print_stage("Train")
+    Timer.stopwatch(f"train::{RUNNER_ID}")
     runner.train(
         agent=agent,
         dataset=dataset,
         eval_offline_fns=[eval_loss_q, eval_loss_pi],
         eval_online_fns=[eval_reward],
         eval_env_fn=eval_env,
+    )
+
+    train_ms = Timer.stopwatch(f"train::{RUNNER_ID}")
+    time_path = Path(eval_root()) / f"{RUNNER_ID}.txt"
+    time_path.parent.mkdir(parents=True, exist_ok=True)
+    time_path.write_text(
+        f"runner_id={RUNNER_ID}\ntrain_ms={train_ms:.3f}\ntrain_sec={train_ms/1000.0:.3f}\n",
+        encoding="utf-8",
     )
 
     print_stage("Done")
