@@ -8,12 +8,12 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from ice_offline.dataset.value_collector import (
+from ice_offline.dataset.collector_value import (
     MiniGridAction,
     MiniGridDirection,
     ValueCollector,
 )
-from ice_offline.dataset.value_loader import ValueLoader
+from ice_offline.dataset.loader_value import ValueLoader
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
