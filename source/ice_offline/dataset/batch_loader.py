@@ -66,14 +66,25 @@ class BatchLoader:
     act_shape: tuple[int, ...]
     act_size: int
     buffer: TransitionBuffer
-    seed: int = 42
+
+    def __post_init__(self) -> None:
+        self._rng = np.random.default_rng(42)
 
     @property
     def num_transitions(self) -> int:
         return _obs_len(self.buffer.obs)
 
     def sample_batch(self, batch_size: int, seed: int | None = None) -> BatchType:
-        return self.buffer.sample_batch(batch_size=batch_size, seed=(42 if seed is None else seed))
+        if seed is not None:
+            return self.buffer.sample_batch(batch_size=batch_size, seed=seed)
+        idx = self._rng.integers(0, _obs_len(self.buffer.obs), size=(batch_size,))
+        return {
+            "obs": _slice_obs(self.buffer.obs, idx),
+            "act": self.buffer.act[idx],
+            "rew": self.buffer.rew[idx],
+            "next_obs": _slice_obs(self.buffer.next_obs, idx),
+            "done": self.buffer.done[idx],
+        }
 
     @classmethod
     def _build_buffer_from_minari(
@@ -137,7 +148,6 @@ class BatchLoader:
         dataset_id: str,
         obs_encode: EncodeFn | None = None,
         act_encode: EncodeFn | None = None,
-        seed: int = 42,
     ) -> "BatchLoader":
         dataset = minari.load_dataset(dataset_id, download=True)
         action_space = dataset.spec.action_space
@@ -160,7 +170,6 @@ class BatchLoader:
             act_shape=act_shape,
             act_size=act_size,
             buffer=buffer,
-            seed=seed,
         )
 
 
