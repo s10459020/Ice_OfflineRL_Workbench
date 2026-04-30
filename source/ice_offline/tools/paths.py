@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 import os
 from pathlib import Path
 
@@ -17,3 +16,7 @@ def model_root() -> Path:
 
 def eval_root() -> Path:
     return Path("tmps/eval")
+
+
+def resolve_value_data_path(dataset_id: str) -> Path:
+    return minari_root() / dataset_id / "data" / "value_data.hdf5"

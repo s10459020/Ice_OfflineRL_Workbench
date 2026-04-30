@@ -1,4 +1,4 @@
-"""Conservative Q-Learning continuous agent (minimal fixed structure)."""
+ï»¿"""Conservative Q-Learning continuous agent (minimal fixed structure)."""
 
 import math
 
@@ -281,11 +281,11 @@ class CQLAgentContinuous:
         #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
         #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # sample approximation
-        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # ³æ¨Bloss     
+        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # ï¿½ï¿½Bloss     
         #
         # E_D[s]: input o
         # E_D[s,a]: input o,a
-        # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') ¤TºØN¦¸
+        # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') ï¿½Tï¿½ï¿½Nï¿½ï¿½
         batch = o.shape[0]
 
         a_s, logp = self.policy.sample_n(o, self.critic.n_action_samples)
@@ -309,7 +309,7 @@ class CQLAgentContinuous:
     def _loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # CQL loss: loss_td + alpha * loss_cql
         # TD3 double Q: sum_i[ loss_td + alpha * loss_cql ]
-        # Lagrange ­¼¤l: alpha
+        # Lagrange ï¿½ï¿½ï¿½l: alpha
         loss_td = self._loss_td(o, a, r, on, d)             # (2,)
         loss_cql = self._loss_cql(o, a, on)                 # (2,)
         loss_cql = 5.0 * (loss_cql - self.critic.alpha_threshold)  # fix weight
@@ -320,7 +320,7 @@ class CQLAgentContinuous:
 
     def _loss_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * L_cql ]
-        # Lagrangian dual¡A­YL_cql¶µªø´Á°¾¤j¡A«h¥[±j­×§ï¤O«×
+        # Lagrangian dualï¿½Aï¿½YL_cqlï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½jï¿½Aï¿½hï¿½[ï¿½jï¿½×§ï¿½Oï¿½ï¿½
         return -(self.critic.alpha() * conservative_loss_detached).mean()
 
     # ====================
@@ -338,7 +338,7 @@ class CQLAgentContinuous:
 
     def _loss_alpha_sac(self, log_prob_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * (log_pi - target_entropy) ]
-        # SAC³]­p¡A­Ylog_probªø´Á°¾¤j¡A«h¥[±j­×§ï¤O«×
+        # SACï¿½]ï¿½pï¿½Aï¿½Ylog_probï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½jï¿½Aï¿½hï¿½[ï¿½jï¿½×§ï¿½Oï¿½ï¿½
         with torch.no_grad():
             target_alpha = log_prob_detached - self.act_size
         return -(self.policy.temp() * target_alpha).mean()

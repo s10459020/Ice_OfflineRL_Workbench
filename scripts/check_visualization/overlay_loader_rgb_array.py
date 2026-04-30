@@ -1,4 +1,4 @@
-import minigrid  # noqa: F401
+﻿import minigrid  # noqa: F401
 import numpy as np
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QLabel

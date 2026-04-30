@@ -1,12 +1,11 @@
-from __future__ import annotations
-
+﻿
 from pathlib import Path
 from typing import Any
 
 import h5py
 
 from ice_offline.data import State
-from ice_offline.paths import minari_root
+from ice_offline.tools.paths import minari_root
 
 
 class StateLoader:

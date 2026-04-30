@@ -1,4 +1,4 @@
-"""Service layer for GUI data access."""
+﻿"""Service layer for GUI data access."""
 
 from .minari_dataset_service import MinariDatasetService
 from .mock_dataset_service import MockDatasetService

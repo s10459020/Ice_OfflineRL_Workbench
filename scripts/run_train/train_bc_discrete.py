@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 from pathlib import Path
 
 import gymnasium as gym
@@ -10,7 +9,7 @@ from minigrid.wrappers import FullyObsWrapper
 from ice_offline.agent import DiscreteBCAgent
 from ice_offline.dataset import BatchLoader
 from ice_offline.runner import TorchBatchOfflineRunner
-from ice_offline.paths import eval_root
+from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage
 from ice_offline.tools.timing import Timer
 

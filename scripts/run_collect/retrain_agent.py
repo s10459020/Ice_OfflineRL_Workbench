@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np

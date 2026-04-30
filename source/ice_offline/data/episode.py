@@ -1,6 +1,5 @@
-"""Episode metadata model for GUI views and presenters."""
+﻿"""Episode metadata model for GUI views and presenters."""
 
-from __future__ import annotations
 
 from dataclasses import dataclass
 

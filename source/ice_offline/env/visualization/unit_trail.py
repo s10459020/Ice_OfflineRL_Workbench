@@ -1,4 +1,4 @@
-from typing import Any
+﻿from typing import Any
 
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_triangle, rotate_fn

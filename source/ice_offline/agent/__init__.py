@@ -1,4 +1,4 @@
-from ._interface import Agent, TorchAgent, model_ref
+﻿from ._interface import Agent, TorchAgent, model_ref
 from .bc_continuous_deterministic import BCAgentContinuousDeterministic as ContinuousBCDeterministicAgent
 from .bc_continuous_stochastic import BCAgentContinuousStochastic as ContinuousBCStochasticAgent
 from .bc_discrete import BCAgentDiscrete as DiscreteBCAgent

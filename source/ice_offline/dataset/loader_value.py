@@ -1,10 +1,9 @@
-from __future__ import annotations
-
+﻿
 from pathlib import Path
 
 import h5py
 import numpy as np
-from ice_offline.paths import minari_root
+from ice_offline.tools.paths import minari_root
 
 
 class ValueLoader:

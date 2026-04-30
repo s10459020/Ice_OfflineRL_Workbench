@@ -1,4 +1,4 @@
-import pickle
+﻿import pickle
 import random
 from pathlib import Path
 from typing import Any, Callable

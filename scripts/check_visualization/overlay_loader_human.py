@@ -1,4 +1,4 @@
-import minigrid  # noqa: F401
+﻿import minigrid  # noqa: F401
 
 from ice_offline.env.visualization import BasicUnit, OverlayLoader
 from ice_offline.env.visualization.overlay_engine import RenderLayer

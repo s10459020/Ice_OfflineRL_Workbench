@@ -1,4 +1,4 @@
-"""QV discrete agent (MSE VQ baseline in Q-learning setting)."""
+﻿"""QV discrete agent (MSE VQ baseline in Q-learning setting)."""
 
 import numpy as np
 import torch

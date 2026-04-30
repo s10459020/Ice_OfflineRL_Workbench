@@ -1,6 +1,5 @@
-"""Mock dataset service for MVP UI interaction tests."""
+﻿"""Mock dataset service for MVP UI interaction tests."""
 
-from __future__ import annotations
 
 from ice_offline.data import EpisodeInfo
 

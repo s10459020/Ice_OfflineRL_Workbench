@@ -1,4 +1,4 @@
-"""Q discrete agent (basic Q-learning in offline batch setting)."""
+﻿"""Q discrete agent (basic Q-learning in offline batch setting)."""
 
 import numpy as np
 import torch

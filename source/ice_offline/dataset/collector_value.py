@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 from pathlib import Path
 from collections.abc import Callable
 from enum import IntEnum
@@ -8,7 +7,7 @@ from typing import Any
 import gymnasium as gym
 import h5py
 import numpy as np
-from ice_offline.paths import minari_root
+from ice_offline.tools.paths import resolve_value_data_path
 
 
 class MiniGridDirection(IntEnum):
@@ -49,24 +48,19 @@ class ValueCollector(gym.Wrapper):
     # ====================
     # Public API
     # ====================
-    def reset(self, *args: Any, **kwargs: Any):
-        self._end_episode()
-        self._obs_cache.clear()
-        self._last_carrying_obj = None
-        self._current = []
-        self._last_values = None
-        return self.env.reset(*args, **kwargs)
-
     def record(self) -> np.ndarray:
+        """Capture one value snapshot at current env/agent context."""
         values = self._compute_values(self._value_fn)
         self._current.append(values)
         self._last_values = values
         return values
 
     def get_last(self) -> np.ndarray | None:
+        """Return the latest recorded value tensor."""
         return self._last_values
 
     def save(self, dataset_id: str) -> Path:
+        """Persist all buffered episodes into value_data.hdf5."""
         self._end_episode()
 
         out_path = self._resolve_value_path(dataset_id)
@@ -78,6 +72,18 @@ class ValueCollector(gym.Wrapper):
                 ep_group = f.require_group(f"episode_{ep_idx}")
                 ep_group.create_dataset("values", data=stacked)
         return out_path
+
+    # ====================
+    # gym.Wrapper Overrides
+    # ====================
+    def reset(self, *args: Any, **kwargs: Any):
+        """Start a new episode and clear value collection cache."""
+        self._end_episode()
+        self._obs_cache.clear()
+        self._last_carrying_obj = None
+        self._current = []
+        self._last_values = None
+        return self.env.reset(*args, **kwargs)
 
     # ====================
     # Internal
@@ -142,8 +148,7 @@ class ValueCollector(gym.Wrapper):
     # Path
     # ====================
     def _resolve_value_path(self, dataset_id: str) -> Path:
-        base = minari_root()
-        return base / dataset_id / "data" / "value_data.hdf5"
+        return resolve_value_data_path(dataset_id)
 
     def _end_episode(self) -> None:
         if self._current:

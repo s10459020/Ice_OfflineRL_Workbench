@@ -1,4 +1,4 @@
-import minari
+﻿import minari
 
 from ice_offline.env.common import insert_render_quiet_innermost
 from ice_offline.env.replay.state_inject_wrapper import StateInjectWrapper

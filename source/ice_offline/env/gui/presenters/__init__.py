@@ -1,4 +1,4 @@
-"""Presenters for GUI MVP."""
+﻿"""Presenters for GUI MVP."""
 
 from .viewer_presenter import ViewerPresenter
 

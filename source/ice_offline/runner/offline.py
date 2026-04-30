@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 import csv
 from dataclasses import dataclass
 from dataclasses import field
@@ -11,7 +10,7 @@ import torch
 
 from ice_offline.dataset import BatchLoader
 from ice_offline.agent._interface import model_ref
-from ice_offline.paths import eval_root
+from ice_offline.tools.paths import eval_root
 
 BatchType = dict[str, Any]
 TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]

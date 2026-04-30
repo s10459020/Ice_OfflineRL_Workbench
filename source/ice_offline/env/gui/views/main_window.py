@@ -1,6 +1,5 @@
-"""Main window for a frontend-only dataset viewer MVP mockup."""
+﻿"""Main window for a frontend-only dataset viewer MVP mockup."""
 
-from __future__ import annotations
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent

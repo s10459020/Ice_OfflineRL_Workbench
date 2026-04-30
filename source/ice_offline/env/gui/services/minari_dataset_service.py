@@ -1,6 +1,5 @@
-"""Minari-backed dataset service for GUI startup data loading."""
+﻿"""Minari-backed dataset service for GUI startup data loading."""
 
-from __future__ import annotations
 
 import numpy as np
 

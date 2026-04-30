@@ -1,11 +1,10 @@
-from __future__ import annotations
-
+﻿
 from pathlib import Path
 from typing import Any, Protocol
 
 import torch
 
-from ice_offline.paths import model_root
+from ice_offline.tools.paths import model_root
 
 
 MODEL_ROOT = model_root()

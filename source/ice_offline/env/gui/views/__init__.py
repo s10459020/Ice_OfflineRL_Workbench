@@ -1,4 +1,4 @@
-"""Views for GUI MVP."""
+﻿"""Views for GUI MVP."""
 
 from .grid_render_panel import GridRenderPanel
 from .main_window import MainWindow

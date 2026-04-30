@@ -1,5 +1,4 @@
-from __future__ import annotations
-
+﻿
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +8,7 @@ import numpy as np
 
 from ice_offline.env.common import StateIOWrapper
 from ice_offline.data import State
-from ice_offline.paths import minari_root
+from ice_offline.tools.paths import minari_root
 
 class StateCollector(gym.Wrapper):
     """Collect episode-wise states and save to Minari dataset folder.
@@ -31,30 +30,12 @@ class StateCollector(gym.Wrapper):
     # ====================
     # Public API
     # ====================
-    def reset(self, *args: Any, **kwargs: Any):
-        self._end_episode()
-        
-        obs, info = self.env.reset(*args, **kwargs)
-        state = self._state_io.get_state()
-        info["state"] = state
-        self._last_state = state
-        
-        self._current = [state.serialize()]
-        return obs, info
-
-    def step(self, *args: Any, **kwargs: Any):
-        obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
-        state = self._state_io.get_state()
-        info["state"] = state
-        self._last_state = state
-
-        self._current.append(state.serialize())
-        return obs, reward, terminated, truncated, info
-
     def get_last(self) -> State | None:
+        """Return the latest captured state in current rollout."""
         return self._last_state
 
     def save(self, dataset_id: str) -> Path:
+        """Persist all buffered episodes into state_data.hdf5."""
         self._end_episode()
 
         out_path = self._resolve_state_path(dataset_id)
@@ -68,6 +49,31 @@ class StateCollector(gym.Wrapper):
                     values = [item[key] for item in seq]
                     ep_group.create_dataset(key, data=np.asarray(values))
         return out_path
+
+    # ====================
+    # gym.Wrapper Overrides
+    # ====================
+    def reset(self, *args: Any, **kwargs: Any):
+        """Start a new episode and capture the initial state (t=0)."""
+        self._end_episode()
+        
+        obs, info = self.env.reset(*args, **kwargs)
+        state = self._state_io.get_state()
+        info["state"] = state
+        self._last_state = state
+        
+        self._current = [state.serialize()]
+        return obs, info
+
+    def step(self, *args: Any, **kwargs: Any):
+        """Advance env one step and append the resulting state."""
+        obs, reward, terminated, truncated, info = self.env.step(*args, **kwargs)
+        state = self._state_io.get_state()
+        info["state"] = state
+        self._last_state = state
+
+        self._current.append(state.serialize())
+        return obs, reward, terminated, truncated, info
 
     # ====================
     # Internal

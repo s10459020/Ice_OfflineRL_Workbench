@@ -1,4 +1,4 @@
-from ice_offline.dataset.collector_state import StateCollector
+﻿from ice_offline.dataset.collector_state import StateCollector
 from ice_offline.dataset.loader_state import StateLoader
 from ice_offline.dataset.collector_value import (
     MiniGridAction,

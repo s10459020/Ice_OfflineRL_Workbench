@@ -1,6 +1,5 @@
-"""MVP presenter for episode/step interaction."""
+﻿"""MVP presenter for episode/step interaction."""
 
-from __future__ import annotations
 
 from ice_offline.data import EpisodeInfo
 

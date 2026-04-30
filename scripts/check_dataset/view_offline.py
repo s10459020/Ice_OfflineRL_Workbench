@@ -1,4 +1,4 @@
-import minari
+﻿import minari
 
 from ice_offline.tools import print_stage
 

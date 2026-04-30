@@ -1,4 +1,4 @@
-import gymnasium as gym
+﻿import gymnasium as gym
 
 
 class StepPenaltyWrapper(gym.RewardWrapper):

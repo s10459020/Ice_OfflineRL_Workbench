@@ -1,4 +1,4 @@
-"""Shared environment data models."""
+﻿"""Shared environment data models."""
 
 from .episode import EpisodeInfo
 from .state import State

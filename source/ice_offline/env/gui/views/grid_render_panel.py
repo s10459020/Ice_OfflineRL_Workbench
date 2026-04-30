@@ -1,6 +1,5 @@
-"""Grid render panel for displaying env.render() RGB frames."""
+﻿"""Grid render panel for displaying env.render() RGB frames."""
 
-from __future__ import annotations
 
 import numpy as np
 from PySide6.QtCore import Qt

@@ -1,4 +1,4 @@
-from ice_offline.env.common import (
+﻿from ice_offline.env.common import (
     MissionTextWrapper,
     NoJpegImageWrapper,
     RenderQuietWrapper,

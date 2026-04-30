@@ -1,4 +1,4 @@
-def print_stage(title: str) -> None:
+﻿def print_stage(title: str) -> None:
     print(f"\n# ---- {title} ----")
 
 

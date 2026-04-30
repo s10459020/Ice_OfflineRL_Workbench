@@ -1,6 +1,5 @@
-"""Visualization panel widget for trail and q-table controls."""
+﻿"""Visualization panel widget for trail and q-table controls."""
 
-from __future__ import annotations
 
 from collections.abc import Callable
 
