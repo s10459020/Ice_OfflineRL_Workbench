@@ -7,7 +7,7 @@ from typing import Any
 import gymnasium as gym
 import h5py
 import numpy as np
-from ice_offline.tools.paths import resolve_value_data_path
+from ice_offline.tools.paths import minari_root
 
 
 class MiniGridDirection(IntEnum):
@@ -148,7 +148,8 @@ class ValueCollector(gym.Wrapper):
     # Path
     # ====================
     def _resolve_value_path(self, dataset_id: str) -> Path:
-        return resolve_value_data_path(dataset_id)
+        base = minari_root()
+        return base / dataset_id / "data" / "value_data.hdf5"
 
     def _end_episode(self) -> None:
         if self._current:
