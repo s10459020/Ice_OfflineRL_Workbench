@@ -209,7 +209,6 @@ class CQLAgentContinuous:
                 action, _ = self.policy.sample(o)
         return action.cpu().numpy()[0]
 
-
     def update(self, batch):
         observation = batch["obs"]
         action = batch["act"]
@@ -281,11 +280,11 @@ class CQLAgentContinuous:
         #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
         #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # sample approximation
-        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # ��Bloss     
+        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss     
         #
         # E_D[s]: input o
         # E_D[s,a]: input o,a
-        # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') �T��N��
+        # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') 三種N次
         batch = o.shape[0]
 
         a_s, logp = self.policy.sample_n(o, self.critic.n_action_samples)
@@ -309,7 +308,7 @@ class CQLAgentContinuous:
     def _loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # CQL loss: loss_td + alpha * loss_cql
         # TD3 double Q: sum_i[ loss_td + alpha * loss_cql ]
-        # Lagrange ���l: alpha
+        # Lagrange 乘子: alpha
         loss_td = self._loss_td(o, a, r, on, d)             # (2,)
         loss_cql = self._loss_cql(o, a, on)                 # (2,)
         loss_cql = 5.0 * (loss_cql - self.critic.alpha_threshold)  # fix weight
@@ -320,7 +319,7 @@ class CQLAgentContinuous:
 
     def _loss_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * L_cql ]
-        # Lagrangian dual�A�YL_cql���������j�A�h�[�j�ק�O��
+        # Lagrangian dual，若L_cql項長期偏大，則加強修改力度
         return -(self.critic.alpha() * conservative_loss_detached).mean()
 
     # ====================
@@ -338,7 +337,7 @@ class CQLAgentContinuous:
 
     def _loss_alpha_sac(self, log_prob_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * (log_pi - target_entropy) ]
-        # SAC�]�p�A�Ylog_prob�������j�A�h�[�j�ק�O��
+        # SAC設計，若log_prob長期偏大，則加強修改力度
         with torch.no_grad():
             target_alpha = log_prob_detached - self.act_size
         return -(self.policy.temp() * target_alpha).mean()
