@@ -3,7 +3,7 @@ from pathlib import Path
 from ice_offline.plot import plot_eval_csv
 
 
-CSV_DIR = Path("tmps/eval/loss_reward")
+CSV_DIR = Path("tmps/eval")
 OUTPUT_DIR = Path("tmps/eval/plots")
 ONEROOMS8_REWARD_FILE = Path("tmps/eval/eval_reward_onerooms8.txt")
 INVERTEDPENDULUM_REWARD_FILE = Path("tmps/eval/eval_reward_invertedpendulum.txt")
