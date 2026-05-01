@@ -1,5 +1,10 @@
-﻿import os
+import os
 from pathlib import Path
+
+
+def ensure_dir(path: Path) -> Path:
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 def minari_root() -> Path:
@@ -15,3 +20,7 @@ def model_root() -> Path:
 
 def eval_root() -> Path:
     return Path("tmps/eval")
+
+
+def eval_plot_root() -> Path:
+    return ensure_dir(eval_root() / "plots")
