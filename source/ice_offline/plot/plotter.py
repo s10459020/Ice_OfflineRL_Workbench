@@ -49,20 +49,39 @@ def plot_eval_csv(
         output_file = Path(output_path)
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
+    ordered_metrics = _ordered_base_metrics(metric_names)
     figure, axes = matplotlib.pyplot.subplots(
-        nrows=len(metric_names),
+        nrows=len(ordered_metrics),
         ncols=1,
-        figsize=(10, max(3, 2.4 * len(metric_names))),
+        figsize=(10, max(3, 2.4 * len(ordered_metrics))),
         sharex=True,
     )
-    if len(metric_names) == 1:
+    if len(ordered_metrics) == 1:
         axes = [axes]
 
-    for axis, metric_name in zip(axes, metric_names):
-        values = np.asarray(metric_series[metric_name], dtype=np.float64)
+    for axis, metric_name in zip(axes, ordered_metrics):
+        q25_key = f"{metric_name}_q25"
+        q50_key = f"{metric_name}_q50"
+        q75_key = f"{metric_name}_q75"
+        if q50_key in metric_series:
+            values = np.asarray(metric_series[q50_key], dtype=np.float64)
+            line_label = f"{metric_name}_q50"
+        else:
+            values = np.asarray(metric_series[metric_name], dtype=np.float64)
+            line_label = metric_name
         finite_values = values[np.isfinite(values)]
 
-        axis.plot(steps, values, linewidth=1.5, label=metric_name)
+        axis.plot(steps, values, linewidth=1.5, label=line_label)
+
+        if q25_key in metric_series and q75_key in metric_series:
+            q25_values = np.asarray(metric_series[q25_key], dtype=np.float64)
+            q75_values = np.asarray(metric_series[q75_key], dtype=np.float64)
+            mask = np.isfinite(q25_values) & np.isfinite(q75_values)
+            if np.any(mask):
+                x = np.asarray(steps, dtype=np.float64)[mask]
+                low = q25_values[mask]
+                high = q75_values[mask]
+                axis.fill_between(x, low, high, alpha=0.20, color="tab:blue", label=f"{metric_name}_q25~q75")
 
         if finite_values.size > 0 and show_mean_line:
             mean_value = float(np.mean(finite_values))
@@ -121,3 +140,21 @@ def _parse_float(raw: str | None) -> float:
         return float(raw)
     except ValueError:
         return math.nan
+
+
+def _ordered_base_metrics(metric_names: list[str]) -> list[str]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for name in metric_names:
+        base = _metric_base_name(name)
+        if base in seen:
+            continue
+        seen.add(base)
+        ordered.append(base)
+    return ordered
+
+
+def _metric_base_name(name: str) -> str:
+    if name.endswith("_q25") or name.endswith("_q50") or name.endswith("_q75"):
+        return name[:-4]
+    return name

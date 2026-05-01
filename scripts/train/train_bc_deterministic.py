@@ -19,10 +19,10 @@ DATASET_ID = "mujoco/invertedpendulum/expert-v0"
 ENV_ID = "InvertedPendulum-v5"
 RUNNER_ID = "bc_deterministic_invertedpendulum"
 BATCH_SIZE = 64
-TRAIN_STEPS = 1_000_000
-EVAL_INTERVAL = 1_000
+TRAIN_STEPS = 300_000
+EVAL_INTERVAL = 3_000
 EVAL_BATCHES = 8
-EVAL_EPISODES = 5
+EVAL_EPISODES = 3
 MODEL_LOAD_STEP = 0
 MODEL_SAVE_INTERVAL = 50_000
 
@@ -57,7 +57,7 @@ def main() -> None:
         batch_size=BATCH_SIZE,
         train_steps=TRAIN_STEPS,
         eval_batches=EVAL_BATCHES,
-        eval_episodes=5,
+        eval_episodes=EVAL_EPISODES,
         eval_interval=EVAL_INTERVAL,
         runner_id=RUNNER_ID,
         model_load_step=MODEL_LOAD_STEP,

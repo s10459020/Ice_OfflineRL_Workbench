@@ -11,6 +11,7 @@ import torch
 from ice_offline.dataset import BatchLoader
 from ice_offline.agent._interface import model_ref
 from ice_offline.tools.paths import eval_root
+from ice_offline.tools.timing import Timer
 
 BatchType = dict[str, Any]
 TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
@@ -41,6 +42,7 @@ class TorchBatchOfflineRunner:
     model_load_step: int = 0
     model_save_interval: int = 0
     eval_dir: str = str(eval_root())
+    debug_timing: bool = False
     _csv_path: Path = field(init=False, repr=False)
     _metric_keys: list[str] = field(default_factory=list, init=False, repr=False)
 
@@ -55,31 +57,71 @@ class TorchBatchOfflineRunner:
         run_id = str(self.runner_id).replace("/", "__")
         self._csv_path = Path(self.eval_dir) / f"{run_id}.csv"
         self._csv_path.parent.mkdir(parents=True, exist_ok=True)
+
+        metric_names = (
+            "sample",
+            "update",
+            "save",
+            "eval_offline",
+            "eval_online",
+            "step_non_eval",
+            "step_eval",
+        )
+
+        def summary_line() -> str:
+            parts: list[str] = []
+            for metric_name in metric_names:
+                avg_ms = Timer.get(f"runner.{metric_name}")
+                parts.append(f"{metric_name}={avg_ms:.3f}")
+            return "perf_ms(avg100) " + " ".join(parts)
+
+        def timer_call(metric_name: str, callback: Callable[[], Any]) -> Any:
+            if self.debug_timing:
+                _, value = Timer.record(f"runner.{metric_name}", callback)
+                return value
+            return callback()
+
         if self.model_load_step > 0:
             agent.load(model_ref(self.runner_id, self.model_load_step))
         for step in range(1, self.train_steps + 1):
-            batch: BatchType = dataset.sample_batch(self.batch_size)
-            agent.update(batch)
-            model_step = self.model_load_step + step
-
-            if self.model_save_interval > 0 and model_step % self.model_save_interval == 0:
-                agent.save(model_ref(self.runner_id, model_step))
+            def run_train_core() -> None:
+                batch: BatchType = timer_call("sample", lambda: dataset.sample_batch(self.batch_size))
+                timer_call("update", lambda: agent.update(batch))
+                model_step = self.model_load_step + step
+                if self.model_save_interval > 0 and model_step % self.model_save_interval == 0:
+                    timer_call("save", lambda: agent.save(model_ref(self.runner_id, model_step)))
 
             if step % self.eval_interval != 0:
+                timer_call("step_non_eval", run_train_core)
                 continue
 
-            row: dict[str, float] = {"step": float(step)}
-            if eval_offline_fns:
-                reduced = self._evaluate_offline(agent, dataset, eval_offline_fns)
-                row.update(reduced)
-            if eval_online_fns and eval_env_fn is not None:
-                online = self._evaluate_online(agent, eval_online_fns, eval_env_fn)
-                row.update(online)
-            self._append_eval_row(row)
-            metrics = [f"step={step}/{self.train_steps}"] + [
-                f"{k}={v:.6f}" for k, v in row.items() if k != "step"
-            ]
-            print(" ".join(metrics))
+            def run_eval_step() -> dict[str, float]:
+                run_train_core()
+                row: dict[str, float] = {"step": float(step)}
+                if eval_offline_fns:
+                    reduced = timer_call("eval_offline", lambda: self._evaluate_offline(agent, dataset, eval_offline_fns))
+                    row.update(reduced)
+                if eval_online_fns and eval_env_fn is not None:
+                    online = timer_call("eval_online", lambda: self._evaluate_online(agent, eval_online_fns, eval_env_fn))
+                    row.update(online)
+                self._append_eval_row(row)
+                return row
+
+            row = timer_call("step_eval", run_eval_step)
+            metrics = [f"step={step}/{self.train_steps}"]
+            for key, value in row.items():
+                if key == "step":
+                    continue
+                if key.endswith("_q25") or key.endswith("_q75"):
+                    continue
+                if key.endswith("_q50"):
+                    metrics.append(f"{key[:-4]}={value:.6f}")
+                    continue
+                metrics.append(f"{key}={value:.6f}")
+            if self.debug_timing:
+                print(" ".join(metrics) + " " + summary_line())
+            else:
+                print(" ".join(metrics))
 
     def _append_eval_row(self, row: dict[str, float]) -> None:
         metric_keys = sorted([k for k in row.keys() if k != "step"])
@@ -118,7 +160,7 @@ class TorchBatchOfflineRunner:
                     values = fn(agent, episode_batch)
                     for k, v in values.items():
                         bucket.setdefault(k, []).append(float(v))
-        return {k: float(np.mean(vs)) for k, vs in bucket.items()}
+        return self._reduce_bucket_quantiles(bucket)
 
     def _evaluate_online(
         self,
@@ -184,6 +226,18 @@ class TorchBatchOfflineRunner:
                         bucket.setdefault(k, []).append(float(v))
         finally:
             env.close()
-        return {k: float(np.mean(vs)) for k, vs in bucket.items()}
+        return self._reduce_bucket_quantiles(bucket)
+
+    def _reduce_bucket_quantiles(self, bucket: dict[str, list[float]]) -> dict[str, float]:
+        reduced: dict[str, float] = {}
+        for key, values in bucket.items():
+            arr = np.asarray(values, dtype=np.float64)
+            if arr.size == 0:
+                continue
+            q25, q50, q75 = np.quantile(arr, [0.25, 0.50, 0.75])
+            reduced[f"{key}_q25"] = float(q25)
+            reduced[f"{key}_q50"] = float(q50)
+            reduced[f"{key}_q75"] = float(q75)
+        return reduced
 
 
