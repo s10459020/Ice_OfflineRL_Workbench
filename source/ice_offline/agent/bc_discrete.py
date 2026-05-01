@@ -65,6 +65,18 @@ class BCAgentDiscrete(TorchAgent):
                     a = rand_a
         return int(a.item())
 
+    def act_batch(self, observation_batch, epsilon: float = 0.0):
+        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            a = self.policy.mode(o)
+            if epsilon > 0.0:
+                batch_size = int(a.shape[0])
+                act_size = int(self.policy.dist(o).logits.shape[1])
+                rand_a = torch.randint(0, act_size, (batch_size,), device=self.device)
+                replace_mask = torch.rand((batch_size,), device=self.device) < epsilon
+                a = torch.where(replace_mask, rand_a, a)
+        return a.cpu().numpy()
+
     def update(self, batch):
         observation = batch["obs"]
         action = batch["act"]

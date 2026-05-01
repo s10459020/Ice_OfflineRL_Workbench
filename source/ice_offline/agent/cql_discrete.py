@@ -83,6 +83,18 @@ class CQLAgentDiscrete(TorchAgent):
                     a = rand_a
         return int(a.item())
 
+    def act_batch(self, observation_batch, epsilon: float = 0.0):
+        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            q = self.critic.q(o)
+            a = q.argmax(dim=1).long()
+            if epsilon > 0.0:
+                batch_size = int(a.shape[0])
+                rand_a = torch.randint(0, self.critic._q.action_size, (batch_size,), device=self.device)
+                replace_mask = torch.rand((batch_size,), device=self.device) < epsilon
+                a = torch.where(replace_mask, rand_a, a)
+        return a.cpu().numpy()
+
     def update(self, batch):
         self._grad_step += 1
         observation = batch["obs"]

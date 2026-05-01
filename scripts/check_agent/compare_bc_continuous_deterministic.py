@@ -87,6 +87,9 @@ def d3rl_action_best_batch(policy: DeterministicPolicy, obs_t: torch.Tensor) -> 
     with torch.no_grad():
         return policy(obs_t).squashed_mu.cpu().numpy()
 
+def d3rl_action_best_single(policy: DeterministicPolicy, obs_t: torch.Tensor) -> np.ndarray:
+    return d3rl_action_best_batch(policy, obs_t)[0]
+
 def _our_losses(
     our_agent: BCAgentContinuousDeterministic,
     obs_t: torch.Tensor,
@@ -133,10 +136,19 @@ def main() -> None:
     print_stage("Act Compare")
     rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
-        obs_t = sample_observation(rng, 1, OBS_DIM)
-        d3_act = d3rl_action_best_batch(d3_policy, obs_t)[0]
-        our_act = our_agent.act(obs_t[0], greedy=True)
+        obs_single = sample_observation(rng, 1, OBS_DIM)
+        obs_batch = sample_observation(rng, BATCH_SIZE, OBS_DIM)
+
+        # act_single: d3rl best action vs our act
+        d3_act = d3rl_action_best_single(d3_policy, obs_single)
+        our_act = our_agent.act(obs_single[0], greedy=True)
         _assert_equal([(d3_act, our_act)])
+
+        # act_batch: d3rl best batch action vs our act_batch
+        d3_batch = d3rl_action_best_batch(d3_policy, obs_batch)
+        our_batch = our_agent.act_batch(obs_batch.cpu().numpy(), greedy=True)
+        _assert_equal([(d3_batch, our_batch)])
+
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
     print_stage("Loss Compare")
@@ -161,7 +173,7 @@ def main() -> None:
         print(f"batch={i}/{N_TEST_BATCHES} param_match=True")
 
     print_stage("Result")
-    print("PASS: act, loss, and full update params are aligned with d3rl.")
+    print("PASS: act, act_batch, loss, and full update params are aligned with d3rl.")
 
 
 if __name__ == "__main__":

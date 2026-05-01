@@ -62,6 +62,12 @@ class BCAgentContinuousStochastic(TorchAgent):
             a = self.policy.mode(o) if greedy else self.policy.sample(o)
         return a.cpu().numpy()[0]
 
+    def act_batch(self, observation_batch, greedy: bool = True):
+        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            a = self.policy.mode(o) if greedy else self.policy.sample(o)
+        return a.cpu().numpy()
+
     def update(self, batch):
         observation = batch["obs"]
         action = batch["act"]

@@ -20,8 +20,8 @@ DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
 ENV_ID = "BabyAI-OneRoomS8-v0"
 RUNNER_ID = "cql_discrete_onerooms8"
 BATCH_SIZE = 64
-TRAIN_STEPS = 300_000
-EVAL_INTERVAL = 3_000
+TRAIN_STEPS = 100_000
+EVAL_INTERVAL = 2_000
 EVAL_BATCHES = 8
 EVAL_EPISODES = 3
 MODEL_LOAD_STEP = 0
@@ -97,6 +97,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 
 
 

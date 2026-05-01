@@ -31,6 +31,9 @@ class TorchAgent:
     def _load(self, state: dict[str, Any]) -> None:
         raise NotImplementedError
 
+    def act_best(self, observation: Any) -> Any:
+        return self.act(observation)
+
     def save(self, model_name: str | Path) -> Path:
         path = Path(model_name).with_suffix(".pt")
         path.parent.mkdir(parents=True, exist_ok=True)

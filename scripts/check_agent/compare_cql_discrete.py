@@ -88,6 +88,9 @@ def _assert_equal(pairs) -> None:
 def d3rl_action_best_batch(algo, obs_t: torch.Tensor) -> np.ndarray:
     return algo.impl.inner_predict_best_action(obs_t).cpu().numpy()
 
+def d3rl_action_best_single(algo, obs_t: torch.Tensor) -> np.ndarray:
+    return d3rl_action_best_batch(algo, obs_t)[0]
+
 def _d3rl_losses(algo, obs_t, act_t, rew_t, next_obs_t, done_t) -> torch.Tensor:
     q_values = algo.impl._q_func_forwarder.compute_expected_q(obs_t)
     next_q_values = algo.impl._q_func_forwarder.compute_expected_q(next_obs_t)
@@ -153,10 +156,19 @@ def main() -> None:
     print_stage("Act Compare")
     rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
-        obs_t = sample_observation(rng, 1, OBS_DIM)
-        d3_act = d3rl_action_best_batch(d3rl, obs_t)[0]
-        our_act = our_agent.act(obs_t[0], epsilon=0.0)
+        obs_single = sample_observation(rng, 1, OBS_DIM)
+        obs_batch = sample_observation(rng, BATCH_SIZE, OBS_DIM)
+
+        # act_single: d3rl best action vs our act
+        d3_act = d3rl_action_best_single(d3rl, obs_single)
+        our_act = our_agent.act(obs_single[0], epsilon=0.0)
         _assert_equal([(d3_act, our_act)])
+
+        # act_batch: d3rl best batch action vs our act_batch
+        d3_batch = d3rl_action_best_batch(d3rl, obs_batch)
+        our_batch = our_agent.act_batch(obs_batch.cpu().numpy(), epsilon=0.0)
+        _assert_equal([(d3_batch, our_batch)])
+
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
 
@@ -195,7 +207,7 @@ def main() -> None:
         print(f"batch={i}/{N_TEST_BATCHES} param_match=True")
 
     print_stage("Result")
-    print("PASS: act, loss, and full update params are aligned with d3rl.")
+    print("PASS: act, act_batch, loss, and full update params are aligned with d3rl.")
 
 
 if __name__ == "__main__":

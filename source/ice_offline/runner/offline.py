@@ -19,7 +19,7 @@ TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, 
 
 class RunnerAgent(Protocol):
     device: str
-    def act(self, observation: Any, epsilon: float = 0.0) -> Any: ...
+    def act_best(self, observation: Any) -> Any: ...
     def update(self, batch: BatchType) -> None: ...
     def save(self, model_name: str | Path) -> Path: ...
     def load(self, model_name: str | Path) -> None: ...
@@ -186,13 +186,7 @@ class TorchBatchOfflineRunner:
                         else np.asarray([obs])
                     )
                     o = self.obs_encode(obs_batch)[0]
-                    try:
-                        a_raw = agent.act(o, epsilon=0.0)
-                    except TypeError:
-                        try:
-                            a_raw = agent.act(o, greedy=True)
-                        except TypeError:
-                            a_raw = agent.act(o)
+                    a_raw = agent.act_best(o)
                     if hasattr(env.action_space, "n"):
                         env_action = int(np.asarray(a_raw).item())
                     else:

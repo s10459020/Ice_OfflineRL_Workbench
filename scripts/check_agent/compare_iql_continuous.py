@@ -180,25 +180,36 @@ def main() -> None:
     print_stage("Act Compare")
     rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
-        obs_t = sample_observation(rng, 1, OBS_DIM)
-        d3_act = d3rl_action_best_single(algo, obs_t)
-        our_act = our.act(obs_t[0], greedy=True)
+        obs_single = sample_observation(rng, 1, OBS_DIM)
+        obs_batch = sample_observation(rng, BATCH_SIZE, OBS_DIM)
+
+        # act_single: d3rl best action vs our act
+        d3_act = d3rl_action_best_single(algo, obs_single)
+        our_act = our.act(obs_single[0], greedy=True)
         _assert_equal([(d3_act, our_act)])
 
-        torch.manual_seed(SEED + 5000 + i)
-        d3_sample = d3rl_action_sample_single(algo, obs_t)
-        torch.manual_seed(SEED + 5000 + i)
-        our_sample = our.act(obs_t[0], greedy=False)
+        # act_batch: d3rl best batch action vs our act_batch
+        d3_batch = d3rl_action_best_batch(algo, obs_batch)
+        our_batch = our.act_batch(obs_batch.cpu().numpy(), greedy=True)
+        _assert_equal([(d3_batch, our_batch)])
+
+        # sample_single: d3rl sampled action vs our act
+        sample_seed_single = SEED + 5000 + i
+        torch.manual_seed(sample_seed_single)
+        d3_sample = d3rl_action_sample_single(algo, obs_single)
+        torch.manual_seed(sample_seed_single)
+        our_sample = our.act(obs_single[0], greedy=False)
         _assert_equal([(d3_sample, our_sample)])
 
-        torch.manual_seed(SEED + 7000 + i)
-        single_sample_batch = our.act(obs_t[0].cpu().numpy(), greedy=False)
-        torch.manual_seed(SEED + 7000 + i)
-        single_sample = our.act(obs_t[0].cpu().numpy(), greedy=False)
-        _assert_equal([
-            (single_sample, single_sample_batch),
-        ])
-        print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
+        # sample_batch: d3rl sampled batch action vs our act_batch
+        sample_seed_batch = SEED + 7000 + i
+        torch.manual_seed(sample_seed_batch)
+        d3_sample_batch = d3rl_action_sample_batch(algo, obs_batch)
+        torch.manual_seed(sample_seed_batch)
+        our_sample_batch = our.act_batch(obs_batch.cpu().numpy(), greedy=False)
+        _assert_equal([(d3_sample_batch, our_sample_batch)])
+
+        print(f"batch={i}/{N_TEST_BATCHES} act_and_sample_match=True")
 
 
     print_stage("Loss Compare")
@@ -237,7 +248,7 @@ def main() -> None:
         print(f"batch={i}/{N_TEST_BATCHES} param_match=True")
 
     print_stage("Result")
-    print("PASS: act, loss, and full update params are aligned with d3rl.")
+    print("PASS: sample, act, act_batch, loss, and full update params are aligned with d3rl.")
 
 
 if __name__ == "__main__":

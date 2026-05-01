@@ -21,23 +21,29 @@ def plot_eval_csv(
     if not csv_file.exists():
         raise FileNotFoundError(f"csv not found: {csv_file}")
 
-    with csv_file.open("r", encoding="utf-8", newline="") as csv_stream:
+    with csv_file.open("r", encoding="utf-8-sig", newline="") as csv_stream:
         reader = csv.DictReader(csv_stream)
         if not reader.fieldnames:
             raise ValueError(f"csv has no header: {csv_file}")
 
-        metric_names = [name for name in reader.fieldnames if name != "step"]
+        key_map = {_normalize_csv_key(name): name for name in reader.fieldnames}
+        step_key = key_map.get("step")
+        if step_key is None:
+            raise ValueError(f"csv has no step column: {csv_file}")
+
+        metric_names = [name for name in key_map.keys() if name != "step"]
         if not metric_names:
             raise ValueError(f"csv has no metric columns: {csv_file}")
 
         steps: list[float] = []
         metric_series: dict[str, list[float]] = {name: [] for name in metric_names}
         for row in reader:
-            if row.get("step") is None:
+            step_value = row.get(step_key)
+            if step_value is None:
                 continue
-            steps.append(_parse_float(row["step"]))
+            steps.append(_parse_float(step_value))
             for metric_name in metric_names:
-                metric_value = row.get(metric_name)
+                metric_value = row.get(key_map[metric_name])
                 metric_series[metric_name].append(_parse_float(metric_value))
 
     if not steps:
@@ -158,3 +164,7 @@ def _metric_base_name(name: str) -> str:
     if name.endswith("_q25") or name.endswith("_q50") or name.endswith("_q75"):
         return name[:-4]
     return name
+
+
+def _normalize_csv_key(name: str) -> str:
+    return str(name).strip().strip('"').lstrip("\ufeff")
