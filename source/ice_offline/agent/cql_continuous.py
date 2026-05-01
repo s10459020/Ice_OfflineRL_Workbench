@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from d3rlpy.models.torch.distributions import SquashedGaussianDistribution
+from ice_offline.agent._interface import TorchAgent
 
 
 class _Adam:
@@ -161,7 +162,7 @@ class _QQ(torch.nn.Module):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
 
-class CQLAgentContinuous:
+class CQLAgentContinuous(TorchAgent):
     def __init__(self, obs_size: int, act_size: int, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
         self.device = "cpu"
         self.act_size = act_size
@@ -225,18 +226,36 @@ class CQLAgentContinuous:
         d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
 
         # critic
-        critic_loss = self._loss_critic(o, a, r, on, d)
+        critic_loss = self._loss_critic(o, a, r, on, d, update_alpha=True)
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
 
         # actor
-        actor_loss = self._loss_actor(o)
+        actor_loss = self._loss_actor(o, update_alpha=True)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
 
         self.critic.update_target_soft()
+
+    def _save(self) -> dict[str, torch.Tensor]:
+        return {
+            "policy": self.policy.state_dict(),
+            "critic": self.critic.state_dict(),
+            "actor_optimizer": self.actor_optim.state_dict(),
+            "critic_optimizer": self.critic_optim.state_dict(),
+            "actor_alpha_optimizer": self.alpha_optim.state_dict(),
+            "critic_alpha_optimizer": self.alpha_prime_optim.state_dict(),
+        }
+
+    def _load(self, state: dict[str, torch.Tensor]) -> None:
+        self.policy.load_state_dict(state["policy"])
+        self.critic.load_state_dict(state["critic"])
+        self.actor_optim.load_state_dict(state["actor_optimizer"])
+        self.critic_optim.load_state_dict(state["critic_optimizer"])
+        self.alpha_optim.load_state_dict(state["actor_alpha_optimizer"])
+        self.alpha_prime_optim.load_state_dict(state["critic_alpha_optimizer"])
         
     def update_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> None:
         self.alpha_prime_optim.zero_grad()
@@ -307,7 +326,15 @@ class CQLAgentContinuous:
         data_q = self.critic.qq(o, a)                             # (2,B,1)
         return (logsumexp - data_q).mean(dim=[1, 2])        # (2), double Q
 
-    def _loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def _loss_critic(
+        self,
+        o: torch.Tensor,
+        a: torch.Tensor,
+        r: torch.Tensor,
+        on: torch.Tensor,
+        d: torch.Tensor,
+        update_alpha: bool = True,
+    ) -> torch.Tensor:
         # CQL loss: loss_td + alpha * loss_cql
         # TD3 double Q: sum_i[ loss_td + alpha * loss_cql ]
         # Lagrange 乘子: alpha
@@ -315,7 +342,8 @@ class CQLAgentContinuous:
         loss_cql = self._loss_cql(o, a, on)                 # (2,)
         loss_cql = 5.0 * (loss_cql - self.critic.alpha_threshold)  # fix weight
 
-        self.update_alpha_cql(loss_cql.detach())
+        if update_alpha:
+            self.update_alpha_cql(loss_cql.detach())
         loss_critic = loss_td.sum() + (self.critic.alpha() * loss_cql).sum() # d3rl design
         return loss_critic
 
@@ -327,13 +355,14 @@ class CQLAgentContinuous:
     # ====================
     # actor mathmatics
     # ====================
-    def _loss_actor(self, o: torch.Tensor) -> torch.Tensor:
+    def _loss_actor(self, o: torch.Tensor, update_alpha: bool = True) -> torch.Tensor:
         # TD3 Clipped Double Q: Q_min = min(Q1, Q2)
         # SAC loss = E_D[s],pi[a]{ temp * log_pi - Q_min }
         # E_D[s]: input o
         # E_pi[a]: sample a
         a, log_prob = self.policy.sample(o)
-        self.update_alpha_sac(log_prob.detach())
+        if update_alpha:
+            self.update_alpha_sac(log_prob.detach())
         q_t = self.critic.qq_min(o, a)
         return (self.policy.temp() * log_prob - q_t).mean()
 
@@ -343,10 +372,24 @@ class CQLAgentContinuous:
         with torch.no_grad():
             target_alpha = log_prob_detached - self.act_size
         return -(self.policy.temp() * target_alpha).mean()
-    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        return self._loss_critic(o, a, r, on, d)
+    
+    def loss_critic(
+        self,
+        o: torch.Tensor,
+        a: torch.Tensor,
+        r: torch.Tensor,
+        on: torch.Tensor,
+        d: torch.Tensor,
+        update_alpha: bool = False,
+    ) -> torch.Tensor:
+        return self._loss_critic(o, a, r, on, d, update_alpha=update_alpha)
 
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor | None = None) -> torch.Tensor:
-        return self._loss_actor(o)
+    def loss_actor(
+        self,
+        o: torch.Tensor,
+        a: torch.Tensor | None = None,
+        update_alpha: bool = False,
+    ) -> torch.Tensor:
+        return self._loss_actor(o, update_alpha=update_alpha)
 
 
