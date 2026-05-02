@@ -1,11 +1,11 @@
-﻿from ice_offline.dataset.collector_state import StateCollector
-from ice_offline.dataset.loader_state import StateLoader
+﻿from iice_offline.dataset.state_collectorimport StateCollector
+from ice_offline.dataset.state_loader import StateLoader
 from ice_offline.dataset.collector_value import (
     MiniGridAction,
     MiniGridDirection,
     ValueCollector,
 )
-from ice_offline.dataset.loader_value import ValueLoader
+from ice_offline.dataset.value_loader import ValueLoader
 
 __all__ = [
     "StateCollector",

@@ -4,8 +4,8 @@ import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_triangle, rotate_fn
 
 from ice_offline.data.trail import Trail, TrailPoint
-from ice_offline.dataset.collector_state import StateCollector
-from ice_offline.dataset.loader_state import StateLoader
+from ice_offline.dataset.state_collector import StateCollector
+from ice_offline.dataset.state_loader import StateLoader
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
