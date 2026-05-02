@@ -7,7 +7,7 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from ice_offline.dataset.collector_value import (
+from ice_offline.dataset.value_collector import (
     MiniGridAction,
     MiniGridDirection,
     ValueCollector,

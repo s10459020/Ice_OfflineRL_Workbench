@@ -6,6 +6,8 @@
 5. 命名與匯出禁止使用別名設計（alias）。所有檔名、import、export 與對外 API 名稱必須使用單一正式名稱，不得以轉發或別名方式維持相容。
 6. 全專案禁止使用 `from __future__ import annotations`；不得新增此行。
 6. 全專案禁止使用 `from __future__ import annotations`；不得新增此行。
+7. 不要使用 `del` 來處理未使用參數；保留原參數即可。
+8. 不要加入多餘的防衛性檢查；以極簡、直通邏輯為主。
 
 目前專案理解（2026-04-30）：
 1. dataset 主來源為 Minari 格式資料集；專案多數流程以 `dataset_id` 配合 `minari.load_dataset(...)` 讀取資料，路徑根目錄由 `source/ice_offline/tools/paths.py` 的 `minari_root()` 管理（預設 `tmps/datasets`）。
