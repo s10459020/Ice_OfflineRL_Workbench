@@ -4,8 +4,8 @@ import minari
 import numpy as np
 
 from ice_offline.agent import QTableAgent
-from ice_offline.dataset import DistributionLoader
-from ice_offline.dataset.distribuion_oneroom import ACTIONS, DistributionOneRoomCollector, make_value_env
+from ice_offline.dataset import ValueLoader
+from ice_offline.dataset.value_oneroom import ACTIONS, ValueOneRoomCollector, make_value_env
 from ice_offline.tools import print_stage
 
 
@@ -35,12 +35,12 @@ def main() -> None:
 
     eval_env = make_value_env()
     base_env = make_value_env()
-    distribution_collector = DistributionOneRoomCollector(
+    value_collector = ValueOneRoomCollector(
         base_env,
         eval_fn=eval_fn,
         agent=agent,
     )
-    collector = minari.DataCollector(distribution_collector, record_infos=False)
+    collector = minari.DataCollector(value_collector, record_infos=False)
 
     expected_episodes: list[list[np.ndarray]] = []
     total_steps = 0
@@ -48,7 +48,7 @@ def main() -> None:
     try:
         for episode in range(1, MAX_EPISODES + 1):
             observation, _ = collector.reset(seed=SEED_BASE + episode)
-            expected_steps: list[np.ndarray] = [distribution_collector.eval().copy()]
+            expected_steps: list[np.ndarray] = [value_collector.eval().copy()]
             done = False
             truncated = False
             episode_steps = 0
@@ -57,7 +57,7 @@ def main() -> None:
                 action = int(agent.policy(observation, epsilon=POLICY_EPSILON))
                 next_observation, reward, done, truncated, _ = collector.step(action)
                 agent.update(observation, action, float(reward), next_observation, bool(done or truncated))
-                expected_steps.append(distribution_collector.eval().copy())
+                expected_steps.append(value_collector.eval().copy())
                 observation = next_observation
                 episode_steps += 1
                 total_steps += 1
@@ -79,7 +79,7 @@ def main() -> None:
             eval_env=eval_env,
             description="collect and compare distribution data with loader",
         )
-        value_data_path = distribution_collector.save(DATASET_ID)
+        value_data_path = value_collector.save(DATASET_ID)
         print(f"value_data_path={value_data_path}")
     finally:
         eval_env.close()
@@ -88,9 +88,9 @@ def main() -> None:
     print(f"total_steps={total_steps}")
 
     print_stage("Compare")
-    distribution_loader = DistributionLoader(DATASET_ID)
+    value_loader = ValueLoader(DATASET_ID)
     try:
-        loaded_episode_count = distribution_loader.get_episode_count()
+        loaded_episode_count = value_loader.get_episode_count()
         expected_episode_count = len(expected_episodes)
         if loaded_episode_count != expected_episode_count:
             raise SystemExit(
@@ -98,7 +98,7 @@ def main() -> None:
             )
 
         for episode_index, expected_steps in enumerate(expected_episodes):
-            actual_steps = distribution_loader.load_episode(episode_index)
+            actual_steps = value_loader.load_episode(episode_index)
             if len(actual_steps) != len(expected_steps):
                 raise SystemExit(
                     f"FAIL: step_count mismatch episode={episode_index} "
@@ -113,7 +113,7 @@ def main() -> None:
                 if not np.array_equal(expected_step, actual_step):
                     raise SystemExit(f"FAIL: value mismatch episode={episode_index} step={step_index}")
     finally:
-        distribution_loader.close()
+        value_loader.close()
 
     print("PASS: compare_distribution all matched")
 

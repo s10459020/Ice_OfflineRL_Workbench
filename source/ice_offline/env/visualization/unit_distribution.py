@@ -7,12 +7,12 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from ice_offline.dataset.value_collector import (
+from ice_offline.dataset.old_value_collector import (
     MiniGridAction,
     MiniGridDirection,
-    ValueCollector,
+    OldValueCollector,
 )
-from ice_offline.dataset.value_loader import ValueLoader
+from ice_offline.dataset.old_value_loader import OldValueLoader
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer
@@ -327,7 +327,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     """Collect values and register state-action renderer(s).
 
     Responsibilities:
-    - ensure ValueCollector exists on wrapper path
+    - ensure OldValueCollector exists on wrapper path
     - ingest info["values"] during on_render
     - register renderer(s) into OverlayEngine
     """
@@ -365,7 +365,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     def on_wrapper(self, env: gym.Env, wrapper: Any, engine: OverlayEngine) -> gym.Env:
         # Online mode: register renderer and ensure values source exists.
         engine.register(int(RenderLayer.DISTRIBUTION), self._sa_renderer)
-        collector = ValueCollector(env, self._value_fn)
+        collector = OldValueCollector(env, self._value_fn)
         wrapper.register("values", collector.get_last)
         return collector
 
@@ -375,7 +375,7 @@ class DistributionUnit(UnitWrapperInterface, UnitLoaderInterface):
     def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
         # Offline mode: register renderer and load per-episode values list.
         engine.register(int(RenderLayer.DISTRIBUTION), self._sa_renderer)
-        value_loader = ValueLoader(loader.dataset_id)
+        value_loader = OldValueLoader(loader.dataset_id)
         loader.register_list("values", lambda episode_index: value_loader.load_episode(episode_index))
 
     # ====================

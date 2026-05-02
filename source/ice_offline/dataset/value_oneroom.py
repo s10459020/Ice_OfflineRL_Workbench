@@ -4,7 +4,7 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.dataset.distribution_collector import DistributionCollector, EvalFn
+from ice_offline.dataset.value_collector import EvalFn, ValueCollector
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
 
 
@@ -20,7 +20,7 @@ def make_value_env() -> gym.Env:
     return env
 
 
-class DistributionOneRoomCollector(DistributionCollector):
+class ValueOneRoomCollector(ValueCollector):
     def __init__(
         self,
         env: gym.Env,
