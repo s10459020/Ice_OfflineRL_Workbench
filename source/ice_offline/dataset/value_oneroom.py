@@ -2,6 +2,7 @@ from typing import Any
 
 import gymnasium as gym
 import minigrid  # noqa: F401
+import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.dataset.value_collector import EvalFn, ValueCollector
@@ -18,6 +19,22 @@ def make_value_env() -> gym.Env:
     env = MissionTextWrapper(env)
     env = NoJpegImageWrapper(env)
     return env
+
+
+def decode_oneroom(values_oa: np.ndarray, *, width: int, height: int) -> np.ndarray:
+    inner_width = max(0, width - 2)
+    inner_height = max(0, height - 2)
+    decoded = np.zeros(
+        (inner_width, inner_height, len(DIRECTIONS), values_oa.shape[1]),
+        dtype=values_oa.dtype,
+    )
+    sample_index = 0
+    for x in range(1, width - 1):
+        for y in range(1, height - 1):
+            for direction in DIRECTIONS:
+                decoded[x - 1, y - 1, direction, :] = values_oa[sample_index, :]
+                sample_index += 1
+    return decoded
 
 
 class ValueOneRoomCollector(ValueCollector):

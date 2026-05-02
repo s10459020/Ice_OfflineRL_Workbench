@@ -14,7 +14,7 @@ from ice_offline.tools import print_stage
 # Config
 # ====================
 ENV_ID = "BabyAI-OneRoomS8-v0"
-DATASET_ID = "check/recode_state-v0"
+DATASET_ID = "check/compare_state-v0"
 MAX_EPISODES = 5
 SEED_BASE = 42
 

@@ -12,7 +12,7 @@ from ice_offline.tools import print_stage
 # ====================
 # config
 # ====================
-DATASET_ID = "check/compare_distribution-v0"
+DATASET_ID = "check/compare_value-v0"
 MAX_EPISODES = 5
 SEED_BASE = 42
 POLICY_EPSILON = 0.3
@@ -72,12 +72,12 @@ def main() -> None:
 
         collector.create_dataset(
             dataset_id=DATASET_ID,
-            algorithm_name="random_policy_distribution",
+            algorithm_name="random_policy_value",
             author="local_test",
             author_email="local_test@example.com",
-            code_permalink="https://example.com/compare_distribution",
+            code_permalink="https://example.com/compare_value",
             eval_env=eval_env,
-            description="collect and compare distribution data with loader",
+            description="collect and compare value data with loader",
         )
         value_data_path = value_collector.save(DATASET_ID)
         print(f"value_data_path={value_data_path}")
@@ -115,7 +115,7 @@ def main() -> None:
     finally:
         value_loader.close()
 
-    print("PASS: compare_distribution all matched")
+    print("PASS: compare_value all matched")
 
 
 if __name__ == "__main__":

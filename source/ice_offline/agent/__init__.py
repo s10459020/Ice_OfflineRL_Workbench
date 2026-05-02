@@ -11,6 +11,7 @@ from .ac_discrete_va import ActorCriticAgent as DiscreteActorCriticAgent
 from .pg_continuous import PolicyGradientAgent as ContinuousPolicyGradientAgent
 from .pg_discrete import PolicyGradientAgent as DiscretePolicyGradientAgent
 from .q_table import QTableAgent, QTableState
+from .q_step import StepQAgent
 from .q_discrete import QAgentDiscrete
 
 __all__ = [
@@ -30,5 +31,6 @@ __all__ = [
     "DiscretePolicyGradientAgent",
     "QTableAgent",
     "QTableState",
+    "StepQAgent",
     "QAgentDiscrete",
 ]

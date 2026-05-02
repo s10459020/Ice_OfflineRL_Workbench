@@ -7,7 +7,7 @@ from .state_injector import StateInjectWrapper
 from .state_loader import StateLoader
 from .value_collector import ValueCollector
 from .value_loader import ValueLoader
-from .value_oneroom import ValueOneRoomCollector, make_value_env
+from .value_oneroom import ValueOneRoomCollector, decode_oneroom, make_value_env
 
 __all__ = [
     "BatchLoader",
@@ -21,5 +21,6 @@ __all__ = [
     "ValueCollector",
     "ValueLoader",
     "ValueOneRoomCollector",
+    "decode_oneroom",
     "make_value_env",
 ]
