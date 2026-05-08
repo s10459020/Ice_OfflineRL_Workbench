@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
+from ._spec import EnvSpec
 from ._spec import TorchAgent
 
 from ice_offline.runner.offline import TransitionBatch
@@ -65,6 +66,14 @@ class BCAgentDiscrete(TorchAgent):
             weight_decay=0.0,
             amsgrad=False,
         )
+
+    def configure(self, env_spec: EnvSpec) -> None:
+        assert env_spec.observation_shape is not None
+        assert env_spec.action_cardinality is not None
+        assert len(env_spec.action_cardinality) == 1
+        obs_size = int(np.prod(env_spec.observation_shape))
+        action_size = int(env_spec.action_cardinality[0])
+        self.set_dim(obs_size=obs_size, act_size=action_size)
 
     # ====================
     # Public API

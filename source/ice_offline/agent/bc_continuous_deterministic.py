@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
 
 
@@ -34,14 +35,18 @@ class BCAgentContinuousDeterministic(TorchAgent):
     # ====================
     # Init
     # ====================
-    def __init__(self, obs_size: int, act_size: int):
+    def __init__(self, obs_size: int = 0, act_size: int = 0):
         self.device = "cpu"
         self.learning_rate = 1e-3
         self.expl_noise_std = 0.1
 
-        self.policy = _Pi(obs_size, act_size).to(
-            self.device
-        )
+        self.policy = None
+        self.optimizer = None
+        if obs_size > 0 and act_size > 0:
+            self.set_dim(obs_size, act_size)
+
+    def set_dim(self, obs_size: int, act_size: int) -> None:
+        self.policy = _Pi(obs_size, act_size).to(self.device)
 
         self.optimizer = torch.optim.Adam(
             self.policy.parameters(),
@@ -51,6 +56,13 @@ class BCAgentContinuousDeterministic(TorchAgent):
             weight_decay=0.0,
             amsgrad=False,
         )
+
+    def configure(self, env_spec: EnvSpec) -> None:
+        assert env_spec.observation_shape is not None
+        assert env_spec.action_shape is not None
+        obs_size = int(np.prod(env_spec.observation_shape))
+        act_size = int(np.prod(env_spec.action_shape))
+        self.set_dim(obs_size=obs_size, act_size=act_size)
 
     # ====================
     # Public API

@@ -3,6 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ._spec import EnvSpec
 from ._spec import TorchAgent
 
 
@@ -75,22 +76,38 @@ class QVAgentDiscrete(TorchAgent):
     # ====================
     def __init__(
         self,
-        obs_size: int,
-        act_size: int,
+        obs_size: int = 0,
+        act_size: int = 0,
         learning_rate: float = 6.25e-5,
         gamma: float = 0.99,
         target_update_interval: int = 1000,
     ):
         self.device = "cpu"
+        self.learning_rate = learning_rate
         self.gamma = gamma
         self.target_update_interval = target_update_interval
         self._grad_step = 0
+        self.q = None
+        self.v = None
+        self.optim = None
 
+        if obs_size > 0 and act_size > 0:
+            self.set_dim(obs_size, act_size)
+
+    def set_dim(self, obs_size: int, act_size: int) -> None:
         self.q = _TQ(obs_size, act_size).to(self.device)
         self.v = _V(obs_size).to(self.device)
-        self.optim = _Adam(learning_rate)(
+        self.optim = _Adam(self.learning_rate)(
             list(self.q._q.parameters()) + list(self.v.parameters())
         )
+
+    def configure(self, env_spec: EnvSpec) -> None:
+        assert env_spec.observation_shape is not None
+        assert env_spec.action_cardinality is not None
+        assert len(env_spec.action_cardinality) == 1
+        obs_size = int(np.prod(env_spec.observation_shape))
+        action_size = int(env_spec.action_cardinality[0])
+        self.set_dim(obs_size=obs_size, act_size=action_size)
 
     # ====================
     # Public API

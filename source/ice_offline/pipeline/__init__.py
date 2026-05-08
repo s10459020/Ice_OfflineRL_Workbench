@@ -1,4 +1,4 @@
-from .batch_loader import BatchLoader
+from .batch_loader import MinariLoader
 from .old_value_collector import OldValueCollector
 from .old_value_loader import OldValueLoader
 from .state_collector import StateCollector
@@ -10,7 +10,7 @@ from .value_loader import ValueLoader
 from .value_oneroom import ValueOneRoomCollector, decode_oneroom, make_value_env
 
 __all__ = [
-    "BatchLoader",
+    "MinariLoader",
     "OldValueCollector",
     "OldValueLoader",
     "StateCollector",

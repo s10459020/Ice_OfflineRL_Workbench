@@ -6,6 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from d3rlpy.models.torch.distributions import SquashedGaussianDistribution
+from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
 
 
@@ -163,32 +164,59 @@ class _QQ(torch.nn.Module):
 
 
 class CQLAgentContinuous(TorchAgent):
-    def __init__(self, obs_size: int, act_size: int, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
+    def __init__(self, obs_size: int = 0, act_size: int = 0, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
         self.device = "cpu"
         self.act_size = act_size
+        self.actor_learning_rate = actor_learning_rate
+        self.critic_learning_rate = critic_learning_rate
+        self.actor_alpha_learning_rate = actor_alpha_learning_rate
+        self.critic_alpha_learning_rate = critic_alpha_learning_rate
+        self.gamma = gamma
+        self.tau = tau
+        self.actor_initial_alpha = actor_initial_alpha
+        self.critic_initial_alpha = critic_initial_alpha
+        self.alpha_threshold = alpha_threshold
+        self.n_action_samples = n_action_samples
+        self.policy = None
+        self.critic = None
+        self.actor_optim = None
+        self.critic_optim = None
+        self.alpha_optim = None
+        self.alpha_prime_optim = None
+        if obs_size > 0 and act_size > 0:
+            self.set_dim(obs_size, act_size)
 
+    def set_dim(self, obs_size: int, act_size: int) -> None:
+        self.act_size = act_size
         self.policy = _Pi(obs_size=obs_size, act_size=act_size).to(self.device)
         self.critic = _QQ(
             obs_size=obs_size,
             act_size=act_size,
-            gamma=gamma,
-            tau=tau,
-            alpha_threshold=alpha_threshold,
-            n_action_samples=n_action_samples,
+            gamma=self.gamma,
+            tau=self.tau,
+            alpha_threshold=self.alpha_threshold,
+            n_action_samples=self.n_action_samples,
             device=self.device,
         ).to(self.device)
-        self.policy.log_alpha.data.fill_(math.log(actor_initial_alpha))
-        self.critic.log_alpha.data.fill_(math.log(critic_initial_alpha))
-        self.actor_optim = _Adam(actor_learning_rate)(
+        self.policy.log_alpha.data.fill_(math.log(self.actor_initial_alpha))
+        self.critic.log_alpha.data.fill_(math.log(self.critic_initial_alpha))
+        self.actor_optim = _Adam(self.actor_learning_rate)(
             list(self.policy.hidden.parameters())
             + list(self.policy.mean_head.parameters())
             + list(self.policy.logstd_head.parameters())
         )
-        self.critic_optim = _Adam(critic_learning_rate)(
+        self.critic_optim = _Adam(self.critic_learning_rate)(
             list(self.critic.q1.parameters()) + list(self.critic.q2.parameters())
         )
-        self.alpha_optim = _Adam(actor_alpha_learning_rate)([self.policy.log_alpha])
-        self.alpha_prime_optim = _Adam(critic_alpha_learning_rate)([self.critic.log_alpha])
+        self.alpha_optim = _Adam(self.actor_alpha_learning_rate)([self.policy.log_alpha])
+        self.alpha_prime_optim = _Adam(self.critic_alpha_learning_rate)([self.critic.log_alpha])
+
+    def configure(self, env_spec: EnvSpec) -> None:
+        assert env_spec.observation_shape is not None
+        assert env_spec.action_shape is not None
+        obs_size = int(np.prod(env_spec.observation_shape))
+        act_size = int(np.prod(env_spec.action_shape))
+        self.set_dim(obs_size=obs_size, act_size=act_size)
 
     # ====================
     # public API

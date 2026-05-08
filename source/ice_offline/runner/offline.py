@@ -9,7 +9,8 @@ import numpy as np
 import torch
 
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline import BatchLoader
+from ice_offline.pipeline import MinariLoader
+from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import model_ref
 from ice_offline.tools.paths import eval_root
 
@@ -22,7 +23,7 @@ OnlineEvalFn = Callable[[TransitionBatch], dict[str, float]]
 
 class RunnerAgent(Protocol):
     device: str
-    def set_dim(self, obs_size: int, act_size: int) -> None: ...
+    def configure(self, env_spec: EnvSpec) -> None: ...
     def act_best(self, observation: Any) -> Any: ...
     def update(self, batch: BatchType) -> None: ...
     def save(self, model_name: str | Path) -> Path: ...
@@ -55,13 +56,14 @@ class TorchBatchOfflineRunner:
         eval_online_fns: list[OnlineEvalFn],
     ) -> None:
         
-        batch_loader = BatchLoader(dataset)
-        obs_size = int(np.prod(batch_loader.obs_shape))
-        if batch_loader.act_size > 0:
-            act_size = batch_loader.act_size
-        else:
-            act_size = int(np.prod(batch_loader.act_shape))
-        agent.set_dim(obs_size=obs_size, act_size=act_size)
+        batch_loader = MinariLoader(dataset)
+        env_spec = EnvSpec(
+            observation_shape=batch_loader.observation_shape,
+            observation_cardinality=batch_loader.observation_cardinality,
+            action_shape=batch_loader.action_shape,
+            action_cardinality=batch_loader.action_cardinality,
+        )
+        agent.configure(env_spec)
         if self.steps_begin > 0:
             agent.load(model_ref(self.runner_id, self.steps_begin))
 
@@ -109,7 +111,7 @@ class TorchBatchOfflineRunner:
     def _evaluate_offline(
         self,
         agent: RunnerAgent,
-        batch_loader: BatchLoader,
+        batch_loader: MinariLoader,
         eval_offline_fns: list[OfflineEvalFn],
     ) -> dict[str, float]:
         bucket: dict[str, list[float]] = {}

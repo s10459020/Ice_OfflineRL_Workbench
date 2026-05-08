@@ -1,5 +1,6 @@
 ﻿
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 import torch
@@ -22,11 +23,32 @@ class Agent(Protocol):
     def load(self, model_name: str | Path) -> None: ...
 
 
+@dataclass
+class EnvSpec:
+    observation_shape: tuple[int, ...] | None
+    observation_cardinality: tuple[int, ...] | None
+    action_shape: tuple[int, ...] | None
+    action_cardinality: tuple[int, ...] | None
+
+
 class TorchAgent:
     device: str
 
-    def set_dim(self, obs_size: int, act_size: int) -> None:
+    def configure(
+        self,
+        env_spec: EnvSpec,
+    ) -> None:
         return None
+
+    def set_dim(self, obs_size: int, act_size: int) -> None:
+        self.configure(
+            EnvSpec(
+                observation_shape=(obs_size,),
+                observation_cardinality=None,
+                action_shape=(1,),
+                action_cardinality=(act_size,),
+            )
+        )
 
     def _save(self) -> dict[str, Any]:
         raise NotImplementedError

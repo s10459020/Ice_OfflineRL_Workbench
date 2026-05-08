@@ -44,3 +44,14 @@ class BaseDataset:
 
     def eval_online_fns(self):
         return [eval_return]
+
+    def observation_cardinality(self, observation_shape: tuple[int, ...], minari_dataset) -> tuple[int, ...] | None:
+        return None
+
+    def action_cardinality(self, action_shape: tuple[int, ...], minari_dataset) -> tuple[int, ...] | None:
+        if action_shape != (1,):
+            return None
+        n = getattr(minari_dataset.spec.action_space, "n", None)
+        if n is None:
+            return None
+        return (int(n),)

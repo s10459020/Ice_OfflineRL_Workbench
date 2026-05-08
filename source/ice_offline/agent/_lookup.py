@@ -1,5 +1,3 @@
-from typing import Any, Callable
-
 import torch
 
 from ice_offline.agent import CQLAgentContinuous
@@ -11,39 +9,9 @@ from ice_offline.agent import IQLAgentContinuous
 from ice_offline.agent import IQLAgentDiscrete
 from ice_offline.agent import QAgentDiscrete
 from ice_offline.agent import QVAgentDiscrete
-from ice_offline.runner.offline import BatchType
 from ice_offline.runner.offline import OfflineEvalFn
 from ice_offline.runner.offline import RunnerAgent
 from ice_offline.runner.offline import TransitionBatch
-
-
-AgentBuilder = Callable[[int, int], RunnerAgent]
-
-
-class LazyAgentProxy:
-    def __init__(self, builder: AgentBuilder):
-        self.device = "cpu"
-        self._builder = builder
-        self._inner: RunnerAgent | None = None
-
-    def set_dim(self, obs_size: int, act_size: int) -> None:
-        self._inner = self._builder(obs_size, act_size)
-        self.device = self._inner.device
-
-    def act_best(self, observation: Any) -> Any:
-        return self._inner.act_best(observation)
-
-    def update(self, batch: BatchType) -> None:
-        self._inner.update(batch)
-
-    def save(self, model_name) -> Any:
-        return self._inner.save(model_name)
-
-    def load(self, model_name) -> None:
-        self._inner.load(model_name)
-
-    def __getattr__(self, item: str):
-        return getattr(self._inner, item)
 
 
 def eval_bc_discrete_loss(agent: DiscreteBCAgent, transitions: TransitionBatch) -> dict[str, float]:
@@ -106,18 +74,12 @@ def eval_cql_discrete_loss_cql(agent: CQLAgentDiscrete, transitions: TransitionB
     return {"loss_cql": float(agent._loss_cql(o, a).item())}
 
 
-def eval_bc_deterministic_loss_pi(
-    agent: ContinuousBCDeterministicAgent,
-    transitions: TransitionBatch,
-) -> dict[str, float]:
+def eval_bc_deterministic_loss_pi(agent: ContinuousBCDeterministicAgent, transitions: TransitionBatch) -> dict[str, float]:
     o, a, _, _, _ = transitions
     return {"loss_pi": float(agent.loss_actor(o, a).item())}
 
 
-def eval_bc_stochastic_loss_pi(
-    agent: ContinuousBCStochasticAgent,
-    transitions: TransitionBatch,
-) -> dict[str, float]:
+def eval_bc_stochastic_loss_pi(agent: ContinuousBCStochasticAgent, transitions: TransitionBatch) -> dict[str, float]:
     o, a, _, _, _ = transitions
     return {"loss_pi": float(agent.loss_actor(o, a).item())}
 
@@ -152,37 +114,35 @@ def eval_cql_continuous_loss_pi(agent: CQLAgentContinuous, transitions: Transiti
         return {"loss_pi": float(agent.loss_actor(o).item())}
 
 
-AGENT_BUILDERS: dict[str, AgentBuilder] = {
-    "bc_discrete": lambda obs_size, act_size: DiscreteBCAgent(obs_size=obs_size, act_size=act_size),
-    "q_discrete": lambda obs_size, act_size: QAgentDiscrete(obs_size=obs_size, act_size=act_size),
-    "qv_discrete": lambda obs_size, act_size: QVAgentDiscrete(obs_size=obs_size, act_size=act_size),
-    "iql_discrete": lambda obs_size, act_size: IQLAgentDiscrete(obs_size=obs_size, act_size=act_size),
-    "cql_discrete": lambda obs_size, act_size: CQLAgentDiscrete(obs_size=obs_size, act_size=act_size),
-    "bc_deterministic": lambda obs_size, act_size: ContinuousBCDeterministicAgent(obs_size=obs_size, act_size=act_size),
-    "bc_stochastic": lambda obs_size, act_size: ContinuousBCStochasticAgent(obs_size=obs_size, act_size=act_size),
-    "iql_continuous": lambda obs_size, act_size: IQLAgentContinuous(obs_size=obs_size, act_size=act_size),
-    "cql_continuous": lambda obs_size, act_size: CQLAgentContinuous(obs_size=obs_size, act_size=act_size),
+AGENT_LOOKUP: dict[str, RunnerAgent] = {
+    "bc_deterministic": ContinuousBCDeterministicAgent(),
+    "bc_discrete": DiscreteBCAgent(),
+    "bc_stochastic": ContinuousBCStochasticAgent(),
+    "cql_continuous": CQLAgentContinuous(),
+    "cql_discrete": CQLAgentDiscrete(),
+    "iql_continuous": IQLAgentContinuous(),
+    "iql_discrete": IQLAgentDiscrete(),
+    "q_discrete": QAgentDiscrete(),
+    "qv_discrete": QVAgentDiscrete(),
 }
 
 
 AGENT_EVAL_OFFLINE_LOOKUP: dict[str, list[OfflineEvalFn]] = {
+    "bc_deterministic": [eval_bc_deterministic_loss_pi],
     "bc_discrete": [eval_bc_discrete_loss],
+    "bc_stochastic": [eval_bc_stochastic_loss_pi],
+    "cql_continuous": [eval_cql_continuous_loss_q, eval_cql_continuous_loss_pi],
+    "cql_discrete": [eval_cql_discrete_loss, eval_cql_discrete_loss_td, eval_cql_discrete_loss_cql],
+    "iql_continuous": [eval_iql_continuous_loss_q, eval_iql_continuous_loss_v, eval_iql_continuous_loss_pi],
+    "iql_discrete": [eval_iql_discrete_loss, eval_iql_discrete_loss_q, eval_iql_discrete_loss_v],
     "q_discrete": [eval_q_discrete_loss, eval_q_discrete_loss_q],
     "qv_discrete": [eval_qv_discrete_loss, eval_qv_discrete_loss_q, eval_qv_discrete_loss_v],
-    "iql_discrete": [eval_iql_discrete_loss, eval_iql_discrete_loss_q, eval_iql_discrete_loss_v],
-    "cql_discrete": [eval_cql_discrete_loss, eval_cql_discrete_loss_td, eval_cql_discrete_loss_cql],
-    "bc_deterministic": [eval_bc_deterministic_loss_pi],
-    "bc_stochastic": [eval_bc_stochastic_loss_pi],
-    "iql_continuous": [eval_iql_continuous_loss_q, eval_iql_continuous_loss_v, eval_iql_continuous_loss_pi],
-    "cql_continuous": [eval_cql_continuous_loss_q, eval_cql_continuous_loss_pi],
 }
 
 
 def get_agent(agent_id: str) -> RunnerAgent:
-    return LazyAgentProxy(AGENT_BUILDERS[agent_id])
+    return AGENT_LOOKUP[agent_id]
 
 
 def get_agent_train_bundle(agent_id: str) -> tuple[RunnerAgent, list[OfflineEvalFn]]:
-    agent = get_agent(agent_id)
-    eval_offline_fns = AGENT_EVAL_OFFLINE_LOOKUP[agent_id]
-    return agent, eval_offline_fns
+    return get_agent(agent_id), AGENT_EVAL_OFFLINE_LOOKUP[agent_id]
