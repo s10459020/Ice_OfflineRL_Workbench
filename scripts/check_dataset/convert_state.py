@@ -1,7 +1,7 @@
-import gymnasium as gym
+﻿import gymnasium as gym
 import minigrid  # noqa: F401
 
-from ice_offline.dataset import StateInjectWrapper, convert_fullobs
+from ice_offline.pipeline import StateInjectWrapper, convert_fullobs
 from ice_offline.env.common import insert_render_quiet_innermost
 from ice_offline.tools import print_stage
 

@@ -25,6 +25,9 @@ class Agent(Protocol):
 class TorchAgent:
     device: str
 
+    def set_dim(self, obs_size: int, act_size: int) -> None:
+        return None
+
     def _save(self) -> dict[str, Any]:
         raise NotImplementedError
 

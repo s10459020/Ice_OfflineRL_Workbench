@@ -1,5 +1,5 @@
 ﻿import d3rlpy
-from ice_offline.dataset import d3rl_convertor
+from ice_offline.pipeline import d3rl_convertor
 
 # mute logging
 d3rlpy.logging.LOG.info = lambda *args, **kwargs: None

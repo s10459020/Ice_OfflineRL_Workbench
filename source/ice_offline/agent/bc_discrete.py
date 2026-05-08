@@ -4,7 +4,17 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Categorical
-from ._interface import TorchAgent
+from ._spec import TorchAgent
+
+from ice_offline.runner.offline import TransitionBatch
+
+
+def eval_bc_discrete_loss(
+    agent: "BCAgentDiscrete",
+    transitions: TransitionBatch,
+) -> dict[str, float]:
+    obs_batch, act_batch, _, _, _ = transitions
+    return {"offline_loss": float(agent.loss_actor(obs_batch, act_batch).item())}
 
 
 class _Pi(torch.nn.Module):
@@ -35,13 +45,18 @@ class BCAgentDiscrete(TorchAgent):
     # ====================
     # Init
     # ====================
-    def __init__(self, obs_size: int, act_size: int):
+    def __init__(self, obs_size: int = 0, act_size: int = 0):
         self.device = "cpu"
         self.beta = 0.5
         self.learning_rate = 1e-3
+        self.policy = None
+        self.optimizer = None
 
+        if obs_size > 0 and act_size > 0:
+            self.set_dim(obs_size=obs_size, act_size=act_size)
+
+    def set_dim(self, obs_size: int, act_size: int) -> None:
         self.policy = _Pi(obs_size, act_size).to(self.device)
-
         self.optimizer = torch.optim.Adam(
             self.policy.parameters(),
             lr=self.learning_rate,

@@ -1,11 +1,11 @@
-from typing import Any
+﻿from typing import Any
 
 import minari
 import numpy as np
 
 from ice_offline.agent import QTableAgent
-from ice_offline.dataset import ValueLoader
-from ice_offline.dataset.value_oneroom import ACTIONS, ValueOneRoomCollector, make_value_env
+from ice_offline.pipeline import ValueLoader
+from ice_offline.pipeline.value_oneroom import ACTIONS, ValueOneRoomCollector, make_value_env
 from ice_offline.tools import print_stage
 
 

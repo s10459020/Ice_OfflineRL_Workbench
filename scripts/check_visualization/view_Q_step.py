@@ -1,11 +1,11 @@
-import argparse
+﻿import argparse
 import bisect
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Slider
 
-from ice_offline.dataset import OldValueLoader
+from ice_offline.pipeline import OldValueLoader
 
 
 DATASET_ID = "check/visualization-q-step-v0"

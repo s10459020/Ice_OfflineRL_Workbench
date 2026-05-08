@@ -3,7 +3,7 @@
 import numpy as np
 import torch
 from torch.distributions import Normal
-from ice_offline.agent._interface import TorchAgent
+from ice_offline.agent._spec import TorchAgent
 
 
 class _Adam:

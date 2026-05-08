@@ -2,7 +2,7 @@
 
 import numpy as np
 import torch
-from ._interface import TorchAgent
+from ._spec import TorchAgent
 
 
 class _Adam:

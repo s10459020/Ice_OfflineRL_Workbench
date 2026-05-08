@@ -1,11 +1,11 @@
-import gymnasium as gym
+﻿import gymnasium as gym
 import minari
 import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.data import State
-from ice_offline.dataset import StateCollector, StateLoader
+from ice_offline.pipeline import StateCollector, StateLoader
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
 from ice_offline.tools import print_stage
 

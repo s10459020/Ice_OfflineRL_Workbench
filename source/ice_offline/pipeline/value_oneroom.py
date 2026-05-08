@@ -1,11 +1,11 @@
-from typing import Any
+﻿from typing import Any
 
 import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.dataset.value_collector import EvalFn, ValueCollector
+from ice_offline.pipeline.value_collector import EvalFn, ValueCollector
 from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
 
 

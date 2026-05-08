@@ -1,11 +1,11 @@
-import gymnasium as gym
+﻿import gymnasium as gym
 import minari
 import minigrid  # noqa: F401
 import numpy as np
 
 from ice_offline.agent import StepQAgent
-from ice_offline.dataset import OldValueCollector
-from ice_offline.dataset.value_oneroom import make_value_env
+from ice_offline.pipeline import OldValueCollector
+from ice_offline.pipeline.value_oneroom import make_value_env
 from ice_offline.tools import print_stage
 
 

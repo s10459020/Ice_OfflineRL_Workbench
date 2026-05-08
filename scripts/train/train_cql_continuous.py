@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 from ice_offline.agent import CQLAgentContinuous
-from ice_offline.dataset import BatchLoader
+from ice_offline.pipeline import BatchLoader
 from ice_offline.runner import TorchBatchOfflineRunner
 from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage

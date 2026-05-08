@@ -3,7 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ice_offline.agent._interface import TorchAgent
+from ice_offline.agent._spec import TorchAgent
 
 
 class _Pi(torch.nn.Module):

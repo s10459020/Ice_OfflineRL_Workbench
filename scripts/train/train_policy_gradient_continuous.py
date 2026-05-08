@@ -3,7 +3,7 @@ import gymnasium as gym
 import numpy as np
 
 from ice_offline.agent import ContinuousPolicyGradientAgent
-from ice_offline.agent._interface import model_ref
+from ice_offline.agent._spec import model_ref
 from ice_offline.tools.printer import print_stage
 
 ENV_ID = "InvertedPendulum-v5"

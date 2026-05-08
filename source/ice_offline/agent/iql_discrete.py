@@ -3,7 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ._interface import TorchAgent
+from ._spec import TorchAgent
 
 
 class _Adam:

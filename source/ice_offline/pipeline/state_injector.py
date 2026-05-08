@@ -4,7 +4,7 @@ import minari
 import numpy as np
 
 from ice_offline.data import State
-from ice_offline.dataset.state_loader import StateLoader
+from ice_offline.pipeline.state_loader import StateLoader
 from ice_offline.env.common import StateIOWrapper
 
 

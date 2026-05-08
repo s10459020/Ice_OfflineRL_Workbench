@@ -6,7 +6,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from d3rlpy.models.torch.distributions import SquashedGaussianDistribution
-from ice_offline.agent._interface import TorchAgent
+from ice_offline.agent._spec import TorchAgent
 
 
 class _Adam:
