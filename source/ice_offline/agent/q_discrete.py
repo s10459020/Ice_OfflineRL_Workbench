@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from ._spec import EnvSpec
 from ._spec import TorchAgent
+from ice_offline.runner.offline import TransitionBatch
 
 
 class _Adam:
@@ -146,4 +147,14 @@ class QAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d)
+
+
+def eval_q_discrete_loss(agent: "QAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, r, on, d = transitions
+    return {"loss": float(agent.loss_critic(o, a, r, on, d).item())}
+
+
+def eval_q_discrete_loss_q(agent: "QAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, r, on, d = transitions
+    return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
 

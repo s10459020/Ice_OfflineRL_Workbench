@@ -1,17 +1,33 @@
-﻿import gymnasium as gym
+import gymnasium as gym
+import minari
 import numpy as np
 import torch
-import minari
+from collections import deque
+
 
 def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, r, _, _ = episode_batch
-    return {"return": float(r.sum().item())}
+    _, _, reward, _, _ = episode_batch
+    return {"return": float(reward.sum().item())}
 
 
-def eval_reward_sum(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, r, _, _ = episode_batch
-    return {"reward_sum": float(r.sum().item())}
+class StopReturnStable:
+    def __init__(self, patience: int = 5, lambda_ratio: float = 0.01) -> None:
+        self.patience = patience
+        self.lambda_ratio = lambda_ratio
+        self.recent = deque(maxlen=patience)
 
+    def should_stop(self, metrics: dict[str, list[float]]) -> bool:
+        self.recent.append(float(np.mean(metrics["return"])))
+        if len(self.recent) < self.patience:
+            return False
+
+        seq = list(self.recent)
+        base = abs(seq[0]) + 1e-12
+        for i in range(1, len(seq)):
+            ratio = abs(seq[i] - seq[i - 1]) / base
+            if ratio > self.lambda_ratio:
+                return False
+        return True
 
 class BaseDataset:
     dataset_name: str
@@ -24,10 +40,10 @@ class BaseDataset:
     def obs_encode(self, obs):
         return np.asarray(obs)
 
-    def act_encode_batch(self, act): 
+    def act_encode_batch(self, act):
         return np.asarray(act)
-    
-    def act_encode(self, act): 
+
+    def act_encode(self, act):
         return np.asarray(act)
 
     def make_dataset(self):
@@ -35,10 +51,10 @@ class BaseDataset:
 
     def make_eval_env(self):
         return gym.make(self.env_id)
-    
+
     def make_collect_env(self):
         return gym.make(self.env_id)
-    
+
     def make_render_env(self):
         return gym.make(self.env_id, render_mode="human")
 

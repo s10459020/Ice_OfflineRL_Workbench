@@ -5,6 +5,7 @@ import torch
 from torch.distributions import Normal
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.runner.offline import TransitionBatch
 
 
 class _Adam:
@@ -288,4 +289,22 @@ class IQLAgentContinuous(TorchAgent):
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self._loss_actor(o, a)
+
+
+def eval_iql_continuous_loss_q(agent: "IQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, r, on, d = transitions
+    with torch.no_grad():
+        return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
+
+
+def eval_iql_continuous_loss_v(agent: "IQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, _, _, _ = transitions
+    with torch.no_grad():
+        return {"loss_v": float(agent._loss_v(o, a).item())}
+
+
+def eval_iql_continuous_loss_pi(agent: "IQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, _, _, _ = transitions
+    with torch.no_grad():
+        return {"loss_pi": float(agent.loss_actor(o, a).item())}
 

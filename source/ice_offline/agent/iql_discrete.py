@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from ._spec import EnvSpec
 from ._spec import TorchAgent
+from ice_offline.runner.offline import TransitionBatch
 
 
 class _Adam:
@@ -150,5 +151,20 @@ class IQLAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
+
+
+def eval_iql_discrete_loss(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, r, on, d = transitions
+    return {"loss": float(agent.loss_critic(o, a, r, on, d).item())}
+
+
+def eval_iql_discrete_loss_q(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, r, on, d = transitions
+    return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
+
+
+def eval_iql_discrete_loss_v(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
+    o, a, _, _, _ = transitions
+    return {"loss_v": float(agent._loss_v(o, a).item())}
 
 
