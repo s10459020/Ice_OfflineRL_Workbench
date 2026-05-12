@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from d3rlpy.models.torch.distributions import SquashedGaussianDistribution
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.runner.offline import TransitionBatch
+from ice_offline.runner.evaluator import TransitionBatch
 
 
 class _Adam:

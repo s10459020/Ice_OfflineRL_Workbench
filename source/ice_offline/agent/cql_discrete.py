@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from ._spec import EnvSpec
 from ._spec import TorchAgent
-from ice_offline.runner.offline import TransitionBatch
+from ice_offline.runner.evaluator import TransitionBatch
 
 
 class _Adam:

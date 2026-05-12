@@ -12,6 +12,13 @@ class OneRoomS8Dataset(BaseDataset):
     dataset_id = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
     env_id = "BabyAI-OneRoomS8-v0"
 
+    def __init__(self) -> None:
+        super().__init__(
+            dataset_name=self.dataset_name,
+            dataset_id=self.dataset_id,
+            env_id=self.env_id,
+        )
+
     def obs_encode_batch(self, o_batch: dict[str, np.ndarray]) -> np.ndarray:
         imgs = np.asarray(o_batch["image"], dtype=np.float32) # [B, H, W, C]
         return imgs.reshape(imgs.shape[0], -1)                # [B, D]
