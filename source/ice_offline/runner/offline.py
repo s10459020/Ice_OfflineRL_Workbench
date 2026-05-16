@@ -55,10 +55,16 @@ class TorchBatchOfflineRunner:
         steps_begin = saver.resolve_steps_begin()
         minari_loader = MinariLoader(dataset)
         env_spec = EnvSpec(
-            observation_shape=minari_loader.observation_shape,
-            observation_cardinality=minari_loader.observation_cardinality,
-            action_shape=minari_loader.action_shape,
-            action_cardinality=minari_loader.action_cardinality,
+            observation_shape=minari_loader.obs_shape,
+            observation_cardinality=dataset.observation_cardinality(
+                minari_loader.obs_shape,
+                minari_loader.minari_dataset,
+            ),
+            action_shape=minari_loader.act_shape,
+            action_cardinality=dataset.action_cardinality(
+                minari_loader.act_shape,
+                minari_loader.minari_dataset,
+            ),
         )
         agent.configure(env_spec)
         saver.load_if_needed(agent, steps_begin)

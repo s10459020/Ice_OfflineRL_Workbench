@@ -11,24 +11,11 @@ class MinariLoader:
         self.minari_dataset = dataset.make_dataset()
         self.buffer = self._build_buffer(self.minari_dataset)
 
-        self.observation_shape = tuple(int(x) for x in self.buffer["obs"].shape[1:])
-        self.action_shape = tuple(int(x) for x in self.buffer["act"].shape[1:])
-        self.observation_size = int(np.prod(self.observation_shape)) if self.observation_shape else 1
-        self.action_size = int(np.prod(self.action_shape)) if self.action_shape else 1
-        self.observation_cardinality = self.dataset.observation_cardinality(
-            self.observation_shape,
-            self.minari_dataset,
-        )
-        self.action_cardinality = self.dataset.action_cardinality(
-            self.action_shape,
-            self.minari_dataset,
-        )
+        self.obs_shape = tuple(int(x) for x in self.buffer["obs"].shape[1:])
+        self.act_shape = tuple(int(x) for x in self.buffer["act"].shape[1:])
+        self.obs_dim = int(np.prod(self.obs_shape)) if self.obs_shape else 1
+        self.act_dim = int(np.prod(self.act_shape)) if self.act_shape else 1
         self.count = self.buffer["obs"].shape[0]
-
-        self.obs_shape = self.observation_shape
-        self.act_shape = self.action_shape
-        self.obs_size = self.observation_size
-        self.act_size = self.action_cardinality if self.action_cardinality is not None else self.action_size
 
     def sample_batch(self, batch_size: int) -> dict[str, np.ndarray]:
         idx = self._rng.integers(0, self.count, size=(batch_size,))

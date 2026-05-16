@@ -1,10 +1,9 @@
 ﻿from dataclasses import dataclass
 
-import numpy as np
 import torch
+import numpy as np
 import torch.nn.functional as F
 
-from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
 from ice_offline.runner.evaluator import TransitionBatch
 
@@ -167,17 +166,13 @@ class _TD3_Critic(torch.nn.Module):
 
 @dataclass
 class ScasDynamic(TorchAgent):
+    obs_dim: int
+    act_dim: int
     learning_rate: float = 1e-3
-    device: torch.device = "cpu"   
+    device: torch.device = "cpu"
 
-    def configure(self, env_spec: EnvSpec) -> None:
-        assert env_spec.observation_shape is not None
-        assert env_spec.action_shape is not None
-
-        obs_size = int(np.prod(env_spec.observation_shape))
-        act_size = int(np.prod(env_spec.action_shape))
-
-        self.model = _M(obs_size, act_size).to(self.device)
+    def __post_init__(self) -> None:
+        self.model = _M(self.obs_dim, self.act_dim).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=self.learning_rate,
@@ -226,6 +221,9 @@ class ScasDynamic(TorchAgent):
 
 @dataclass
 class ScasAgent(TorchAgent):
+    obs_dim: int
+    act_dim: int
+    dynamics: ScasDynamic
     tau: float
     max_action: float
     beta: float = 3e-3
@@ -237,16 +235,10 @@ class ScasAgent(TorchAgent):
     max_weight: float = 50.0
     device: torch.device = "cpu"
 
-    def configure(self, env_spec: EnvSpec, dynamics: ScasDynamic) -> None:
-        assert env_spec.observation_shape is not None
-        assert env_spec.action_shape is not None
-
-        obs_size = int(np.prod(env_spec.observation_shape))
-        act_size = int(np.prod(env_spec.action_shape))
-
-        self.actor = _Scas_Actor(obs_size, act_size, tau=self.tau, max_action=self.max_action).to(self.device)
-        self.critic = _TD3_Critic(obs_size, act_size, tau=self.tau).to(self.device)
-        self.dynamics = dynamics.prepare().to(self.device)
+    def __post_init__(self) -> None:
+        self.actor = _Scas_Actor(self.obs_dim, self.act_dim, tau=self.tau, max_action=self.max_action).to(self.device)
+        self.critic = _TD3_Critic(self.obs_dim, self.act_dim, tau=self.tau).to(self.device)
+        self.dynamics = self.dynamics.prepare().to(self.device)
 
         self.actor_optimizer = torch.optim.Adam(self.actor.get_parameters(), lr=2e-4)
         self.critic_optimizer = torch.optim.Adam(self.critic.get_parameters(), lr=3e-4)
