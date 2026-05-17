@@ -7,25 +7,6 @@ import torch.nn.functional as F
 from ice_offline.agent._spec import TorchAgent
 from ice_offline.runner.evaluator import TransitionBatch
 
-class _M(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int):
-        super().__init__()
-        self.network = torch.nn.Sequential(
-            torch.nn.Linear(obs_size + act_size, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, obs_size),
-        )
-
-    def forward(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        x = torch.cat([o, a], -1)
-        return self.network(x)
-
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0):
         super().__init__()
