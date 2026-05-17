@@ -310,6 +310,8 @@ class ScasAgent(TorchAgent):
     def _td_target(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             an = self.actor.tpi_act(sn)
+            noise = (torch.randn_like(an) * 0.2).clamp(-0.5, 0.5)
+            an = (an + noise).clamp(-self.max_action, self.max_action)
             tq = self.critic.tq_min(sn,an)
             return r + self.gamma * tq * (1 - d)
     

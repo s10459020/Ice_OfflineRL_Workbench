@@ -1,0 +1,44 @@
+import random
+from typing import Any
+from typing import Callable
+
+import numpy as np
+import torch
+
+
+Callback = Callable[[], list[Any]]
+
+
+def _set_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+
+def _max_abs_diff(x: Any, y: Any) -> float:
+    if torch.is_tensor(x) and torch.is_tensor(y):
+        return float((x - y).abs().max().item())
+    x_arr = np.asarray(x)
+    y_arr = np.asarray(y)
+    return float(np.max(np.abs(x_arr - y_arr)))
+
+
+def assert_list(ref_list: list[Any], our_list: list[Any], label: str) -> None:
+    if len(ref_list) != len(our_list):
+        raise SystemExit(f"FAIL: {label} length mismatch ref={len(ref_list)} our={len(our_list)}")
+
+    for idx, (ref_item, our_item) in enumerate(zip(ref_list, our_list)):
+        diff = _max_abs_diff(ref_item, our_item)
+        if diff != 0.0:
+            raise SystemExit(f"FAIL: {label}[{idx}] mismatch max_abs_diff={diff:.12e}")
+
+    print(f"PASS: {label}")
+
+
+def assert_callback(ref_callback: Callback, our_callback: Callback, label: str, seed: int) -> tuple[list[Any], list[Any]]:
+    _set_seed(seed)
+    ref_list = ref_callback()
+    _set_seed(seed)
+    our_list = our_callback()
+    assert_list(ref_list, our_list, label=label)
+    return ref_list, our_list
