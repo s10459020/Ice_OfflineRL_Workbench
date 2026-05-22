@@ -22,16 +22,19 @@ SEED = 42
 BATCH_SIZE = 64
 N_TEST_BATCHES = 30
 MAX_ACTION = 1.0
-TAU = 0.005
-GAMMA = 0.99
-POLICY_FREQ = 2
-ALPHA = 5.0
-LMBDA = 0.25
-BETA = 3e-3
 
 
 # ====================
-# Mapping
+# Global Pair
+# ====================
+REF: Any | None = None
+OUR: ScasAgent | None = None
+OUR_DYNAMICS: ScasDynamic | None = None
+REF_DYNAMICS: torch.nn.Module | None = None
+
+
+# ====================
+# Mapping: all_pairs
 # ====================
 def _all_pairs(ref: Any, our: ScasAgent, ref_dynamics: torch.nn.Module, our_dynamics: ScasDynamic):
     return [
@@ -120,9 +123,9 @@ def _all_pairs(ref: Any, our: ScasAgent, ref_dynamics: torch.nn.Module, our_dyna
 
 
 # ====================
-# Init / Sample
+# Init: init, sample, copy
 # ====================
-def _init_pair() -> None:
+def init_compare() -> tuple[Any, ScasAgent, torch.nn.Module, ScasDynamic]:
     global REF, OUR, OUR_DYNAMICS, REF_DYNAMICS
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -139,32 +142,20 @@ def _init_pair() -> None:
         replay_buffer=None,
         dynamics=REF_DYNAMICS,
         antmaze=False,
-        discount=GAMMA,
-        tau=TAU,
-        policy_freq=POLICY_FREQ,
-        schedule=True,
-        temp=ALPHA,
-        lam=LMBDA,
-        beta=BETA,
     )
-    OUR_DYNAMICS = ScasDynamic(obs_dim=OBS_DIM, act_dim=ACT_DIM, learning_rate=1e-3, device=DEVICE)
+    OUR_DYNAMICS = ScasDynamic(obs_dim=OBS_DIM, act_dim=ACT_DIM, device=DEVICE)
     OUR = ScasAgent(
         obs_dim=OBS_DIM,
         act_dim=ACT_DIM,
         dynamics=OUR_DYNAMICS,
-        tau=TAU,
         max_action=MAX_ACTION,
-        beta=BETA,
-        alpha=ALPHA,
-        lmbda=LMBDA,
-        gamma=GAMMA,
-        policy_freq=POLICY_FREQ,
         device=DEVICE,
     )
 
     with torch.no_grad():
         for our_param, ref_param in _all_pairs(REF, OUR, REF_DYNAMICS, OUR_DYNAMICS):
             our_param.copy_(ref_param)
+    return REF, OUR, REF_DYNAMICS, OUR_DYNAMICS
             
 def _sample_transition(batch_size: int = BATCH_SIZE):
     s = torch.as_tensor(np.random.standard_normal((batch_size, OBS_DIM)), dtype=torch.float32, device=DEVICE)
@@ -178,27 +169,18 @@ def _sample_transition(batch_size: int = BATCH_SIZE):
 # ====================
 # Ref Math
 # ====================
-def _ref_next_action_with_noise(ref: Any, sn: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-    # SCAS.py train(): noise + next_action
-    noise = (torch.randn_like(a) * 0.2).clamp(-0.5, 0.5)
-    return (ref.actor_target(sn) + noise).clamp(-ref.max_action, ref.max_action)
-
-
-def _ref_target_q(ref: Any, sn: torch.Tensor, a: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-    # SCAS.py train(): target_Q
-    not_done = 1.0 - d
-    with torch.no_grad():
-        next_action = _ref_next_action_with_noise(ref, sn, a)
-        tq1, tq2, tq3, tq4 = ref.critic_target(sn, next_action)
-        tq = torch.cat([tq1, tq2, tq3, tq4], dim=1)
-        tq, _ = torch.min(tq, dim=1, keepdim=True)
-        return r + not_done * ref.discount * tq
-
-
 def _ref_loss_critic_parts(
     ref: Any, s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: torch.Tensor, d: torch.Tensor
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-    y = _ref_target_q(ref, sn, a, r, d)
+    not_done = 1.0 - d
+    with torch.no_grad():
+        noise = (torch.randn_like(a) * 0.2).clamp(-0.5, 0.5)
+        next_action = (ref.actor_target(sn) + noise).clamp(-ref.max_action, ref.max_action)
+        target_q1, target_q2, target_q3, target_q4 = ref.critic_target(sn, next_action)
+        target_q = torch.cat([target_q1, target_q2, target_q3, target_q4], dim=1)
+        target_q, _ = torch.min(target_q, dim=1, keepdim=True)
+        y = r + not_done * ref.discount * target_q
+
     q1, q2, q3, q4 = ref.critic(s, a)
     loss_q1 = F.mse_loss(q1, y)
     loss_q2 = F.mse_loss(q2, y)
@@ -281,7 +263,7 @@ def _ref_update_and_collect_params(
 
 
 # ====================
-# Our Math
+# Out Math
 # ====================
 def _our_update_and_collect_params(
     s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: torch.Tensor, d: torch.Tensor
@@ -292,8 +274,8 @@ def _our_update_and_collect_params(
 
 # ====================
 # Compare
-# ====================            
-def _run_act_compare() -> None:
+# ====================
+def compare_act() -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, _, _, _, _ = _sample_transition()
@@ -311,7 +293,7 @@ def _run_act_compare() -> None:
         )
 
 
-def _run_loss_compare() -> None:
+def compare_loss() -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = _sample_transition()
@@ -347,7 +329,7 @@ def _run_loss_compare() -> None:
         )
 
 
-def _run_param_compare() -> None:
+def compare_param() -> None:
     print_stage("Param Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = _sample_transition(batch_size=1)
@@ -369,14 +351,14 @@ def _run_param_compare() -> None:
 
 
 # ====================
-# Main
+# main & __main__
 # ====================
 def main() -> None:
     print_stage("Init")
-    _init_pair()
-    _run_act_compare()
-    _run_loss_compare()
-    _run_param_compare()
+    init_compare()
+    compare_act()
+    compare_loss()
+    compare_param()
     print_stage("Result")
     print("PASS: compare_scas finished.")
 

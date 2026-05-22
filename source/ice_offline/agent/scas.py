@@ -224,8 +224,8 @@ class ScasAgent(TorchAgent):
     obs_dim: int
     act_dim: int
     dynamics: ScasDynamic
-    tau: float
     max_action: float
+    tau: float = 0.005
     beta: float = 3e-3
     alpha: float = 5.0
     lmbda: float = 0.25
