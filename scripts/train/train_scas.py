@@ -32,6 +32,7 @@ def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 
 def train(
+    task_id: str,
     batch_loader: MinariLoader,
     *,
     seed: int = 42,
@@ -47,20 +48,25 @@ def train(
     lmbda: float = 0.25,
     policy_freq: int = 2,
     log_interval: int = 0,
-    eval_interval: int = 10000,
+    eval_interval: int = 1000,
     eval_offline_n: int = 8,
     eval_online_n: int = 4,
     eval_env_fn=None,
-    eval_tag: str = "scas",
+    recode_eval: bool = True,
+    recode_reset: bool = True,
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
     dynamics_evaluator = Evaluator2(
-        runner_id=f"{eval_tag}_dynamics",
+        runner_id=task_id,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_offline_fns=[eval_loss_dynamic],
+        recode_eval=recode_eval,
+        recode_reset=recode_reset,
     )
+
+
 
     print_stage("Train Dynamics")
     dynamics = ScasDynamic(
@@ -72,9 +78,13 @@ def train(
     for step in range(1, dynamics_steps + 1):
         batch = batch_loader.sample_batch(batch_size)
         dynamics.update(batch)
+        if log_interval > 0 and step % log_interval == 0:
+            print(f"[dynamics][step] {step}")
         dynamics_evaluator.eval_offline(step=step, agent=dynamics, batch_loader=batch_loader, batch_size=batch_size)
         dynamics_evaluator.print(step)
         dynamics_evaluator.recode(step)
+
+
 
     print_stage("Train Agent")
     agent = ScasAgent(
@@ -91,17 +101,21 @@ def train(
         device=device,
     )
     agent_evaluator = Evaluator2(
-        runner_id=f"{eval_tag}_agent",
+        runner_id=task_id,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
         eval_offline_fns=[eval_loss_agent],
         eval_online_fns=[eval_return],
+        recode_eval=recode_eval,
+        recode_reset=recode_reset,
     )
 
     for step in range(1, agent_steps + 1):
         batch = batch_loader.sample_batch(batch_size)
         agent.update(batch)
+        if log_interval > 0 and step % log_interval == 0:
+            print(f"[agent][step] {step}")
         agent_evaluator.eval_offline(step=step, agent=agent, batch_loader=batch_loader, batch_size=batch_size)
         agent_evaluator.eval_online(step=step, agent=agent, env_fn=eval_env_fn)
         agent_evaluator.print(step)
@@ -109,14 +123,13 @@ def train(
 
 
 def main() -> None:
+    TASK_ID = "halfcheetah_medium__scas"
     dataset = get_dataset("halfcheetah_medium")
     batch_loader = MinariLoader(dataset=dataset, seed=42)
     print_stage("Load")
     train(
+        task_id=TASK_ID,
         batch_loader=batch_loader,
-        log_interval=10_000,
-        eval_interval=20_000,
-        eval_offline_n=4,
     )
     print_stage("Done")
 
