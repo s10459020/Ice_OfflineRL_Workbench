@@ -1,7 +1,7 @@
 ﻿"""Mock dataset service for MVP UI interaction tests."""
 
 
-from ice_offline.data import EpisodeInfo
+from ice_offline.data.episode import EpisodeInfo
 
 
 class MockDatasetService:
@@ -15,4 +15,4 @@ class MockDatasetService:
         ]
 
     def set_trail_enabled(self, enabled: bool) -> None:
-        del enabled
+        _ = enabled

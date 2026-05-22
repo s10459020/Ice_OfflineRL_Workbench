@@ -1,9 +1,9 @@
 ﻿import gymnasium as gym
 import minigrid  # noqa: F401
 
-from ice_offline.pipeline import StateInjectWrapper, convert_fullobs
-from ice_offline.env.common import insert_render_quiet_innermost
-from ice_offline.tools import print_stage
+from ice_offline.pipeline.state_injector import StateInjectWrapper`nfrom ice_offline.pipeline.state_converter import convert_fullobs
+from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
+from ice_offline.tools.printer import print_stage
 
 
 # ====================
@@ -52,3 +52,5 @@ for episode in range(1, env.total_episodes + 1):
 
 env.close()
 print(f"online_steps={steps_online}")
+
+

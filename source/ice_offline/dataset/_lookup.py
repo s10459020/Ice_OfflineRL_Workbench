@@ -1,7 +1,7 @@
 ﻿import copy
 
-from ice_offline.dataset import BaseDataset
-from ice_offline.dataset import OneRoomS8Dataset
+from ice_offline.dataset._spec import BaseDataset
+from ice_offline.dataset.oneroom_s8 import OneRoomS8Dataset
 from ice_offline.dataset._spec import eval_return
 from ice_offline.dataset._spec import StopReturnStable
 from ice_offline.runner.evaluator import OnlineEvalFn

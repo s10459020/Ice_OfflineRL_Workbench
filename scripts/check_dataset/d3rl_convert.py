@@ -1,7 +1,7 @@
 ﻿import d3rlpy
 
-from ice_offline.pipeline import d3rl_convertor
-from ice_offline.tools import print_stage
+from ice_offline.pipeline.d3rl_converter import to_buffer
+from ice_offline.tools.printer import print_stage
 
 
 # ====================
@@ -16,7 +16,7 @@ N_STEPS = 200
 # Convert
 # ====================
 print_stage("Convert")
-dataset = d3rl_convertor.to_buffer(DATASET_ID)
+dataset = to_buffer(DATASET_ID)
 print(f"dataset_type={type(dataset)}")
 print(f"episode_count={len(dataset.episodes)}")
 print(f"transition_count={dataset.transition_count}")
@@ -31,3 +31,4 @@ print_stage("Train")
 algo = d3rlpy.algos.DQNConfig(batch_size=32).create(device=DEVICE)
 algo.fit(dataset, n_steps=N_STEPS)
 print("fit finished")
+

@@ -4,10 +4,10 @@ import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.data import State
-from ice_offline.pipeline import StateCollector, StateLoader
-from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
-from ice_offline.tools import print_stage
+from ice_offline.data.state import State
+from ice_offline.pipeline.state_collector import StateCollector`nfrom ice_offline.pipeline.state_loader import StateLoader
+from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper`nfrom ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
+from ice_offline.tools.printer import print_stage
 
 
 # ====================
@@ -117,3 +117,5 @@ finally:
     loader.close()
 
 print("PASS: compare_state all matched")
+
+

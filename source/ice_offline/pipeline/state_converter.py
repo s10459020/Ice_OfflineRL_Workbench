@@ -6,7 +6,7 @@ import minari
 import numpy as np
 from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 
-from ice_offline.data import State
+from ice_offline.data.state import State
 from ice_offline.tools.paths import minari_root
 
 _ACTION_PICKUP = 3

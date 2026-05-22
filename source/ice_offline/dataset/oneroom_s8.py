@@ -4,7 +4,8 @@ import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
+from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper
+from ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
 
 
 class OneRoomS8Dataset(BaseDataset):

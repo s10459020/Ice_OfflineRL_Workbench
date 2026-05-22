@@ -10,18 +10,23 @@ OfflineEvalFn = Callable[[object, TransitionBatch], dict[str, float]]
 OnlineEvalFn = Callable[[TransitionBatch], dict[str, float]]
 
 
-class RunnerEvaluator:
+class Evaluator:
     def __init__(
         self,
         runner_id: str,
         eval_dir: str,
         eval_batches: int,
         eval_episodes: int,
+        eval_interval: int = 0,
     ) -> None:
         self.eval_batches = eval_batches
         self.eval_episodes = eval_episodes
+        self.eval_interval = eval_interval
         self.eval_dir_path = Path(eval_dir) / runner_id
         self.eval_dir_path.mkdir(parents=True, exist_ok=True)
+
+    def should_eval(self, step: int) -> bool:
+        return self.eval_interval > 0 and step % self.eval_interval == 0
 
     def evaluate_offline(self, agent, minari_loader, eval_offline_fns: list[OfflineEvalFn], batch_size: int) -> dict[str, list[float]]:
         bucket: dict[str, list[float]] = {}

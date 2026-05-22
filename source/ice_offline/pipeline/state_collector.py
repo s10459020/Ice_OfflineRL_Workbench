@@ -6,8 +6,8 @@ import gymnasium as gym
 import h5py
 import numpy as np
 
-from ice_offline.env.common import StateIOWrapper
-from ice_offline.data import State
+from ice_offline.env.common.state_io_wrapper import StateIOWrapper
+from ice_offline.data.state import State
 from ice_offline.tools.paths import minari_root
 
 class StateCollector(gym.Wrapper):

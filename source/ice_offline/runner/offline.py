@@ -4,10 +4,10 @@ from pathlib import Path
 
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline import MinariLoader
+from ice_offline.pipeline.batch_loader import MinariLoader
 from ice_offline.runner.evaluator import OfflineEvalFn
 from ice_offline.runner.evaluator import OnlineEvalFn
-from ice_offline.runner.evaluator import RunnerEvaluator
+from ice_offline.runner.evaluator import Evaluator
 from ice_offline.runner.saver import RunnerSaver
 from ice_offline.runner.stopper import EarlyStopEvent
 from ice_offline.runner.stopper import RunnerStopper
@@ -49,7 +49,13 @@ class TorchBatchOfflineRunner:
         early_stop_events: list[EarlyStopEvent] | None = None,
     ) -> None:
         saver = RunnerSaver(self.runner_id, self.steps_begin, self.steps_begin_auto, self.save_interval)
-        evaluator = RunnerEvaluator(self.runner_id, self.eval_dir, self.eval_batches, self.eval_episodes)
+        evaluator = Evaluator(
+            self.runner_id,
+            self.eval_dir,
+            self.eval_batches,
+            self.eval_episodes,
+            self.eval_interval,
+        )
         stopper = RunnerStopper(early_stop_events)
 
         steps_begin = saver.resolve_steps_begin()
@@ -86,7 +92,7 @@ class TorchBatchOfflineRunner:
             agent.update(batch)
             saver.save_if_needed(agent, step)
 
-            if self.eval_interval > 0 and step % self.eval_interval == 0:
+            if evaluator.should_eval(step):
                 offline_metrics = evaluator.evaluate_offline(agent, minari_loader, eval_offline_fns, self.batch_size)
                 online_metrics = evaluator.evaluate_online(agent, dataset, eval_online_fns)
                 metrics = {**offline_metrics, **online_metrics}

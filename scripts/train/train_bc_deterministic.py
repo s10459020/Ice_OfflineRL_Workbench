@@ -5,9 +5,9 @@ import gymnasium as gym
 import numpy as np
 import torch
 
-from ice_offline.agent import ContinuousBCDeterministicAgent
-from ice_offline.pipeline import BatchLoader
-from ice_offline.runner import TorchBatchOfflineRunner
+from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+from ice_offline.pipeline.batch_loader import MinariLoader
+from ice_offline.runner.offline import TorchBatchOfflineRunner
 from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage
 from ice_offline.tools.timing import Timer
@@ -32,7 +32,7 @@ def obs_encode(obs: np.ndarray) -> np.ndarray:
 
 
 
-def eval_loss_pi(agent: ContinuousBCDeterministicAgent, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     o, a, _, _, _ = episode_batch
     with torch.no_grad():
         return {"loss_pi": float(agent.loss_actor(o, a).item())}
@@ -49,7 +49,7 @@ def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 def main() -> None:
     print_stage("Load")
-    dataset = BatchLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
+    dataset = MinariLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
     obs_dim = int(np.prod(dataset.obs_shape))
     act_dim = int(np.prod(dataset.act_shape))
     runner = TorchBatchOfflineRunner(
@@ -63,7 +63,7 @@ def main() -> None:
         model_load_step=MODEL_LOAD_STEP,
         model_save_interval=MODEL_SAVE_INTERVAL,
     )
-    agent = ContinuousBCDeterministicAgent(obs_size=obs_dim, act_size=act_dim)
+    agent = BCAgentContinuousDeterministic(obs_size=obs_dim, act_size=act_dim)
 
     print_stage("Train")
     Timer.stopwatch(f"train::{RUNNER_ID}")
@@ -88,6 +88,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 
 
 

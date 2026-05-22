@@ -3,8 +3,8 @@ import sys
 
 from PySide6.QtWidgets import QApplication
 
-from ice_offline.env.gui.presenters import ViewerPresenter
-from ice_offline.env.gui.services import MinariDatasetService
+from ice_offline.env.gui.presenters.viewer_presenter import ViewerPresenter
+from ice_offline.env.gui.services.minari_dataset_service import MinariDatasetService
 from ice_offline.env.gui.views.main_window import MainWindow
 
 
@@ -25,3 +25,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

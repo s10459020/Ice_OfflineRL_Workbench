@@ -3,8 +3,10 @@
 
 import numpy as np
 
-from ice_offline.data import EpisodeInfo
-from ice_offline.env.visualization import BasicUnit, DistributionUnit, RenderLayer
+from ice_offline.data.episode import EpisodeInfo
+from ice_offline.env.visualization.overlay_engine import RenderLayer
+from ice_offline.env.visualization.unit_basic import BasicUnit
+from ice_offline.env.visualization.unit_distribution import DistributionUnit
 from ice_offline.env.visualization.overlay_loader import OverlayLoader
 from ice_offline.env.visualization.unit_trail import TrailUnit
 

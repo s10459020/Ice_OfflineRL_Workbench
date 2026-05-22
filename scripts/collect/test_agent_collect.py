@@ -5,11 +5,13 @@ import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.agent import QTableAgent
-from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper, insert_render_quiet_innermost
+from ice_offline.agent.q_table import QTableAgent
+from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper
+from ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
+from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
 from ice_offline.env.common.step_penalty_wrapper import StepPenaltyWrapper
-from ice_offline.env.replay import StateCollector, ValueCollector
-from ice_offline.tools import print_stage
+from ice_offline.pipeline.state_collector import StateCollector`nfrom ice_offline.pipeline.value_collector import ValueCollector
+from ice_offline.tools.printer import print_stage
 
 ENV_ID = "BabyAI-OneRoomS8-v0"
 DATASET_ID = "test_agent_collect-v0"
@@ -96,3 +98,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+

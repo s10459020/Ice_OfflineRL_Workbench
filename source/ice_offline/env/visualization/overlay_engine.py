@@ -2,7 +2,7 @@
 from types import MethodType
 from typing import Any
 import numpy as np
-from ice_offline.tools import Timer
+from ice_offline.tools.timing import Timer
 from .overlay_renderer import OverlayRenderer
 
 

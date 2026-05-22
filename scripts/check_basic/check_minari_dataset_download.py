@@ -1,6 +1,6 @@
 ﻿import minari
 
-from ice_offline.tools import print_stage
+from ice_offline.tools.printer import print_stage
 
 def step_load_dataset(dataset_id: str) -> minari.MinariDataset:
     print_stage("Load Dataset")
@@ -64,3 +64,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

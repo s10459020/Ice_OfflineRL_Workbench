@@ -14,8 +14,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ice_offline.env.gui.presenters import ViewerPresenter
-from ice_offline.env.gui.services import MinariDatasetService
+from ice_offline.env.gui.presenters.viewer_presenter import ViewerPresenter
+from ice_offline.env.gui.services.minari_dataset_service import MinariDatasetService
 from ice_offline.env.gui.views.grid_render_panel import GridRenderPanel
 from ice_offline.env.gui.views.visualization_panel import VisualizationPanel
 

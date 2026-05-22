@@ -6,7 +6,8 @@ import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.pipeline.value_collector import EvalFn, ValueCollector
-from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
+from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper
+from ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
 
 
 ENV_ID = "BabyAI-OneRoomS8-v0"

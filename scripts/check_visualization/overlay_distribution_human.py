@@ -4,9 +4,9 @@ import numpy as np
 from collections import defaultdict
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.env.visualization import BasicUnit, DistributionUnit, OverlayWrapper
+from ice_offline.env.visualization.unit_basic import BasicUnit`nfrom ice_offline.env.visualization.unit_distribution import DistributionUnit`nfrom ice_offline.env.visualization.overlay_wrapper import OverlayWrapper
 from ice_offline.env.visualization.overlay_engine import RenderLayer
-from ice_offline.tools import Timer, insert_render_quiet_innermost
+from ice_offline.tools.timing import Timer, insert_render_quiet_innermost
 
 
 value_table: defaultdict[tuple[bytes, int], dict[int, float]] = defaultdict(dict)
@@ -54,3 +54,4 @@ def main(episodes: int = 3) -> None:
 
 if __name__ == "__main__":
     main()
+

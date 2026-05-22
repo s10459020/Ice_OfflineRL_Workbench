@@ -5,10 +5,10 @@ import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.agent import QTableAgent
-from ice_offline.env.common import MissionTextWrapper, NoJpegImageWrapper
-from ice_offline.env.replay import StateCollector, ValueCollector
-from ice_offline.tools import print_stage
+from ice_offline.agent.q_table import QTableAgent
+from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper`nfrom ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
+from ice_offline.pipeline.state_collector import StateCollector`nfrom ice_offline.pipeline.value_collector import ValueCollector
+from ice_offline.tools.printer import print_stage
 
 
 def make_env(env_id: str) -> gym.Env:
@@ -112,3 +112,6 @@ if __name__ == "__main__":
         env_id=env_id,
         dataset_id=dataset_id,
     )
+
+
+

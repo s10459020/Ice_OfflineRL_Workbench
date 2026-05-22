@@ -1,7 +1,7 @@
 ﻿import gymnasium as gym
 import minigrid  # noqa: F401
 import numpy as np
-from ice_offline.tools import Timer
+from ice_offline.tools.timing import Timer
 from minigrid.wrappers import FullyObsWrapper
 
 
@@ -61,3 +61,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

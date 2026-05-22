@@ -2,7 +2,7 @@
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.agent import DiscretePolicyGradientAgent
+from ice_offline.agent.pg_discrete import PolicyGradientAgent
 from ice_offline.agent._spec import model_ref
 from ice_offline.tools.printer import print_stage
 
@@ -19,12 +19,12 @@ def main() -> None:
     env = gym.make(ENV_ID)
     obs_dim = int(np.prod(env.observation_space.shape))
 
-    agent = DiscretePolicyGradientAgent(
+    agent = PolicyGradientAgent(
         n_actions=env.action_space.n,
         obs_dim=obs_dim,
     )
     if LOAD_STEP is not None:
-        agent = DiscretePolicyGradientAgent.load(RUNNER_ID, LOAD_STEP)
+        agent = PolicyGradientAgent.load(RUNNER_ID, LOAD_STEP)
         print(
             f"load step={LOAD_STEP} "
             f"path={model_path(RUNNER_ID, LOAD_STEP, '.npz')}"
@@ -92,6 +92,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
 
 
 

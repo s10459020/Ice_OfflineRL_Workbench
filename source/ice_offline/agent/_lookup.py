@@ -1,28 +1,28 @@
-﻿from ice_offline.agent import CQLAgentContinuous
-from ice_offline.agent import CQLAgentDiscrete
-from ice_offline.agent import ContinuousBCDeterministicAgent
-from ice_offline.agent import ContinuousBCStochasticAgent
-from ice_offline.agent import DiscreteBCAgent
-from ice_offline.agent import IQLAgentContinuous
-from ice_offline.agent import IQLAgentDiscrete
-from ice_offline.agent import QAgentDiscrete
-from ice_offline.agent import QVAgentDiscrete
+from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
 from ice_offline.agent.bc_continuous_deterministic import eval_bc_deterministic_loss_pi
+from ice_offline.agent.bc_continuous_stochastic import BCAgentContinuousStochastic
 from ice_offline.agent.bc_continuous_stochastic import eval_bc_stochastic_loss_pi
+from ice_offline.agent.bc_discrete import BCAgentDiscrete
 from ice_offline.agent.bc_discrete import eval_bc_discrete_loss
+from ice_offline.agent.cql_continuous import CQLAgentContinuous
 from ice_offline.agent.cql_continuous import eval_cql_continuous_loss_pi
 from ice_offline.agent.cql_continuous import eval_cql_continuous_loss_q
+from ice_offline.agent.cql_discrete import CQLAgentDiscrete
 from ice_offline.agent.cql_discrete import eval_cql_discrete_loss
 from ice_offline.agent.cql_discrete import eval_cql_discrete_loss_cql
 from ice_offline.agent.cql_discrete import eval_cql_discrete_loss_td
+from ice_offline.agent.iql_continuous import IQLAgentContinuous
 from ice_offline.agent.iql_continuous import eval_iql_continuous_loss_pi
 from ice_offline.agent.iql_continuous import eval_iql_continuous_loss_q
 from ice_offline.agent.iql_continuous import eval_iql_continuous_loss_v
+from ice_offline.agent.iql_discrete import IQLAgentDiscrete
 from ice_offline.agent.iql_discrete import eval_iql_discrete_loss
 from ice_offline.agent.iql_discrete import eval_iql_discrete_loss_q
 from ice_offline.agent.iql_discrete import eval_iql_discrete_loss_v
+from ice_offline.agent.q_discrete import QAgentDiscrete
 from ice_offline.agent.q_discrete import eval_q_discrete_loss
 from ice_offline.agent.q_discrete import eval_q_discrete_loss_q
+from ice_offline.agent.qv_discrete import QVAgentDiscrete
 from ice_offline.agent.qv_discrete import eval_qv_discrete_loss
 from ice_offline.agent.qv_discrete import eval_qv_discrete_loss_q
 from ice_offline.agent.qv_discrete import eval_qv_discrete_loss_v
@@ -31,9 +31,9 @@ from ice_offline.runner.offline import RunnerAgent
 
 
 AGENT_LOOKUP: dict[str, RunnerAgent] = {
-    "bc_deterministic": ContinuousBCDeterministicAgent(),
-    "bc_discrete": DiscreteBCAgent(),
-    "bc_stochastic": ContinuousBCStochasticAgent(),
+    "bc_deterministic": BCAgentContinuousDeterministic(),
+    "bc_discrete": BCAgentDiscrete(),
+    "bc_stochastic": BCAgentContinuousStochastic(),
     "cql_continuous": CQLAgentContinuous(),
     "cql_discrete": CQLAgentDiscrete(),
     "iql_continuous": IQLAgentContinuous(),

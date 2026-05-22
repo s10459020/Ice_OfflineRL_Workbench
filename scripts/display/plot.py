@@ -1,6 +1,6 @@
-from pathlib import Path
+﻿from pathlib import Path
 
-from ice_offline.plot import plot_eval_csv
+from ice_offline.plot.plotter import plot_eval_csv
 
 # Hyperparameters
 CSV_PATH = "tmps/eval/loss_reward/cql_discrete_onerooms8.csv"
@@ -24,3 +24,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

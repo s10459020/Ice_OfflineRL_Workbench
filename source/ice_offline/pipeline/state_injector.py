@@ -3,9 +3,9 @@ import gymnasium as gym
 import minari
 import numpy as np
 
-from ice_offline.data import State
+from ice_offline.data.state import State
 from ice_offline.pipeline.state_loader import StateLoader
-from ice_offline.env.common import StateIOWrapper
+from ice_offline.env.common.state_io_wrapper import StateIOWrapper
 
 
 class StateInjectWrapper(gym.Wrapper):

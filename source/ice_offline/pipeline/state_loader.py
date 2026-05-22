@@ -4,7 +4,7 @@ from typing import Any
 
 import h5py
 
-from ice_offline.data import State
+from ice_offline.data.state import State
 from ice_offline.tools.paths import minari_root
 
 

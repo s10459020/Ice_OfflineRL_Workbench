@@ -3,10 +3,10 @@
 import minari
 import numpy as np
 
-from ice_offline.agent import QTableAgent
-from ice_offline.pipeline import ValueLoader
+from ice_offline.agent.q_table import QTableAgent
+from ice_offline.pipeline.value_loader import ValueLoader
 from ice_offline.pipeline.value_oneroom import ACTIONS, ValueOneRoomCollector, make_value_env
-from ice_offline.tools import print_stage
+from ice_offline.tools.printer import print_stage
 
 
 # ====================
@@ -120,3 +120,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

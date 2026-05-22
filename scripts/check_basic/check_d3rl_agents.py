@@ -1,5 +1,5 @@
 ﻿import d3rlpy
-from ice_offline.pipeline import d3rl_convertor
+from ice_offline.pipeline.d3rl_converter import to_buffer
 
 # mute logging
 d3rlpy.logging.LOG.info = lambda *args, **kwargs: None
@@ -40,7 +40,7 @@ AGENTS = [
 ]
 
 def main() -> None:
-    dataset = d3rl_convertor.to_buffer(DATASET_ID, mode="flatten")
+    dataset = to_buffer(DATASET_ID, mode="flatten")
  
     results: list[tuple[str, bool, str]] = []
     print("\n=== fitting ===")

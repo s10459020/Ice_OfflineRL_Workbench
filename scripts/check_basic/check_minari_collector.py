@@ -4,7 +4,7 @@ import minigrid  # noqa: F401
 import minari
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.tools import MissionTextWrapper, NoJpegImageWrapper, print_stage
+from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper`nfrom ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper`nfrom ice_offline.tools.printer import print_stage
 
 
 # ====================
@@ -160,3 +160,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

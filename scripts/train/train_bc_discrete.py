@@ -6,9 +6,9 @@ import numpy as np
 import torch
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.agent import DiscreteBCAgent
-from ice_offline.pipeline import BatchLoader
-from ice_offline.runner import TorchBatchOfflineRunner
+from ice_offline.agent.bc_discrete import BCAgentDiscrete
+from ice_offline.pipeline.batch_loader import MinariLoader
+from ice_offline.runner.offline import TorchBatchOfflineRunner
 from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage
 from ice_offline.tools.timing import Timer
@@ -34,7 +34,7 @@ def eval_env() -> gym.Env:
     return FullyObsWrapper(gym.make(ENV_ID))
 
 
-def eval_loss(agent: DiscreteBCAgent, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+def eval_loss(agent: BCAgentDiscrete, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     o, a, _, _, _ = episode_batch
     return {"loss": float(agent.loss_actor(o, a).item())}
 
@@ -46,7 +46,7 @@ def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 def main() -> None:
     print_stage("Load")
-    dataset = BatchLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
+    dataset = MinariLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
     obs_dim = int(np.prod(dataset.obs_shape))
     act_size = dataset.act_size
     runner = TorchBatchOfflineRunner(
@@ -60,7 +60,7 @@ def main() -> None:
         model_load_step=MODEL_LOAD_STEP,
         model_save_interval=MODEL_SAVE_INTERVAL,
     )
-    agent = DiscreteBCAgent(obs_size=obs_dim, act_size=act_size)
+    agent = BCAgentDiscrete(obs_size=obs_dim, act_size=act_size)
 
     print_stage("Train")
     Timer.stopwatch(f"train::{RUNNER_ID}")
@@ -85,6 +85,8 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
 
 
 

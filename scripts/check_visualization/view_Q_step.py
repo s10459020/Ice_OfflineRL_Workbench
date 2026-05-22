@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Slider
 
-from ice_offline.pipeline import OldValueLoader
+from ice_offline.pipeline.old_value_loader import OldValueLoader
 
 
 DATASET_ID = "check/visualization-q-step-v0"
@@ -132,3 +132,4 @@ if __name__ == "__main__":
     parser.add_argument("--step", type=int, default=1)
     args = parser.parse_args()
     main(args.dataset_id, args.episode, args.step)
+

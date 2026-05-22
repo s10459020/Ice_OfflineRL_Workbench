@@ -3,10 +3,10 @@ import numpy as np
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QLabel
 
-from ice_offline.env.visualization import BasicUnit, OverlayLoader
+from ice_offline.env.visualization.unit_basic import BasicUnit`nfrom ice_offline.env.visualization.overlay_loader import OverlayLoader
 from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.env.visualization.unit_trail import TrailUnit
-from ice_offline.tools import Timer
+from ice_offline.tools.timing import Timer
 
 
 def main(dataset: str = "test_collect_state-v0") -> None:
@@ -58,3 +58,4 @@ def main(dataset: str = "test_collect_state-v0") -> None:
 
 if __name__ == "__main__":
     main()
+

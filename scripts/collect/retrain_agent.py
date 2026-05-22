@@ -4,10 +4,10 @@ import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.agent import QTableAgent
-from ice_offline.env.common import insert_render_quiet_innermost
+from ice_offline.agent.q_table import QTableAgent
+from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
 from ice_offline.env.common.step_penalty_wrapper import StepPenaltyWrapper
-from ice_offline.tools import print_stage
+from ice_offline.tools.printer import print_stage
 
 ENV_ID = "BabyAI-OneRoomS8-v0"
 MODEL_ID = f"{ENV_ID}_QTableAgent"
@@ -70,3 +70,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+

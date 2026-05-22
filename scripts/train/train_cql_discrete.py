@@ -6,9 +6,9 @@ import numpy as np
 import torch
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.agent import CQLAgentDiscrete
-from ice_offline.pipeline import BatchLoader
-from ice_offline.runner import TorchBatchOfflineRunner
+from ice_offline.agent.cql_discrete import CQLAgentDiscrete
+from ice_offline.pipeline.batch_loader import MinariLoader
+from ice_offline.runner.offline import TorchBatchOfflineRunner
 from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage
 from ice_offline.tools.timing import Timer
@@ -53,7 +53,7 @@ def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 def main() -> None:
     print_stage("Load")
-    dataset = BatchLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
+    dataset = MinariLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
     obs_dim = int(np.prod(dataset.obs_shape))
     act_size = dataset.act_size
     runner = TorchBatchOfflineRunner(
@@ -97,6 +97,9 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
 
 
 

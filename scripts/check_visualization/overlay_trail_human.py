@@ -2,10 +2,10 @@
 import minigrid  # noqa: F401
 import numpy as np
 
-from ice_offline.env.visualization import BasicUnit, OverlayWrapper
+from ice_offline.env.visualization.unit_basic import BasicUnit`nfrom ice_offline.env.visualization.overlay_wrapper import OverlayWrapper
 from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.env.visualization.unit_trail import TrailUnit
-from ice_offline.tools import Timer, insert_render_quiet_innermost
+from ice_offline.tools.timing import Timer, insert_render_quiet_innermost
 
 
 def main(episodes: int = 3) -> None:
@@ -42,3 +42,4 @@ def main(episodes: int = 3) -> None:
 
 if __name__ == "__main__":
     main()
+

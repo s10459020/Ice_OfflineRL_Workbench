@@ -12,8 +12,9 @@ from minigrid.utils.rendering import (
     rotate_fn,
 )
 
-from ice_offline.env.common import StateIOWrapper
-from ice_offline.env.replay import StateCollector, StateLoader
+from ice_offline.env.common.state_io_wrapper import StateIOWrapper
+from ice_offline.pipeline.state_collector import StateCollector
+from ice_offline.pipeline.state_loader import StateLoader
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface

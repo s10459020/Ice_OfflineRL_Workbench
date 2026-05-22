@@ -1,6 +1,6 @@
-from pathlib import Path
+﻿from pathlib import Path
 
-from ice_offline.plot import plot_eval_csv
+from ice_offline.plot.plotter import plot_eval_csv
 
 
 CSV_DIR = Path("tmps/eval")
@@ -56,3 +56,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
