@@ -43,7 +43,7 @@ def train(
     log_interval: int = 0,
     eval_interval: int = 1000,
     eval_offline_n: int = 8,
-    eval_online_n: int = 0,
+    eval_online_n: int = 4,
     eval_env_fn=None,
     recode_eval: bool = True,
     recode_reset: bool = True,
@@ -92,7 +92,11 @@ def main() -> None:
     dataset = get_dataset("halfcheetah_medium")
     batch_loader = MinariLoader(dataset=dataset, seed=42)
     print_stage("Load")
-    train(task_id=task_id, batch_loader=batch_loader)
+    train(
+        task_id=task_id,
+        batch_loader=batch_loader,
+        eval_env_fn=dataset.make_eval_env,
+    )
     print_stage("Done")
 
 
