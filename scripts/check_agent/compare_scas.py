@@ -31,106 +31,91 @@ BETA = 3e-3
 
 
 # ====================
-# Global Pair
-# ====================
-REF: Any | None = None
-OUR: ScasAgent | None = None
-OUR_DYNAMICS: ScasDynamic | None = None
-REF_DYNAMICS: torch.nn.Module | None = None
-
-
-ref_model.device = torch.device(DEVICE)
-ref_scas.device = torch.device(DEVICE)
-RefDynamics = ref_model.Dynamics
-RefSCAS = ref_scas.SCAS
-
-
-# ====================
 # Mapping
 # ====================
-def _all_pairs():
+def _all_pairs(ref: Any, our: ScasAgent, ref_dynamics: torch.nn.Module, our_dynamics: ScasDynamic):
     return [
         # dynamics M: l1..l5
-        (OUR_DYNAMICS.model.network[0].weight, REF_DYNAMICS.l1.weight),
-        (OUR_DYNAMICS.model.network[0].bias, REF_DYNAMICS.l1.bias),
-        (OUR_DYNAMICS.model.network[2].weight, REF_DYNAMICS.l2.weight),
-        (OUR_DYNAMICS.model.network[2].bias, REF_DYNAMICS.l2.bias),
-        (OUR_DYNAMICS.model.network[4].weight, REF_DYNAMICS.l3.weight),
-        (OUR_DYNAMICS.model.network[4].bias, REF_DYNAMICS.l3.bias),
-        (OUR_DYNAMICS.model.network[6].weight, REF_DYNAMICS.l4.weight),
-        (OUR_DYNAMICS.model.network[6].bias, REF_DYNAMICS.l4.bias),
-        (OUR_DYNAMICS.model.network[8].weight, REF_DYNAMICS.l5.weight),
-        (OUR_DYNAMICS.model.network[8].bias, REF_DYNAMICS.l5.bias),
+        (our_dynamics.model.network[0].weight, ref_dynamics.l1.weight),
+        (our_dynamics.model.network[0].bias, ref_dynamics.l1.bias),
+        (our_dynamics.model.network[2].weight, ref_dynamics.l2.weight),
+        (our_dynamics.model.network[2].bias, ref_dynamics.l2.bias),
+        (our_dynamics.model.network[4].weight, ref_dynamics.l3.weight),
+        (our_dynamics.model.network[4].bias, ref_dynamics.l3.bias),
+        (our_dynamics.model.network[6].weight, ref_dynamics.l4.weight),
+        (our_dynamics.model.network[6].bias, ref_dynamics.l4.bias),
+        (our_dynamics.model.network[8].weight, ref_dynamics.l5.weight),
+        (our_dynamics.model.network[8].bias, ref_dynamics.l5.bias),
         # actor pi: l1..l3
-        (OUR.actor.pi.network[0].weight, REF.actor.l1.weight),
-        (OUR.actor.pi.network[0].bias, REF.actor.l1.bias),
-        (OUR.actor.pi.network[2].weight, REF.actor.l2.weight),
-        (OUR.actor.pi.network[2].bias, REF.actor.l2.bias),
-        (OUR.actor.pi.network[4].weight, REF.actor.l3.weight),
-        (OUR.actor.pi.network[4].bias, REF.actor.l3.bias),
+        (our.actor.pi.network[0].weight, ref.actor.l1.weight),
+        (our.actor.pi.network[0].bias, ref.actor.l1.bias),
+        (our.actor.pi.network[2].weight, ref.actor.l2.weight),
+        (our.actor.pi.network[2].bias, ref.actor.l2.bias),
+        (our.actor.pi.network[4].weight, ref.actor.l3.weight),
+        (our.actor.pi.network[4].bias, ref.actor.l3.bias),
         # actor target: l1..l3
-        (OUR.actor.tpi.network[0].weight, REF.actor_target.l1.weight),
-        (OUR.actor.tpi.network[0].bias, REF.actor_target.l1.bias),
-        (OUR.actor.tpi.network[2].weight, REF.actor_target.l2.weight),
-        (OUR.actor.tpi.network[2].bias, REF.actor_target.l2.bias),
-        (OUR.actor.tpi.network[4].weight, REF.actor_target.l3.weight),
-        (OUR.actor.tpi.network[4].bias, REF.actor_target.l3.bias),
+        (our.actor.tpi.network[0].weight, ref.actor_target.l1.weight),
+        (our.actor.tpi.network[0].bias, ref.actor_target.l1.bias),
+        (our.actor.tpi.network[2].weight, ref.actor_target.l2.weight),
+        (our.actor.tpi.network[2].bias, ref.actor_target.l2.bias),
+        (our.actor.tpi.network[4].weight, ref.actor_target.l3.weight),
+        (our.actor.tpi.network[4].bias, ref.actor_target.l3.bias),
         # critic q1: l1..l3
-        (OUR.critic.q1.network[0].weight, REF.critic.l1.weight),
-        (OUR.critic.q1.network[0].bias, REF.critic.l1.bias),
-        (OUR.critic.q1.network[2].weight, REF.critic.l2.weight),
-        (OUR.critic.q1.network[2].bias, REF.critic.l2.bias),
-        (OUR.critic.q1.network[4].weight, REF.critic.l3.weight),
-        (OUR.critic.q1.network[4].bias, REF.critic.l3.bias),
+        (our.critic.q1.network[0].weight, ref.critic.l1.weight),
+        (our.critic.q1.network[0].bias, ref.critic.l1.bias),
+        (our.critic.q1.network[2].weight, ref.critic.l2.weight),
+        (our.critic.q1.network[2].bias, ref.critic.l2.bias),
+        (our.critic.q1.network[4].weight, ref.critic.l3.weight),
+        (our.critic.q1.network[4].bias, ref.critic.l3.bias),
         # critic q2: l4..l6
-        (OUR.critic.q2.network[0].weight, REF.critic.l4.weight),
-        (OUR.critic.q2.network[0].bias, REF.critic.l4.bias),
-        (OUR.critic.q2.network[2].weight, REF.critic.l5.weight),
-        (OUR.critic.q2.network[2].bias, REF.critic.l5.bias),
-        (OUR.critic.q2.network[4].weight, REF.critic.l6.weight),
-        (OUR.critic.q2.network[4].bias, REF.critic.l6.bias),
+        (our.critic.q2.network[0].weight, ref.critic.l4.weight),
+        (our.critic.q2.network[0].bias, ref.critic.l4.bias),
+        (our.critic.q2.network[2].weight, ref.critic.l5.weight),
+        (our.critic.q2.network[2].bias, ref.critic.l5.bias),
+        (our.critic.q2.network[4].weight, ref.critic.l6.weight),
+        (our.critic.q2.network[4].bias, ref.critic.l6.bias),
         # critic q3: l7..l9
-        (OUR.critic.q3.network[0].weight, REF.critic.l7.weight),
-        (OUR.critic.q3.network[0].bias, REF.critic.l7.bias),
-        (OUR.critic.q3.network[2].weight, REF.critic.l8.weight),
-        (OUR.critic.q3.network[2].bias, REF.critic.l8.bias),
-        (OUR.critic.q3.network[4].weight, REF.critic.l9.weight),
-        (OUR.critic.q3.network[4].bias, REF.critic.l9.bias),
+        (our.critic.q3.network[0].weight, ref.critic.l7.weight),
+        (our.critic.q3.network[0].bias, ref.critic.l7.bias),
+        (our.critic.q3.network[2].weight, ref.critic.l8.weight),
+        (our.critic.q3.network[2].bias, ref.critic.l8.bias),
+        (our.critic.q3.network[4].weight, ref.critic.l9.weight),
+        (our.critic.q3.network[4].bias, ref.critic.l9.bias),
         # critic q4: l10..l12
-        (OUR.critic.q4.network[0].weight, REF.critic.l10.weight),
-        (OUR.critic.q4.network[0].bias, REF.critic.l10.bias),
-        (OUR.critic.q4.network[2].weight, REF.critic.l11.weight),
-        (OUR.critic.q4.network[2].bias, REF.critic.l11.bias),
-        (OUR.critic.q4.network[4].weight, REF.critic.l12.weight),
-        (OUR.critic.q4.network[4].bias, REF.critic.l12.bias),
+        (our.critic.q4.network[0].weight, ref.critic.l10.weight),
+        (our.critic.q4.network[0].bias, ref.critic.l10.bias),
+        (our.critic.q4.network[2].weight, ref.critic.l11.weight),
+        (our.critic.q4.network[2].bias, ref.critic.l11.bias),
+        (our.critic.q4.network[4].weight, ref.critic.l12.weight),
+        (our.critic.q4.network[4].bias, ref.critic.l12.bias),
         # critic target q1: l1..l3
-        (OUR.critic.tq1.network[0].weight, REF.critic_target.l1.weight),
-        (OUR.critic.tq1.network[0].bias, REF.critic_target.l1.bias),
-        (OUR.critic.tq1.network[2].weight, REF.critic_target.l2.weight),
-        (OUR.critic.tq1.network[2].bias, REF.critic_target.l2.bias),
-        (OUR.critic.tq1.network[4].weight, REF.critic_target.l3.weight),
-        (OUR.critic.tq1.network[4].bias, REF.critic_target.l3.bias),
+        (our.critic.tq1.network[0].weight, ref.critic_target.l1.weight),
+        (our.critic.tq1.network[0].bias, ref.critic_target.l1.bias),
+        (our.critic.tq1.network[2].weight, ref.critic_target.l2.weight),
+        (our.critic.tq1.network[2].bias, ref.critic_target.l2.bias),
+        (our.critic.tq1.network[4].weight, ref.critic_target.l3.weight),
+        (our.critic.tq1.network[4].bias, ref.critic_target.l3.bias),
         # critic target q2: l4..l6
-        (OUR.critic.tq2.network[0].weight, REF.critic_target.l4.weight),
-        (OUR.critic.tq2.network[0].bias, REF.critic_target.l4.bias),
-        (OUR.critic.tq2.network[2].weight, REF.critic_target.l5.weight),
-        (OUR.critic.tq2.network[2].bias, REF.critic_target.l5.bias),
-        (OUR.critic.tq2.network[4].weight, REF.critic_target.l6.weight),
-        (OUR.critic.tq2.network[4].bias, REF.critic_target.l6.bias),
+        (our.critic.tq2.network[0].weight, ref.critic_target.l4.weight),
+        (our.critic.tq2.network[0].bias, ref.critic_target.l4.bias),
+        (our.critic.tq2.network[2].weight, ref.critic_target.l5.weight),
+        (our.critic.tq2.network[2].bias, ref.critic_target.l5.bias),
+        (our.critic.tq2.network[4].weight, ref.critic_target.l6.weight),
+        (our.critic.tq2.network[4].bias, ref.critic_target.l6.bias),
         # critic target q3: l7..l9
-        (OUR.critic.tq3.network[0].weight, REF.critic_target.l7.weight),
-        (OUR.critic.tq3.network[0].bias, REF.critic_target.l7.bias),
-        (OUR.critic.tq3.network[2].weight, REF.critic_target.l8.weight),
-        (OUR.critic.tq3.network[2].bias, REF.critic_target.l8.bias),
-        (OUR.critic.tq3.network[4].weight, REF.critic_target.l9.weight),
-        (OUR.critic.tq3.network[4].bias, REF.critic_target.l9.bias),
+        (our.critic.tq3.network[0].weight, ref.critic_target.l7.weight),
+        (our.critic.tq3.network[0].bias, ref.critic_target.l7.bias),
+        (our.critic.tq3.network[2].weight, ref.critic_target.l8.weight),
+        (our.critic.tq3.network[2].bias, ref.critic_target.l8.bias),
+        (our.critic.tq3.network[4].weight, ref.critic_target.l9.weight),
+        (our.critic.tq3.network[4].bias, ref.critic_target.l9.bias),
         # critic target q4: l10..l12
-        (OUR.critic.tq4.network[0].weight, REF.critic_target.l10.weight),
-        (OUR.critic.tq4.network[0].bias, REF.critic_target.l10.bias),
-        (OUR.critic.tq4.network[2].weight, REF.critic_target.l11.weight),
-        (OUR.critic.tq4.network[2].bias, REF.critic_target.l11.bias),
-        (OUR.critic.tq4.network[4].weight, REF.critic_target.l12.weight),
-        (OUR.critic.tq4.network[4].bias, REF.critic_target.l12.bias),
+        (our.critic.tq4.network[0].weight, ref.critic_target.l10.weight),
+        (our.critic.tq4.network[0].bias, ref.critic_target.l10.bias),
+        (our.critic.tq4.network[2].weight, ref.critic_target.l11.weight),
+        (our.critic.tq4.network[2].bias, ref.critic_target.l11.bias),
+        (our.critic.tq4.network[4].weight, ref.critic_target.l12.weight),
+        (our.critic.tq4.network[4].bias, ref.critic_target.l12.bias),
     ]
 
 
@@ -141,6 +126,10 @@ def _init_pair() -> None:
     global REF, OUR, OUR_DYNAMICS, REF_DYNAMICS
     torch.manual_seed(SEED)
     np.random.seed(SEED)
+    ref_model.device = torch.device(DEVICE)
+    ref_scas.device = torch.device(DEVICE)
+    RefDynamics = ref_model.Dynamics
+    RefSCAS = ref_scas.SCAS
 
     REF_DYNAMICS = RefDynamics(OBS_DIM, ACT_DIM).to(DEVICE)
     REF = RefSCAS(
@@ -174,7 +163,7 @@ def _init_pair() -> None:
     )
 
     with torch.no_grad():
-        for our_param, ref_param in _all_pairs():
+        for our_param, ref_param in _all_pairs(REF, OUR, REF_DYNAMICS, OUR_DYNAMICS):
             our_param.copy_(ref_param)
             
 def _sample_transition(batch_size: int = BATCH_SIZE):
@@ -288,7 +277,7 @@ def _ref_update_and_collect_params(
     s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: torch.Tensor, d: torch.Tensor
 ) -> list[torch.Tensor]:
     _update_ref(REF, s, a, r, sn, d)
-    return [ref_param.detach().cpu().clone() for _, ref_param in _all_pairs()]
+    return [ref_param.detach().cpu().clone() for _, ref_param in _all_pairs(REF, OUR, REF_DYNAMICS, OUR_DYNAMICS)]
 
 
 # ====================
@@ -298,7 +287,7 @@ def _our_update_and_collect_params(
     s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: torch.Tensor, d: torch.Tensor
 ) -> list[torch.Tensor]:
     OUR.update({"obs": s, "act": a, "rew": r, "next_obs": sn, "done": d})
-    return [our_param.detach().cpu().clone() for our_param, _ in _all_pairs()]
+    return [our_param.detach().cpu().clone() for our_param, _ in _all_pairs(REF, OUR, REF_DYNAMICS, OUR_DYNAMICS)]
 
 
 # ====================
