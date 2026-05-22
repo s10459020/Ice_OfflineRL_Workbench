@@ -38,7 +38,7 @@ def train(
     seed: int = 42,
     device: str = "cpu",
     batch_size: int = 256,
-    dynamics_steps: int = 200_000,
+    dynamics_steps: int = 100_000,
     agent_steps: int = 500_000,
     max_action: float = 1.0,
     tau: float = 0.005,
@@ -130,6 +130,7 @@ def main() -> None:
     train(
         task_id=TASK_ID,
         batch_loader=batch_loader,
+        eval_env_fn=dataset.make_eval_env,
     )
     print_stage("Done")
 

@@ -16,7 +16,7 @@ class Evaluator2:
         self,
         runner_id: str,
         eval_interval: int,
-        eval_offline_n: int,
+        eval_offline_n: int = 0,
         eval_online_n: int = 0,
         eval_offline_fns: list[OfflineEvalFn] = [],
         eval_online_fns: list[OnlineEvalFn] = [],
@@ -169,4 +169,4 @@ class Evaluator2:
         for key in sorted(self.last_evals.keys()):
             values = self.last_evals[key]
             parts.append(f"{key}={sum(values) / len(values):.6g}")
-        print("eval", *parts)
+        print(f"eval step={step}", *parts)
