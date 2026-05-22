@@ -4,16 +4,18 @@ import types
 import numpy as np
 import torch
 import torch.nn.functional as F
-
-from ice_offline.agent.aspl import AsplAgent
-from ice_offline.tools.printer import print_stage
-from _lib import assert_callback
-from _lib import assert_list
+from scipy.stats import qmc
 
 # Dummy library
-if "d4rl" not in sys.modules:
-    sys.modules["d4rl"] = types.ModuleType("d4rl")
+sys.modules["d4rl"] = types.ModuleType("d4rl")
+from ice_offline.agent.aspl import AsplAgent
+from ice_offline.tools.printer import print_stage
+import _lib
+from _lib import assert_callback, assert_list
+
 from ASPL_source.agent.policy.aspl_policy import ASPLPolicy
+import ASPL_source.agent.policy.aspl_policy as aspl_policy_module
+import ASPL_source.agent.policy.base_policy as base_policy_module
 
 
 
@@ -26,6 +28,9 @@ SEED = 42
 BATCH_SIZE = 64
 N_TEST_BATCHES = 30
 MAX_ACTION = 1.0
+REF_QMC_SAMPLER: qmc.LatinHypercube | None = None
+REF: ASPLPolicy | None = None
+OUR: AsplAgent | None = None
 
 
 # ====================
@@ -40,6 +45,8 @@ def _all_pairs(ref: ASPLPolicy, our: AsplAgent):
         (ref.actor.layers[2].bias, our.actor.pi.network[2].bias),
         (ref.actor.layers[4].weight, our.actor.pi.network[4].weight),
         (ref.actor.layers[4].bias, our.actor.pi.network[4].bias),
+        (ref.actor.layers[6].weight, our.actor.pi.network[6].weight),
+        (ref.actor.layers[6].bias, our.actor.pi.network[6].bias),
         # actor target
         (ref.actor_target.layers[0].weight, our.actor.tpi.network[0].weight),
         (ref.actor_target.layers[0].bias, our.actor.tpi.network[0].bias),
@@ -47,6 +54,8 @@ def _all_pairs(ref: ASPLPolicy, our: AsplAgent):
         (ref.actor_target.layers[2].bias, our.actor.tpi.network[2].bias),
         (ref.actor_target.layers[4].weight, our.actor.tpi.network[4].weight),
         (ref.actor_target.layers[4].bias, our.actor.tpi.network[4].bias),
+        (ref.actor_target.layers[6].weight, our.actor.tpi.network[6].weight),
+        (ref.actor_target.layers[6].bias, our.actor.tpi.network[6].bias),
         # critic q1
         (ref.critic.q_networks[0][0].weight, our.critic.q1.network[0].weight),
         (ref.critic.q_networks[0][0].bias, our.critic.q1.network[0].bias),
@@ -129,7 +138,8 @@ def _all_pairs(ref: ASPLPolicy, our: AsplAgent):
 # ====================
 # Init: init, sample, copy
 # ====================
-def _sample_transition(rng: np.random.Generator, batch_size: int, device: torch.device):
+def _sample_transition(batch_size: int, device: torch.device):
+    rng = np.random.default_rng()
     s = torch.as_tensor(rng.standard_normal((batch_size, OBS_DIM)).astype(np.float32), dtype=torch.float32, device=device)
     a = torch.as_tensor(rng.standard_normal((batch_size, ACT_DIM)).astype(np.float32), dtype=torch.float32, device=device)
     sn = torch.as_tensor(rng.standard_normal((batch_size, OBS_DIM)).astype(np.float32), dtype=torch.float32, device=device)
@@ -155,6 +165,12 @@ def _build_our() -> AsplAgent:
     )
 
 
+def set_seed(seed: int) -> None:
+    global REF_QMC_SAMPLER
+    REF_QMC_SAMPLER = qmc.LatinHypercube(d=OUR.act_dim, seed=seed)
+    OUR.set_seed(seed)
+
+
 # ====================
 # Ref Math: 原生方法的封裝
 # ====================
@@ -170,8 +186,14 @@ def _ref_loss_td_with_target(ref: ASPLPolicy, s: torch.Tensor, a: torch.Tensor, 
     return critic_loss_supervised
 
 
-def _ref_loss_punish_with_target(ref: ASPLPolicy, s: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
+def _ref_loss_punish_with_target(
+    ref: ASPLPolicy,
+    s: torch.Tensor,
+    a: torch.Tensor,
+    q_target: torch.Tensor,
+) -> torch.Tensor:
     sampled_actions = ref.sample_actions(s.shape[0], a.shape[1])
+
     action_expanded = a.unsqueeze(0).expand(ref.num_sampled_actions, -1, -1)
     action_diff = (sampled_actions - action_expanded) ** 2
     f_penalty = action_diff / (2 * ref.max_action) ** 2
@@ -187,7 +209,14 @@ def _ref_loss_punish_with_target(ref: ASPLPolicy, s: torch.Tensor, a: torch.Tens
     return critic_loss_unsupervised
 
 
-def _ref_loss_critic(ref: ASPLPolicy, s: torch.Tensor, a: torch.Tensor, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+def _ref_loss_critic(
+    ref: ASPLPolicy,
+    s: torch.Tensor,
+    a: torch.Tensor,
+    sn: torch.Tensor,
+    r: torch.Tensor,
+    d: torch.Tensor,
+) -> torch.Tensor:
     # source update() critic path (self-contained):
     # target_Q -> supervised(td) + alpha * unsupervised(punish)
     not_done = 1.0 - d
@@ -214,15 +243,59 @@ def _ref_loss_critic(ref: ASPLPolicy, s: torch.Tensor, a: torch.Tensor, sn: torc
     return critic_loss
 
 
+def _ref_update_and_collect_params(
+    s: torch.Tensor,
+    a: torch.Tensor,
+    sn: torch.Tensor,
+    r: torch.Tensor,
+    d: torch.Tensor,
+) -> list[torch.Tensor]:
+    class _Buffer:
+        def sample(self, batch_size, s=s, a=a, sn=sn, r=r, d=d):
+            return s, a, sn, r, 1.0 - d
+
+    buffer = _Buffer()
+    _ = REF.update(buffer, batch_size=BATCH_SIZE)
+    return [x for x, _ in _all_pairs(REF, OUR)]
+
+
+def _our_update_and_collect_params(
+    batch: dict[str, torch.Tensor],
+) -> list[torch.Tensor]:
+    _ = OUR.update(batch)
+    return [y for _, y in _all_pairs(REF, OUR)]
+
+
 # ====================
 # Compare: 比較的本體
 # ====================
 def init_compare() -> tuple[ASPLPolicy, AsplAgent]:
     print_stage("Init")
-    torch.manual_seed(SEED)
-    np.random.seed(SEED)
+    base_policy_module.device = torch.device("cpu")
+    aspl_policy_module.device = torch.device("cpu")
     ref = _build_ref()
     our = _build_our()
+    global REF, OUR
+    REF = ref
+    OUR = our
+
+    # override sample by seed
+    def _sample_actions_seeded(batch_size: int, action_dim: int) -> torch.Tensor:
+        samples = REF_QMC_SAMPLER.random(n=ref.num_sampled_actions)
+        scaled_samples = qmc.scale(samples, [-ref.max_action] * action_dim, [ref.max_action] * action_dim)
+        sampled_actions_base = torch.as_tensor(scaled_samples, dtype=torch.float32, device=base_policy_module.device)
+        return sampled_actions_base.unsqueeze(1).repeat(1, batch_size, 1)
+    ref.sample_actions = _sample_actions_seeded
+
+    # override set seed by add qmc seed
+    def _set_seed_patched(seed: int) -> None:
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+        import random
+        random.seed(seed)
+        set_seed(seed)
+    _lib._set_seed = _set_seed_patched
+    
     with torch.no_grad():
         for ref_param, our_param in _all_pairs(ref, our):
             our_param.copy_(ref_param.to(our_param.device))
@@ -231,10 +304,9 @@ def init_compare() -> tuple[ASPLPolicy, AsplAgent]:
 
 def compare_act(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Act Compare")
-    rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
-        obs_single = rng.standard_normal((OBS_DIM,)).astype(np.float32)
-        obs_batch_np = rng.standard_normal((BATCH_SIZE, OBS_DIM)).astype(np.float32)
+        obs_single = np.random.default_rng().standard_normal((OBS_DIM,)).astype(np.float32)
+        obs_batch_np = np.random.default_rng().standard_normal((BATCH_SIZE, OBS_DIM)).astype(np.float32)
         obs_batch_t = torch.as_tensor(obs_batch_np, dtype=torch.float32, device="cpu")
 
         assert_callback(
@@ -253,25 +325,22 @@ def compare_act(ref: ASPLPolicy, our: AsplAgent) -> None:
 
 def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Loss Compare")
-    rng = np.random.default_rng(SEED + 1)
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, sn, r, d = _sample_transition(rng, BATCH_SIZE, torch.device("cpu"))
+        s, a, sn, r, d = _sample_transition(BATCH_SIZE, torch.device("cpu"))
         ref.total_it = i
         our.update_step = i
         ref.mean_abs_q = 0.0
         our.q_mean = 0.0
-        q_target_ref = _ref_td_target(ref, sn, r, d)
-        q_target_our = our._td_target(sn, r, d)
 
         assert_callback(
-            lambda: [_ref_loss_td_with_target(ref, s, a, q_target_ref).detach().cpu()],
-            lambda: [our.loss_td_with_target(s, a, q_target_our).detach().cpu()],
+            lambda: [_ref_loss_td_with_target(ref, s, a, _ref_td_target(ref, sn, r, d)).detach().cpu()],
+            lambda: [our.loss_td_with_target(s, a, our._td_target(sn, r, d)).detach().cpu()],
             label=f"loss_td[{i}]",
             seed=SEED + 2000 + i,
         )
         assert_callback(
-            lambda: [_ref_loss_punish_with_target(ref, s, a, q_target_ref).detach().cpu()],
-            lambda: [our.loss_punish_with_target(s, a, q_target_our).detach().cpu()],
+            lambda: [_ref_loss_punish_with_target(ref, s, a, _ref_td_target(ref, sn, r, d)).detach().cpu()],
+            lambda: [our.loss_punish_with_target(s, a, our._td_target(sn, r, d)).detach().cpu()],
             label=f"loss_punish[{i}]",
             seed=SEED + 2100 + i,
         )
@@ -291,31 +360,19 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
 
 def compare_param(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Param Compare")
-    rng = np.random.default_rng(SEED + 2)
     ref.total_it = 0
     our.update_step = 0
     ref.mean_abs_q = 0.0
     our.q_mean = 0.0
 
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, sn, r, d = _sample_transition(rng, BATCH_SIZE, torch.device("cpu"))
-        class _Buffer:
-            def sample(self, batch_size, s=s, a=a, sn=sn, r=r, d=d):
-                return s, a, sn, r, 1.0 - d
-
-        buffer = _Buffer()
-
+        s, a, sn, r, d = _sample_transition(BATCH_SIZE, torch.device("cpu"))
         assert_callback(
-            lambda: [ref.update(buffer, batch_size=BATCH_SIZE)],
-            lambda: [our.update({"obs": s, "act": a, "rew": r, "next_obs": sn, "done": d})],
+            lambda: _ref_update_and_collect_params(s, a, sn, r, d),
+            lambda: _our_update_and_collect_params({"obs": s, "act": a, "rew": r, "next_obs": sn, "done": d}),
             label=f"update[{i}]",
             seed=SEED + 3000 + i,
         )
-
-        pair_list = _all_pairs(ref, our)
-        ref_list = [x for x, _ in pair_list]
-        our_list = [y for _, y in pair_list]
-        assert_list(ref_list, our_list, label=f"params[{i}]")
 
 
 # ====================

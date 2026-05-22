@@ -1,6 +1,2 @@
-﻿"""Service layer for GUI data access."""
+﻿__all__ = []
 
-from .minari_dataset_service import MinariDatasetService
-from .mock_dataset_service import MockDatasetService
-
-__all__ = ["MockDatasetService", "MinariDatasetService"]

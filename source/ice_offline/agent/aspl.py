@@ -19,17 +19,21 @@ class _Pi(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.Linear(256, 256),
             torch.nn.ReLU(),
+            torch.nn.Linear(256, 256),
+            torch.nn.ReLU(),
             torch.nn.Linear(256, act_size),
         )
         # hidden linear init
         torch.nn.init.constant_(self.network[0].bias, 0.1)
         torch.nn.init.constant_(self.network[2].bias, 0.1)
+        torch.nn.init.constant_(self.network[4].bias, 0.1)
         torch.nn.init.kaiming_uniform_(self.network[0].weight, a=5**0.5)
         torch.nn.init.kaiming_uniform_(self.network[2].weight, a=5**0.5)
+        torch.nn.init.kaiming_uniform_(self.network[4].weight, a=5**0.5)
 
         # output linear init
-        torch.nn.init.uniform_(self.network[4].weight, -1e-3, 1e-3)
-        torch.nn.init.uniform_(self.network[4].bias, -1e-3, 1e-3)
+        torch.nn.init.uniform_(self.network[6].weight, -1e-3, 1e-3)
+        torch.nn.init.uniform_(self.network[6].bias, -1e-3, 1e-3)
 
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.max_action * torch.tanh(self.network(o))
@@ -196,6 +200,7 @@ class AsplAgent(TorchAgent):
     def __post_init__(self) -> None:
         self.actor = _TD3_Actor(self.obs_dim, self.act_dim, tau=self.tau, max_action=self.max_action).to(self.device)
         self.critic = _TD3_Critic(self.obs_dim, self.act_dim, tau=self.tau).to(self.device)
+        self._lhs_sampler = qmc.LatinHypercube(d=self.act_dim)
 
         self.actor_optimizer = torch.optim.Adam(self.actor.get_parameters(), lr=self.learning_rate)
         self.critic_optimizer = torch.optim.Adam(self.critic.get_parameters(), lr=self.learning_rate)
@@ -219,6 +224,9 @@ class AsplAgent(TorchAgent):
         with torch.no_grad():
             a = self.actor.pi_act(s)
         return a.cpu().numpy()
+
+    def set_seed(self, seed: int) -> None:
+        self._lhs_sampler = qmc.LatinHypercube(d=self.act_dim, seed=seed)
 
     def update(self, batch):
         s = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
@@ -271,8 +279,7 @@ class AsplAgent(TorchAgent):
         return (a + noise).clamp(-self.max_action, self.max_action)
             
     def _sample_lhs_actions(self, batch_size: int, num_samples: int) -> torch.Tensor:
-        sampler = qmc.LatinHypercube(d=self.act_dim)
-        samples = sampler.random(n=num_samples) # (N, A)[0 ~ 1]
+        samples = self._lhs_sampler.random(n=num_samples) # (N, A)[0 ~ 1]
 
         samples = qmc.scale(
             samples, 
@@ -336,7 +343,7 @@ class AsplAgent(TorchAgent):
     
     def loss_punish_with_target(self, s: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
-        a_samples = self._sample_lhs_actions(s.shape[0], self.num_sample)                   # (N,B,A)
+        a_samples = self._sample_lhs_actions(s.shape[0], self.num_sample)                      # (N,B,A)
         q_pseudo = self._q_pseudo(s, a, a_samples, q_target)                                # (N,B,1)
 
         # reshape
@@ -348,7 +355,14 @@ class AsplAgent(TorchAgent):
         losses = [F.mse_loss(q_value, q_pseudo_reshape) for q_value in q_values]
         return sum(losses)
 
-    def loss_critic(self, s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: torch.Tensor, d: torch.Tensor) -> torch.Tensor:          
+    def loss_critic(
+        self,
+        s: torch.Tensor,
+        a: torch.Tensor,
+        r: torch.Tensor,
+        sn: torch.Tensor,
+        d: torch.Tensor,
+    ) -> torch.Tensor:
         # loss = TD + alpha * Punish
         # source use same noise target
         q_target = self._td_target(sn, r, d)
