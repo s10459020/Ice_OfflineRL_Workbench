@@ -2,7 +2,6 @@
 from typing import Any, Type
 
 import h5py
-import minari
 import numpy as np
 
 from ice_offline.tools.paths import minari_root
@@ -12,17 +11,14 @@ class StateConverter:
     # ====================
     # Init
     # ====================
-    def __init__(self, dataset_id: str, converter_cls: Type) -> None:
-        self._dataset = minari.load_dataset(dataset_id, download=True)
-        self._path = self._resolve_state_path(dataset_id)
+    def __init__(self, dataset: Any, converter_cls: Type) -> None:
+        self._dataset = dataset
+        self._path = self._resolve_state_path(self._dataset.spec.dataset_id)
         self._converter = converter_cls()
 
     # ====================
     # Public API
     # ====================
-    def total_episodes(self) -> int:
-        return self._dataset.total_episodes
-
     def reset(self) -> Path:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with h5py.File(self._path, "w"):
