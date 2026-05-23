@@ -5,7 +5,7 @@ import minari
 import numpy as np
 
 from ice_offline.pipeline.state._spec import StateIO
-from ice_offline.pipeline.state_op.state_loader import StateLoader
+from ice_offline.pipeline.state_operator.state_loader import StateLoader
 
 
 class StateInjectWrapper(gym.Wrapper):
@@ -100,7 +100,9 @@ class StateInjectWrapper(gym.Wrapper):
         self._states = self._state_loader.load_episode(episode_index)
 
     def _materialize_obs_seq(self, observations, transition_count: int) -> list:
-        return [{k: observations[k][i] for k in observations} for i in range(transition_count + 1)]
+        if isinstance(observations, dict):
+            return [{k: observations[k][i] for k in observations} for i in range(transition_count + 1)]
+        return [observations[i] for i in range(transition_count + 1)]
 
     def _materialize_info_seq(self, infos, transition_count: int) -> list[dict]:
         if infos is None:
