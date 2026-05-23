@@ -1,4 +1,6 @@
-﻿import gymnasium as gym
+﻿from typing import Type
+
+import gymnasium as gym
 import minari
 import numpy as np
 
@@ -7,25 +9,19 @@ from ice_offline.pipeline.state_op.state_loader import StateLoader
 
 
 class StateInjectWrapper(gym.Wrapper):
-    """Replay dataset transitions using recorded states/observations/actions."""
-
     def __init__(
         self,
         env: gym.Env,
         dataset_id: str,
-        state_io: StateIO,
         state_cls: type,
-        *,
-        random_episode: bool = False,
+        state_io_cls: Type[StateIO],
     ) -> None:
-        self._state_io = state_io
         super().__init__(env)
-        self.dataset = minari.load_dataset(dataset_id)
+        self._state_io = state_io_cls(env)
         self._state_loader = StateLoader(dataset_id, state_cls)
 
+        self.dataset = minari.load_dataset(dataset_id)
         self.total_episodes = self.dataset.total_episodes
-        self.random_episode = random_episode
-        self._rng = np.random.default_rng()
 
         self._episode_index: int | None = None
         self._transition_index: int | None = None
@@ -37,13 +33,15 @@ class StateInjectWrapper(gym.Wrapper):
         self._observations: list | None = None
         self._transition_count: int | None = None
 
+    # ====================
+    # Override
+    # ====================
     def reset(self, *, seed: int | None = None, options: dict | None = None):
-        if seed is not None:
-            self._rng = np.random.default_rng(seed)
         self.env.reset(seed=seed, options=options)
-        episode_index = self._pick_episode_index(options=options)
-        self._load_episode_payload(episode_index)
+
+        episode_index = self._select_episode_index(seed=seed, options=options)
         self._episode_index = episode_index
+        self._load_episode_payload(episode_index)
 
         state = self._states[0]
         self._state_io.set_state(state)
@@ -72,14 +70,15 @@ class StateInjectWrapper(gym.Wrapper):
         self._state_loader.close()
         self.env.close()
 
-    def _pick_episode_index(self, options: dict | None) -> int:
+    # ====================
+    # Private
+    # ====================
+    def _select_episode_index(self, seed: int | None = None, options: dict | None = None) -> int:
         if options and "episode_index" in options:
-            episode_index = options["episode_index"]
-            if episode_index < 0 or episode_index >= self.total_episodes:
-                raise IndexError(f"episode_index out of range: {episode_index}")
-            return episode_index
-        if self.random_episode:
-            return self._rng.integers(low=0, high=self.total_episodes)
+            return options["episode_index"]
+        if seed is not None:
+            rng = np.random.default_rng(seed)
+            return rng.integers(low=0, high=self.total_episodes)
         if self._episode_index is None:
             return 0
         return (self._episode_index + 1) % self.total_episodes

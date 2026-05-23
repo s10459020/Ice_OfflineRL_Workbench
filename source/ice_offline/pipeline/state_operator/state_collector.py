@@ -1,5 +1,5 @@
 ﻿from pathlib import Path
-from typing import Any
+from typing import Any, Type
 
 import gymnasium as gym
 import h5py
@@ -9,15 +9,13 @@ from ice_offline.pipeline.state._spec import StateIO
 from ice_offline.tools.paths import minari_root
 
 
-class StateCollector(gym.Wrapper):
-    """Collect episode-wise states and save to Minari dataset folder."""
-
+class StateCollectWrapper(gym.Wrapper):
     # ====================
     # Init
     # ====================
-    def __init__(self, env: gym.Env, state_io: StateIO) -> None:
+    def __init__(self, env: gym.Env, state_io_cls: Type[StateIO]) -> None:
         super().__init__(env)
-        self._state_io = state_io
+        self._state_io = state_io_cls(env)
         self._episodes: list[list[dict]] = []
         self._episode: list[dict] | None = None
 
