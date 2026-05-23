@@ -1,35 +1,11 @@
-﻿
-from pathlib import Path
-
-import gymnasium as gym
-import numpy as np
+﻿import numpy as np
 import torch
 
 from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+from ice_offline.dataset._lookup import get_dataset
 from ice_offline.pipeline.batch_loader import MinariLoader
-from ice_offline.runner.offline import TorchBatchOfflineRunner
-from ice_offline.tools.paths import eval_root
+from ice_offline.runner.evaluator2 import Evaluator2
 from ice_offline.tools.printer import print_stage
-from ice_offline.tools.timing import Timer
-
-
-
-
-DATASET_ID = "mujoco/invertedpendulum/expert-v0"
-ENV_ID = "InvertedPendulum-v5"
-RUNNER_ID = "bc_deterministic_invertedpendulum"
-BATCH_SIZE = 64
-TRAIN_STEPS = 100_000
-EVAL_INTERVAL = 2_000
-EVAL_BATCHES = 8
-EVAL_EPISODES = 3
-MODEL_LOAD_STEP = 0
-MODEL_SAVE_INTERVAL = 50_000
-
-def obs_encode(obs: np.ndarray) -> np.ndarray:
-    obs_arr = np.asarray(obs, dtype=np.float32)
-    return obs_arr.reshape(obs_arr.shape[0], -1)
-
 
 
 def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
@@ -38,63 +14,69 @@ def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[tor
         return {"loss_pi": float(agent.loss_actor(o, a).item())}
 
 
-def eval_env() -> gym.Env:
-    return gym.make(ENV_ID)
-
-
 def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     _, _, r, _, _ = episode_batch
     return {"reward_sum": float(r.sum().item())}
 
 
-def main() -> None:
-    print_stage("Load")
-    dataset = MinariLoader.from_minari(dataset_id=DATASET_ID, obs_encode=obs_encode)
-    obs_dim = int(np.prod(dataset.obs_shape))
-    act_dim = int(np.prod(dataset.act_shape))
-    runner = TorchBatchOfflineRunner(
-        obs_encode=obs_encode,
-        batch_size=BATCH_SIZE,
-        train_steps=TRAIN_STEPS,
-        eval_batches=EVAL_BATCHES,
-        eval_episodes=EVAL_EPISODES,
-        eval_interval=EVAL_INTERVAL,
-        runner_id=RUNNER_ID,
-        model_load_step=MODEL_LOAD_STEP,
-        model_save_interval=MODEL_SAVE_INTERVAL,
-    )
-    agent = BCAgentContinuousDeterministic(obs_size=obs_dim, act_size=act_dim)
+def train(
+    task_id: str,
+    batch_loader: MinariLoader,
+    *,
+    seed: int = 42,
+    batch_size: int = 64,
+    steps: int = 100_000,
+    log_interval: int = 0,
+    eval_interval: int = 2_000,
+    eval_offline_n: int = 8,
+    eval_online_n: int = 3,
+    eval_env_fn=None,
+    recode_eval: bool = True,
+    recode_reset: bool = True,
+) -> None:
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
-    print_stage("Train")
-    Timer.stopwatch(f"train::{RUNNER_ID}")
-    runner.train(
-        agent=agent,
-        dataset=dataset,
+    print_stage("Train BC Deterministic")
+    agent = BCAgentContinuousDeterministic(
+        obs_size=batch_loader.obs_dim,
+        act_size=batch_loader.act_dim,
+    )
+
+    evaluator = Evaluator2(
+        runner_id=task_id,
+        eval_interval=eval_interval,
+        eval_offline_n=eval_offline_n,
+        eval_online_n=eval_online_n,
         eval_offline_fns=[eval_loss_pi],
         eval_online_fns=[eval_reward],
-        eval_env_fn=eval_env,
+        recode_eval=recode_eval,
+        recode_reset=recode_reset,
     )
 
-    train_ms = Timer.stopwatch(f"train::{RUNNER_ID}")
-    time_path = Path(eval_root()) / f"{RUNNER_ID}.txt"
-    time_path.parent.mkdir(parents=True, exist_ok=True)
-    time_path.write_text(
-        f"runner_id={RUNNER_ID}\ntrain_ms={train_ms:.3f}\ntrain_sec={train_ms/1000.0:.3f}\n",
-        encoding="utf-8",
-    )
+    for step in range(1, steps + 1):
+        batch = batch_loader.sample_batch(batch_size)
+        agent.update(batch)
+        if log_interval > 0 and step % log_interval == 0:
+            print(f"[bc_deterministic][step] {step}")
+        evaluator.eval_offline(step=step, agent=agent, batch_loader=batch_loader, batch_size=batch_size)
+        evaluator.eval_online(step=step, agent=agent, env_fn=eval_env_fn)
+        evaluator.print(step)
+        evaluator.recode(step)
 
+
+def main() -> None:
+    task_id = "invertedpendulum_expert__bc_deterministic"
+    dataset = get_dataset("invertedpendulum_expert")
+    batch_loader = MinariLoader(dataset=dataset, seed=42)
+    print_stage("Load")
+    train(
+        task_id=task_id,
+        batch_loader=batch_loader,
+        eval_env_fn=dataset.make_eval_env,
+    )
     print_stage("Done")
 
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
-
-
-
-
-
