@@ -1,30 +1,27 @@
-﻿
-import gymnasium as gym
+﻿import gymnasium as gym
 import minari
 import numpy as np
 
-from ice_offline.data.state import State
-from ice_offline.pipeline.state_loader import StateLoader
-from ice_offline.pipeline.state.oneroom_s8 import OneroomS8StateIO
+from ice_offline.pipeline.state._spec import StateIO
+from ice_offline.pipeline.state_op.state_loader import StateLoader
 
 
 class StateInjectWrapper(gym.Wrapper):
     """Replay dataset transitions using recorded states/observations/actions."""
 
-    # ====================
-    # Init
-    # ====================
     def __init__(
         self,
         env: gym.Env,
         dataset_id: str,
+        state_io: StateIO,
+        state_cls: type,
         *,
         random_episode: bool = False,
     ) -> None:
-        self._state_io = OneroomS8StateIO(env)
+        self._state_io = state_io
         super().__init__(env)
         self.dataset = minari.load_dataset(dataset_id)
-        self._state_loader = StateLoader(dataset_id)
+        self._state_loader = StateLoader(dataset_id, state_cls)
 
         self.total_episodes = self.dataset.total_episodes
         self.random_episode = random_episode
@@ -34,21 +31,16 @@ class StateInjectWrapper(gym.Wrapper):
         self._transition_index: int | None = None
 
         self._infos: list[dict] | None = None
-        self._states: list[State] | None = None
+        self._states: list | None = None
         self._actions: list[int] | None = None
         self._rewards: list[float] | None = None
         self._observations: list | None = None
         self._transition_count: int | None = None
 
-    # ====================
-    # gym.Wrapper Overrides
-    # ====================
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         if seed is not None:
             self._rng = np.random.default_rng(seed)
-
         self.env.reset(seed=seed, options=options)
-
         episode_index = self._pick_episode_index(options=options)
         self._load_episode_payload(episode_index)
         self._episode_index = episode_index
@@ -56,10 +48,7 @@ class StateInjectWrapper(gym.Wrapper):
         state = self._states[0]
         self._state_io.set_state(state)
         self._transition_index = 0
-
-        info = self._infos[0]
-        observation = self._observations[0]
-        return observation, info
+        return self._observations[0], self._infos[0]
 
     def step(self, action: int | None = None):
         curr_index = self._transition_index
@@ -79,26 +68,18 @@ class StateInjectWrapper(gym.Wrapper):
         terminated = next_index >= self._transition_count
         return obs, reward, terminated, truncated, info
 
-    # ====================
-    # Public API
-    # ====================
     def close(self) -> None:
         self._state_loader.close()
         self.env.close()
 
-    # ====================
-    # Internal
-    # ====================
     def _pick_episode_index(self, options: dict | None) -> int:
         if options and "episode_index" in options:
             episode_index = options["episode_index"]
             if episode_index < 0 or episode_index >= self.total_episodes:
                 raise IndexError(f"episode_index out of range: {episode_index}")
             return episode_index
-
         if self.random_episode:
             return self._rng.integers(low=0, high=self.total_episodes)
-
         if self._episode_index is None:
             return 0
         return (self._episode_index + 1) % self.total_episodes

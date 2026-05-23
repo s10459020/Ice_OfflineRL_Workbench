@@ -1,4 +1,4 @@
-﻿import gymnasium as gym
+import gymnasium as gym
 import numpy as np
 from minigrid.core.grid import Grid
 from minigrid.core.world_object import WorldObj
@@ -7,11 +7,11 @@ from ice_offline.data.state import State
 
 
 class StateIOWrapper(gym.Wrapper):
-    """Provide get_state/set_state only on this wrapper layer."""
+    """Backward-compatible State IO wrapper for existing import paths."""
 
     def __init__(self, env: gym.Env) -> None:
         super().__init__(env)
-        
+
     def get_state(self) -> State:
         base = self.unwrapped
         carrying = None if base.carrying is None else tuple(base.carrying.encode())
@@ -20,7 +20,7 @@ class StateIOWrapper(gym.Wrapper):
             agent_pos=base.agent_pos,
             agent_dir=base.agent_dir,
             grid=np.asarray(base.grid.encode(), dtype=np.int8),
-            carrying=carrying
+            carrying=carrying,
         )
 
     def set_state(self, state: State) -> None:

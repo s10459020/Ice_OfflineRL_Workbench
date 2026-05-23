@@ -12,7 +12,7 @@ from minigrid.utils.rendering import (
     rotate_fn,
 )
 
-from ice_offline.env.common.state_io_wrapper import StateIOWrapper
+from ice_offline.pipeline.state.oneroom_s8 import OneroomS8StateIO
 from ice_offline.pipeline.state_collector import StateCollector
 from ice_offline.pipeline.state_loader import StateLoader
 
@@ -117,7 +117,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
         self._objects = _ObjectsRender()
         self._highlight = _HighlightRender()
         self._background = _BackgroundRender()
-        self._state_io: StateIOWrapper | None = None
+        self._state_io: OneroomS8StateIO | None = None
 
     def _register_engine(self, engine: OverlayEngine) -> None:
         engine.register(int(RenderLayer.AGENT), self._agent)
@@ -147,7 +147,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
     # ====================
     def on_env(self, base_env: gym.Env) -> None:
         self._highlight._base_env = base_env
-        self._state_io = StateIOWrapper(base_env)
+        self._state_io = OneroomS8StateIO(base_env)
 
     def on_seek(self, data: dict[str, Any]) -> None:
         self._state_io.set_state(data["state"])
