@@ -16,11 +16,8 @@ def main() -> None:
     converter = StateConverter(dataset=dataset, converter_cls=HopperConverter)
     episodes = dataset.total_episodes
 
-    state_path = converter.reset()
-    print(f"[convert] reset output={state_path}")
-    for episode_index in range(episodes):
-        converter.convert(episode_index)
-        print(f"[convert] episode={episode_index + 1}/{episodes} done")
+    state_dataset = converter.convert()
+    print(f"[convert] output={state_dataset.path}")
     print(f"[convert] all episodes done total={episodes}")
 
     env = gym.make(ENV_ID, render_mode="human")
@@ -61,3 +58,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

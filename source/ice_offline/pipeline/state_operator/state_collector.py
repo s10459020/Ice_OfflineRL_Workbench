@@ -1,12 +1,9 @@
-﻿from pathlib import Path
-from typing import Any, Type
+﻿from typing import Any, Type
 
 import gymnasium as gym
-import h5py
-import numpy as np
 
 from ice_offline.pipeline.state._spec import StateIO
-from ice_offline.tools.paths import minari_root
+from ice_offline.pipeline.state_operator.state_dataset import StateDataset
 
 
 class StateCollectWrapper(gym.Wrapper):
@@ -22,22 +19,16 @@ class StateCollectWrapper(gym.Wrapper):
     # ====================
     # Public API
     # ====================
-    def save(self, dataset_id: str) -> Path:
+    def save(self, dataset_id: str) -> StateDataset:
         self._end_episode()
-        out_path = self._resolve_state_path(dataset_id)
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with h5py.File(out_path, "w") as h5_file:
-            for ep_idx, seq in enumerate(self._episodes):
-                ep_group = h5_file.require_group(f"episode_{ep_idx}")
-                keys = seq[0].keys()
-                for key in keys:
-                    values = [item[key] for item in seq]
-                    ep_group.create_dataset(key, data=np.asarray(values))
-        return out_path
+        return StateDataset.write(
+            dataset_id=dataset_id,
+            state_cls=self._state_io.state_cls,
+            episodes=self._episodes,
+        )
 
     # ====================
-    # Override
+    # Overwrite
     # ====================
     def reset(self, *args: Any, **kwargs: Any):
         obs, info = self.env.reset(*args, **kwargs)
@@ -57,10 +48,6 @@ class StateCollectWrapper(gym.Wrapper):
     # ====================
     # Private
     # ====================
-    def _resolve_state_path(self, dataset_id: str) -> Path:
-        base = minari_root()
-        return base / dataset_id / "data" / "state_data.hdf5"
-
     def _end_episode(self) -> None:
         if self._episode:
             self._episodes.append(self._episode)

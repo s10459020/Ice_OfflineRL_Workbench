@@ -5,10 +5,13 @@ import minari
 import numpy as np
 
 from ice_offline.pipeline.state._spec import StateIO
-from ice_offline.pipeline.state_operator.state_loader import StateLoader
+from ice_offline.pipeline.state_operator.state_dataset import StateDataset
 
 
 class StateInjectWrapper(gym.Wrapper):
+    # ====================
+    # Init
+    # ====================
     def __init__(
         self,
         env: gym.Env,
@@ -18,7 +21,7 @@ class StateInjectWrapper(gym.Wrapper):
     ) -> None:
         super().__init__(env)
         self._state_io = state_io_cls(env)
-        self._state_loader = StateLoader(dataset_id, state_cls)
+        self._state_dataset = StateDataset.load_dataset(dataset_id=dataset_id, state_cls=state_cls)
 
         self.dataset = minari.load_dataset(dataset_id)
         self.total_episodes = self.dataset.total_episodes
@@ -34,7 +37,7 @@ class StateInjectWrapper(gym.Wrapper):
         self._transition_count: int | None = None
 
     # ====================
-    # Override
+    # Overwrite
     # ====================
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         self.env.reset(seed=seed, options=options)
@@ -66,8 +69,11 @@ class StateInjectWrapper(gym.Wrapper):
         terminated = next_index >= self._transition_count
         return obs, reward, terminated, truncated, info
 
+    # ====================
+    # Public API
+    # ====================
     def close(self) -> None:
-        self._state_loader.close()
+        self._state_dataset.close()
         self.env.close()
 
     # ====================
@@ -97,7 +103,7 @@ class StateInjectWrapper(gym.Wrapper):
         self._rewards = list(trajectory.rewards)
         self._observations = self._materialize_obs_seq(trajectory.observations, transition_count)
         self._infos = self._materialize_info_seq(trajectory.infos, transition_count)
-        self._states = self._state_loader.load_episode(episode_index)
+        self._states = self._state_dataset.read_episode(episode_index)
 
     def _materialize_obs_seq(self, observations, transition_count: int) -> list:
         if isinstance(observations, dict):
