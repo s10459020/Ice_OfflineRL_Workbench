@@ -113,13 +113,13 @@ class BCAgentDiscrete(TorchAgent):
         loss.backward()
         self.optimizer.step()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "pi": self.policy.state_dict(),
             "optimizer": self.optimizer.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         pi_key = "pi" if "pi" in state else "policy"
         self.policy.load_state_dict(state[pi_key])
         self.optimizer.load_state_dict(state["optimizer"])
@@ -145,3 +145,4 @@ class BCAgentDiscrete(TorchAgent):
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a)
+

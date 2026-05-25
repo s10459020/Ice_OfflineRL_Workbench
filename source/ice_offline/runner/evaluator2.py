@@ -15,13 +15,13 @@ class Evaluator2:
     def __init__(
         self,
         runner_id: str,
-        eval_interval: int,
+        eval_interval: int = 1,
         eval_offline_n: int = 0,
         eval_online_n: int = 0,
         eval_offline_fns: list[OfflineEvalFn] = [],
         eval_online_fns: list[OnlineEvalFn] = [],
         recode_eval: bool = True,
-        recode_reset: bool = False,
+        recode_reset: bool = True,
     ) -> None:
         self.eval_interval = eval_interval
         self.eval_offline_n = eval_offline_n

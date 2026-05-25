@@ -95,13 +95,13 @@ class BCAgentContinuousStochastic(TorchAgent):
         loss.backward()
         self.optimizer.step()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "pi": self.policy.state_dict(),
             "optimizer": self.optimizer.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.policy.load_state_dict(state["pi"])
         self.optimizer.load_state_dict(state["optimizer"])
 
@@ -119,3 +119,4 @@ def eval_bc_stochastic_loss_pi(
 ) -> dict[str, float]:
     o, a, _, _, _ = transitions
     return {"loss_pi": float(agent.loss_actor(o, a).item())}
+

@@ -139,14 +139,14 @@ class QVAgentDiscrete(TorchAgent):
         if self._grad_step % self.target_update_interval == 0:
             self.q.update_target()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "q": self.q.state_dict(),
             "v": self.v.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.q.load_state_dict(state["q"])
         self.v.load_state_dict(state["v"])
         self.optim.load_state_dict(state["optimizer"])
@@ -188,4 +188,5 @@ def eval_qv_discrete_loss_q(agent: "QVAgentDiscrete", transitions: TransitionBat
 def eval_qv_discrete_loss_v(agent: "QVAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
     o, a, _, _, _ = transitions
     return {"loss_v": float(agent._loss_v(o, a).item())}
+
 

@@ -134,13 +134,13 @@ class CQLAgentDiscrete(TorchAgent):
         if self._grad_step % self.target_update_interval == 0:
             self.critic.update_target()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "q": self.critic.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         q_key = "q" if "q" in state else "critic"
         optim_key = "optimizer" if "optimizer" in state else "optim"
         self.critic.load_state_dict(state[q_key])
@@ -202,3 +202,4 @@ def eval_cql_discrete_loss_td(agent: "CQLAgentDiscrete", transitions: Transition
 def eval_cql_discrete_loss_cql(agent: "CQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
     o, a, _, _, _ = transitions
     return {"loss_cql": float(agent._loss_cql(o, a).item())}
+

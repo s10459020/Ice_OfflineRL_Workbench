@@ -1,24 +1,17 @@
-﻿import minari
-import gymnasium as gym
+﻿import gymnasium as gym
+import minari
 
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
-from ice_offline.pipeline.state_convert.hopper import HopperConverter
-from ice_offline.pipeline.state_operator.state_converter import StateConverter
 from ice_offline.pipeline.state_operator.state_injector import StateInjectWrapper
 
 
-DATASET_ID = "mujoco/hopper/simple-v0"
+DATASET_ID = "train/hopper_simple_bc-v0"
 ENV_ID = "Hopper-v5"
 
 
-def main() -> None:
-    dataset = minari.load_dataset(DATASET_ID, download=True)
-    converter = StateConverter(dataset=dataset, converter_cls=HopperConverter)
+if __name__ == "__main__":
+    dataset = minari.load_dataset(DATASET_ID)
     episodes = dataset.total_episodes
-
-    state_dataset = converter.convert()
-    print(f"[convert] output={state_dataset.path}")
-    print(f"[convert] all episodes done total={episodes}")
 
     env = gym.make(ENV_ID, render_mode="human")
     env = StateInjectWrapper(
@@ -54,8 +47,3 @@ def main() -> None:
         env.close()
 
     print(f"episodes={episodes} total_steps={steps_total}")
-
-
-if __name__ == "__main__":
-    main()
-

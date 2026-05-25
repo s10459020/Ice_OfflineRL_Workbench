@@ -48,7 +48,7 @@ def _load_eval_csv(csv_path: Path) -> tuple[np.ndarray, np.ndarray]:
     return np.asarray(steps, dtype=np.float64), np.asarray(samples, dtype=np.float64)
 
 
-def main() -> int:
+if __name__ == "__main__":
     PLOT_DIR.mkdir(parents=True, exist_ok=True)
 
     figure, axes = matplotlib.pyplot.subplots(
@@ -83,8 +83,3 @@ def main() -> int:
     matplotlib.pyplot.close(figure)
 
     print(f"saved: {output_path}")
-    return 0
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())

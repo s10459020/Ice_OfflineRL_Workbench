@@ -140,3 +140,4 @@ class ActorCriticAgent:
         q_weight = self._Q(obs_vector, reward, next_obs_vector, done)
         grad_pW, grad_pb = self._nabla_log_pi(obs_vector, action)
         return q_weight * grad_pW, q_weight * grad_pb
+

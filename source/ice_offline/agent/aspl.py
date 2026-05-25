@@ -380,3 +380,4 @@ class AsplAgent(TorchAgent):
         a = self._action_noise(a)
         q = self.critic.q1_value(s, a)
         return -q.mean() # mean over batch
+

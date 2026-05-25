@@ -1,50 +1,57 @@
-from typing import Any
+﻿from typing import Any
 
 import minari
 
 
-class MinariCollectorWrapper:
-    def __init__(
+class MinariCollectorWrapper(minari.DataCollector):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    def reset(self, *args: Any, **kwargs: Any):
+        try:
+            return super().reset(*args, **kwargs)
+        except Exception:
+            self.close()
+            raise
+
+    def step(self, *args: Any, **kwargs: Any):
+        try:
+            return super().step(*args, **kwargs)
+        except Exception:
+            self.close()
+            raise
+
+    def close(self) -> None:
+        super().close()
+
+    def save(
         self,
-        env,
+        dataset_id: str,
         *,
-        record_infos: bool = False,
         algorithm_name: str = "unknown",
         author: str = "ice_offline",
         author_email: str = "ice_offline@example.com",
         code_permalink: str = "https://example.com/ice_offline",
         description: str = "",
         eval_env=None,
-    ) -> None:
-        self._collector = minari.DataCollector(env, record_infos=record_infos)
-        self._algorithm_name = algorithm_name
-        self._author = author
-        self._author_email = author_email
-        self._code_permalink = code_permalink
-        self._description = description
-        self._eval_env = eval_env
-
-    def reset(self, *args: Any, **kwargs: Any):
-        return self._collector.reset(*args, **kwargs)
-
-    def step(self, *args: Any, **kwargs: Any):
-        return self._collector.step(*args, **kwargs)
-
-    def close(self) -> None:
-        self._collector.close()
-
-    def save(self, dataset_id: str):
+    ):
+        if eval_env is None:
+            eval_env = self.env
         try:
-            minari.delete_dataset(dataset_id)
-        except Exception:
-            pass
+            try:
+                minari.delete_dataset(dataset_id)
+            except Exception:
+                pass
 
-        return self._collector.create_dataset(
-            dataset_id=dataset_id,
-            algorithm_name=self._algorithm_name,
-            author=self._author,
-            author_email=self._author_email,
-            code_permalink=self._code_permalink,
-            eval_env=self._eval_env,
-            description=self._description,
-        )
+            return self.create_dataset(
+                dataset_id=dataset_id,
+                algorithm_name=algorithm_name,
+                author=author,
+                author_email=author_email,
+                code_permalink=code_permalink,
+                eval_env=eval_env,
+                description=description,
+            )
+        except Exception:
+            self.close()
+            raise

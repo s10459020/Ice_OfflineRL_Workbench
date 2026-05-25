@@ -122,3 +122,4 @@ class PolicyGradientAgent:
             nabla_b += return_t * grad_b
 
         return nabla_W, nabla_b
+

@@ -1,14 +1,27 @@
 ﻿"""Conservative Q-Learning continuous agent (minimal fixed structure)."""
 
+import importlib.util
 import math
+from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-from d3rlpy.models.torch.distributions import SquashedGaussianDistribution
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
 from ice_offline.runner.evaluator import TransitionBatch
+
+
+def _load_squashed_gaussian_distribution():
+    repo_root = Path(__file__).resolve().parents[3]
+    module_path = repo_root / ".venv" / "Lib" / "site-packages" / "d3rlpy" / "models" / "torch" / "distributions.py"
+    spec = importlib.util.spec_from_file_location("ice_offline_d3rlpy_distributions", module_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module.SquashedGaussianDistribution
+
+
+_SquashedGaussianDistribution = _load_squashed_gaussian_distribution()
 
 
 class _Adam:
@@ -51,9 +64,9 @@ class _Pi(torch.nn.Module):
     def temp(self) -> torch.Tensor:
         return self.log_alpha.exp()
 
-    def dist(self, o: torch.Tensor) -> SquashedGaussianDistribution:
+    def dist(self, o: torch.Tensor) -> _SquashedGaussianDistribution:
         mean, logstd = self(o)
-        return SquashedGaussianDistribution(loc=mean, std=logstd.exp())
+        return _SquashedGaussianDistribution(loc=mean, std=logstd.exp())
 
     def mode(self, o: torch.Tensor) -> torch.Tensor:
         return torch.tanh(self(o)[0])
@@ -268,7 +281,7 @@ class CQLAgentContinuous(TorchAgent):
 
         self.critic.update_target_soft()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "policy": self.policy.state_dict(),
             "critic": self.critic.state_dict(),
@@ -278,7 +291,7 @@ class CQLAgentContinuous(TorchAgent):
             "critic_alpha_optimizer": self.alpha_prime_optim.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.policy.load_state_dict(state["policy"])
         self.critic.load_state_dict(state["critic"])
         self.actor_optim.load_state_dict(state["actor_optimizer"])
@@ -432,5 +445,6 @@ def eval_cql_continuous_loss_pi(agent: "CQLAgentContinuous", transitions: Transi
     o, _, _, _, _ = transitions
     with torch.no_grad():
         return {"loss_pi": float(agent.loss_actor(o).item())}
+
 
 

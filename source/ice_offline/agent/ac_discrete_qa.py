@@ -156,3 +156,4 @@ class ActorCriticAgent:
         advantage = self._A(obs_vector, action)
         grad_pW, grad_pb = self._nabla_log_pi(obs_vector, action)
         return advantage * grad_pW, advantage * grad_pb
+

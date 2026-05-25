@@ -222,7 +222,7 @@ class IQLAgentContinuous(TorchAgent):
 
         self.critic.update_target_soft()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "actor": self.actor.state_dict(),
             "q": self.critic.state_dict(),
@@ -231,7 +231,7 @@ class IQLAgentContinuous(TorchAgent):
             "critic_optimizer": self.critic_optim.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.actor.load_state_dict(state["actor"])
         self.critic.load_state_dict(state["q"])
         self.v.load_state_dict(state["v"])
@@ -307,4 +307,5 @@ def eval_iql_continuous_loss_pi(agent: "IQLAgentContinuous", transitions: Transi
     o, a, _, _, _ = transitions
     with torch.no_grad():
         return {"loss_pi": float(agent.loss_actor(o, a).item())}
+
 

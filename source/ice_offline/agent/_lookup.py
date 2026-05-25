@@ -1,4 +1,4 @@
-from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+﻿from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
 from ice_offline.agent.bc_continuous_deterministic import eval_bc_deterministic_loss_pi
 from ice_offline.agent.bc_continuous_stochastic import BCAgentContinuousStochastic
 from ice_offline.agent.bc_continuous_stochastic import eval_bc_stochastic_loss_pi
@@ -61,3 +61,4 @@ def get_agent(agent_id: str) -> RunnerAgent:
 
 def get_agent_train_bundle(agent_id: str) -> tuple[RunnerAgent, list[OfflineEvalFn]]:
     return get_agent(agent_id), AGENT_EVAL_OFFLINE_LOOKUP[agent_id]
+

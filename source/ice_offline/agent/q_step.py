@@ -1,4 +1,4 @@
-from typing import Any
+﻿from typing import Any
 
 from .q_table import ObservationEncoder, QTableAgent
 
@@ -36,3 +36,4 @@ class StepQAgent:
 
     def step_count(self) -> int:
         return self._step_counter
+

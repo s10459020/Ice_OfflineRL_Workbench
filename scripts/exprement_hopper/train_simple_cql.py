@@ -3,19 +3,19 @@ import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+from ice_offline.agent.cql_continuous import CQLAgentContinuous
 from ice_offline.dataset._lookup import get_dataset
 from ice_offline.pipeline.batch_loader import MinariLoader
 from ice_offline.pipeline.minari_collector import MinariCollectorWrapper
-from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
+from ice_offline.pipeline.state.hopper import HopperState
+from ice_offline.pipeline.state.hopper import HopperStateIO
 from ice_offline.pipeline.state_operator.state_collector import StateCollectWrapper
 from ice_offline.pipeline.state_operator.state_dataset import StateDataset
 from ice_offline.runner.evaluator2 import Evaluator2
 from ice_offline.tools.printer import print_stage
 
 
-TASK_ID = "train/hopper_simple_bc-v0"
-DATASET_KEY = "hopper_simple"
+TASK_ID = "train/hopper_simple_cql-v0"
 
 BATCH_SIZE = 256
 STEPS = 200_000
@@ -25,10 +25,21 @@ EVAL_ONLINE_N = 3
 SAVE_INTERVAL = 20_000
 
 
-def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    o, a, _, _, _ = episode_batch
+def eval_loss(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+    o, a, r, on, d = episode_batch
     with torch.no_grad():
-        return {"loss_pi": float(agent.loss_actor(o, a).item())}
+        loss_td_parts = agent._loss_td(o, a, r, on, d)
+        loss_cql_parts = agent._loss_cql(o, a, on)
+        loss_critic = agent.loss_critic(o, a, r, on, d)
+        loss_pi = agent.loss_actor(o)
+        return {
+            "loss_q": float(loss_critic.item()),
+            "loss_q_td1": float(loss_td_parts[0].item()),
+            "loss_q_td2": float(loss_td_parts[1].item()),
+            "loss_q_cql1": float(loss_cql_parts[0].item()),
+            "loss_q_cql2": float(loss_cql_parts[1].item()),
+            "loss_pi": float(loss_pi.item()),
+        }
 
 
 def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
@@ -54,8 +65,8 @@ def train(
 
     batch_loader = MinariLoader(dataset=dataset, seed=seed)
 
-    print_stage("Train BC")
-    agent = BCAgentContinuousDeterministic(
+    print_stage("Train CQL")
+    agent = CQLAgentContinuous(
         obs_size=batch_loader.obs_dim,
         act_size=batch_loader.act_dim,
     )
@@ -65,7 +76,7 @@ def train(
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
-        eval_offline_fns=[eval_loss_pi],
+        eval_offline_fns=[eval_loss],
         eval_online_fns=[eval_return],
     )
 
@@ -115,7 +126,7 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = get_dataset(DATASET_KEY)
+    dataset = get_dataset("hopper_simple")
     minari_data, state_data = collect(dataset=dataset, env_id=dataset.env_id, task_id=TASK_ID)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")

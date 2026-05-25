@@ -111,14 +111,14 @@ class IQLAgentDiscrete(TorchAgent):
         loss.backward()
         self.optim.step()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "q": self.q.state_dict(),
             "v": self.v.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.q.load_state_dict(state["q"])
         self.v.load_state_dict(state["v"])
         optim_key = "optimizer" if "optimizer" in state else "optim"
@@ -166,5 +166,6 @@ def eval_iql_discrete_loss_q(agent: "IQLAgentDiscrete", transitions: TransitionB
 def eval_iql_discrete_loss_v(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
     o, a, _, _, _ = transitions
     return {"loss_v": float(agent._loss_v(o, a).item())}
+
 
 

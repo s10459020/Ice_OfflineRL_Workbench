@@ -2,7 +2,7 @@
 
 import gymnasium as gym
 
-from ice_offline.pipeline.state._spec import StateIO
+from ice_offline.pipeline.state._spec import State, StateIO
 from ice_offline.pipeline.state_operator.state_dataset import StateDataset
 
 
@@ -10,8 +10,9 @@ class StateCollectWrapper(gym.Wrapper):
     # ====================
     # Init
     # ====================
-    def __init__(self, env: gym.Env, state_io_cls: Type[StateIO]) -> None:
+    def __init__(self, env: gym.Env, state_cls: Type[State], state_io_cls: Type[StateIO]) -> None:
         super().__init__(env)
+        self._state_cls = state_cls
         self._state_io = state_io_cls(env)
         self._episodes: list[list[dict]] = []
         self._episode: list[dict] | None = None
@@ -23,7 +24,7 @@ class StateCollectWrapper(gym.Wrapper):
         self._end_episode()
         return StateDataset.write(
             dataset_id=dataset_id,
-            state_cls=self._state_io.state_cls,
+            state_cls=self._state_cls,
             episodes=self._episodes,
         )
 

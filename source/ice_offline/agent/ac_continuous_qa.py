@@ -139,3 +139,4 @@ class ActorCriticAgent:
         grad_pW = np.outer(obs_vector, nabla_mean_log_pi)
         grad_pb = nabla_mean_log_pi
         return grad_pW, grad_pb
+

@@ -119,13 +119,13 @@ class QAgentDiscrete(TorchAgent):
         if self._grad_step % self.target_update_interval == 0:
             self.q.update_target()
 
-    def _save(self) -> dict[str, torch.Tensor]:
+    def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
             "q": self.q.state_dict(),
             "optimizer": self.optim.state_dict(),
         }
 
-    def _load(self, state: dict[str, torch.Tensor]) -> None:
+    def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.q.load_state_dict(state["q"])
         self.optim.load_state_dict(state["optimizer"])
 
@@ -157,4 +157,5 @@ def eval_q_discrete_loss(agent: "QAgentDiscrete", transitions: TransitionBatch) 
 def eval_q_discrete_loss_q(agent: "QAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
     o, a, r, on, d = transitions
     return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
+
 
