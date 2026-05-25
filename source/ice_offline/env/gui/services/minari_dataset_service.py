@@ -8,7 +8,6 @@ from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.env.visualization.unit_basic import BasicUnit
 from ice_offline.env.visualization.unit_distribution import DistributionUnit
 from ice_offline.env.visualization.overlay_loader import OverlayLoader
-from ice_offline.env.visualization.unit_trail import TrailUnit
 
 
 class MinariDatasetService:
@@ -17,8 +16,7 @@ class MinariDatasetService:
     def __init__(self, dataset_id: str, distribution_style: str = "ring") -> None:
         self._loader = OverlayLoader(
             dataset_id,
-            units=[BasicUnit(), TrailUnit(), DistributionUnit(style=distribution_style)],
-            #units=[BasicUnit(), TrailUnit(), DistributionUnit(quantize_mode="fixed")],
+            units=[BasicUnit(), DistributionUnit(style=distribution_style)],
             render_mode="rgb_array",
         )
         self._dataset = self._loader.get_dataset()
@@ -36,9 +34,6 @@ class MinariDatasetService:
             self._loaded_episode_id = episode_id
         self._loader.seek(step_index)
         return self._loader.render()
-
-    def set_trail_enabled(self, enabled: bool) -> None:
-        self._loader.engine.set_enabled(RenderLayer.TRAIL, enabled)
 
     def set_distribution_enabled(self, enabled: bool) -> None:
         self._loader.engine.set_enabled(RenderLayer.DISTRIBUTION, enabled)

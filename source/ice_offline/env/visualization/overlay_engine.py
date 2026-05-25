@@ -12,10 +12,9 @@ from .overlay_renderer import OverlayRenderer
 class RenderLayer(IntEnum):
     BACKGROUND = 0
     DISTRIBUTION = 10
-    TRAIL = 20
-    OBJECTS = 30
-    AGENT = 40
-    HIGHLIGHT = 50
+    OBJECTS = 20
+    AGENT = 30
+    HIGHLIGHT = 40
 
 
 class OverlayEngine:

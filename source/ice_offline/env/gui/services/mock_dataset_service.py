@@ -14,5 +14,5 @@ class MockDatasetService:
             EpisodeInfo(episode_id=2, step_count=15),
         ]
 
-    def set_trail_enabled(self, enabled: bool) -> None:
+    def set_distribution_enabled(self, enabled: bool) -> None:
         _ = enabled

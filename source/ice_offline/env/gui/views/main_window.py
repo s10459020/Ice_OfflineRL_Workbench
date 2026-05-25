@@ -53,7 +53,6 @@ class MainWindow(QMainWindow):
     def _reset_ui_state(self) -> None:
         self._episode_list.setCurrentRow(0)
         self._visualization_panel.reset_defaults()
-        self._dataset_service.set_trail_enabled(self._visualization_panel.is_trail_enabled())
         self._dataset_service.set_distribution_enabled(self._visualization_panel.is_q_table_enabled())
         self._on_episode_selected(self._episode_list.currentRow())
 
@@ -167,7 +166,6 @@ class MainWindow(QMainWindow):
     def _bind_presenter(self) -> None:
         self._episode_list.currentRowChanged.connect(self._on_episode_selected)
         self._step_slider.valueChanged.connect(self._on_step_slider_changed)
-        self._visualization_panel.bind_trail_toggled(self._on_trail_toggled)
         self._visualization_panel.bind_q_table_toggled(self._on_q_table_toggled)
         
     def _on_episode_selected(self, episode_index: int) -> None:
@@ -186,10 +184,6 @@ class MainWindow(QMainWindow):
         episode_id, step_index = self._presenter.current_render_target()
         frame = self._dataset_service.render_episode_step(episode_id=episode_id, step_index=step_index)
         self._grid_view.set_frame(frame)
-
-    def _on_trail_toggled(self, enabled: bool) -> None:
-        self._dataset_service.set_trail_enabled(enabled)
-        self._sync_grid_view()
 
     def _on_q_table_toggled(self, enabled: bool) -> None:
         self._dataset_service.set_distribution_enabled(enabled)
