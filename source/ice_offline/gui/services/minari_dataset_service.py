@@ -3,7 +3,7 @@
 
 import numpy as np
 
-from ice_offline.data.episode import EpisodeInfo
+from ice_offline.gui.models.episode import EpisodeInfo
 from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.env.visualization.unit_basic import BasicUnit
 from ice_offline.env.visualization.unit_distribution import DistributionUnit

@@ -1,7 +1,7 @@
 ﻿"""Mock dataset service for MVP UI interaction tests."""
 
 
-from ice_offline.data.episode import EpisodeInfo
+from ice_offline.gui.models.episode import EpisodeInfo
 
 
 class MockDatasetService:

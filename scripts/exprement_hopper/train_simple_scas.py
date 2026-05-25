@@ -1,4 +1,5 @@
 ﻿import gymnasium as gym
+from ice_offline.dataset._spec import BaseDataset
 import minari
 import numpy as np
 import torch
@@ -56,7 +57,7 @@ def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 def train(
     task_id: str,
-    dataset,
+    dataset: BaseDataset,
     *,
     eval_env: gym.Env,
     seed: int = 42,
@@ -124,9 +125,9 @@ def train(
 
 
 def collect(
-    dataset,
-    env_id: str = "Hopper-v5",
+    env_id: str,
     task_id: str = TASK_ID,
+    dataset: BaseDataset,
     batch_size: int = BATCH_SIZE,
     dynamics_steps: int = DYNAMICS_STEPS,
     agent_steps: int = AGENT_STEPS,

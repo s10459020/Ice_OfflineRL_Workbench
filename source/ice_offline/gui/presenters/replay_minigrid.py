@@ -1,7 +1,7 @@
 ﻿"""MVP presenter for episode/step interaction."""
 
 
-from ice_offline.data.episode import EpisodeInfo
+from ice_offline.gui.models.episode import EpisodeInfo
 
 
 class ViewerPresenter:

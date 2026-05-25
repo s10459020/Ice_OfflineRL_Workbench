@@ -5,6 +5,7 @@ import torch
 
 from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
 from ice_offline.dataset._lookup import get_dataset
+from ice_offline.dataset._spec import BaseDataset
 from ice_offline.pipeline.batch_loader import MinariLoader
 from ice_offline.pipeline.minari_collector import MinariCollectorWrapper
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
@@ -14,8 +15,8 @@ from ice_offline.runner.evaluator2 import Evaluator2
 from ice_offline.tools.printer import print_stage
 
 
-TASK_ID = "train/hopper_simple_bc-v0"
 DATASET_KEY = "hopper_simple"
+TASK_ID = "train/hopper_simple_bc-v0"
 
 BATCH_SIZE = 256
 STEPS = 200_000
@@ -23,6 +24,7 @@ EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
 SAVE_INTERVAL = 20_000
+SEED = 42
 
 
 def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
@@ -37,22 +39,23 @@ def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 
 def train(
-    task_id: str,
-    dataset,
+    dataset: BaseDataset,
     *,
-    eval_env: gym.Env,
-    seed: int = 42,
-    batch_size: int = 256,
-    steps: int = 200_000,
-    eval_interval: int = 2_000,
-    eval_offline_n: int = 8,
-    eval_online_n: int = 3,
-    save_interval: int = 20_000,
+    steps: int = STEPS,
+    task_id: str = TASK_ID,
+    batch_size: int = BATCH_SIZE,
+    eval_interval: int = EVAL_INTERVAL,
+    eval_offline_n: int = EVAL_OFFLINE_N,
+    eval_online_n: int = EVAL_ONLINE_N,
+    eval_env: gym.Env | None = None,
+    save_interval: int = SAVE_INTERVAL,
+    seed: int = SEED,
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     batch_loader = MinariLoader(dataset=dataset, seed=seed)
+    eval_env = eval_env or dataset.make_collect_env()
 
     print_stage("Train BC")
     agent = BCAgentContinuousDeterministic(
@@ -81,17 +84,17 @@ def train(
 
 
 def collect(
-    dataset,
-    env_id: str = "Hopper-v5",
+    dataset: BaseDataset,
+    *,
+    steps: int = STEPS,
     task_id: str = TASK_ID,
     batch_size: int = BATCH_SIZE,
-    steps: int = STEPS,
     eval_interval: int = EVAL_INTERVAL,
-    eval_offline_n: int = EVAL_OFFLINE_N,
     eval_online_n: int = EVAL_ONLINE_N,
+    eval_offline_n: int = EVAL_OFFLINE_N,
     save_interval: int = SAVE_INTERVAL,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    env = gym.make(env_id)
+    env = dataset.make_collect_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
@@ -116,9 +119,8 @@ def collect(
 
 if __name__ == "__main__":
     dataset = get_dataset(DATASET_KEY)
-    minari_data, state_data = collect(dataset=dataset, env_id=dataset.env_id, task_id=TASK_ID)
+    minari_data, state_data = collect(dataset=dataset, task_id=TASK_ID)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
 
