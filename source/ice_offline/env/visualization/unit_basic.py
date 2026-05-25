@@ -13,8 +13,8 @@ from minigrid.utils.rendering import (
 )
 
 from ice_offline.pipeline.state.oneroom_s8 import OneroomS8StateIO
-from ice_offline.pipeline.state_collector import StateCollector
-from ice_offline.pipeline.state_loader import StateLoader
+from ice_offline.pipeline.state.oneroom_s8 import OneroomS8State
+from ice_offline.pipeline.state_operator.state_dataset import StateDataset
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
@@ -118,6 +118,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
         self._highlight = _HighlightRender()
         self._background = _BackgroundRender()
         self._state_io: OneroomS8StateIO | None = None
+        self._state_dataset: StateDataset | None = None
 
     def _register_engine(self, engine: OverlayEngine) -> None:
         engine.register(int(RenderLayer.AGENT), self._agent)
@@ -130,17 +131,20 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
     # ====================
     def on_wrapper(self, env: gym.Env, wrapper: Any, engine: OverlayEngine) -> gym.Env:
         self._register_engine(engine)
-        collector = StateCollector(env)
-        wrapper.register("state", collector.get_last)
-        return collector
+        state_io = OneroomS8StateIO(env)
+        wrapper.register("state", state_io.get_state)
+        return env
 
     # ====================
     # Loader Hooks
     # ====================
     def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
         self._register_engine(engine)
-        state_loader = StateLoader(loader.dataset_id)
-        loader.register_list("state", lambda episode_index: state_loader.load_episode(episode_index))
+        self._state_dataset = StateDataset.load_dataset(
+            dataset_id=loader.dataset_id,
+            state_cls=OneroomS8State,
+        )
+        loader.register_list("state", lambda episode_index: self._state_dataset.read_episode(episode_index))
 
     # ====================
     # Shared Hooks
