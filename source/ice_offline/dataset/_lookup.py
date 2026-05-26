@@ -3,8 +3,8 @@
 from ice_offline.dataset._spec import BaseDataset
 from ice_offline.dataset._spec import eval_return
 from ice_offline.dataset._spec import StopReturnStable
-from ice_offline.runner.evaluator import OnlineEvalFn
-from ice_offline.runner.stopper import EarlyStopEvent
+from ice_offline.run.evaluator import OnlineEvalFn
+from ice_offline.run.stopper import EarlyStopEvent
 
 
 DATASET_LOOKUP: dict[str, BaseDataset] = {

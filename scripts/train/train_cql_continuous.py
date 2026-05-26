@@ -7,7 +7,7 @@ import torch
 
 from ice_offline.agent.cql_continuous import CQLAgentContinuous
 from ice_offline.pipeline.batch_loader import MinariLoader
-from ice_offline.runner.offline import TorchBatchOfflineRunner
+from ice_offline.run.offline import TorchBatchOfflineRunner
 from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage
 from ice_offline.tools.timing import Timer

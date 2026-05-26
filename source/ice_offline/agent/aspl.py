@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from scipy.stats import qmc
 
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.runner.evaluator import TransitionBatch
+from ice_offline.run.evaluator import TransitionBatch
 
 
 

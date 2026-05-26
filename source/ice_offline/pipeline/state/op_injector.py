@@ -5,7 +5,7 @@ import minari
 import numpy as np
 
 from ice_offline.pipeline.state._spec import StateIO
-from ice_offline.pipeline.state_operator.state_dataset import StateDataset
+from ice_offline.pipeline.state.op_dataset import StateDataset
 
 
 class StateInjectWrapper(gym.Wrapper):
@@ -119,3 +119,4 @@ class StateInjectWrapper(gym.Wrapper):
         if isinstance(payload, dict):
             return {k: self._index_payload(v, index) for k, v in payload.items()}
         return payload[index]
+

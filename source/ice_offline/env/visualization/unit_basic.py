@@ -12,9 +12,9 @@ from minigrid.utils.rendering import (
     rotate_fn,
 )
 
-from ice_offline.pipeline.state.oneroom_s8 import OneroomS8StateIO
-from ice_offline.pipeline.state.oneroom_s8 import OneroomS8State
-from ice_offline.pipeline.state_operator.state_dataset import StateDataset
+from ice_offline.pipeline.state.minigrid import MinigridStateIO
+from ice_offline.pipeline.state.minigrid import MinigridState
+from ice_offline.pipeline.state.op_dataset import StateDataset
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
@@ -117,7 +117,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
         self._objects = _ObjectsRender()
         self._highlight = _HighlightRender()
         self._background = _BackgroundRender()
-        self._state_io: OneroomS8StateIO | None = None
+        self._state_io: MinigridStateIO | None = None
         self._state_dataset: StateDataset | None = None
 
     def _register_engine(self, engine: OverlayEngine) -> None:
@@ -131,7 +131,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
     # ====================
     def on_wrapper(self, env: gym.Env, wrapper: Any, engine: OverlayEngine) -> gym.Env:
         self._register_engine(engine)
-        state_io = OneroomS8StateIO(env)
+        state_io = MinigridStateIO(env)
         wrapper.register("state", state_io.get_state)
         return env
 
@@ -142,7 +142,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
         self._register_engine(engine)
         self._state_dataset = StateDataset.load_dataset(
             dataset_id=loader.dataset_id,
-            state_cls=OneroomS8State,
+            state_cls=MinigridState,
         )
         loader.register_list("state", lambda episode_index: self._state_dataset.read_episode(episode_index))
 
@@ -151,7 +151,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
     # ====================
     def on_env(self, base_env: gym.Env) -> None:
         self._highlight._base_env = base_env
-        self._state_io = OneroomS8StateIO(base_env)
+        self._state_io = MinigridStateIO(base_env)
 
     def on_seek(self, data: dict[str, Any]) -> None:
         self._state_io.set_state(data["state"])
@@ -165,3 +165,6 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
         self._objects.grid = grid
 
         self._highlight.refresh_mask()
+
+
+

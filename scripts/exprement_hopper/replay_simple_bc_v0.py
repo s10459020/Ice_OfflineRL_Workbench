@@ -2,7 +2,7 @@
 import minari
 
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
-from ice_offline.pipeline.state_operator.state_injector import StateInjectWrapper
+from ice_offline.pipeline.state.op_injector import StateInjectWrapper
 
 
 DATASET_ID = "train/hopper_simple_bc-v0"
@@ -47,3 +47,5 @@ if __name__ == "__main__":
         env.close()
 
     print(f"episodes={episodes} total_steps={steps_total}")
+
+

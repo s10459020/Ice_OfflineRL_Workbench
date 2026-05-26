@@ -3,10 +3,10 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
-from ice_offline.pipeline.state.oneroom_s8 import OneroomS8State, OneroomS8StateIO
-from ice_offline.pipeline.state_convert.oneroom_s8_fullobs import OneroomS8FullobsConverter
-from ice_offline.pipeline.state_operator.state_converter import StateConverter
-from ice_offline.pipeline.state_operator.state_injector import StateInjectWrapper
+from ice_offline.pipeline.state.minigrid import MinigridState, MinigridStateIO
+from ice_offline.pipeline.state.minigrid import MinigridFullobsConverter
+from ice_offline.pipeline.state.op_converter import StateConverter
+from ice_offline.pipeline.state.op_injector import StateInjectWrapper
 
 
 DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"
@@ -15,7 +15,7 @@ ENV_ID = "BabyAI-OneRoomS8-v0"
 
 def main() -> None:
     dataset = minari.load_dataset(DATASET_ID, download=True)
-    converter = StateConverter(dataset=dataset, converter_cls=OneroomS8FullobsConverter)
+    converter = StateConverter(dataset=dataset, converter_cls=MinigridFullobsConverter)
     episodes = dataset.total_episodes
 
     state_dataset = converter.convert()
@@ -27,8 +27,8 @@ def main() -> None:
     env = StateInjectWrapper(
         env=env,
         dataset_id=DATASET_ID,
-        state_cls=OneroomS8State,
-        state_io_cls=OneroomS8StateIO,
+        state_cls=MinigridState,
+        state_io_cls=MinigridStateIO,
     )
 
     steps_total = 0
@@ -58,4 +58,7 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
 

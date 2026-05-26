@@ -5,12 +5,12 @@ from pathlib import Path
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.dataset._spec import BaseDataset
 from ice_offline.pipeline.batch_loader import MinariLoader
-from ice_offline.runner.evaluator import OfflineEvalFn
-from ice_offline.runner.evaluator import OnlineEvalFn
-from ice_offline.runner.evaluator import Evaluator
-from ice_offline.runner.saver import RunnerSaver
-from ice_offline.runner.stopper import EarlyStopEvent
-from ice_offline.runner.stopper import RunnerStopper
+from ice_offline.run.evaluator import OfflineEvalFn
+from ice_offline.run.evaluator import OnlineEvalFn
+from ice_offline.run.evaluator import Evaluator
+from ice_offline.run.saver import RunnerSaver
+from ice_offline.run.stopper import EarlyStopEvent
+from ice_offline.run.stopper import RunnerStopper
 from ice_offline.tools.paths import eval_root
 
 

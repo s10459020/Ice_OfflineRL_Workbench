@@ -1,7 +1,7 @@
 ﻿from typing import Any, Type
 
 from ice_offline.pipeline.state._spec import State
-from ice_offline.pipeline.state_operator.state_dataset import StateDataset
+from ice_offline.pipeline.state.op_dataset import StateDataset
 
 
 class StateConverter:
@@ -26,3 +26,4 @@ class StateConverter:
             state_cls=State,
             episodes=episodes,
         )
+

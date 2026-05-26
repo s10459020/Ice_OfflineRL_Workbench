@@ -26,8 +26,8 @@ from ice_offline.agent.qv_discrete import QVAgentDiscrete
 from ice_offline.agent.qv_discrete import eval_qv_discrete_loss
 from ice_offline.agent.qv_discrete import eval_qv_discrete_loss_q
 from ice_offline.agent.qv_discrete import eval_qv_discrete_loss_v
-from ice_offline.runner.evaluator import OfflineEvalFn
-from ice_offline.runner.offline import RunnerAgent
+from ice_offline.run.evaluator import OfflineEvalFn
+from ice_offline.run.offline import RunnerAgent
 
 
 AGENT_LOOKUP: dict[str, RunnerAgent] = {

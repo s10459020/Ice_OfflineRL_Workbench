@@ -5,7 +5,7 @@ import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.pipeline.value_collector import EvalFn, ValueCollector
+from ice_offline.pipeline.value.collector import EvalFn, ValueCollector
 from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper
 from ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
 
@@ -83,3 +83,4 @@ class ValueOneRoomCollector(ValueCollector):
 
     def _clear_cache(self) -> None:
         self._obs_samples = None
+

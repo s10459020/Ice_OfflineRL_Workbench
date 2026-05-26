@@ -2,9 +2,9 @@
 import gymnasium as gym
 
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
-from ice_offline.pipeline.state_convert.hopper import HopperConverter
-from ice_offline.pipeline.state_operator.state_converter import StateConverter
-from ice_offline.pipeline.state_operator.state_injector import StateInjectWrapper
+from ice_offline.pipeline.state.hopper import HopperConverter
+from ice_offline.pipeline.state.op_converter import StateConverter
+from ice_offline.pipeline.state.op_injector import StateInjectWrapper
 
 
 DATASET_ID = "mujoco/hopper/simple-v0"
@@ -54,4 +54,6 @@ if __name__ == "__main__":
         env.close()
 
     print(f"episodes={episodes} total_steps={steps_total}")
+
+
 

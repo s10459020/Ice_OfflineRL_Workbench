@@ -4,10 +4,10 @@ import numpy as np
 
 from ice_offline.agent._spec import model_ref
 from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
-from ice_offline.pipeline.minari_collector import MinariCollectorWrapper
+from ice_offline.pipeline.minari.collector import MinariCollectorWrapper
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
-from ice_offline.pipeline.state_operator.state_collector import StateCollectWrapper
-from ice_offline.pipeline.state_operator.state_dataset import StateDataset
+from ice_offline.pipeline.state.op_collector import StateCollectWrapper
+from ice_offline.pipeline.state.op_dataset import StateDataset
 from ice_offline.tools.printer import print_stage
 
 
@@ -70,4 +70,7 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
+
+
 

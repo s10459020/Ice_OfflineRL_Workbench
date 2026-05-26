@@ -9,7 +9,7 @@ import torch
 import torch.nn.functional as F
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.runner.evaluator import TransitionBatch
+from ice_offline.run.evaluator import TransitionBatch
 
 
 def _load_squashed_gaussian_distribution():

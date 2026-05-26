@@ -3,7 +3,7 @@
 import gymnasium as gym
 
 from ice_offline.pipeline.state._spec import State, StateIO
-from ice_offline.pipeline.state_operator.state_dataset import StateDataset
+from ice_offline.pipeline.state.op_dataset import StateDataset
 
 
 class StateCollectWrapper(gym.Wrapper):
@@ -52,3 +52,4 @@ class StateCollectWrapper(gym.Wrapper):
     def _end_episode(self) -> None:
         if self._episode:
             self._episodes.append(self._episode)
+

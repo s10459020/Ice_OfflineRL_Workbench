@@ -8,7 +8,7 @@ from minigrid.wrappers import FullyObsWrapper
 
 from ice_offline.agent.iql_discrete import IQLAgentDiscrete
 from ice_offline.pipeline.batch_loader import MinariLoader
-from ice_offline.runner.offline import TorchBatchOfflineRunner
+from ice_offline.run.offline import TorchBatchOfflineRunner
 from ice_offline.tools.paths import eval_root
 from ice_offline.tools.printer import print_stage
 from ice_offline.tools.timing import Timer

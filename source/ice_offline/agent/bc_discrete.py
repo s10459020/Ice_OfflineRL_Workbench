@@ -7,7 +7,7 @@ from torch.distributions import Categorical
 from ._spec import EnvSpec
 from ._spec import TorchAgent
 
-from ice_offline.runner.evaluator import TransitionBatch
+from ice_offline.run.evaluator import TransitionBatch
 
 
 def eval_bc_discrete_loss(

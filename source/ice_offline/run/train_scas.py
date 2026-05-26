@@ -1,5 +1,4 @@
 ﻿import gymnasium as gym
-from ice_offline.dataset._spec import BaseDataset
 import minari
 import numpy as np
 import torch
@@ -7,18 +6,18 @@ import torch
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.dataset._lookup import get_dataset
+from ice_offline.dataset._spec import BaseDataset
 from ice_offline.pipeline.batch_loader import MinariLoader
-from ice_offline.pipeline.minari_collector import MinariCollectorWrapper
+from ice_offline.pipeline.minari.collector import MinariCollectorWrapper
 from ice_offline.pipeline.state.hopper import HopperState
 from ice_offline.pipeline.state.hopper import HopperStateIO
-from ice_offline.pipeline.state_operator.state_collector import StateCollectWrapper
-from ice_offline.pipeline.state_operator.state_dataset import StateDataset
-from ice_offline.runner.evaluator2 import Evaluator2
+from ice_offline.pipeline.state.op_collector import StateCollectWrapper
+from ice_offline.pipeline.state.op_dataset import StateDataset
+from ice_offline.run.evaluator2 import Evaluator2
 from ice_offline.tools.printer import print_stage
 
 
-TASK_ID = "train/hopper_simple_scas-v0"
-
+DATASET_KEY = "hopper_simple"
 BATCH_SIZE = 256
 DYNAMICS_STEPS = 100_000
 AGENT_STEPS = 200_000
@@ -26,6 +25,7 @@ EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
 SAVE_INTERVAL = 20_000
+SEED = 42
 
 
 def eval_loss_dynamic(dynamics: ScasDynamic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
@@ -56,23 +56,25 @@ def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, t
 
 
 def train(
-    task_id: str,
     dataset: BaseDataset,
     *,
-    eval_env: gym.Env,
-    seed: int = 42,
-    batch_size: int = 256,
-    dynamics_steps: int = 100_000,
-    agent_steps: int = 200_000,
-    eval_interval: int = 2_000,
-    eval_offline_n: int = 8,
-    eval_online_n: int = 3,
-    save_interval: int = 20_000,
+    dynamics_steps: int = DYNAMICS_STEPS,
+    agent_steps: int = AGENT_STEPS,
+    task_id: str = None,
+    batch_size: int = BATCH_SIZE,
+    eval_interval: int = EVAL_INTERVAL,
+    eval_offline_n: int = EVAL_OFFLINE_N,
+    eval_online_n: int = EVAL_ONLINE_N,
+    eval_env: gym.Env | None = None,
+    save_interval: int = SAVE_INTERVAL,
+    seed: int = SEED,
 ) -> None:
+    task_id = task_id or f"{dataset.dataset_id.replace('/', '_')}_scas-v0"
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     batch_loader = MinariLoader(dataset=dataset, seed=seed)
+    eval_env = eval_env or dataset.make_collect_env()
 
     print_stage("Train SCAS Dynamics")
     dynamics = ScasDynamic(
@@ -125,18 +127,19 @@ def train(
 
 
 def collect(
-    env_id: str,
-    task_id: str = TASK_ID,
     dataset: BaseDataset,
-    batch_size: int = BATCH_SIZE,
+    *,
     dynamics_steps: int = DYNAMICS_STEPS,
     agent_steps: int = AGENT_STEPS,
+    task_id: str = None,
+    batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_offline_n: int = EVAL_OFFLINE_N,
     eval_online_n: int = EVAL_ONLINE_N,
     save_interval: int = SAVE_INTERVAL,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    env = gym.make(env_id)
+    task_id = task_id or f"{dataset.dataset_id.replace('/', '_')}_scas-v0"
+    env = dataset.make_collect_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
@@ -153,18 +156,19 @@ def collect(
         save_interval=save_interval,
     )
 
-    minari_data = minari_col.save(task_id)
-    state_data = state_col.save(task_id)
+    minari_data = minari_col.save(f"train/{task_id}")
+    state_data = state_col.save(f"train/{task_id}")
     minari_col.close()
 
     return minari_data, state_data
 
 
 if __name__ == "__main__":
-    dataset = get_dataset("hopper_simple")
-    minari_data, state_data = collect(dataset=dataset, env_id=dataset.env_id, task_id=TASK_ID)
+    dataset = get_dataset(DATASET_KEY)
+    minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
 
 

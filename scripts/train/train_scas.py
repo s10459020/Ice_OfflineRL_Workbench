@@ -5,7 +5,7 @@ from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.dataset._lookup import get_dataset
 from ice_offline.pipeline.batch_loader import MinariLoader
-from ice_offline.runner.evaluator2 import Evaluator2
+from ice_offline.run.evaluator2 import Evaluator2
 from ice_offline.tools.printer import print_stage
 
 

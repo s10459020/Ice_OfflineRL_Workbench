@@ -1,6 +1,6 @@
 ﻿from ice_offline.agent._lookup import get_agent_train_bundle
 from ice_offline.dataset._lookup import get_dataset_train_bundle
-from ice_offline.runner.offline import TorchBatchOfflineRunner
+from ice_offline.run.offline import TorchBatchOfflineRunner
 from ice_offline.tools.printer import print_stage
 
 
