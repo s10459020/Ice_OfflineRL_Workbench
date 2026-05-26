@@ -28,10 +28,10 @@ SEED = 42
 def eval_loss(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     o, a, r, on, d = episode_batch
     with torch.no_grad():
-        loss_td_parts = agent._loss_td(o, a, r, on, d)
-        loss_cql_parts = agent._loss_cql(o, a, on)
+        loss_td_parts = agent.loss_td(o, a, r, on, d)
+        loss_cql_parts = agent.loss_conservative(o, a, on)
         loss_critic = agent.loss_critic(o, a, r, on, d)
-        loss_pi = agent.loss_actor(o)
+        loss_pi = agent.loss_actor(o, update_alpha=False)
         return {
             "loss_q": float(loss_critic.item()),
             "loss_q_td1": float(loss_td_parts[0].item()),

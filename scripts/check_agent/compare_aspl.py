@@ -334,13 +334,13 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
 
         assert_callback(
             lambda: [_ref_loss_td_with_target(ref, s, a, _ref_td_target(ref, sn, r, d)).detach().cpu()],
-            lambda: [our.loss_td_with_target(s, a, our._td_target(sn, r, d)).detach().cpu()],
+            lambda: [our.loss_td_with_target(s, a, our.td_target(sn, r, d)).detach().cpu()],
             label=f"loss_td[{i}]",
             seed=SEED + 2000 + i,
         )
         assert_callback(
             lambda: [_ref_loss_punish_with_target(ref, s, a, _ref_td_target(ref, sn, r, d)).detach().cpu()],
-            lambda: [our.loss_punish_with_target(s, a, our._td_target(sn, r, d)).detach().cpu()],
+            lambda: [our.loss_punish_with_target(s, a, our.td_target(sn, r, d)).detach().cpu()],
             label=f"loss_punish[{i}]",
             seed=SEED + 2100 + i,
         )

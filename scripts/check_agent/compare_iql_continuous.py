@@ -104,10 +104,10 @@ def _our_losses(
     next_obs_t: torch.Tensor,
     done_t: torch.Tensor,
 ) -> torch.Tensor:
-    q_loss = our._loss_q(obs_t, act_t, rew_t, next_obs_t, done_t)
-    v_loss = our._loss_v(obs_t, act_t)
+    q_loss = our.loss_q(obs_t, act_t, rew_t, next_obs_t, done_t)
+    v_loss = our.loss_v(obs_t, act_t)
     critic = q_loss + v_loss
-    actor = our._loss_actor(obs_t, act_t)
+    actor = our.loss_actor(obs_t, act_t)
     return torch.stack([critic, q_loss, v_loss, actor])
 
 def _d3rl_losses(d3rl, batch: TorchMiniBatch, obs_t: torch.Tensor) -> torch.Tensor:

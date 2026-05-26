@@ -114,8 +114,8 @@ def _d3rl_losses(algo, obs_t, act_t, rew_t, next_obs_t, done_t) -> torch.Tensor:
     return torch.stack([total, td_loss, conservative])
 
 def _our_losses(our_agent: CQLAgentDiscrete, obs_t, act_t, rew_t, next_obs_t, done_t) -> torch.Tensor:
-    td = our_agent._loss_td(obs_t, act_t, rew_t, next_obs_t, done_t)
-    cql = our_agent._loss_cql(obs_t, act_t)
+    td = our_agent.loss_td(obs_t, act_t, rew_t, next_obs_t, done_t)
+    cql = our_agent.loss_conservative(obs_t, act_t)
     total = our_agent._loss(obs_t, act_t, rew_t, next_obs_t, done_t)
     return torch.stack([total, td, cql])
 

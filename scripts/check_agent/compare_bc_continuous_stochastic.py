@@ -104,7 +104,7 @@ def _our_losses(
     obs_t: torch.Tensor,
     act_t: torch.Tensor,
 ) -> torch.Tensor:
-    return torch.stack([our_agent._loss(obs_t, act_t)])
+    return torch.stack([our_agent.loss_actor(obs_t, act_t)])
 
 def _d3rl_losses(
     d3_policy: NormalPolicy,

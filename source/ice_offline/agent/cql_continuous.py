@@ -169,7 +169,7 @@ class _QQ(torch.nn.Module):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
 class CQLAgentContinuous(TorchAgent):
-    def __init__(self, obs_size: int = 0, act_size: int = 0, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
+    def __init__(self, obs_size: int, act_size: int, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
         self.device = "cpu"
         self.act_size = act_size
         self.actor_learning_rate = actor_learning_rate
@@ -188,10 +188,6 @@ class CQLAgentContinuous(TorchAgent):
         self.critic_optim = None
         self.alpha_optim = None
         self.alpha_prime_optim = None
-        if obs_size > 0 and act_size > 0:
-            self.set_dim(obs_size, act_size)
-
-    def set_dim(self, obs_size: int, act_size: int) -> None:
         self.act_size = act_size
         self.policy = _Pi(obs_size=obs_size, act_size=act_size).to(self.device)
         self.critic = _QQ(
@@ -216,13 +212,6 @@ class CQLAgentContinuous(TorchAgent):
         self.alpha_optim = _Adam(self.actor_alpha_learning_rate)([self.policy.log_alpha])
         self.alpha_prime_optim = _Adam(self.critic_alpha_learning_rate)([self.critic.log_alpha])
 
-    def configure(self, env_spec) -> None:
-        assert env_spec.observation_shape is not None
-        assert env_spec.action_shape is not None
-        obs_size = int(np.prod(env_spec.observation_shape))
-        act_size = int(np.prod(env_spec.action_shape))
-        self.set_dim(obs_size=obs_size, act_size=act_size)
-
     # ====================
     # public API
     # ====================
@@ -244,7 +233,7 @@ class CQLAgentContinuous(TorchAgent):
             else:
                 a, _ = self.policy.sample(o)
         return a.cpu().numpy()
-
+    
     def update(self, batch):
         observation = batch["obs"]
         action = batch["act"]
@@ -258,19 +247,30 @@ class CQLAgentContinuous(TorchAgent):
         on = torch.as_tensor(next_observation, dtype=torch.float32, device=self.device)
         d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
 
-        # critic
-        critic_loss = self._loss_critic(o, a, r, on, d, update_alpha=True)
+        critic_loss = self.loss_critic(o, a, r, on, d, update_alpha=True)
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
 
-        # actor
-        actor_loss = self._loss_actor(o, update_alpha=True)
+        actor_loss = self.loss_actor(o, update_alpha=True)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
 
         self.critic.update_target_soft()
+
+        
+    def update_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> None:
+        self.alpha_prime_optim.zero_grad()
+        alpha_loss = self.loss_alpha_cql(conservative_loss_detached)
+        alpha_loss.backward()
+        self.alpha_prime_optim.step()
+
+    def update_alpha_sac(self, log_prob_detached: torch.Tensor) -> None:
+        self.alpha_optim.zero_grad()
+        alpha_loss = self.loss_alpha_sac(log_prob_detached)
+        alpha_loss.backward()
+        self.alpha_optim.step()
 
     def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
@@ -289,23 +289,11 @@ class CQLAgentContinuous(TorchAgent):
         self.critic_optim.load_state_dict(state["critic_optimizer"])
         self.alpha_optim.load_state_dict(state["actor_alpha_optimizer"])
         self.alpha_prime_optim.load_state_dict(state["critic_alpha_optimizer"])
-        
-    def update_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> None:
-        self.alpha_prime_optim.zero_grad()
-        alpha_loss = self._loss_alpha_cql(conservative_loss_detached)
-        alpha_loss.backward()
-        self.alpha_prime_optim.step()
-
-    def update_alpha_sac(self, log_prob_detached: torch.Tensor) -> None:
-        self.alpha_optim.zero_grad()
-        alpha_loss = self._loss_alpha_sac(log_prob_detached)
-        alpha_loss.backward()
-        self.alpha_optim.step()
 
     # ====================
     # critic mathmatics
     # ====================
-    def _target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         #  AC target: r + gamma*                             Q2  * (1-done)
         # TD3 target: r + gamma*                         Q2_min  * (1-done) # Clipped Double Q
         # DQN target: r + gamma*                    targ_Q2_min  * (1-done) # target Q
@@ -319,17 +307,17 @@ class CQLAgentContinuous(TorchAgent):
             qn = self.critic.tqq_min(on, an)
             return r + self.critic.gamma * qn * (1.0 - d)
 
-    def _loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # TD3 Double Q 
         # loss_i = E_D[ (Qi-y)^2 ]
         # E_D[...]: input ...
-        target = self._target(on, r, d)
+        target = self.target(on, r, d)
         qq = self.critic.qq(o, a)
         loss_td_1 = F.mse_loss(qq[0], target)
         loss_td_2 = F.mse_loss(qq[1], target)
         return torch.stack([loss_td_1, loss_td_2], dim=0)
 
-    def _loss_cql(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
+    def loss_conservative(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
         # L_CQL(H) = E_D[s]{log *              sum_a[exp(Q)] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
@@ -359,7 +347,7 @@ class CQLAgentContinuous(TorchAgent):
         data_q = self.critic.qq(o, a)                             # (2,B,1)
         return (logsumexp - data_q).mean(dim=[1, 2])        # (2), double Q
 
-    def _loss_critic(
+    def loss_critic(
         self,
         o: torch.Tensor,
         a: torch.Tensor,
@@ -371,8 +359,8 @@ class CQLAgentContinuous(TorchAgent):
         # CQL loss: loss_td + alpha * loss_cql
         # TD3 double Q: sum_i[ loss_td + alpha * loss_cql ]
         # Lagrange 乘子: alpha
-        loss_td = self._loss_td(o, a, r, on, d)             # (2,)
-        loss_cql = self._loss_cql(o, a, on)                 # (2,)
+        loss_td = self.loss_td(o, a, r, on, d)             # (2,)
+        loss_cql = self.loss_conservative(o, a, on)         # (2,)
         loss_cql = 5.0 * (loss_cql - self.critic.alpha_threshold)  # fix weight
 
         if update_alpha:
@@ -380,7 +368,7 @@ class CQLAgentContinuous(TorchAgent):
         loss_critic = loss_td.sum() + (self.critic.alpha() * loss_cql).sum() # d3rl design
         return loss_critic
 
-    def _loss_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> torch.Tensor:
+    def loss_alpha_cql(self, conservative_loss_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * L_cql ]
         # Lagrangian dual，若L_cql項長期偏大，則加強修改力度
         return -(self.critic.alpha() * conservative_loss_detached).mean()
@@ -388,7 +376,7 @@ class CQLAgentContinuous(TorchAgent):
     # ====================
     # actor mathmatics
     # ====================
-    def _loss_actor(self, o: torch.Tensor, update_alpha: bool = True) -> torch.Tensor:
+    def loss_actor(self, o: torch.Tensor, update_alpha: bool = True) -> torch.Tensor:
         # TD3 Clipped Double Q: Q_min = min(Q1, Q2)
         # SAC loss = E_D[s],pi[a]{ temp * log_pi - Q_min }
         # E_D[s]: input o
@@ -399,28 +387,9 @@ class CQLAgentContinuous(TorchAgent):
         q_t = self.critic.qq_min(o, a)
         return (self.policy.temp() * log_prob - q_t).mean()
 
-    def _loss_alpha_sac(self, log_prob_detached: torch.Tensor) -> torch.Tensor:
+    def loss_alpha_sac(self, log_prob_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * (log_pi - target_entropy) ]
         # SAC設計，若log_prob長期偏大，則加強修改力度
         with torch.no_grad():
             target_alpha = log_prob_detached - self.act_size
         return -(self.policy.temp() * target_alpha).mean()
-    
-    def loss_critic(
-        self,
-        o: torch.Tensor,
-        a: torch.Tensor,
-        r: torch.Tensor,
-        on: torch.Tensor,
-        d: torch.Tensor,
-        update_alpha: bool = False,
-    ) -> torch.Tensor:
-        return self._loss_critic(o, a, r, on, d, update_alpha=update_alpha)
-
-    def loss_actor(
-        self,
-        o: torch.Tensor,
-        a: torch.Tensor | None = None,
-        update_alpha: bool = False,
-    ) -> torch.Tensor:
-        return self._loss_actor(o, update_alpha=update_alpha)

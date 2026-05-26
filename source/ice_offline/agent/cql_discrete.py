@@ -55,30 +55,15 @@ class CQLAgentDiscrete(TorchAgent):
     # ====================
     # Init
     # ====================
-    def __init__(self, obs_size: int = 0, act_size: int = 0, learning_rate: float = 6.25e-5, gamma: float = 0.99, alpha: float = 1.0, target_update_interval: int = 8000):
+    def __init__(self, obs_size: int, act_size: int, learning_rate: float = 6.25e-5, gamma: float = 0.99, alpha: float = 1.0, target_update_interval: int = 8000):
         self.device = "cpu"
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.alpha = alpha
         self.target_update_interval = target_update_interval
         self._grad_step = 0
-        self.critic = None
-        self.optim = None
-
-        if obs_size > 0 and act_size > 0:
-            self.set_dim(obs_size, act_size)
-
-    def set_dim(self, obs_size: int, act_size: int) -> None:
         self.critic = _TQ(obs_size=obs_size, act_size=act_size).to(self.device)
         self.optim = _Adam(self.learning_rate)(self.critic._q.parameters())
-
-    def configure(self, env_spec) -> None:
-        assert env_spec.observation_shape is not None
-        assert env_spec.action_cardinality is not None
-        assert len(env_spec.action_cardinality) == 1
-        obs_size = int(np.prod(env_spec.observation_shape))
-        action_size = int(env_spec.action_cardinality[0])
-        self.set_dim(obs_size=obs_size, act_size=action_size)
 
     # ====================
     # Public API
@@ -150,7 +135,7 @@ class CQLAgentDiscrete(TorchAgent):
             qn = self.critic.tq(on).gather(1, an.view(-1, 1))
             return r + self.gamma * qn * (1.0 - d)
 
-    def _loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # L_TD = E[ (Q(s,a) - target)^2 ]
         # Huber loss = delta < a ? : L2(Q-target) : L1(loss)
         q = self.critic.q(o).gather(1, a.view(-1, 1)) # Q(si,ai) for batch
@@ -161,7 +146,7 @@ class CQLAgentDiscrete(TorchAgent):
         huber = torch.where(cond, 0.5 * delta**2, delta.abs() - 0.5)
         return huber.mean()
 
-    def _loss_cql(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_conservative(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # L_CQL(H) = E_s~D[logsumexp( Q(.|a) )] - E_(s,a)~D[ Q(s,a) ]
         # E_D[s]: input o
         # E_D[s,a]: input o,a
@@ -173,11 +158,8 @@ class CQLAgentDiscrete(TorchAgent):
 
         return (q_a - q_sa).mean()
 
-    def _loss(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        # L = L_TD + alpha * L_CQL(H)
-        loss_td = self._loss_td(o, a, r, on, d)
-        loss_cql = self._loss_cql(o, a)
-        return loss_td + self.alpha * loss_cql
-
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        return self._loss(o, a, r, on, d)
+        # L = L_TD + alpha * L_CQL(H)
+        loss_td = self.loss_td(o, a, r, on, d)
+        loss_cql = self.loss_conservative(o, a)
+        return loss_td + self.alpha * loss_cql

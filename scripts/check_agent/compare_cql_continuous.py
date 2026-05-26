@@ -104,8 +104,8 @@ def _our_losses(
     next_obs_t: torch.Tensor,
     done_t: torch.Tensor,
 ) -> torch.Tensor:
-    critic = our._loss_critic(obs_t, act_t, rew_t, next_obs_t, done_t)
-    actor = our._loss_actor(obs_t)
+    critic = our.loss_critic(obs_t, act_t, rew_t, next_obs_t, done_t, update_alpha=False)
+    actor = our.loss_actor(obs_t, update_alpha=False)
     return torch.stack([critic, actor])
 
 def _d3rl_losses(d3rl, batch: TorchMiniBatch, obs_t: torch.Tensor) -> torch.Tensor:

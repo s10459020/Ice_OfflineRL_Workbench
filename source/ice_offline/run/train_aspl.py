@@ -28,17 +28,13 @@ SEED = 42
 def eval_loss_aspl(agent: AsplAgent, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     s, a, r, sn, d = episode_batch
     with torch.no_grad():
-        q_target = agent._td_target(sn, r, d)
-        loss_td = agent.loss_td_with_target(s, a, q_target)
-        loss_punish = agent.loss_punish_with_target(s, a, q_target)
-        loss_actor = agent.loss_td3_variant(s)
+        q_target = agent.td_target(sn, r, d)
         return {
+            "loss_td": float(agent.loss_td_with_target(s, a, q_target).item()),
+            "loss_punish": float(agent.loss_punish_with_target(s, a, q_target).item()),
             "loss_critic": float(agent.loss_critic(s, a, r, sn, d).item()),
-            "loss_td": float(loss_td.item()),
-            "loss_punish": float(loss_punish.item()),
-            "loss_actor": float(loss_actor.item()),
-            "loss_critic_decomposed": float((loss_td + agent.alpha * loss_punish).item()),
-        }
+            "loss_actor": float(agent.loss_td3_variant(s).item()),
+       }
 
 
 def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:

@@ -301,7 +301,7 @@ class ScasAgent(TorchAgent):
     # ====================
     # critic mathmatics
     # ====================
-    def _td_target(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def td_target(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             an = self.actor.tpi_act(sn)
             noise = (torch.randn_like(an) * 0.2).clamp(-0.5, 0.5)
@@ -317,7 +317,7 @@ class ScasAgent(TorchAgent):
         sn: torch.Tensor,
         d: torch.Tensor,
     ) -> torch.Tensor:
-        y = self._td_target(sn, r, d)
+        y = self.td_target(sn, r, d)
         q1, q2, q3, q4 = self.critic.q_values(o, a)
         loss_q1 = F.mse_loss(q1, y)
         loss_q2 = F.mse_loss(q2, y)

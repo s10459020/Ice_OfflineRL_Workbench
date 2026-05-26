@@ -122,8 +122,8 @@ class _QQ(torch.nn.Module):
 class IQLAgentContinuous(TorchAgent):
     def __init__(
         self,
-        obs_size: int = 0,
-        act_size: int = 0,
+        obs_size: int,
+        act_size: int,
         actor_learning_rate: float = 3e-4,
         critic_learning_rate: float = 3e-4,
         gamma: float = 0.99,
@@ -147,11 +147,6 @@ class IQLAgentContinuous(TorchAgent):
         self.v = None
         self.actor_optim = None
         self.critic_optim = None
-
-        if obs_size > 0 and act_size > 0:
-            self.set_dim(obs_size, act_size)
-
-    def set_dim(self, obs_size: int, act_size: int) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.actor = _Pi(obs_size, act_size, beta=self.beta, max_weight=self.max_weight).to(self.device)
@@ -165,13 +160,6 @@ class IQLAgentContinuous(TorchAgent):
             + list(self.critic.q2.parameters())
             + list(self.v.parameters())
         )
-
-    def configure(self, env_spec) -> None:
-        assert env_spec.observation_shape is not None
-        assert env_spec.action_shape is not None
-        obs_size = int(np.prod(env_spec.observation_shape))
-        act_size = int(np.prod(env_spec.action_shape))
-        self.set_dim(obs_size=obs_size, act_size=act_size)
 
     # ====================
     # public API
@@ -202,12 +190,12 @@ class IQLAgentContinuous(TorchAgent):
         on = torch.as_tensor(next_observation, dtype=torch.float32, device=self.device)
         d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
 
-        critic_loss = self._loss_critic(o, a, r, on, d)
+        critic_loss = self.loss_critic(o, a, r, on, d)
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
 
-        actor_loss = self._loss_actor(o, a)
+        actor_loss = self.loss_actor(o, a)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
@@ -233,19 +221,19 @@ class IQLAgentContinuous(TorchAgent):
     # ====================
     # critic
     # ====================
-    def _target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             return r + self.gamma * self.v(on) * (1.0 - d)
 
-    def _loss_q(
+    def loss_q(
         self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor
     ) -> torch.Tensor:
-        target = self._target(on, r, d)
+        target = self.target(on, r, d)
         qq = self.critic.qq(o, a)
         # loss_q = E_batch{(target - Q)^2}
         return (qq[0] - target).pow(2).mean() + (qq[1] - target).pow(2).mean()
 
-    def _loss_v(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_v(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # L2_tau = |tau - 1(u<0)| * u^2
         # loss_v = E_batch{ L2_tau(Q-V) }
         q_t = self.critic.tqq_min(o, a)
@@ -254,15 +242,15 @@ class IQLAgentContinuous(TorchAgent):
         weight = (self.v.tau - (diff < 0.0).float()).abs().detach()
         return (weight * diff.pow(2)).mean()
 
-    def _loss_critic(
+    def loss_critic(
         self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor
     ) -> torch.Tensor:
-        return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
+        return self.loss_q(o, a, r, on, d) + self.loss_v(o, a)
 
     # ====================
     # actor
     # ====================
-    def _weight(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def weight(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # weight = -exp( beta * (Q - V))
         with torch.no_grad():
             q_t = self.critic.tqq_min(o, a)
@@ -270,14 +258,8 @@ class IQLAgentContinuous(TorchAgent):
             adv = q_t - v_t
             return -(self.actor.beta * adv).exp().clamp(max=self.actor.max_weight)
 
-    def _loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         # loss_pi = E_batch{weight * log_pi}
-        weight = self._weight(o, a)
+        weight = self.weight(o, a)
         log_pi = self.actor.log_prob(o, a)
         return (weight * log_pi).mean()
-
-    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        return self._loss_critic(o, a, r, on, d)
-
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        return self._loss_actor(o, a)

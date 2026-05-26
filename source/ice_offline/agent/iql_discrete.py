@@ -55,6 +55,8 @@ class IQLAgentDiscrete(TorchAgent):
     # ====================
     def __init__(
         self,
+        obs_size: int,
+        act_size: int,
         learning_rate: float = 6.25e-5,
         gamma: float = 0.99,
         v_tau: float = 0.7,
@@ -66,13 +68,6 @@ class IQLAgentDiscrete(TorchAgent):
         self.q = None
         self.v = None
         self.optim = None
-
-    def configure(self, env_spec) -> None:
-        assert env_spec.observation_shape is not None
-        assert env_spec.action_cardinality is not None
-        assert len(env_spec.action_cardinality) == 1
-        obs_size = int(np.prod(env_spec.observation_shape))
-        act_size = int(env_spec.action_cardinality[0])
         self.q = _Q(obs_size, act_size).to(self.device)
         self.v = _V(obs_size, tau=self.v_tau).to(self.device)
         self.optim = _Adam(self.learning_rate)(

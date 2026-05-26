@@ -92,9 +92,9 @@ def _our_losses(
     our_agent: BCAgentDiscrete, obs_t: torch.Tensor, act_t: torch.Tensor
 ) -> torch.Tensor:
     logits = our_agent.policy(obs_t).logits
-    loss_bc = our_agent._loss_bc(logits, act_t)
-    loss_regular = our_agent._loss_regular(logits)
-    loss = our_agent._loss(obs_t, act_t)
+    loss_bc = our_agent.loss_bc(logits, act_t)
+    loss_regular = our_agent.loss_regular(logits)
+    loss = our_agent.loss_actor(obs_t, act_t)
     return torch.stack([loss, loss_bc, loss_regular])
 
 def _d3rl_losses(

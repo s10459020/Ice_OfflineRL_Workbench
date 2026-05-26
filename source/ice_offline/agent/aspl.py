@@ -300,7 +300,7 @@ class AsplAgent(TorchAgent):
     # ====================
     # critic mathmatics
     # ====================
-    def _td_target(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def td_target(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             an = self.actor.tpi_act(sn)
             an = self._action_noise(an)
@@ -364,7 +364,7 @@ class AsplAgent(TorchAgent):
     ) -> torch.Tensor:
         # loss = TD + alpha * Punish
         # source use same noise target
-        q_target = self._td_target(sn, r, d)
+        q_target = self.td_target(sn, r, d)
         loss_td = self.loss_td_with_target(s, a, q_target)
         loss_aspl = self.loss_punish_with_target(s, a, q_target)
         return loss_td + self.alpha * loss_aspl
