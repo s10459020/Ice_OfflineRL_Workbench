@@ -105,7 +105,7 @@ class CQLAgentDiscrete(TorchAgent):
         on = torch.as_tensor(next_observation, dtype=torch.float32, device=self.device)
         d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
 
-        loss = self._loss(o, a, r, on, d)
+        loss = self.loss_critic(o, a, r, on, d)
         self.optim.zero_grad()
         loss.backward()
         self.optim.step()
