@@ -4,7 +4,8 @@ import numpy as np
 from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import QApplication, QLabel
 
-from ice_offline.env.visualization.unit_basic import BasicUnit`nfrom ice_offline.env.visualization.overlay_wrapper import OverlayWrapper
+from ice_offline.env.visualization.unit_basic import BasicUnit
+from ice_offline.env.visualization.overlay_wrapper import OverlayWrapper
 from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
 from ice_offline.tools.timing import Timer

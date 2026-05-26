@@ -64,12 +64,12 @@ def train(
 
     task_id = task_id or f"{dataset.env_id}_aspl-v0"
     eval_env = eval_env or dataset.make_collect_env()
-    dataset.set_seed(seed)\n    batch_loader = dataset
+    dataset.set_seed(seed)
 
     print_stage("Train ASPL")
     agent = AsplAgent(
-        obs_dim=batch_loader.obs_dim,
-        act_dim=batch_loader.act_dim,
+        obs_dim=dataset.obs_dim,
+        act_dim=dataset.act_dim,
         max_action=1.0,
         device="cpu",
     )
@@ -85,9 +85,9 @@ def train(
     )
 
     for step in range(1, steps + 1):
-        batch = batch_loader.sample_batch(batch_size)
+        batch = dataset.sample_batch(batch_size)
         agent.update(batch)
-        evaluator.eval(step=step, agent=agent, batch_loader=batch_loader, batch_size=batch_size, eval_env=eval_env)
+        evaluator.eval(step=step, agent=agent, batch_loader=dataset, batch_size=batch_size, eval_env=eval_env)
         evaluator.print(step)
         evaluator.recode(step)
         if step % save_interval == 0 or step == steps:

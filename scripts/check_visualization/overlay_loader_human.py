@@ -1,6 +1,7 @@
 ﻿import minigrid  # noqa: F401
 
-from ice_offline.env.visualization.unit_basic import BasicUnit`nfrom ice_offline.env.visualization.overlay_loader import OverlayLoader
+from ice_offline.env.visualization.unit_basic import BasicUnit
+from ice_offline.env.visualization.overlay_loader import OverlayLoader
 from ice_offline.env.visualization.overlay_engine import RenderLayer
 from ice_offline.tools.timing import Timer
 

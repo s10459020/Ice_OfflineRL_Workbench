@@ -73,12 +73,12 @@ def train(
 
     task_id = task_id or f"{dataset.env_id}_scas-v0"
     eval_env = eval_env or dataset.make_collect_env()
-    dataset.set_seed(seed)\n    batch_loader = dataset
+    dataset.set_seed(seed)
 
     print_stage("Train SCAS Dynamics")
     dynamics = ScasDynamic(
-        obs_dim=batch_loader.obs_dim,
-        act_dim=batch_loader.act_dim,
+        obs_dim=dataset.obs_dim,
+        act_dim=dataset.act_dim,
         learning_rate=1e-3,
         device="cpu",
     )
@@ -89,9 +89,9 @@ def train(
         eval_offline_fns=[eval_loss_dynamic],
     )
     for step in range(1, dynamics_steps + 1):
-        batch = batch_loader.sample_batch(batch_size)
+        batch = dataset.sample_batch(batch_size)
         dynamics.update(batch)
-        dynamics_evaluator.eval(step=step, agent=dynamics, batch_loader=batch_loader, batch_size=batch_size)
+        dynamics_evaluator.eval(step=step, agent=dynamics, batch_loader=dataset, batch_size=batch_size)
         dynamics_evaluator.print(step)
         dynamics_evaluator.recode(step)
         if step % save_interval == 0 or step == dynamics_steps:
@@ -99,8 +99,8 @@ def train(
 
     print_stage("Train SCAS Agent")
     agent = ScasAgent(
-        obs_dim=batch_loader.obs_dim,
-        act_dim=batch_loader.act_dim,
+        obs_dim=dataset.obs_dim,
+        act_dim=dataset.act_dim,
         dynamics=dynamics,
         max_action=1.0,
         device="cpu",
@@ -115,9 +115,9 @@ def train(
         recode_reset=False,
     )
     for step in range(1, agent_steps + 1):
-        batch = batch_loader.sample_batch(batch_size)
+        batch = dataset.sample_batch(batch_size)
         agent.update(batch)
-        agent_evaluator.eval(step=step, agent=agent, batch_loader=batch_loader, batch_size=batch_size, eval_env=eval_env)
+        agent_evaluator.eval(step=step, agent=agent, batch_loader=dataset, batch_size=batch_size, eval_env=eval_env)
         agent_evaluator.print(step)
         agent_evaluator.recode(step)
         if step % save_interval == 0 or step == agent_steps:
