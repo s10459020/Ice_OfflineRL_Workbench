@@ -7,7 +7,6 @@ from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.dataset._lookup import get_dataset
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline.minari.loader import MinariLoader
 from ice_offline.pipeline.minari.collector import MinariCollectorWrapper
 from ice_offline.pipeline.state.hopper import HopperState
 from ice_offline.pipeline.state.hopper import HopperStateIO
@@ -69,12 +68,12 @@ def train(
     save_interval: int = SAVE_INTERVAL,
     seed: int = SEED,
 ) -> None:
-    task_id = task_id or f"{dataset.dataset_id.replace('/', '_')}_scas-v0"
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    batch_loader = MinariLoader(dataset=dataset, seed=seed)
+    task_id = task_id or f"{dataset.env_id}_scas-v0"
     eval_env = eval_env or dataset.make_collect_env()
+    dataset.set_seed(seed)\n    batch_loader = dataset
 
     print_stage("Train SCAS Dynamics")
     dynamics = ScasDynamic(
@@ -137,7 +136,7 @@ def collect(
     eval_online_n: int = EVAL_ONLINE_N,
     save_interval: int = SAVE_INTERVAL,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.dataset_id.replace('/', '_')}_scas-v0"
+    task_id = task_id or f"{dataset.env_id}_scas-v0"
     env = dataset.make_collect_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)

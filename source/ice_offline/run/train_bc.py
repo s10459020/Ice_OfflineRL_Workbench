@@ -6,7 +6,6 @@ import torch
 from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
 from ice_offline.dataset._lookup import get_dataset
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline.minari.loader import MinariLoader
 from ice_offline.pipeline.minari.collector import MinariCollectorWrapper
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
 from ice_offline.pipeline.state.op_collector import StateCollectWrapper
@@ -52,9 +51,9 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.dataset_id.replace('/', '_')}_bc-v0"
+    task_id = task_id or f"{dataset.env_id}_bc-v0"
     eval_env = eval_env or dataset.make_collect_env()
-    batch_loader = MinariLoader(dataset=dataset, seed=seed)
+    dataset.set_seed(seed)\n    batch_loader = dataset
 
     print_stage("Train BC")
     agent = BCAgentContinuousDeterministic(
@@ -92,7 +91,7 @@ def collect(
     eval_offline_n: int = EVAL_OFFLINE_N,
     save_interval: int = SAVE_INTERVAL,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.dataset_id.replace('/', '_')}_bc-v0"
+    task_id = task_id or f"{dataset.env_id}_bc-v0"
     env = dataset.make_collect_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
