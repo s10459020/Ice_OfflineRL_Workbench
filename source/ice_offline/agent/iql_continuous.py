@@ -3,10 +3,7 @@
 import numpy as np
 import torch
 from torch.distributions import Normal
-from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
-
 
 class _Adam:
     def __init__(self, lr: float):
@@ -21,7 +18,6 @@ class _Adam:
             weight_decay=0.0,
             amsgrad=False,
         )
-
 
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, beta: float, max_weight: float):
@@ -64,7 +60,6 @@ class _Pi(torch.nn.Module):
         squashed_mean, std = self.dist(o)
         return Normal(squashed_mean, std).log_prob(a).sum(dim=-1, keepdims=True)
 
-
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
@@ -78,7 +73,6 @@ class _Q(torch.nn.Module):
 
     def forward(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self.network(torch.cat([o, a], dim=1))
-
 
 class _V(torch.nn.Module):
     def __init__(self, obs_size: int, tau: float):
@@ -94,7 +88,6 @@ class _V(torch.nn.Module):
 
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.network(o)
-
 
 class _QQ(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, tau: float):
@@ -125,7 +118,6 @@ class _QQ(torch.nn.Module):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
             for p_targ, p in zip(self.targ_q2.parameters(), self.q2.parameters()):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
-
 
 class IQLAgentContinuous(TorchAgent):
     def __init__(
@@ -174,7 +166,7 @@ class IQLAgentContinuous(TorchAgent):
             + list(self.v.parameters())
         )
 
-    def configure(self, env_spec: EnvSpec) -> None:
+    def configure(self, env_spec) -> None:
         assert env_spec.observation_shape is not None
         assert env_spec.action_shape is not None
         obs_size = int(np.prod(env_spec.observation_shape))
@@ -289,23 +281,3 @@ class IQLAgentContinuous(TorchAgent):
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self._loss_actor(o, a)
-
-
-def eval_iql_continuous_loss_q(agent: "IQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    with torch.no_grad():
-        return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
-
-
-def eval_iql_continuous_loss_v(agent: "IQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, _, _, _ = transitions
-    with torch.no_grad():
-        return {"loss_v": float(agent._loss_v(o, a).item())}
-
-
-def eval_iql_continuous_loss_pi(agent: "IQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, _, _, _ = transitions
-    with torch.no_grad():
-        return {"loss_pi": float(agent.loss_actor(o, a).item())}
-
-

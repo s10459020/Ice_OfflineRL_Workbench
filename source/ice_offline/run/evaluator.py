@@ -1,8 +1,9 @@
-import csv
-from pathlib import Path
+﻿from pathlib import Path
 from typing import Callable
 
 import torch
+
+from ice_offline.tools.paths import eval_root
 
 
 TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
@@ -14,93 +15,151 @@ class Evaluator:
     def __init__(
         self,
         runner_id: str,
-        eval_dir: str,
-        eval_batches: int,
-        eval_episodes: int,
-        eval_interval: int = 0,
+        eval_interval: int = 1,
+        eval_offline_n: int = 0,
+        eval_online_n: int = 0,
+        eval_offline_fns: list[OfflineEvalFn] = [],
+        eval_online_fns: list[OnlineEvalFn] = [],
+        recode_eval: bool = True,
+        recode_reset: bool = True,
     ) -> None:
-        self.eval_batches = eval_batches
-        self.eval_episodes = eval_episodes
         self.eval_interval = eval_interval
-        self.eval_dir_path = Path(eval_dir) / runner_id
-        self.eval_dir_path.mkdir(parents=True, exist_ok=True)
+        self.eval_offline_n = eval_offline_n
+        self.eval_online_n = eval_online_n
+        self.eval_offline_fns = eval_offline_fns
+        self.eval_online_fns = eval_online_fns
+        self.recode_eval = recode_eval
+        self.last_evals: dict[str, list[float]] = {}
+        self.last_eval_step: int = -1
+        self.eval_dir = None
+        if self.recode_eval:
+            self.eval_dir = Path(eval_root()) / runner_id
+            self.eval_dir.mkdir(parents=True, exist_ok=True)
+            if recode_reset:
+                for p in self.eval_dir.glob("*"):
+                    if p.is_file():
+                        p.unlink()
 
     def should_eval(self, step: int) -> bool:
         return self.eval_interval > 0 and step % self.eval_interval == 0
 
-    def evaluate_offline(self, agent, minari_loader, eval_offline_fns: list[OfflineEvalFn], batch_size: int) -> dict[str, list[float]]:
+    def _eval_offline(
+        self,
+        agent,
+        eval_offline_fn: OfflineEvalFn,
+        batch_loader,
+        batch_size: int,
+    ) -> dict[str, list[float]]:
         bucket: dict[str, list[float]] = {}
         with torch.no_grad():
-            for _ in range(self.eval_batches):
-                batch = minari_loader.sample_batch(batch_size)
+            for _ in range(self.eval_offline_n):
+                batch = batch_loader.sample_batch(batch_size)
                 obs = torch.as_tensor(batch["obs"], device=agent.device)
                 act = torch.as_tensor(batch["act"], device=agent.device)
                 rew = torch.as_tensor(batch["rew"], device=agent.device).view(-1, 1)
                 next_obs = torch.as_tensor(batch["next_obs"], device=agent.device)
                 done = torch.as_tensor(batch["done"], device=agent.device).view(-1, 1)
                 transitions: TransitionBatch = (obs, act, rew, next_obs, done)
-
-                for eval_fn in eval_offline_fns:
-                    values = eval_fn(agent, transitions)
-                    for key, value in values.items():
-                        bucket.setdefault(key, []).append(float(value))
+                values = eval_offline_fn(agent, transitions)
+                for key, value in values.items():
+                    bucket.setdefault(key, []).append(float(value))
         return bucket
 
-    def evaluate_online(self, agent, dataset, eval_online_fns: list[OnlineEvalFn]) -> dict[str, list[float]]:
+    def _eval_online(
+        self,
+        agent,
+        eval_online_fn: OnlineEvalFn,
+        eval_env,
+    ) -> dict[str, list[float]]:
         bucket: dict[str, list[float]] = {}
-        env = dataset.make_eval_env()
-        try:
-            for _ in range(self.eval_episodes):
-                obs, _ = env.reset()
-                encoded_obs = dataset.obs_encode(obs)
+        for _ in range(self.eval_online_n):
+            obs, _ = eval_env.reset()
+            done = False
 
-                done = False
-                obs_list: list[torch.Tensor] = []
-                act_list: list[torch.Tensor] = []
-                rew_list: list[torch.Tensor] = []
-                next_obs_list: list[torch.Tensor] = []
-                done_list: list[torch.Tensor] = []
+            obs_list: list[torch.Tensor] = []
+            act_list: list[torch.Tensor] = []
+            rew_list: list[torch.Tensor] = []
+            next_obs_list: list[torch.Tensor] = []
+            done_list: list[torch.Tensor] = []
 
-                while not done:
-                    act_policy = agent.act_best(encoded_obs)
-                    act_env = dataset.act_encode(act_policy)
-                    next_obs_raw, reward, terminated, truncated, _ = env.step(act_env)
-                    next_encoded_obs = dataset.obs_encode(next_obs_raw)
-                    done = bool(terminated or truncated)
+            while not done:
+                act = agent.act_best(obs)
+                next_obs, reward, terminated, truncated, _ = eval_env.step(act)
+                done = bool(terminated or truncated)
 
-                    obs_list.append(torch.as_tensor(encoded_obs, device=agent.device))
-                    act_list.append(torch.as_tensor(act_env, device=agent.device))
-                    rew_list.append(torch.as_tensor(reward, device=agent.device))
-                    next_obs_list.append(torch.as_tensor(next_encoded_obs, device=agent.device))
-                    done_list.append(torch.as_tensor(done, device=agent.device))
-                    encoded_obs = next_encoded_obs
+                obs_list.append(torch.as_tensor(obs, device=agent.device))
+                act_list.append(torch.as_tensor(act, device=agent.device))
+                rew_list.append(torch.as_tensor(reward, device=agent.device))
+                next_obs_list.append(torch.as_tensor(next_obs, device=agent.device))
+                done_list.append(torch.as_tensor(done, device=agent.device))
+                obs = next_obs
 
-                episode_batch: TransitionBatch = (
-                    torch.stack(obs_list, dim=0),
-                    torch.stack(act_list, dim=0),
-                    torch.stack(rew_list, dim=0).view(-1, 1),
-                    torch.stack(next_obs_list, dim=0),
-                    torch.stack(done_list, dim=0).view(-1, 1),
-                )
-                for eval_fn in eval_online_fns:
-                    values = eval_fn(episode_batch)
-                    for key, value in values.items():
-                        bucket.setdefault(key, []).append(float(value))
-        finally:
-            env.close()
+            episode_batch: TransitionBatch = (
+                torch.stack(obs_list, dim=0),
+                torch.stack(act_list, dim=0),
+                torch.stack(rew_list, dim=0).view(-1, 1),
+                torch.stack(next_obs_list, dim=0),
+                torch.stack(done_list, dim=0).view(-1, 1),
+            )
+            values = eval_online_fn(episode_batch)
+            for key, value in values.items():
+                bucket.setdefault(key, []).append(float(value))
         return bucket
 
-    def append_eval_step(self, step: int, metrics: dict[str, list[float]]) -> None:
-        for metric_key, values in metrics.items():
-            csv_path = self.eval_dir_path / f"{metric_key}.csv"
-            with csv_path.open("a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                if f.tell() == 0:
-                    writer.writerow(["step"] + [str(i) for i in range(1, len(values) + 1)])
-                writer.writerow([int(step)] + values)
+    def eval(
+        self,
+        step: int,
+        agent,
+        batch_loader=None,
+        batch_size: int = 0,
+        eval_env=None,
+    ) -> None:
+        if not self.should_eval(step):
+            return False
+        self.last_evals = {}
+        self.last_eval_step = step
 
-    def summary_text(self, step: int, steps: int, metrics: dict[str, list[float]]) -> str:
-        parts = [f"step={step}/{steps}"]
-        for key in sorted(metrics.keys()):
-            parts.append(f"{key}={sum(metrics[key]) / len(metrics[key]):.6g}")
-        return " ".join(parts)
+        if self.eval_offline_fns:
+            for eval_fn in self.eval_offline_fns:
+                evals = self._eval_offline(
+                    agent=agent,
+                    eval_offline_fn=eval_fn,
+                    batch_loader=batch_loader,
+                    batch_size=batch_size,
+                )
+                for key, values in evals.items():
+                    self.last_evals.setdefault(key, []).extend(values)
+        if self.eval_online_fns:
+            for eval_fn in self.eval_online_fns:
+                evals = self._eval_online(
+                    agent=agent,
+                    eval_online_fn=eval_fn,
+                    eval_env=eval_env,
+                )
+                for key, values in evals.items():
+                    self.last_evals.setdefault(key, []).extend(values)
+
+    def recode(self, step: int) -> None:
+        if not self.should_eval(step):
+            return
+        if not self.recode_eval:
+            return
+        for eval_id, values in self.last_evals.items():
+            path = self.eval_dir / f"{eval_id}.csv"
+            is_new = not path.exists()
+            with path.open("a", encoding="utf-8", newline="") as f:
+                if is_new:
+                    header = "step," + ",".join(str(i) for i in range(1, len(values) + 1))
+                    f.write(f"{header}\n")
+                row = ",".join(str(float(v)) for v in values)
+                f.write(f"{step},{row}\n")
+
+    def print(self, step: int) -> None:
+        if not self.should_eval(step):
+            return
+        parts: list[str] = []
+        for key in sorted(self.last_evals.keys()):
+            values = self.last_evals[key]
+            parts.append(f"{key}={sum(values) / len(values):.6g}")
+        print(f"eval step={step}", *parts)
+

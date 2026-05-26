@@ -28,11 +28,6 @@ class OneRoomS8Dataset(BaseDataset):
         imgs = np.asarray(o["image"], dtype=np.float32)       # [H, W, C]
         return imgs.reshape(-1)                               # [D]
 
-    def make_eval_env(self):
-        env = gym.make(self.env_id)
-        env = FullyObsWrapper(env)
-        return env  
-
     def make_collect_env(self) -> gym.Env:
         env = gym.make(self.env_id)
         env = FullyObsWrapper(env)

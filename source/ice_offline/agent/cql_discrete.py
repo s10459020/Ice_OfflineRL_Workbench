@@ -3,10 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ._spec import EnvSpec
 from ._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
-
 
 class _Adam:
     def __init__(self, lr: float):
@@ -21,7 +18,6 @@ class _Adam:
             weight_decay=0.0,
             amsgrad=False,
         )
-
 
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -39,7 +35,6 @@ class _Q(torch.nn.Module):
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.network(o)
 
-
 class _TQ(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
@@ -55,7 +50,6 @@ class _TQ(torch.nn.Module):
 
     def tq(self, o: torch.Tensor) -> torch.Tensor:
         return self._targ_q(o)
-
 
 class CQLAgentDiscrete(TorchAgent):
     # ====================
@@ -78,7 +72,7 @@ class CQLAgentDiscrete(TorchAgent):
         self.critic = _TQ(obs_size=obs_size, act_size=act_size).to(self.device)
         self.optim = _Adam(self.learning_rate)(self.critic._q.parameters())
 
-    def configure(self, env_spec: EnvSpec) -> None:
+    def configure(self, env_spec) -> None:
         assert env_spec.observation_shape is not None
         assert env_spec.action_cardinality is not None
         assert len(env_spec.action_cardinality) == 1
@@ -187,19 +181,3 @@ class CQLAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a, r, on, d)
-
-
-def eval_cql_discrete_loss(agent: "CQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    return {"loss": float(agent.loss_critic(o, a, r, on, d).item())}
-
-
-def eval_cql_discrete_loss_td(agent: "CQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    return {"loss_td": float(agent._loss_td(o, a, r, on, d).item())}
-
-
-def eval_cql_discrete_loss_cql(agent: "CQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, _, _, _ = transitions
-    return {"loss_cql": float(agent._loss_cql(o, a).item())}
-

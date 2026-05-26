@@ -2,10 +2,7 @@
 
 import numpy as np
 import torch
-from ._spec import EnvSpec
 from ._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
-
 
 class _Adam:
     def __init__(self, lr: float):
@@ -20,7 +17,6 @@ class _Adam:
             weight_decay=0.0,
             amsgrad=False,
         )
-
 
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -37,7 +33,6 @@ class _Q(torch.nn.Module):
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.network(o)
 
-
 class _TQ(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
@@ -53,7 +48,6 @@ class _TQ(torch.nn.Module):
 
     def tq(self, o: torch.Tensor) -> torch.Tensor:
         return self._targ_q(o)
-
 
 class QAgentDiscrete(TorchAgent):
     # ====================
@@ -82,7 +76,7 @@ class QAgentDiscrete(TorchAgent):
         self.q = _TQ(obs_size, act_size).to(self.device)
         self.optim = _Adam(self.learning_rate)(self.q._q.parameters())
 
-    def configure(self, env_spec: EnvSpec) -> None:
+    def configure(self, env_spec) -> None:
         assert env_spec.observation_shape is not None
         assert env_spec.action_cardinality is not None
         assert len(env_spec.action_cardinality) == 1
@@ -147,15 +141,3 @@ class QAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d)
-
-
-def eval_q_discrete_loss(agent: "QAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    return {"loss": float(agent.loss_critic(o, a, r, on, d).item())}
-
-
-def eval_q_discrete_loss_q(agent: "QAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
-
-

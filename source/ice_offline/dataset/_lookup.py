@@ -1,12 +1,4 @@
-﻿import torch
-
-from ice_offline.dataset._spec import BaseDataset
-from ice_offline.run.evaluator import OnlineEvalFn
-
-
-def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, reward, _, _ = episode_batch
-    return {"return": float(reward.sum().item())}
+﻿from ice_offline.dataset._spec import BaseDataset
 
 
 DATASET_LOOKUP: dict[str, BaseDataset] = {
@@ -23,20 +15,6 @@ DATASET_LOOKUP: dict[str, BaseDataset] = {
     "walker2d_simple": BaseDataset(dataset_name="walker2d", dataset_id="mujoco/walker2d/simple-v0", env_id="Walker2d-v5"),
 }
 
-DATASET_EVAL_ONLINE_LOOKUP: dict[str, list[OnlineEvalFn]] = {
-    "halfcheetah_expert": [eval_return],
-    "halfcheetah_medium": [eval_return],
-    "halfcheetah_simple": [eval_return],
-    "hopper_expert": [eval_return],
-    "hopper_medium": [eval_return],
-    "hopper_simple": [eval_return],
-    "invertedpendulum_expert": [eval_return],
-    "onerooms8_fullobs_optimal": [eval_return],
-    "walker2d_expert": [eval_return],
-    "walker2d_medium": [eval_return],
-    "walker2d_simple": [eval_return],
-}
-
 
 def get_dataset(dataset_id: str) -> BaseDataset:
     if dataset_id == "onerooms8_fullobs_optimal":
@@ -44,10 +22,3 @@ def get_dataset(dataset_id: str) -> BaseDataset:
 
         return OneRoomS8Dataset()
     return DATASET_LOOKUP[dataset_id]
-
-
-def get_dataset_train_bundle(dataset_id: str) -> tuple[BaseDataset, list[OnlineEvalFn]]:
-    return (
-        get_dataset(dataset_id),
-        DATASET_EVAL_ONLINE_LOOKUP[dataset_id],
-    )

@@ -7,10 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
-
 
 def _load_squashed_gaussian_distribution():
     repo_root = Path(__file__).resolve().parents[3]
@@ -20,9 +17,7 @@ def _load_squashed_gaussian_distribution():
     spec.loader.exec_module(module)
     return module.SquashedGaussianDistribution
 
-
 _SquashedGaussianDistribution = _load_squashed_gaussian_distribution()
-
 
 class _Adam:
     def __init__(self, lr: float):
@@ -37,7 +32,6 @@ class _Adam:
             weight_decay=0.0,
             amsgrad=False,
         )
-
 
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -87,7 +81,6 @@ class _Pi(torch.nn.Module):
         log_prob = log_prob.reshape(-1, 1)              # (B, N, 1) => (B*N, 1)
         return a, log_prob
 
-
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
@@ -102,7 +95,6 @@ class _Q(torch.nn.Module):
     def forward(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         x = torch.cat([o, a], dim=1)
         return self.network(x)
-
 
 class _QQ(torch.nn.Module):
     def __init__(
@@ -176,7 +168,6 @@ class _QQ(torch.nn.Module):
             for p_targ, p in zip(self.targ_q2.parameters(), self.q2.parameters()):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
-
 class CQLAgentContinuous(TorchAgent):
     def __init__(self, obs_size: int = 0, act_size: int = 0, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
         self.device = "cpu"
@@ -225,7 +216,7 @@ class CQLAgentContinuous(TorchAgent):
         self.alpha_optim = _Adam(self.actor_alpha_learning_rate)([self.policy.log_alpha])
         self.alpha_prime_optim = _Adam(self.critic_alpha_learning_rate)([self.critic.log_alpha])
 
-    def configure(self, env_spec: EnvSpec) -> None:
+    def configure(self, env_spec) -> None:
         assert env_spec.observation_shape is not None
         assert env_spec.action_shape is not None
         obs_size = int(np.prod(env_spec.observation_shape))
@@ -433,18 +424,3 @@ class CQLAgentContinuous(TorchAgent):
         update_alpha: bool = False,
     ) -> torch.Tensor:
         return self._loss_actor(o, update_alpha=update_alpha)
-
-
-def eval_cql_continuous_loss_q(agent: "CQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    with torch.no_grad():
-        return {"loss_q": float(agent.loss_critic(o, a, r, on, d).item())}
-
-
-def eval_cql_continuous_loss_pi(agent: "CQLAgentContinuous", transitions: TransitionBatch) -> dict[str, float]:
-    o, _, _, _, _ = transitions
-    with torch.no_grad():
-        return {"loss_pi": float(agent.loss_actor(o).item())}
-
-
-

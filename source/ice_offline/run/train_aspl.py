@@ -12,7 +12,7 @@ from ice_offline.pipeline.state.hopper import HopperState
 from ice_offline.pipeline.state.hopper import HopperStateIO
 from ice_offline.pipeline.state.op_collector import StateCollectWrapper
 from ice_offline.pipeline.state.op_dataset import StateDataset
-from ice_offline.run.evaluator2 import Evaluator2
+from ice_offline.run.evaluator import Evaluator
 from ice_offline.tools.printer import print_stage
 
 
@@ -76,7 +76,7 @@ def train(
     )
     agent.set_seed(seed)
 
-    evaluator = Evaluator2(
+    evaluator = Evaluator(
         runner_id=task_id,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
@@ -88,8 +88,7 @@ def train(
     for step in range(1, steps + 1):
         batch = batch_loader.sample_batch(batch_size)
         agent.update(batch)
-        evaluator.eval_offline(step=step, agent=agent, batch_loader=batch_loader, batch_size=batch_size)
-        evaluator.eval_online(step=step, agent=agent, env=eval_env)
+        evaluator.eval(step=step, agent=agent, batch_loader=batch_loader, batch_size=batch_size, eval_env=eval_env)
         evaluator.print(step)
         evaluator.recode(step)
         if step % save_interval == 0 or step == steps:
@@ -137,6 +136,8 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
+
 
 
 

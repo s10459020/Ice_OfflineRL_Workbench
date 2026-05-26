@@ -5,7 +5,6 @@ import numpy as np
 import torch.nn.functional as F
 
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
 
 class _M(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -178,7 +177,6 @@ class ScasDynamic(TorchAgent):
             lr=self.learning_rate,
         )
 
-
     # ====================
     # extend 
     # ====================
@@ -198,7 +196,6 @@ class ScasDynamic(TorchAgent):
         loss.backward() 
         self.optimizer.step()
 
-
     # ====================
     # extend 
     # ====================
@@ -217,7 +214,6 @@ class ScasDynamic(TorchAgent):
         pred = self.model(s, a)
         return F.mse_loss(pred, sn)
         
-
 
 @dataclass
 class ScasAgent(TorchAgent):
@@ -242,7 +238,6 @@ class ScasAgent(TorchAgent):
 
         self.actor_optimizer = torch.optim.Adam(self.actor.get_parameters(), lr=2e-4)
         self.critic_optimizer = torch.optim.Adam(self.critic.get_parameters(), lr=3e-4)
-
 
     # ====================
     # public API
@@ -284,7 +279,6 @@ class ScasAgent(TorchAgent):
 
             self.critic.update_target_soft()
             self.actor.update_target_soft()
-
 
     # ====================
     # extend 
@@ -331,7 +325,6 @@ class ScasAgent(TorchAgent):
         loss_q4 = F.mse_loss(q4, y)
         return loss_q1 + loss_q2 + loss_q3 + loss_q4
 
-
     # ====================
     # actor mathmatics
     # ====================    
@@ -362,22 +355,3 @@ class ScasAgent(TorchAgent):
 
     def loss_actor(self, s: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
         return (1.0 - self.lmbda) * self.loss_td3(s) + self.lmbda * self.loss_correction(s, sn)
-
-
-def eval_loss_critic(agent: "ScasAgent", transitions: TransitionBatch) -> dict[str, float]:
-    s, a, r, sn, d = transitions
-    with torch.no_grad():
-        return {"loss_q": float(agent.loss_critic(s, a, r, sn, d).item())}
-
-
-def eval_loss_actor(agent: "ScasAgent", transitions: TransitionBatch) -> dict[str, float]:
-    s, _, _, sn, _ = transitions
-    with torch.no_grad():
-        return {
-            "loss_td3": float(agent.loss_td3(s).item()),
-            "loss_correction": float(agent.loss_correction(s, sn).item()),
-            "loss_pi": float(agent.loss_actor(s, sn).item())
-        }
-
-
-

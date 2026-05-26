@@ -1,5 +1,4 @@
 ﻿
-from dataclasses import dataclass
 from typing import Any, Protocol
 from pathlib import Path
 
@@ -8,47 +7,21 @@ import torch
 from ice_offline.tools.paths import model_root
 
 
-MODEL_ROOT = model_root()
-
-
 def model_ref(model_id: str, step: int) -> Path:
-    return MODEL_ROOT / model_id / str(step)
+    return model_root() / model_id / str(step)
 
 
 class Agent(Protocol):
     agent_name: str
 
+    def act_best(self, observation: Any) -> Any: ...
+    def update(self, batch: Any) -> None: ...
     def save(self, model_id: str, step: int = 0) -> Path: ...
-
     def load(self, model_name: str | Path) -> None: ...
 
 
-@dataclass
-class EnvSpec:
-    observation_shape: tuple[int, ...] | None
-    observation_cardinality: tuple[int, ...] | None
-    action_shape: tuple[int, ...] | None
-    action_cardinality: tuple[int, ...] | None
-
-
-class TorchAgent:
+class TorchAgent(Agent):
     device: str
-
-    def configure(
-        self,
-        env_spec: EnvSpec,
-    ) -> None:
-        return None
-
-    def set_dim(self, obs_size: int, act_size: int) -> None:
-        self.configure(
-            EnvSpec(
-                observation_shape=(obs_size,),
-                observation_cardinality=None,
-                action_shape=(1,),
-                action_cardinality=(act_size,),
-            )
-        )
 
     def _save_dict(self) -> dict[str, Any]:
         raise NotImplementedError
@@ -58,6 +31,9 @@ class TorchAgent:
 
     def act_best(self, observation: Any) -> Any:
         return self.act(observation)
+
+    def update(self, batch: Any) -> None:
+        raise NotImplementedError
 
     def save(self, model_id: str, step: int = 0) -> Path:
         path = model_ref(model_id, step).with_suffix(".pt")

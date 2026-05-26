@@ -3,10 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ._spec import EnvSpec
 from ._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
-
 
 class _Adam:
     def __init__(self, lr: float):
@@ -21,7 +18,6 @@ class _Adam:
             weight_decay=0.0,
             amsgrad=False,
         )
-
 
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -38,7 +34,6 @@ class _Q(torch.nn.Module):
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.network(o)
 
-
 class _V(torch.nn.Module):
     def __init__(self, obs_size: int, tau: float):
         super().__init__()
@@ -53,7 +48,6 @@ class _V(torch.nn.Module):
 
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.network(o)
-
 
 class IQLAgentDiscrete(TorchAgent):
     # ====================
@@ -73,7 +67,7 @@ class IQLAgentDiscrete(TorchAgent):
         self.v = None
         self.optim = None
 
-    def configure(self, env_spec: EnvSpec) -> None:
+    def configure(self, env_spec) -> None:
         assert env_spec.observation_shape is not None
         assert env_spec.action_cardinality is not None
         assert len(env_spec.action_cardinality) == 1
@@ -151,21 +145,3 @@ class IQLAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
-
-
-def eval_iql_discrete_loss(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    return {"loss": float(agent.loss_critic(o, a, r, on, d).item())}
-
-
-def eval_iql_discrete_loss_q(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, r, on, d = transitions
-    return {"loss_q": float(agent._loss_q(o, a, r, on, d).item())}
-
-
-def eval_iql_discrete_loss_v(agent: "IQLAgentDiscrete", transitions: TransitionBatch) -> dict[str, float]:
-    o, a, _, _, _ = transitions
-    return {"loss_v": float(agent._loss_v(o, a).item())}
-
-
-

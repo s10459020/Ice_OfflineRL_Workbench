@@ -1,6 +1,13 @@
 ﻿import gymnasium as gym
 import minari
 import numpy as np
+from pathlib import Path
+
+from ice_offline.tools.paths import minari_root
+
+
+def dataset_ref(dataset_id: str) -> Path:
+    return minari_root() / dataset_id / "data"
 
 
 class BaseDataset:
@@ -32,9 +39,6 @@ class BaseDataset:
 
     def make_dataset(self):
         return minari.load_dataset(self.dataset_id, download=True)
-
-    def make_eval_env(self):
-        return gym.make(self.env_id)
 
     def make_collect_env(self):
         return gym.make(self.env_id)

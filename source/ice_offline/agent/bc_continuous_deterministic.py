@@ -3,10 +3,7 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ice_offline.agent._spec import EnvSpec
 from ice_offline.agent._spec import TorchAgent
-from ice_offline.run.evaluator import TransitionBatch
-
 
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -30,7 +27,6 @@ class _Pi(torch.nn.Module):
 
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.mode(o)
-
 
 class BCAgentContinuousDeterministic(TorchAgent):
     # ====================
@@ -58,7 +54,7 @@ class BCAgentContinuousDeterministic(TorchAgent):
             amsgrad=False,
         )
 
-    def configure(self, env_spec: EnvSpec) -> None:
+    def configure(self, env_spec) -> None:
         assert env_spec.observation_shape is not None
         assert env_spec.action_shape is not None
         obs_size = int(np.prod(env_spec.observation_shape))
@@ -119,12 +115,3 @@ class BCAgentContinuousDeterministic(TorchAgent):
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         return self._loss(o, a)
-
-
-def eval_bc_deterministic_loss_pi(
-    agent: "BCAgentContinuousDeterministic",
-    transitions: TransitionBatch,
-) -> dict[str, float]:
-    o, a, _, _, _ = transitions
-    return {"loss_pi": float(agent.loss_actor(o, a).item())}
-
