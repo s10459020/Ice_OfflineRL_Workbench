@@ -1,16 +1,14 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from typing import Any, Protocol
 from pathlib import Path
 
 from ice_offline.agent._spec import EnvSpec
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline.batch_loader import MinariLoader
+from ice_offline.pipeline.minari.loader import MinariLoader
 from ice_offline.run.evaluator import OfflineEvalFn
 from ice_offline.run.evaluator import OnlineEvalFn
 from ice_offline.run.evaluator import Evaluator
 from ice_offline.run.saver import RunnerSaver
-from ice_offline.run.stopper import EarlyStopEvent
-from ice_offline.run.stopper import RunnerStopper
 from ice_offline.tools.paths import eval_root
 
 
@@ -46,7 +44,6 @@ class TorchBatchOfflineRunner:
         agent: RunnerAgent,
         eval_offline_fns: list[OfflineEvalFn],
         eval_online_fns: list[OnlineEvalFn],
-        early_stop_events: list[EarlyStopEvent] | None = None,
     ) -> None:
         saver = RunnerSaver(self.runner_id, self.steps_begin, self.steps_begin_auto, self.save_interval)
         evaluator = Evaluator(
@@ -56,7 +53,6 @@ class TorchBatchOfflineRunner:
             self.eval_episodes,
             self.eval_interval,
         )
-        stopper = RunnerStopper(early_stop_events)
 
         steps_begin = saver.resolve_steps_begin()
         minari_loader = MinariLoader(dataset)
@@ -76,16 +72,12 @@ class TorchBatchOfflineRunner:
         saver.load_if_needed(agent, steps_begin)
 
         if steps_begin > 0:
-            precheck_rounds = stopper.precheck_evals()
-            for _ in range(precheck_rounds):
+            for _ in range(1):
                 offline_metrics = evaluator.evaluate_offline(agent, minari_loader, eval_offline_fns, self.batch_size)
                 online_metrics = evaluator.evaluate_online(agent, dataset, eval_online_fns)
                 metrics = {**offline_metrics, **online_metrics}
                 evaluator.append_eval_step(steps_begin, metrics)
                 print(evaluator.summary_text(steps_begin, self.steps, metrics))
-                if stopper.should_stop(metrics):
-                    print(f"early_stop=True step={steps_begin}")
-                    return
 
         for step in range(steps_begin + 1, self.steps + 1):
             batch: BatchType = minari_loader.sample_batch(self.batch_size)
@@ -98,6 +90,4 @@ class TorchBatchOfflineRunner:
                 metrics = {**offline_metrics, **online_metrics}
                 evaluator.append_eval_step(step, metrics)
                 print(evaluator.summary_text(step, self.steps, metrics))
-                if stopper.should_stop(metrics):
-                    print(f"early_stop=True step={step}")
-                    break
+

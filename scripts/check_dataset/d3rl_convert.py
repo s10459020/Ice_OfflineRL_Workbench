@@ -1,6 +1,6 @@
 ﻿import d3rlpy
 
-from ice_offline.pipeline.d3rl_converter import to_buffer
+from ice_offline.pipeline.d3rl.converter import to_buffer
 from ice_offline.tools.printer import print_stage
 
 
@@ -31,4 +31,5 @@ print_stage("Train")
 algo = d3rlpy.algos.DQNConfig(batch_size=32).create(device=DEVICE)
 algo.fit(dataset, n_steps=N_STEPS)
 print("fit finished")
+
 

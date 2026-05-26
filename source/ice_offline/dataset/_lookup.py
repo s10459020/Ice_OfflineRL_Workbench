@@ -1,10 +1,12 @@
-﻿import copy
+﻿import torch
 
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.dataset._spec import eval_return
-from ice_offline.dataset._spec import StopReturnStable
 from ice_offline.run.evaluator import OnlineEvalFn
-from ice_offline.run.stopper import EarlyStopEvent
+
+
+def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+    _, _, reward, _, _ = episode_batch
+    return {"return": float(reward.sum().item())}
 
 
 DATASET_LOOKUP: dict[str, BaseDataset] = {
@@ -35,20 +37,6 @@ DATASET_EVAL_ONLINE_LOOKUP: dict[str, list[OnlineEvalFn]] = {
     "walker2d_simple": [eval_return],
 }
 
-DATASET_STOP_LOOKUP: dict[str, list[EarlyStopEvent]] = {
-    "halfcheetah_expert": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "halfcheetah_medium": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "halfcheetah_simple": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "hopper_expert": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "hopper_medium": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "hopper_simple": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "invertedpendulum_expert": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "onerooms8_fullobs_optimal": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "walker2d_expert": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "walker2d_medium": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-    "walker2d_simple": [StopReturnStable(patience=5, lambda_ratio=0.01)],
-}
-
 
 def get_dataset(dataset_id: str) -> BaseDataset:
     if dataset_id == "onerooms8_fullobs_optimal":
@@ -58,11 +46,8 @@ def get_dataset(dataset_id: str) -> BaseDataset:
     return DATASET_LOOKUP[dataset_id]
 
 
-def get_dataset_train_bundle(dataset_id: str) -> tuple[BaseDataset, list[OnlineEvalFn], list[EarlyStopEvent]]:
-    early_stop_events = copy.deepcopy(DATASET_STOP_LOOKUP[dataset_id])
+def get_dataset_train_bundle(dataset_id: str) -> tuple[BaseDataset, list[OnlineEvalFn]]:
     return (
         get_dataset(dataset_id),
         DATASET_EVAL_ONLINE_LOOKUP[dataset_id],
-        early_stop_events,
     )
-

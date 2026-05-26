@@ -6,7 +6,7 @@ import torch
 from ice_offline.agent.cql_continuous import CQLAgentContinuous
 from ice_offline.dataset._lookup import get_dataset
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline.batch_loader import MinariLoader
+from ice_offline.pipeline.minari.loader import MinariLoader
 from ice_offline.pipeline.minari.collector import MinariCollectorWrapper
 from ice_offline.pipeline.state.hopper import HopperState
 from ice_offline.pipeline.state.hopper import HopperStateIO
@@ -135,6 +135,7 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
 
 
 

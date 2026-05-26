@@ -1,33 +1,7 @@
 ﻿import gymnasium as gym
 import minari
 import numpy as np
-import torch
-from collections import deque
 
-
-def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, reward, _, _ = episode_batch
-    return {"return": float(reward.sum().item())}
-
-
-class StopReturnStable:
-    def __init__(self, patience: int = 5, lambda_ratio: float = 0.01) -> None:
-        self.patience = patience
-        self.lambda_ratio = lambda_ratio
-        self.recent = deque(maxlen=patience)
-
-    def should_stop(self, metrics: dict[str, list[float]]) -> bool:
-        self.recent.append(float(np.mean(metrics["return"])))
-        if len(self.recent) < self.patience:
-            return False
-
-        seq = list(self.recent)
-        base = abs(seq[0]) + 1e-12
-        for i in range(1, len(seq)):
-            ratio = abs(seq[i] - seq[i - 1]) / base
-            if ratio > self.lambda_ratio:
-                return False
-        return True
 
 class BaseDataset:
     dataset_name: str
@@ -67,9 +41,6 @@ class BaseDataset:
 
     def make_render_env(self):
         return gym.make(self.env_id, render_mode="human")
-
-    def eval_online_fns(self):
-        return [eval_return]
 
     def observation_cardinality(self, observation_shape: tuple[int, ...], minari_dataset) -> tuple[int, ...] | None:
         return None

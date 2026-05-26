@@ -1,5 +1,5 @@
 ﻿import d3rlpy
-from ice_offline.pipeline.d3rl_converter import to_buffer
+from ice_offline.pipeline.d3rl.converter import to_buffer
 
 # mute logging
 d3rlpy.logging.LOG.info = lambda *args, **kwargs: None
@@ -73,3 +73,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
