@@ -32,14 +32,14 @@ def eval_loss_aspl(agent: AsplAgent, episode_batch: tuple[torch.Tensor, torch.Te
         return {
             "loss_td": float(agent.loss_td_with_target(s, a, q_target).item()),
             "loss_punish": float(agent.loss_punish_with_target(s, a, q_target).item()),
-            "loss_critic": float(agent.loss_critic(s, a, r, sn, d).item()),
             "loss_actor": float(agent.loss_td3_variant(s).item()),
+            "loss_critic": float(agent.loss_critic(s, a, r, sn, d).item()),
        }
 
 
 def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     _, _, r, _, _ = episode_batch
-    return {"reward_sum": float(r.sum().item())}
+    return {"return": float(r.sum().item())}
 
 
 def train(

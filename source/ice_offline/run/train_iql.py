@@ -30,9 +30,9 @@ def eval_loss(agent: IQLAgentContinuous, episode_batch: tuple[torch.Tensor, torc
     with torch.no_grad():
         return {
             "loss_q": float(agent.loss_q(o, a, r, on, d).item()),
-            "loss_critic": float(agent.loss_critic(o, a, r, on, d).item()),
             "loss_v": float(agent.loss_v(o, a).item()),
-            "loss_pi": float(agent.loss_actor(o, a).item()),
+            "loss_actor": float(agent.loss_actor(o, a).item()),
+            "loss_critic": float(agent.loss_critic(o, a, r, on, d).item()),
         }
 
 

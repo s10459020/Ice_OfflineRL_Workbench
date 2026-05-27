@@ -13,7 +13,7 @@ def plot(runner_key: str) -> None:
     if len(csv_paths) == 0:
         raise FileNotFoundError(f"no csv found: {eval_dir}")
     output_path = PLOT_ROOT / f"{runner_key}.png"
-    plot_csv(csv_paths=csv_paths, plot_name=runner_key, show=True, output_path=str(output_path))
+    plot_csv(csv_paths=csv_paths, plot_name=runner_key, show=False, output_path=str(output_path))
     print(f"saved: {output_path}")
 
 

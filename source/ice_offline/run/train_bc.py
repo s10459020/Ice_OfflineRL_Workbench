@@ -27,7 +27,7 @@ SEED = 42
 def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     o, a, _, _, _ = episode_batch
     with torch.no_grad():
-        return {"loss_pi": float(agent.loss_actor(o, a).item())}
+        return {"loss_actor": float(agent.loss_actor(o, a).item())}
 
 
 def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:

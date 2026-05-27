@@ -36,22 +36,21 @@ def eval_loss_dynamic(dynamics: ScasDynamic, episode_batch: tuple[torch.Tensor, 
 def eval_loss_agent(agent: ScasAgent, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     s, a, r, sn, d = episode_batch
     with torch.no_grad():
-        loss_q = agent.loss_critic(s, a, r, sn, d)
         loss_td3 = agent.loss_td3(s)
         loss_correction = agent.loss_correction(s, sn)
-        loss_pi = agent.loss_actor(s, sn)
+        loss_critic = agent.loss_critic(s, a, r, sn, d)
+        loss_actor = agent.loss_actor(s, sn)
         return {
-            "loss_q": float(loss_q.item()),
             "loss_td3": float(loss_td3.item()),
             "loss_correction": float(loss_correction.item()),
-            "loss_pi": float(loss_pi.item()),
-            "loss_pi_weighted": float(((1.0 - agent.lmbda) * loss_td3 + agent.lmbda * loss_correction).item()),
+            "loss_critic": float(loss_critic.item()),
+            "loss_actor": float(loss_actor.item()),
         }
 
 
 def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     _, _, r, _, _ = episode_batch
-    return {"reward_sum": float(r.sum().item())}
+    return {"return": float(r.sum().item())}
 
 
 def train(

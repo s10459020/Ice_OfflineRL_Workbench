@@ -30,15 +30,13 @@ def eval_loss(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torc
     with torch.no_grad():
         loss_td_parts = agent.loss_td(o, a, r, on, d)
         loss_cql_parts = agent.loss_conservative(o, a, on)
-        loss_critic = agent.loss_critic(o, a, r, on, d)
-        loss_pi = agent.loss_actor(o, update_alpha=False)
+        loss_critic = agent.loss_critic(o, a, r, on, d, update_alpha=False)
+        loss_actor = agent.loss_actor(o, update_alpha=False)
         return {
-            "loss_q": float(loss_critic.item()),
-            "loss_q_td1": float(loss_td_parts[0].item()),
-            "loss_q_td2": float(loss_td_parts[1].item()),
-            "loss_q_cql1": float(loss_cql_parts[0].item()),
-            "loss_q_cql2": float(loss_cql_parts[1].item()),
-            "loss_pi": float(loss_pi.item()),
+            "loss_q_td": float(loss_td_parts.sum().item()),
+            "loss_q_cql": float(loss_cql_parts.sum().item()),
+            "loss_actor": float(loss_actor.item()),
+            "loss_critic": float(loss_critic.item()),
         }
 
 
