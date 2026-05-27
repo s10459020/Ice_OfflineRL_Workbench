@@ -220,7 +220,7 @@ class ScasAgent(TorchAgent):
     obs_dim: int
     act_dim: int
     dynamics: ScasDynamic
-    max_action: float
+    max_action: float = 1.0
     tau: float = 0.005
     beta: float = 3e-3
     alpha: float = 5.0

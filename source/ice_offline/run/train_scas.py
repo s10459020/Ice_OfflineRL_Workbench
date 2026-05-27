@@ -48,7 +48,7 @@ def eval_loss_agent(agent: ScasAgent, episode_batch: tuple[torch.Tensor, torch.T
         }
 
 
-def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     _, _, r, _, _ = episode_batch
     return {"return": float(r.sum().item())}
 
@@ -78,8 +78,6 @@ def train(
     dynamics = ScasDynamic(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
-        learning_rate=1e-3,
-        device="cpu",
     )
     dynamics_evaluator = Evaluator(
         runner_id=task_id,
@@ -102,7 +100,6 @@ def train(
         act_dim=dataset.act_dim,
         dynamics=dynamics,
         max_action=1.0,
-        device="cpu",
     )
     agent_evaluator = Evaluator(
         runner_id=task_id,
@@ -110,7 +107,7 @@ def train(
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
         eval_offline_fns=[eval_loss_agent],
-        eval_online_fns=[eval_reward],
+        eval_online_fns=[eval_return],
         recode_reset=False,
     )
     for step in range(1, agent_steps + 1):

@@ -4,7 +4,7 @@ import gymnasium as gym
 from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
 from ice_offline.pipeline.state.hopper import HopperConverter
 from ice_offline.pipeline.state.op_converter import StateConverter
-from ice_offline.pipeline.state.op_injector import StateInjectWrapper
+from ice_offline.pipeline.state.op_replayer import StateInjectWrapper
 
 
 DATASET_ID = "mujoco/hopper/simple-v0"

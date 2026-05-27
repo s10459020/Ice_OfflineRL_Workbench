@@ -6,7 +6,7 @@ from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_inne
 from ice_offline.pipeline.state.minigrid import MinigridState, MinigridStateIO
 from ice_offline.pipeline.state.minigrid import MinigridFullobsConverter
 from ice_offline.pipeline.state.op_converter import StateConverter
-from ice_offline.pipeline.state.op_injector import StateInjectWrapper
+from ice_offline.pipeline.state.op_replayer import StateInjectWrapper
 
 
 DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"

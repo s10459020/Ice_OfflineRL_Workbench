@@ -37,7 +37,7 @@ def eval_loss_aspl(agent: AsplAgent, episode_batch: tuple[torch.Tensor, torch.Te
        }
 
 
-def eval_reward(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
+def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     _, _, r, _, _ = episode_batch
     return {"return": float(r.sum().item())}
 
@@ -67,7 +67,6 @@ def train(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
         max_action=1.0,
-        device="cpu",
     )
     agent.set_seed(seed)
 
@@ -77,7 +76,7 @@ def train(
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
         eval_offline_fns=[eval_loss_aspl],
-        eval_online_fns=[eval_reward],
+        eval_online_fns=[eval_return],
     )
 
     for step in range(1, steps + 1):

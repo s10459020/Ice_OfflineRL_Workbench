@@ -1,4 +1,4 @@
-﻿from typing import Type
+from typing import Type
 
 import gymnasium as gym
 import minari
@@ -9,9 +9,6 @@ from ice_offline.pipeline.state.op_dataset import StateDataset
 
 
 class StateInjectWrapper(gym.Wrapper):
-    # ====================
-    # Init
-    # ====================
     def __init__(
         self,
         env: gym.Env,
@@ -36,9 +33,6 @@ class StateInjectWrapper(gym.Wrapper):
         self._observations: list | None = None
         self._transition_count: int | None = None
 
-    # ====================
-    # Overwrite
-    # ====================
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         self.env.reset(seed=seed, options=options)
 
@@ -69,16 +63,10 @@ class StateInjectWrapper(gym.Wrapper):
         terminated = next_index >= self._transition_count
         return obs, reward, terminated, truncated, info
 
-    # ====================
-    # Public API
-    # ====================
     def close(self) -> None:
         self._state_dataset.close()
         self.env.close()
 
-    # ====================
-    # Private
-    # ====================
     def _select_episode_index(self, seed: int | None = None, options: dict | None = None) -> int:
         if options and "episode_index" in options:
             return options["episode_index"]
@@ -120,3 +108,21 @@ class StateInjectWrapper(gym.Wrapper):
             return {k: self._index_payload(v, index) for k, v in payload.items()}
         return payload[index]
 
+
+def make_replayer(
+    dataset_id: str,
+    state_cls: type,
+    state_io_cls: Type[StateIO],
+    eval_env: gym.Env | None = None,
+):
+    if not dataset_id.endswith("-v0"):
+        raise ValueError(f"dataset_id must be full id with version suffix, got: {dataset_id}")
+    if eval_env is None:
+        dataset = minari.load_dataset(dataset_id)
+        eval_env = gym.make(dataset.spec.env_spec.id, render_mode="human")
+    return StateInjectWrapper(
+        env=eval_env,
+        dataset_id=dataset_id,
+        state_cls=state_cls,
+        state_io_cls=state_io_cls,
+    )
