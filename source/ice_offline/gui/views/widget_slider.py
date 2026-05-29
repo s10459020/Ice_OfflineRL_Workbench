@@ -34,7 +34,9 @@ class SliderWidget(QWidget):
         self._slider.blockSignals(False)
 
     def set_value(self, value: int) -> None:
+        self._slider.blockSignals(True)
         self._slider.setValue(value)
+        self._slider.blockSignals(False)
 
     def value(self) -> int:
         return self._slider.value()

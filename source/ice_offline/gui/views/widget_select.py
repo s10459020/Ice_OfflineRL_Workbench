@@ -37,7 +37,9 @@ class SelectWidget(QWidget):
         self._list.blockSignals(False)
 
     def set_index(self, index: int) -> None:
+        self._list.blockSignals(True)   
         self._list.setCurrentRow(index)
+        self._list.blockSignals(False)
 
     def index(self) -> int:
         return self._list.currentRow()

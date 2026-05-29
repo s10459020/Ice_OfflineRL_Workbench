@@ -2,7 +2,9 @@ from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
 from ice_offline.pipeline.state.op_replayer import make_replayer
 
 
+#DATASET_ID = "mujoco/hopper/simple-v0"
 #DATASET_ID = "mujoco/hopper/medium-v0"
+#DATASET_ID = "mujoco/hopper/expert-v0"
 DATASET_ID = "test/hopper_simple_random-v0"
 STATE_CLS = HopperState
 STATE_IO_CLS = HopperStateIO

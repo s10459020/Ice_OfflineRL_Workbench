@@ -1,4 +1,6 @@
-﻿from PySide6.QtCore import Qt
+﻿import traceback
+
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog,
@@ -9,9 +11,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from ice_offline.gui.viewmodels.replay_mojoco import ViewerPresenter
 from ice_offline.gui.views.widget_render import RenderWidget
 from ice_offline.gui.views.widget_select import SelectWidget
+from ice_offline.gui.views.widget_setting import SettingWidget
 from ice_offline.gui.views.widget_slider import SliderWidget
 from ice_offline.tools.paths import minari_root
 
@@ -28,7 +30,7 @@ class MainWindow(QMainWindow):
         self._select = SelectWidget()
         self._slider = SliderWidget()
         self._render = RenderWidget()
-        self._setting =  QWidget()
+        self._setting = SettingWidget()
 
         self.setWindowTitle("Replay Viewer")
         self.resize(980, 640)
@@ -41,10 +43,12 @@ class MainWindow(QMainWindow):
     def _apply_state(self, state) -> None:
         self._button.setText(state.button_label)
         self._select.set_title(state.select_title)
-        self._select.set_labels(state.episode_labels)
-        self._select.set_index(state.selected_episode)
-
-        self._slider.set_range(0, state.max_step, state.selected_step)
+        self._select.set_labels(state.select_labels)
+        self._select.set_index(state.select_index)
+        self._slider.set_range(0, state.slider_max, state.slider_value)
+        self._setting.set_value(state.step_jump)
+        if state.frame is not None:
+            self._render.set_frame(state.frame)
 
     # ====================
     # UI
@@ -56,46 +60,18 @@ class MainWindow(QMainWindow):
         root_layout.setSpacing(20)
         self.setCentralWidget(root)
 
-        # ========================================
-        # ||             Root Layout            ||
-        # || +--------------------------------+ ||
-        # || | Content Layout                 | ||
-        # || +--------------------------------+ ||
-        # || +--------------------------------+ ||
-        # || | Step Slider                    | ||
-        # || +--------------------------------+ ||
-        # ========================================
         content_layout = QHBoxLayout()
         content_layout.setSpacing(24)
         root_layout.addLayout(content_layout, 1)
 
         root_layout.addWidget(self._slider)
-
-        # +------------------------------------------+
-        # |              Content Layout              |
-        # |  +---------------+   +-----------------+ |
-        # |  | Grid Render   |   | Control Layout  | |
-        # |  +---------------+   +-----------------+ |
-        # +------------------------------------------+
         content_layout.addWidget(self._render, 3)
 
-        control_layout = QVBoxLayout()  
+        control_layout = QVBoxLayout()
         control_layout.setSpacing(18)
         control_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addLayout(control_layout, 2)
 
-        # +--------------------------+
-        # |   Right: Control Layout  |
-        # |  +-------------------+   |
-        # |  | Push Button       |   |
-        # |  +-------------------+   |
-        # |  +-------------------+   |
-        # |  | Select List       |   |
-        # |  +-------------------+   |
-        # |  +-------------------+   |
-        # |  | Plugin Area       |   |
-        # |  +-------------------+   |
-        # +--------------------------+
         control_layout.addWidget(self._button)
         control_layout.addWidget(self._select)
         control_layout.addWidget(self._setting)
@@ -108,20 +84,32 @@ class MainWindow(QMainWindow):
         self._button.clicked.connect(self._on_button)
         self._select.selected.connect(self._on_selected)
         self._slider.changed.connect(self._on_slided)
+        self._setting.changed.connect(self._on_setting_changed)
 
     def _on_button(self):
         initial_dir = str(minari_root().resolve())
         path, _ = QFileDialog.getOpenFileName(self, "Select Dataset", initial_dir, "All Files (*.*)")
         if not path:
             return
-        
-        self._apply_state(self._viewmodel.load_dataset(path))
+
+        print(f"[window] load button path={path}")
+        try:
+            state = self._viewmodel.load_dataset(path)
+            print("[window] viewmodel.load_dataset done")
+            self._apply_state(state)
+            print("[window] apply_state done")
+        except Exception:
+            print("[window] load failed:")
+            traceback.print_exc()
 
     def _on_selected(self, index: int) -> None:
         self._apply_state(self._viewmodel.set_episode(index))
 
     def _on_slided(self, value: int) -> None:
         self._apply_state(self._viewmodel.set_step(value))
+
+    def _on_setting_changed(self, value: int) -> None:
+        self._apply_state(self._viewmodel.set_step_jump(value))
 
     # ====================
     # Qt Native Events
@@ -130,27 +118,33 @@ class MainWindow(QMainWindow):
         key = event.key()
 
         if key == Qt.Key_Up:
-            self._select.set_index(max(0, self._select.index() - 1))
+            new_index = max(0, self._select.index() - 1)
+            self._apply_state(self._viewmodel.set_episode(new_index))
             event.accept()
             return
 
         if key == Qt.Key_Down:
-            self._select.set_index(self._select.index() + 1)
+            new_index = self._select.index() + 1
+            self._apply_state(self._viewmodel.set_episode(new_index))
             event.accept()
             return
 
+        step_jump = self._viewmodel.step_jump()
+
         if key == Qt.Key_Left:
-            self._slider.set_value(self._slider.value() - 1)
+            new_step = self._slider.value() - step_jump
+            self._apply_state(self._viewmodel.set_step(new_step))
             event.accept()
             return
 
         if key == Qt.Key_Right:
-            self._slider.set_value(self._slider.value() + 1)
+            new_step = self._slider.value() + step_jump
+            self._apply_state(self._viewmodel.set_step(new_step))
             event.accept()
             return
 
         super().keyPressEvent(event)
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
-        self._presenter.close()
+        self._viewmodel.close()
         super().closeEvent(event)

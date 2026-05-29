@@ -141,7 +141,7 @@ class BasicUnit(UnitWrapperInterface, UnitLoaderInterface):
     def on_loader(self, engine: OverlayEngine, loader: Any) -> None:
         self._register_engine(engine)
         self._state_dataset = StateDataset.load_dataset(
-            dataset_id=loader.dataset_id,
+            path=StateDataset.path(loader.dataset_id),
             state_cls=MinigridState,
         )
         loader.register_list("state", lambda episode_index: self._state_dataset.read_episode(episode_index))

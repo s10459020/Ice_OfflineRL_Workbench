@@ -3,13 +3,16 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import minari
+import numpy as np
+
+from ice_offline.pipeline.d4rl.loader import D4rlLoader
 
 
 OUTPUT_ROOT = Path("tmps/data")
 
 
 def returns(dataset_id: str) -> list[float]:
-    dataset = minari.load_dataset(f"{dataset_id}-v0")
+    dataset = minari.load_dataset(dataset_id)
     values = []
     for episode in dataset.iterate_episodes():
         values.append(float(episode.rewards.sum()))
@@ -61,41 +64,63 @@ def save_returns_boxplot(plot_name: str, *dataset_ids: str) -> Path:
 
 def main() -> None:
     ids_simple = (
-        "mujoco/hopper/simple",
-        "test/hopper_simple_random",
-        "test/hopper_simple_bc",
-        "test/hopper_simple_cql",
-        "test/hopper_simple_iql",
-        "test/hopper_simple_aspl",
-        "test/hopper_simple_scas",
+        "mujoco/hopper/simple-v0",
+        "test/hopper_simple_random-v0",
+        "test/hopper_simple_bc-v0",
+        "test/hopper_simple_cql-v0",
+        "test/hopper_simple_iql-v0",
+        "test/hopper_simple_aspl-v0",
+        "test/hopper_simple_scas-v0",
     )
     ids_medium = (
-        "mujoco/hopper/medium",
-        "test/hopper_medium_random",
-        "test/hopper_medium_bc",
-        "test/hopper_medium_cql",
-        "test/hopper_medium_iql",
-        "test/hopper_medium_aspl",
-        "test/hopper_medium_scas",
+        "mujoco/hopper/medium-v0",
+        "test/hopper_medium_random-v0",
+        "test/hopper_medium_bc-v0",
+        "test/hopper_medium_cql-v0",
+        "test/hopper_medium_iql-v0",
+        "test/hopper_medium_aspl-v0",
+        "test/hopper_medium_scas-v0",
     )
     ids_expert = (
-        "mujoco/hopper/expert",
-        "test/hopper_expert_random",
-        "test/hopper_expert_bc",
-        "test/hopper_expert_cql",
-        "test/hopper_expert_iql",
-        "test/hopper_expert_aspl",
-        "test/hopper_expert_scas",
+        "mujoco/hopper/expert-v0",
+        "test/hopper_expert_random-v0",
+        "test/hopper_expert_bc-v0",
+        "test/hopper_expert_cql-v0",
+        "test/hopper_expert_iql-v0",
+        "test/hopper_expert_aspl-v0",
+        "test/hopper_expert_scas-v0",
+    )
+    ids_medium_replay = (
+        "test/hopper_medium_replay_d4rl_random-v0",
+        "test/hopper_medium_replay_d4rl_bc-v0",
+        "test/hopper_medium_replay_d4rl_cql-v0",
+        "test/hopper_medium_replay_d4rl_iql-v0",
+        "test/hopper_medium_replay_d4rl_aspl-v0",
+        "test/hopper_medium_replay_d4rl_scas-v0",
+    )
+    ids_medium_expert = (
+        "test/hopper_medium_expert_d4rl_random-v0",
+        "test/hopper_medium_expert_d4rl_bc-v0",
+        "test/hopper_medium_expert_d4rl_cql-v0",
+        "test/hopper_medium_expert_d4rl_iql-v0",
+        "test/hopper_medium_expert_d4rl_aspl-v0",
+        "test/hopper_medium_expert_d4rl_scas-v0",
     )
 
-    save_returns_csv("hopper_simple_returns.csv", *ids_simple)
-    save_returns_boxplot("hopper_simple_returns_boxplot.png", *ids_simple)
+    #save_returns_csv("hopper_simple_returns.csv", *ids_simple)
+    #save_returns_boxplot("hopper_simple_returns_boxplot.png", *ids_simple)
 
-    save_returns_csv("hopper_medium_returns.csv", *ids_medium)
-    save_returns_boxplot("hopper_medium_returns_boxplot.png", *ids_medium)
+    #save_returns_csv("hopper_medium_returns.csv", *ids_medium)
+    #save_returns_boxplot("hopper_medium_returns_boxplot.png", *ids_medium)
 
-    save_returns_csv("hopper_expert_returns.csv", *ids_expert)
-    save_returns_boxplot("hopper_expert_returns_boxplot.png", *ids_expert)
+    #save_returns_csv("hopper_expert_returns.csv", *ids_expert)
+    #save_returns_boxplot("hopper_expert_returns_boxplot.png", *ids_expert)
+
+    save_returns_csv("hopper_medium_replay_returns.csv", *ids_medium_replay)
+    save_returns_boxplot("hopper_medium_replay_returns_boxplot.png", *ids_medium_replay)
+
+    save_returns_csv("hopper_medium_expert_returns.csv", *ids_medium_expert)
+    save_returns_boxplot("hopper_medium_expert_returns_boxplot.png", *ids_medium_expert)
 
 
 if __name__ == "__main__":

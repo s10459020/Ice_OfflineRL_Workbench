@@ -23,7 +23,7 @@ class StateCollectWrapper(gym.Wrapper):
     def save(self, dataset_id: str) -> StateDataset:
         self._end_episode()
         return StateDataset.write(
-            dataset_id=dataset_id,
+            path=StateDataset.path(dataset_id),
             state_cls=self._state_cls,
             episodes=self._episodes,
         )

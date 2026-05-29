@@ -1,11 +1,12 @@
-from typing import Type
+﻿from typing import Type
 
 import gymnasium as gym
-import minari
 import numpy as np
 
+from ice_offline.pipeline.minari.loader import MinariLoader
 from ice_offline.pipeline.state._spec import StateIO
 from ice_offline.pipeline.state.op_dataset import StateDataset
+from ice_offline.tools.paths import minari_root
 
 
 class StateInjectWrapper(gym.Wrapper):
@@ -18,9 +19,10 @@ class StateInjectWrapper(gym.Wrapper):
     ) -> None:
         super().__init__(env)
         self._state_io = state_io_cls(env)
-        self._state_dataset = StateDataset.load_dataset(dataset_id=dataset_id, state_cls=state_cls)
+        self._state_dataset = StateDataset.load_dataset(path=StateDataset.path(dataset_id), state_cls=state_cls)
 
-        self.dataset = minari.load_dataset(dataset_id)
+        dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
+        self.dataset = MinariLoader(dataset_path)
         self.total_episodes = self.dataset.total_episodes
 
         self._episode_index: int | None = None
@@ -114,12 +116,12 @@ def make_replayer(
     state_cls: type,
     state_io_cls: Type[StateIO],
     eval_env: gym.Env | None = None,
+    render_mode: str | None = "human",
 ):
-    if not dataset_id.endswith("-v0"):
-        raise ValueError(f"dataset_id must be full id with version suffix, got: {dataset_id}")
     if eval_env is None:
-        dataset = minari.load_dataset(dataset_id)
-        eval_env = gym.make(dataset.spec.env_spec.id, render_mode="human")
+        dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
+        dataset = MinariLoader(dataset_path)
+        eval_env = gym.make(dataset.env_id, render_mode=render_mode)
     return StateInjectWrapper(
         env=eval_env,
         dataset_id=dataset_id,

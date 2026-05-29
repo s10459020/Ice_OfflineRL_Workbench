@@ -1,9 +1,10 @@
 ﻿from typing import Any
 
 import gymnasium as gym
-import minari
 
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
+from ice_offline.pipeline.minari.loader import MinariLoader
+from ice_offline.tools.paths import minari_root
 from .overlay_engine import OverlayEngine
 
 
@@ -17,7 +18,7 @@ class UnitLoaderInterface:
     # ====================
     def on_env(self, base_env: gym.Env) -> None:
         pass
-    
+
     def on_loader(self, engine: OverlayEngine, loader: "OverlayLoader") -> None:
         pass
 
@@ -49,14 +50,15 @@ class OverlayLoader:
                 raise TypeError("each unit must implement UnitLoaderInterface")
 
         self.dataset_id = dataset_id
-        self.dataset = minari.load_dataset(dataset_id)
+        dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
+        self.dataset = MinariLoader(dataset_path)
         self.total_episodes: int = int(self.dataset.total_episodes)
 
-        self.env = self.dataset.recover_environment(eval_env=True, render_mode=render_mode)
+        self.env = gym.make(self.dataset.env_id, render_mode=render_mode)
         self.env = insert_render_quiet_innermost(self.env)
         self._base_env = self.env.unwrapped
         self.engine = OverlayEngine(base_env=self._base_env, overlay_mode="frame")
-        
+
         self._units = units
         self._list_snapshots: dict[str, Any] = {}
         for unit in self._units:
@@ -106,7 +108,7 @@ class OverlayLoader:
 
         for unit in self._units:
             unit.on_load(self._datas)
-            
+
         self.seek(0)
         return self.data["observation"], self.data["info"]
 

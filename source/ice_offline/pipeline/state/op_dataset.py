@@ -25,8 +25,7 @@ class StateDataset:
     # Public API
     # ====================
     @classmethod
-    def load_dataset(cls, dataset_id: str, state_cls: Type[State]) -> "StateDataset":
-        path = cls._path(dataset_id)
+    def load_dataset(cls, path: Path, state_cls: Type[State]) -> "StateDataset":
         return cls(path=path, state_cls=state_cls)
 
     def close(self) -> None:
@@ -63,11 +62,10 @@ class StateDataset:
     @classmethod
     def write(
         cls,
-        dataset_id: str,
+        path: Path,
         state_cls: Type[State],
         episodes: list[list[dict[str, np.ndarray]]],
     ) -> "StateDataset":
-        path = cls._path(dataset_id)
         path.parent.mkdir(parents=True, exist_ok=True)
         with h5py.File(path, "w") as h5_file:
             for episode_index, sequence in enumerate(episodes):
@@ -96,6 +94,6 @@ class StateDataset:
         return counts
 
     @classmethod
-    def _path(cls, dataset_id: str) -> Path:
+    def path(cls, dataset_id: str) -> Path:
         base = minari_root()
         return base / dataset_id / "data" / "state_data.hdf5"
