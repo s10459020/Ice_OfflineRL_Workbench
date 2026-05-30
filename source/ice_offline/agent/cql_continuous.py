@@ -1,4 +1,4 @@
-﻿"""Conservative Q-Learning continuous agent (minimal fixed structure)."""
+﻿from dataclasses import dataclass
 
 import importlib.util
 import math
@@ -168,31 +168,34 @@ class _QQ(torch.nn.Module):
             for p_targ, p in zip(self.targ_q2.parameters(), self.q2.parameters()):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
+@dataclass
 class CQLAgentContinuous(TorchAgent):
-    def __init__(self, obs_size: int, act_size: int, actor_learning_rate: float = 1e-4, critic_learning_rate: float = 3e-4, actor_alpha_learning_rate: float = 1e-4, critic_alpha_learning_rate: float = 1e-4, gamma: float = 0.99, tau: float = 0.005, actor_initial_alpha: float = 1.0, critic_initial_alpha: float = 1.0, alpha_threshold: float = 10.0, n_action_samples: int = 10):
+    obs_size: int
+    act_size: int
+    tau: float = 0.005
+    gamma: float = 0.99
+    actor_initial_alpha: float = 1.0
+    critic_initial_alpha: float = 1.0
+    alpha_threshold: float = 10.0
+    actor_learning_rate: float = 1e-4
+    critic_learning_rate: float = 3e-4
+    actor_alpha_learning_rate: float = 1e-4
+    critic_alpha_learning_rate: float = 1e-4
+    n_action_samples: int = 10
+    device: str = "cpu"
+
+    def __init__(self):
         self.device = "cpu"
-        self.act_size = act_size
-        self.actor_learning_rate = actor_learning_rate
-        self.critic_learning_rate = critic_learning_rate
-        self.actor_alpha_learning_rate = actor_alpha_learning_rate
-        self.critic_alpha_learning_rate = critic_alpha_learning_rate
-        self.gamma = gamma
-        self.tau = tau
-        self.actor_initial_alpha = actor_initial_alpha
-        self.critic_initial_alpha = critic_initial_alpha
-        self.alpha_threshold = alpha_threshold
-        self.n_action_samples = n_action_samples
         self.policy = None
         self.critic = None
         self.actor_optim = None
         self.critic_optim = None
         self.alpha_optim = None
         self.alpha_prime_optim = None
-        self.act_size = act_size
-        self.policy = _Pi(obs_size=obs_size, act_size=act_size).to(self.device)
+        self.policy = _Pi(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
         self.critic = _QQ(
-            obs_size=obs_size,
-            act_size=act_size,
+            obs_size=self.obs_size,
+            act_size=self.act_size,
             gamma=self.gamma,
             tau=self.tau,
             alpha_threshold=self.alpha_threshold,

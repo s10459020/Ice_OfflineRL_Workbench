@@ -15,17 +15,22 @@ from ice_offline.tools.printer import print_stage
 
 
 DATASET_KEY = "hopper_simple"
-BATCH_SIZE = 256
+
 STEPS = 200_000
+SAVE_INTERVAL = 20_000
 EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
-SAVE_INTERVAL = 20_000
+
 SEED = 42
+DEVICE = "cpu"
+BATCH_SIZE = 256
 
 
 def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
     o, a, _, _, _ = episode_batch
+    o = o.to(agent.device)
+    a = a.to(agent.device)
     with torch.no_grad():
         return {"loss_actor": float(agent.loss_actor(o, a).item())}
 
@@ -47,6 +52,7 @@ def train(
     eval_env: gym.Env | None = None,
     save_interval: int = SAVE_INTERVAL,
     seed: int = SEED,
+    device: str = DEVICE,
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -59,6 +65,7 @@ def train(
     agent = BCAgentContinuousDeterministic(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
+        device=device,
     )
 
     evaluator = Evaluator(
@@ -90,6 +97,7 @@ def collect(
     eval_online_n: int = EVAL_ONLINE_N,
     eval_offline_n: int = EVAL_OFFLINE_N,
     save_interval: int = SAVE_INTERVAL,
+    device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
     task_id = task_id or f"{dataset.env_id}_bc-v0"
     env = dataset.make_collect_env()
@@ -106,6 +114,7 @@ def collect(
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
         save_interval=save_interval,
+        device=device,
     )
 
     minari_data = minari_col.save(f"train/{task_id}")

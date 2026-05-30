@@ -1,9 +1,10 @@
-﻿"""Behavior Cloning continuous agent (deterministic)."""
+﻿from dataclasses import dataclass
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from ice_offline.agent._spec import TorchAgent
+
 
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -28,15 +29,20 @@ class _Pi(torch.nn.Module):
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.mode(o)
 
+
+@dataclass
 class BCAgentContinuousDeterministic(TorchAgent):
+    device: str = "cpu"
+    obs_size: int
+    act_size: int
+    learning_rate = 1e-3
+    expl_noise_std = 0.1
+
     # ====================
     # Init
     # ====================
-    def __init__(self, obs_size: int, act_size: int):
-        self.device = "cpu"
-        self.learning_rate = 1e-3
-        self.expl_noise_std = 0.1
-        self.policy = _Pi(obs_size, act_size).to(self.device)
+    def __post_init__(self):
+        self.policy = _Pi(self.obs_size, self.act_size).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.policy.parameters(),
             lr=self.learning_rate,
