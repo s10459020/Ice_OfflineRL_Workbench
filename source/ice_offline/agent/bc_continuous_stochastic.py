@@ -1,5 +1,7 @@
 ﻿"""Behavior Cloning continuous agent (stochastic)."""
 
+from dataclasses import dataclass
+
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -40,11 +42,15 @@ class _Pi(torch.nn.Module):
         a_mean, logstd = self.dist(o)
         return a_mean, logstd
 
+@dataclass
 class BCAgentContinuousStochastic(TorchAgent):
-    def __init__(self, obs_size: int, act_size: int, device: str = "cpu"):
-        self.device = device
-        self.learning_rate = 1e-3
-        self.policy = _Pi(obs_size, act_size).to(self.device)
+    obs_size: int
+    act_size: int
+    learning_rate: float = 1e-3
+    device: str = "cpu"
+
+    def __post_init__(self):
+        self.policy = _Pi(self.obs_size, self.act_size).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.policy.parameters(),
             lr=self.learning_rate,

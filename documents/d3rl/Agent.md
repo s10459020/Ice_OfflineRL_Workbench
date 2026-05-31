@@ -1,0 +1,33 @@
+## Continuous
+- AWACConfig
+- BCConfig
+- BCQConfig
+- BEARConfig
+- CQLConfig
+- CRRConfig
+- CalQLConfig
+- DDPGConfig
+- IQLConfig
+- PLASConfig
+- PLASWithPerturbationConfig
+- PRDCConfig
+- RandomPolicyConfig
+- ReBRACConfig
+- SACConfig
+- TD3Config
+- TD3PlusBCConfig
+
+## Discrete
+- DiscreteBCConfig
+- DiscreteBCQConfig
+- DiscreteCQLConfig
+- DiscreteRandomPolicyConfig
+- DiscreteSACConfig
+- DQNConfig
+- DoubleDQNConfig
+- NFQConfig
+
+## Transformer 
+- DecisionTransformerConfig
+- DiscreteDecisionTransformerConfig
+- TACRConfig

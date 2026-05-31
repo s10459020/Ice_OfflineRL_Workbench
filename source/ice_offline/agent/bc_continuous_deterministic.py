@@ -35,8 +35,8 @@ class _Pi(torch.nn.Module):
 class BCAgentContinuousDeterministic(TorchAgent):
     obs_size: int
     act_size: int
-    learning_rate = 1e-3
-    expl_noise_std = 0.1
+    learning_rate: float = 1e-3
+    expl_noise_std: float = 0.1
     device: str = "cpu"
 
     # ====================
