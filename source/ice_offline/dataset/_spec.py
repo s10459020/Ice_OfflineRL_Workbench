@@ -1,65 +1,90 @@
-﻿import gymnasium as gym
-import numpy as np
+﻿from dataclasses import dataclass, field
+from pathlib import Path
+
+import gymnasium as gym
+import torch
 
 
-class BaseDataset:
-    env_id: str
+@dataclass
+class TorchBuffer:
+    obs_list: torch.Tensor
+    next_obs_list: torch.Tensor
+    act_list: torch.Tensor
+    rew_list: torch.Tensor
+    done_list: torch.Tensor
 
-    def __init__(
-        self,
-        env_id: str,
-        buffer,
-    ) -> None:
-        self.env_id = env_id
-        self.raw_buffer = buffer
-        self.buffer = self._build(self.raw_buffer)
 
-        self._rng = np.random.default_rng()
-        self.obs_shape = tuple(int(x) for x in self.buffer["obs"].shape[1:])
-        self.act_shape = tuple(int(x) for x in self.buffer["act"].shape[1:])
-        self.obs_dim = int(np.prod(self.obs_shape)) if self.obs_shape else 1
-        self.act_dim = int(np.prod(self.act_shape)) if self.act_shape else 1
-        self.count = int(self.buffer["obs"].shape[0])
+@dataclass
+class Dataset:
+    # ====================
+    # Dataset identity
+    # ====================
+    id: str
+    env_id: str = ""
+    dataset_path: str | Path = Path()
+    seed: int = 0
+    device: str = "cpu"
 
-    def set_seed(self, seed: int | None = None):
-        self._rng = np.random.default_rng(seed)
+    # ====================
+    # Loaded dataset info
+    # ====================
+    buffer: TorchBuffer = field(init=False)
+    obs_shape: tuple[int, ...] = ()
+    act_shape: tuple[int, ...] = ()
+    obs_dim: int = 0
+    act_dim: int = 0
+    count: int = 0
 
-    def obs_encode_batch(self, obs):
-        return np.asarray(obs, dtype=np.float32)
+    def __post_init__(self) -> None:
+        self.dataset_path = Path(self.dataset_path)
+        torch.manual_seed(self.seed)
 
-    def act_encode_batch(self, act):
-        return np.asarray(act, dtype=np.float32)
+    # ====================
+    # Public API
+    # ====================
+    def load(self, dataset_path: str | Path):
+        self.dataset_path = Path(dataset_path)
+
+        loader = self.make_loader()
+        self.buffer = loader.buffer
+        self.obs_shape = loader.obs_shape
+        self.act_shape = loader.act_shape
+        self.obs_dim = loader.obs_dim
+        self.act_dim = loader.act_dim
+        self.count = loader.count
+        if not self.env_id:
+            self.env_id = loader.env_id
+
+        return self
+
+    def set_seed(self, seed: int | None = None) -> None:
+        torch.manual_seed(seed)
 
     def sample_batch(self, batch_size: int):
-        idx = self._rng.integers(0, self.count, size=(batch_size,))
-        return {
-            "obs": self.buffer["obs"][idx],
-            "next_obs": self.buffer["next_obs"][idx],
-            "act": self.buffer["act"][idx],
-            "rew": self.buffer["rew"][idx],
-            "done": self.buffer["done"][idx],
-        }
+        idx = torch.randint(self.count, (batch_size,), device=self.buffer.obs_list.device)
+        return TorchBuffer(
+            obs_list=self.buffer.obs_list[idx],
+            next_obs_list=self.buffer.next_obs_list[idx],
+            act_list=self.buffer.act_list[idx],
+            rew_list=self.buffer.rew_list[idx],
+            done_list=self.buffer.done_list[idx],
+        )
 
-    def _build(self, raw: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
-        obs = self.obs_encode_batch(np.asarray(raw["observations"], dtype=np.float32))
-        next_obs = self.obs_encode_batch(np.asarray(raw["next_observations"], dtype=np.float32))
-        act = self.act_encode_batch(np.asarray(raw["actions"], dtype=np.float32))
-        rew = np.asarray(raw["rewards"], dtype=np.float32)
-        term = np.asarray(raw["terminations"], dtype=np.bool_)
-        trunc = np.asarray(raw["truncations"], dtype=np.bool_)
-        done = np.logical_or(term, trunc).astype(np.float32)
-        return {
-            "obs": obs,
-            "next_obs": next_obs,
-            "act": act,
-            "rew": rew,
-            "done": done,
-        }
+    # ====================
+    # Loader binding
+    # ====================
+    def make_loader(self):
+        from ice_offline.data.minari.loader import MinariLoader
+        loader = MinariLoader(self.dataset_path, device=self.device)
+        return loader
 
+    # ====================
+    # Env factory
+    # ====================
     def make_env(self):
         return gym.make(self.env_id)
 
-    def make_collect_env(self):
+    def make_eval_env(self):
         return gym.make(self.env_id)
 
     def make_render_env(self):

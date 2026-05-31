@@ -4,10 +4,10 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.pipeline.minari.loader import MinariLoader
-from ice_offline.pipeline.state._spec import State, StateIO
-from ice_offline.pipeline.state.op_converter import StateConverter
-from ice_offline.pipeline.state.op_dataset import StateDataset
+from ice_offline.data.minari.loader import MinariLoader
+from ice_offline.data.state._spec import State, StateIO
+from ice_offline.data.state.op_converter import StateConverter
+from ice_offline.data.state.op_dataset import StateDataset
 
 
 @dataclass(frozen=True)

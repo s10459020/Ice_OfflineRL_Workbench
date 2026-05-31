@@ -1,5 +1,5 @@
-from ice_offline.pipeline.state.hopper import HopperState, HopperStateIO
-from ice_offline.pipeline.state.op_replayer import make_replayer
+﻿from ice_offline.data.state.hopper import HopperState, HopperStateIO
+from ice_offline.data.state.op_replayer import make_replayer
 
 
 #DATASET_ID = "mujoco/hopper/simple-v0"

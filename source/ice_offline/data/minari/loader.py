@@ -1,9 +1,12 @@
-﻿import json
+import json
 from pathlib import Path
 from typing import Any
 
 import h5py
 import numpy as np
+import torch
+
+from ice_offline.dataset._spec import TorchBuffer
 
 
 class MinariEpisode:
@@ -25,8 +28,9 @@ class MinariEpisode:
 
 
 class MinariLoader:
-    def __init__(self, dataset_path: str | Path) -> None:
+    def __init__(self, dataset_path: str | Path, device: str = "cpu") -> None:
         self.dataset_path = Path(dataset_path)
+        self.device = device
         self.metadata_path = self.dataset_path.parent / "metadata.json"
         self.metadata = self._read_metadata(self.metadata_path)
         self.dataset_id = self.metadata.get("dataset_id")
@@ -37,6 +41,11 @@ class MinariLoader:
         self.total_episodes = len(self._episode_keys)
         self.episode_steps = [int(self.episodes[key]["rewards"].shape[0]) for key in self._episode_keys]
         self.total_steps = int(sum(self.episode_steps))
+        self.obs_shape = tuple(int(x) for x in self.buffer.obs_list.shape[1:])
+        self.act_shape = tuple(int(x) for x in self.buffer.act_list.shape[1:])
+        self.obs_dim = int(np.prod(self.obs_shape)) if self.obs_shape else 1
+        self.act_dim = int(np.prod(self.act_shape)) if self.act_shape else 1
+        self.count = int(self.buffer.obs_list.shape[0])
 
     def __getitem__(self, episode_index: int) -> MinariEpisode:
         episode = self.episodes[self._episode_keys[episode_index]]
@@ -61,7 +70,7 @@ class MinariLoader:
                 infos=episode["infos"],
             )
 
-    def _load_data(self, dataset_path: Path) -> tuple[dict[str, dict[str, Any]], dict[str, np.ndarray | dict[str, np.ndarray]]]:
+    def _load_data(self, dataset_path: Path) -> tuple[dict[str, dict[str, Any]], TorchBuffer]:
         print(f"[data] loading: {dataset_path}")
         episodes: dict[str, dict[str, Any]] = {}
         obs_list: list[np.ndarray | dict[str, np.ndarray]] = []
@@ -104,14 +113,15 @@ class MinariLoader:
                     print(f"[data] loaded {i + 1}/{total} episodes")
 
         print("[data] concatenating buffer arrays...")
-        buffer = {
-            "observations": self._concat_obs(obs_list),
-            "next_observations": self._concat_obs(next_obs_list),
-            "actions": np.concatenate(act_list, axis=0),
-            "rewards": np.concatenate(rew_list, axis=0),
-            "terminations": np.concatenate(term_list, axis=0),
-            "truncations": np.concatenate(trunc_list, axis=0),
-        }
+        term = np.concatenate(term_list, axis=0)
+        trunc = np.concatenate(trunc_list, axis=0)
+        buffer = TorchBuffer(
+            obs_list=torch.as_tensor(self._concat_obs(obs_list), dtype=torch.float32, device=self.device),
+            next_obs_list=torch.as_tensor(self._concat_obs(next_obs_list), dtype=torch.float32, device=self.device),
+            act_list=torch.as_tensor(np.concatenate(act_list, axis=0), dtype=torch.float32, device=self.device),
+            rew_list=torch.as_tensor(np.concatenate(rew_list, axis=0), dtype=torch.float32, device=self.device),
+            done_list=torch.as_tensor(np.logical_or(term, trunc), dtype=torch.float32, device=self.device),
+        )
         print("[data] buffer ready")
         return episodes, buffer
 
@@ -147,14 +157,14 @@ class MinariLoader:
             return self._decode_metadata(parsed, path=path, depth=depth + 1)
         return value
 
-    def _read_env_id(self, metadata: dict) -> str | None:
+    def _read_env_id(self, metadata: dict) -> str:
         env_spec = metadata.get("env_spec")
         if isinstance(env_spec, dict):
-            return env_spec.get("id")
+            return env_spec.get("id", "")
         if isinstance(env_spec, str):
             parsed = json.loads(env_spec)
-            return parsed.get("id")
-        return None
+            return parsed.get("id", "")
+        return ""
 
     def _read_node(self, node):
         if isinstance(node, h5py.Dataset):

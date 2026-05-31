@@ -12,9 +12,9 @@ from minigrid.utils.rendering import (
     rotate_fn,
 )
 
-from ice_offline.pipeline.state.minigrid import MinigridStateIO
-from ice_offline.pipeline.state.minigrid import MinigridState
-from ice_offline.pipeline.state.op_dataset import StateDataset
+from ice_offline.data.state.minigrid import MinigridStateIO
+from ice_offline.data.state.minigrid import MinigridState
+from ice_offline.data.state.op_dataset import StateDataset
 
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface

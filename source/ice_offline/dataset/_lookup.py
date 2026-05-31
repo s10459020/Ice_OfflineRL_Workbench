@@ -1,8 +1,8 @@
 ﻿from pathlib import Path
 
 from ice_offline.dataset._spec import BaseDataset
-from ice_offline.pipeline.d4rl.loader import D4rlLoader
-from ice_offline.pipeline.minari.loader import MinariLoader
+from ice_offline.data.d4rl.loader import D4rlLoader
+from ice_offline.data.minari.loader import MinariLoader
 
 
 DATASET_SPECS: dict[str, dict[str, str]] = {

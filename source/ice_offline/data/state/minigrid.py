@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -6,7 +6,7 @@ from minigrid.core.constants import DIR_TO_VEC, OBJECT_TO_IDX
 from minigrid.core.grid import Grid
 from minigrid.core.world_object import WorldObj
 
-from ice_offline.pipeline.state._spec import State, StateIO
+from ice_offline.data.state._spec import State, StateIO
 
 _ACTION_PICKUP = 3
 _ACTION_DROP = 4

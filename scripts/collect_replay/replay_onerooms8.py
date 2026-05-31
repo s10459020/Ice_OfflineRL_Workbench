@@ -3,10 +3,10 @@ import gymnasium as gym
 import minigrid  # noqa: F401
 
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
-from ice_offline.pipeline.state.minigrid import MinigridState, MinigridStateIO
-from ice_offline.pipeline.state.minigrid import MinigridFullobsConverter
-from ice_offline.pipeline.state.op_converter import StateConverter
-from ice_offline.pipeline.state.op_replayer import StateInjectWrapper
+from ice_offline.data.state.minigrid import MinigridState, MinigridStateIO
+from ice_offline.data.state.minigrid import MinigridFullobsConverter
+from ice_offline.data.state.op_converter import StateConverter
+from ice_offline.data.state.op_replayer import StateInjectWrapper
 
 
 DATASET_ID = "minigrid/BabyAI-OneRoomS8/optimal-fullobs-v0"

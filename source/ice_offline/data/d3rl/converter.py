@@ -3,7 +3,7 @@
 import d3rlpy
 import numpy as np
 
-from ice_offline.pipeline.minari.loader import MinariLoader
+from ice_offline.data.minari.loader import MinariLoader
 from ice_offline.tools.paths import minari_root
 
 

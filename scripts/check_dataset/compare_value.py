@@ -4,8 +4,8 @@ import minari
 import numpy as np
 
 from ice_offline.agent.q_table import QTableAgent
-from ice_offline.pipeline.value.loader import ValueLoader
-from ice_offline.pipeline.value.oneroom import ACTIONS, ValueOneRoomCollector, make_value_env
+from ice_offline.data.value.loader import ValueLoader
+from ice_offline.data.value.oneroom import ACTIONS, ValueOneRoomCollector, make_value_env
 from ice_offline.tools.printer import print_stage
 
 

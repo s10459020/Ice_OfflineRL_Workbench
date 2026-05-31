@@ -3,7 +3,7 @@
 import gymnasium as gym
 
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
-from ice_offline.pipeline.minari.loader import MinariLoader
+from ice_offline.data.minari.loader import MinariLoader
 from ice_offline.tools.paths import minari_root
 from .overlay_engine import OverlayEngine
 

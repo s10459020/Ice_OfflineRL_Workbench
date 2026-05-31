@@ -4,7 +4,7 @@ from typing import Type
 import h5py
 import numpy as np
 
-from ice_offline.pipeline.state._spec import State
+from ice_offline.data.state._spec import State
 from ice_offline.tools.paths import minari_root
 
 

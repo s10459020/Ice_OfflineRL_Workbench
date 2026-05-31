@@ -4,8 +4,8 @@ import minigrid  # noqa: F401
 import numpy as np
 
 from ice_offline.agent.q_step import StepQAgent
-from ice_offline.pipeline.value.op_old_collector import OldValueCollector
-from ice_offline.pipeline.value.oneroom import make_value_env
+from ice_offline.data.value.op_old_collector import OldValueCollector
+from ice_offline.data.value.oneroom import make_value_env
 from ice_offline.tools.printer import print_stage
 
 

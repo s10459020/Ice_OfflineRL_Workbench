@@ -1,9 +1,9 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
 
-from ice_offline.pipeline.state._spec import State, StateIO
+from ice_offline.data.state._spec import State, StateIO
 
 
 @dataclass(frozen=True)

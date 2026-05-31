@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.widgets import Slider
 
-from ice_offline.pipeline.value.op_old_loader import OldValueLoader
+from ice_offline.data.value.op_old_loader import OldValueLoader
 
 
 DATASET_ID = "check/visualization-q-step-v0"

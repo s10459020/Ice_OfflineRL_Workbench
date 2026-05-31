@@ -1,11 +1,11 @@
-import csv
+﻿import csv
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import minari
 import numpy as np
 
-from ice_offline.pipeline.d4rl.loader import D4rlLoader
+from ice_offline.data.d4rl.loader import D4rlLoader
 
 
 OUTPUT_ROOT = Path("tmps/data")

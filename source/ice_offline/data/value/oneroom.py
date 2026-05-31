@@ -5,7 +5,7 @@ import minigrid  # noqa: F401
 import numpy as np
 from minigrid.wrappers import FullyObsWrapper
 
-from ice_offline.pipeline.value.collector import EvalFn, ValueCollector
+from ice_offline.data.value.collector import EvalFn, ValueCollector
 from ice_offline.env.common.mission_text_wrapper import MissionTextWrapper
 from ice_offline.env.common.no_jpeg_image_wrapper import NoJpegImageWrapper
 

@@ -7,12 +7,12 @@ import gymnasium as gym
 import numpy as np
 from minigrid.utils.rendering import fill_coords, point_in_rect
 
-from ice_offline.pipeline.value.op_old_collector import (
+from ice_offline.data.value.op_old_collector import (
     MiniGridAction,
     MiniGridDirection,
     OldValueCollector,
 )
-from ice_offline.pipeline.value.op_old_loader import OldValueLoader
+from ice_offline.data.value.op_old_loader import OldValueLoader
 from .overlay_engine import OverlayEngine, RenderLayer
 from .overlay_loader import UnitLoaderInterface
 from .overlay_renderer import UnitRenderer

@@ -5,7 +5,7 @@ from PySide6.QtWidgets import QApplication
 from ice_offline.gui.models.model_replay import ReplayModel
 from ice_offline.gui.viewmodels.viewmodel_replay import ReplayViewModel
 from ice_offline.gui.views.window_replay import MainWindow
-from ice_offline.pipeline.state.hopper import HopperConverter, HopperState, HopperStateIO
+from ice_offline.data.state.hopper import HopperConverter, HopperState, HopperStateIO
 
 
 def main() -> None:
