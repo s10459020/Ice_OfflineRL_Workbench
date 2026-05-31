@@ -1,10 +1,10 @@
-﻿import numpy as np
+﻿﻿import numpy as np
 import torch
 import d3rlpy
 from d3rlpy.models.torch.imitators import compute_discrete_imitation_loss
 from d3rlpy.models.torch.policies import CategoricalPolicy
 from d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.bc_discrete import BCAgentDiscrete
+from ice_offline.agent.discrete.bc_discrete import BCAgentDiscrete
 from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 from _lib import assert_callback

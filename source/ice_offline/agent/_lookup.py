@@ -1,10 +1,10 @@
-﻿from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
-from ice_offline.agent.bc_continuous_stochastic import BCAgentContinuousStochastic
-from ice_offline.agent.bc_discrete import BCAgentDiscrete
+﻿﻿from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+from ice_offline.agent.continuous.bc_continuous_stochastic import BCAgentContinuousStochastic
+from ice_offline.agent.discrete.bc_discrete import BCAgentDiscrete
 from ice_offline.agent.cql_continuous import CQLAgentContinuous
-from ice_offline.agent.cql_discrete import CQLAgentDiscrete
+from ice_offline.agent.discrete.cql_discrete import CQLAgentDiscrete
 from ice_offline.agent.iql_continuous import IQLAgentContinuous
-from ice_offline.agent.iql_discrete import IQLAgentDiscrete
+from ice_offline.agent.discrete.iql_discrete import IQLAgentDiscrete
 from ice_offline.agent._spec import TorchAgent
 
 

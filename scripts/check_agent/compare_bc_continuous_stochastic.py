@@ -1,11 +1,11 @@
-﻿import numpy as np
+﻿﻿import numpy as np
 import torch
 import d3rlpy
 from d3rlpy.models.torch.imitators import compute_stochastic_imitation_loss
 from d3rlpy.models.torch.policies import NormalPolicy
 from d3rlpy.models.torch.policies import build_gaussian_distribution
 from d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.bc_continuous_stochastic import (
+from ice_offline.agent.continuous.bc_continuous_stochastic import (
     BCAgentContinuousStochastic,
 )
 from ice_offline.dataset._spec import TorchBuffer
