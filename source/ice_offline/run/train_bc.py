@@ -23,7 +23,7 @@ EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
 
 SEED = 42
-DEVICE = "cpu"
+DEVICE = "cuda:0"
 BATCH_SIZE = 256
 
 

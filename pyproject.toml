@@ -17,6 +17,7 @@ dependencies = [
     "h5py",
     "matplotlib",
     "PySide6",
+    "scipy",
 ]
 
 [tool.setuptools]

@@ -32,11 +32,11 @@ class _Pi(torch.nn.Module):
 
 @dataclass
 class BCAgentContinuousDeterministic(TorchAgent):
-    device: str = "cpu"
     obs_size: int
     act_size: int
     learning_rate = 1e-3
     expl_noise_std = 0.1
+    device: str = "cpu"
 
     # ====================
     # Init
