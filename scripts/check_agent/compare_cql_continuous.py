@@ -2,14 +2,14 @@
 import torch
 import torch.nn.functional as F
 
-import d3rlpy
-from d3rlpy.torch_utility import TorchMiniBatch
-from d3rlpy.models.torch import build_squashed_gaussian_distribution, get_parameter
+from _lib import assert_callback
+from d3rlpy_master.d3rlpy import algos
+from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
+from d3rlpy_master.d3rlpy.models.torch import build_squashed_gaussian_distribution, get_parameter
 
 from ice_offline.agent.cql_continuous import CQLAgentContinuous
 from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
-from _lib import assert_callback
 
 # ====================
 # Config
@@ -76,7 +76,7 @@ def build_our_agent() -> CQLAgentContinuous:
     return CQLAgentContinuous(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_d3rl():
-    config = d3rlpy.algos.CQLConfig()
+    config = algos.CQLConfig()
     ref = config.create(device=DEVICE)
     ref.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert ref.impl is not None

@@ -1,15 +1,15 @@
 ﻿import numpy as np
 import torch
-import d3rlpy
-from d3rlpy.models.torch.imitators import compute_deterministic_imitation_loss
-from d3rlpy.models.torch.policies import DeterministicPolicy
-from d3rlpy.torch_utility import TorchMiniBatch
+from _lib import assert_callback
+from d3rlpy_master.d3rlpy import algos
+from d3rlpy_master.d3rlpy.models.torch.imitators import compute_deterministic_imitation_loss
+from d3rlpy_master.d3rlpy.models.torch.policies import DeterministicPolicy
+from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
 from ice_offline.agent.bc_continuous_deterministic import (
     BCAgentContinuousDeterministic,
 )
 from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
-from _lib import assert_callback
 # ====================
 # Config
 # ====================
@@ -41,7 +41,7 @@ def build_our_agent() -> BCAgentContinuousDeterministic:
     return BCAgentContinuousDeterministic(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_d3rl():
-    config = d3rlpy.algos.BCConfig()
+    config = algos.BCConfig()
     algo = config.create(device=DEVICE)
     algo.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert algo.impl is not None
