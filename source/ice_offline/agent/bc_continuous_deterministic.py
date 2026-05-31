@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 
 class _Pi(torch.nn.Module):
@@ -72,14 +73,8 @@ class BCAgentContinuousDeterministic(TorchAgent):
                 a = (a + torch.randn_like(a) * self.expl_noise_std).clamp(-1.0, 1.0)
         return a.cpu().numpy()
 
-    def update(self, batch):
-        observation = batch["obs"]
-        action = batch["act"]
-
-        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(action, dtype=torch.float32, device=self.device)
-
-        loss = self.loss_actor(o, a)
+    def update(self, batch: TorchBuffer):
+        loss = self.loss_actor(batch.obs_list, batch.act_list)
 
         self.optimizer.zero_grad()
         loss.backward()

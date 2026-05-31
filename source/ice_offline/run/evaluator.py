@@ -3,12 +3,12 @@ from typing import Callable
 
 import torch
 
+from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.paths import eval_root
 
 
-TransitionBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
-OfflineEvalFn = Callable[[object, TransitionBatch], dict[str, float]]
-OnlineEvalFn = Callable[[TransitionBatch], dict[str, float]]
+OfflineEvalFn = Callable[[object, TorchBuffer], dict[str, float]]
+OnlineEvalFn = Callable[[TorchBuffer], dict[str, float]]
 
 
 class Evaluator:
@@ -54,13 +54,7 @@ class Evaluator:
         with torch.no_grad():
             for _ in range(self.eval_offline_n):
                 batch = batch_loader.sample_batch(batch_size)
-                obs = torch.as_tensor(batch["obs"], device=agent.device)
-                act = torch.as_tensor(batch["act"], device=agent.device)
-                rew = torch.as_tensor(batch["rew"], device=agent.device).view(-1, 1)
-                next_obs = torch.as_tensor(batch["next_obs"], device=agent.device)
-                done = torch.as_tensor(batch["done"], device=agent.device).view(-1, 1)
-                transitions: TransitionBatch = (obs, act, rew, next_obs, done)
-                values = eval_offline_fn(agent, transitions)
+                values = eval_offline_fn(agent, batch)
                 for key, value in values.items():
                     bucket.setdefault(key, []).append(float(value))
         return bucket
@@ -94,12 +88,12 @@ class Evaluator:
                 done_list.append(torch.as_tensor(done, device=agent.device))
                 obs = next_obs
 
-            episode_batch: TransitionBatch = (
-                torch.stack(obs_list, dim=0),
-                torch.stack(act_list, dim=0),
-                torch.stack(rew_list, dim=0).view(-1, 1),
-                torch.stack(next_obs_list, dim=0),
-                torch.stack(done_list, dim=0).view(-1, 1),
+            episode_batch = TorchBuffer(
+                obs_list=torch.stack(obs_list, dim=0),
+                act_list=torch.stack(act_list, dim=0),
+                rew_list=torch.stack(rew_list, dim=0),
+                next_obs_list=torch.stack(next_obs_list, dim=0),
+                done_list=torch.stack(done_list, dim=0),
             )
             values = eval_online_fn(episode_batch)
             for key, value in values.items():
@@ -162,4 +156,3 @@ class Evaluator:
             values = self.last_evals[key]
             parts.append(f"{key}={sum(values) / len(values):.6g}")
         print(f"eval step={step}", *parts)
-

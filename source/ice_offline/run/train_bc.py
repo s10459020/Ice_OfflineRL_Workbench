@@ -4,8 +4,8 @@ import numpy as np
 import torch
 
 from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
-from ice_offline.dataset._lookup import get_dataset
-from ice_offline.dataset._spec import BaseDataset
+from ice_offline.dataset._spec import Dataset, TorchBuffer
+from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
 from ice_offline.data.state.hopper import HopperState, HopperStateIO
 from ice_offline.data.state.op_collector import StateCollectWrapper
@@ -14,7 +14,7 @@ from ice_offline.run.evaluator import Evaluator
 from ice_offline.tools.printer import print_stage
 
 
-DATASET_KEY = "hopper_simple"
+DATASET_CLASS = HopperSimpleDataset
 
 STEPS = 200_000
 SAVE_INTERVAL = 20_000
@@ -27,21 +27,17 @@ DEVICE = "cuda:0"
 BATCH_SIZE = 256
 
 
-def eval_loss_pi(agent: BCAgentContinuousDeterministic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    o, a, _, _, _ = episode_batch
-    o = o.to(agent.device)
-    a = a.to(agent.device)
+def eval_loss_pi(agent: BCAgentContinuousDeterministic, batch: TorchBuffer) -> dict[str, float]:
     with torch.no_grad():
-        return {"loss_actor": float(agent.loss_actor(o, a).item())}
+        return {"loss_actor": float(agent.loss_actor(batch.obs_list, batch.act_list).item())}
 
 
-def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, r, _, _ = episode_batch
-    return {"return": float(r.sum().item())}
+def eval_return(batch: TorchBuffer) -> dict[str, float]:
+    return {"return": float(batch.rew_list.sum().item())}
 
 
 def train(
-    dataset: BaseDataset,
+    dataset: Dataset,
     *,
     steps: int = STEPS,
     task_id: str = None,
@@ -58,7 +54,7 @@ def train(
     torch.manual_seed(seed)
 
     task_id = task_id or f"{dataset.env_id}_bc-v0"
-    eval_env = eval_env or dataset.make_collect_env()
+    eval_env = eval_env or dataset.make_eval_env()
     dataset.set_seed(seed)
 
     print_stage("Train BC")
@@ -88,7 +84,7 @@ def train(
 
 
 def collect(
-    dataset: BaseDataset,
+    dataset: Dataset,
     *,
     steps: int = STEPS,
     task_id: str = None,
@@ -100,7 +96,7 @@ def collect(
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
     task_id = task_id or f"{dataset.env_id}_bc-v0"
-    env = dataset.make_collect_env()
+    env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
@@ -125,7 +121,7 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = get_dataset(DATASET_KEY)
+    dataset = DATASET_CLASS(device=DEVICE).load()
     minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
