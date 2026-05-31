@@ -1,3 +1,5 @@
+# Project dependence files
+.venv
 
 # Project outputs
 /tmps/
