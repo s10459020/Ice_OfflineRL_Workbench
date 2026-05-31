@@ -7,6 +7,7 @@ from scipy.stats import qmc
 # Dummy library
 sys.modules["d4rl"] = types.ModuleType("d4rl")
 from ice_offline.agent.aspl import AsplAgent
+from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 import _lib
 from _lib import assert_callback, assert_list
@@ -238,8 +239,13 @@ def _ref_update_and_collect_params(
 # ====================
 
 def _our_update_and_collect_params(
-    batch: dict[str, torch.Tensor],
+    s: torch.Tensor,
+    a: torch.Tensor,
+    sn: torch.Tensor,
+    r: torch.Tensor,
+    d: torch.Tensor,
 ) -> list[torch.Tensor]:
+    batch = TorchBuffer(obs_list=s, next_obs_list=sn, act_list=a, rew_list=r, done_list=d)
     _ = OUR.update(batch)
     return [y for _, y in _all_pairs(REF, OUR)]
 
@@ -334,7 +340,7 @@ def compare_param(ref: ASPLPolicy, our: AsplAgent) -> None:
         s, a, sn, r, d = _sample_transition(BATCH_SIZE, torch.device("cpu"))
         assert_callback(
             lambda: _ref_update_and_collect_params(s, a, sn, r, d),
-            lambda: _our_update_and_collect_params({"obs": s, "act": a, "rew": r, "next_obs": sn, "done": d}),
+            lambda: _our_update_and_collect_params(s, a, sn, r, d),
             label=f"update[{i}]",
             seed=SEED + 3000 + i,
         )

@@ -7,6 +7,7 @@ from d3rlpy.torch_utility import TorchMiniBatch
 from ice_offline.agent.bc_continuous_deterministic import (
     BCAgentContinuousDeterministic,
 )
+from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 from _lib import assert_callback
 # ====================
@@ -70,6 +71,16 @@ def _torch_batch(obs_t: torch.Tensor, act_t: torch.Tensor) -> TorchMiniBatch:
         intervals=ones,
         device=DEVICE,
     )
+
+def _torch_buffer(obs_t: torch.Tensor, act_t: torch.Tensor) -> TorchBuffer:
+    zeros = torch.zeros((obs_t.shape[0], 1), dtype=torch.float32, device=DEVICE)
+    return TorchBuffer(
+        obs_list=obs_t,
+        next_obs_list=obs_t,
+        act_list=act_t,
+        rew_list=zeros,
+        done_list=zeros,
+    )
 # ====================
 # Ref Math
 # ====================
@@ -112,7 +123,7 @@ def _our_update_and_collect_params(
     act_t: torch.Tensor,
     d3_policy: DeterministicPolicy,
 ):
-    our_agent.update({"obs": obs_t, "act": act_t})
+    our_agent.update(_torch_buffer(obs_t, act_t))
     return [y for y, _ in _all_pairs(our_agent, d3_policy)]
 # ====================
 # Compare

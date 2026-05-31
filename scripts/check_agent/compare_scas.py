@@ -6,6 +6,7 @@ from SCAS_main import SCAS as ref_scas
 from SCAS_main import model as ref_model
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
+from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 from _lib import assert_callback
 # ====================
@@ -245,7 +246,7 @@ def _ref_update_and_collect_params(
 def _our_update_and_collect_params(
     s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: torch.Tensor, d: torch.Tensor
 ) -> list[torch.Tensor]:
-    OUR.update({"obs": s, "act": a, "rew": r, "next_obs": sn, "done": d})
+    OUR.update(TorchBuffer(obs_list=s, next_obs_list=sn, act_list=a, rew_list=r, done_list=d))
     return [our_param.detach().cpu().clone() for our_param, _ in _all_pairs(REF, OUR, REF_DYNAMICS, OUR_DYNAMICS)]
 
 def compare_act() -> None:

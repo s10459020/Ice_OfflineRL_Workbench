@@ -3,6 +3,7 @@ import torch
 import d3rlpy
 from d3rlpy.torch_utility import TorchMiniBatch
 from ice_offline.agent.cql_discrete import CQLAgentDiscrete
+from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 from _lib import assert_callback
 # ====================
@@ -84,6 +85,21 @@ def _torch_batch(
         intervals=ones,
         device=DEVICE,
     )
+
+def _torch_buffer(
+    obs_t: torch.Tensor,
+    act_t: torch.Tensor,
+    rew_t: torch.Tensor,
+    next_obs_t: torch.Tensor,
+    done_t: torch.Tensor,
+) -> TorchBuffer:
+    return TorchBuffer(
+        obs_list=obs_t,
+        next_obs_list=next_obs_t,
+        act_list=act_t,
+        rew_list=rew_t,
+        done_list=done_t,
+    )
 # ====================
 # Ref Math
 # ====================
@@ -124,15 +140,7 @@ def _our_update_and_collect_params(
     done_t: torch.Tensor,
     d3rl,
 ):
-    our_agent.update(
-        {
-            "obs": obs_t,
-            "act": act_t,
-            "rew": rew_t,
-            "next_obs": next_obs_t,
-            "done": done_t,
-        }
-    )
+    our_agent.update(_torch_buffer(obs_t, act_t, rew_t, next_obs_t, done_t))
     return [y for y, _ in _all_pairs(our_agent, d3rl)]
 # ====================
 # Compare
