@@ -1,24 +1,33 @@
 ﻿from dataclasses import dataclass
 
-import importlib.util
 import math
-from pathlib import Path
 
 import numpy as np
 import torch
 import torch.nn.functional as F
+from torch.distributions import Normal
 from ice_offline.agent._spec import TorchAgent
 from ice_offline.dataset._spec import TorchBuffer
 
-def _load_squashed_gaussian_distribution():
-    repo_root = Path(__file__).resolve().parents[3]
-    module_path = repo_root / ".venv" / "Lib" / "site-packages" / "d3rlpy" / "models" / "torch" / "distributions.py"
-    spec = importlib.util.spec_from_file_location("ice_offline_d3rlpy_distributions", module_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module.SquashedGaussianDistribution
+class _SquashedGaussianDistribution:
+    def __init__(self, loc: torch.Tensor, std: torch.Tensor):
+        self._mean = loc
+        self._std = std
+        self._dist = Normal(self._mean, self._std)
 
-_SquashedGaussianDistribution = _load_squashed_gaussian_distribution()
+    def sample_with_log_prob(self) -> tuple[torch.Tensor, torch.Tensor]:
+        raw_y = self._dist.rsample()
+        log_prob = self._log_prob_from_raw_y(raw_y)
+        return torch.tanh(raw_y), log_prob
+
+    def sample_n_with_log_prob(self, n: int) -> tuple[torch.Tensor, torch.Tensor]:
+        raw_y = self._dist.rsample((n,))
+        log_prob = self._log_prob_from_raw_y(raw_y)
+        return torch.tanh(raw_y).transpose(0, 1), log_prob.transpose(0, 1)
+
+    def _log_prob_from_raw_y(self, raw_y: torch.Tensor) -> torch.Tensor:
+        jacob = 2 * (math.log(2) - raw_y - F.softplus(-2 * raw_y))
+        return (self._dist.log_prob(raw_y) - jacob).sum(dim=-1, keepdims=True)
 
 class _Adam:
     def __init__(self, lr: float):
