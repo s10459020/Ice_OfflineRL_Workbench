@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from ._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 class _Adam:
     def __init__(self, lr: float):
@@ -55,8 +56,8 @@ class CQLAgentDiscrete(TorchAgent):
     # ====================
     # Init
     # ====================
-    def __init__(self, obs_size: int, act_size: int, learning_rate: float = 6.25e-5, gamma: float = 0.99, alpha: float = 1.0, target_update_interval: int = 8000):
-        self.device = "cpu"
+    def __init__(self, obs_size: int, act_size: int, learning_rate: float = 6.25e-5, gamma: float = 0.99, alpha: float = 1.0, target_update_interval: int = 8000, device: str = "cpu"):
+        self.device = device
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.alpha = alpha
@@ -91,19 +92,13 @@ class CQLAgentDiscrete(TorchAgent):
                 a = torch.where(replace_mask, rand_a, a)
         return a.cpu().numpy()
 
-    def update(self, batch):
+    def update(self, batch: TorchBuffer):
         self._grad_step += 1
-        observation = batch["obs"]
-        action = batch["act"]
-        reward = batch["rew"]
-        next_observation = batch["next_obs"]
-        done = batch["done"]
-
-        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(action, dtype=torch.long, device=self.device).view(-1)
-        r = torch.as_tensor(reward, dtype=torch.float32, device=self.device).view(-1, 1)
-        on = torch.as_tensor(next_observation, dtype=torch.float32, device=self.device)
-        d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
+        o = batch.obs_list
+        a = batch.act_list.long().view(-1)
+        r = batch.rew_list.view(-1, 1)
+        on = batch.next_obs_list
+        d = batch.done_list.view(-1, 1)
 
         loss = self.loss_critic(o, a, r, on, d)
         self.optim.zero_grad()

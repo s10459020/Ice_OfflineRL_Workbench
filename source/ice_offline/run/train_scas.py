@@ -5,8 +5,8 @@ import torch
 
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
-from ice_offline.dataset._lookup import get_dataset
-from ice_offline.dataset._spec import BaseDataset
+from ice_offline.dataset._spec import Dataset, TorchBuffer
+from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
 from ice_offline.data.state.hopper import HopperState
 from ice_offline.data.state.hopper import HopperStateIO
@@ -16,7 +16,6 @@ from ice_offline.run.evaluator import Evaluator
 from ice_offline.tools.printer import print_stage
 
 
-DATASET_KEY = "hopper_simple"
 BATCH_SIZE = 256
 DYNAMICS_STEPS = 100_000
 AGENT_STEPS = 200_000
@@ -25,16 +24,23 @@ EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
 SAVE_INTERVAL = 20_000
 SEED = 42
+DEVICE = "cuda:0"
 
 
-def eval_loss_dynamic(dynamics: ScasDynamic, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    s, a, _, sn, _ = episode_batch
+def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, float]:
+    s = batch.obs_list
+    a = batch.act_list
+    sn = batch.next_obs_list
     with torch.no_grad():
         return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
 
 
-def eval_loss_agent(agent: ScasAgent, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    s, a, r, sn, d = episode_batch
+def eval_loss_agent(agent: ScasAgent, batch: TorchBuffer) -> dict[str, float]:
+    s = batch.obs_list
+    a = batch.act_list
+    r = batch.rew_list.view(-1, 1)
+    sn = batch.next_obs_list
+    d = batch.done_list.view(-1, 1)
     with torch.no_grad():
         loss_td3 = agent.loss_td3(s)
         loss_correction = agent.loss_correction(s, sn)
@@ -48,13 +54,12 @@ def eval_loss_agent(agent: ScasAgent, episode_batch: tuple[torch.Tensor, torch.T
         }
 
 
-def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, r, _, _ = episode_batch
-    return {"return": float(r.sum().item())}
+def eval_return(batch: TorchBuffer) -> dict[str, float]:
+    return {"return": float(batch.rew_list.sum().item())}
 
 
 def train(
-    dataset: BaseDataset,
+    dataset: Dataset,
     *,
     dynamics_steps: int = DYNAMICS_STEPS,
     agent_steps: int = AGENT_STEPS,
@@ -66,18 +71,20 @@ def train(
     eval_env: gym.Env | None = None,
     save_interval: int = SAVE_INTERVAL,
     seed: int = SEED,
+    device: str = DEVICE,
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     task_id = task_id or f"{dataset.env_id}_scas-v0"
-    eval_env = eval_env or dataset.make_collect_env()
+    eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
     print_stage("Train SCAS Dynamics")
     dynamics = ScasDynamic(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
+        device=device,
     )
     dynamics_evaluator = Evaluator(
         runner_id=task_id,
@@ -100,6 +107,7 @@ def train(
         act_dim=dataset.act_dim,
         dynamics=dynamics,
         max_action=1.0,
+        device=device,
     )
     agent_evaluator = Evaluator(
         runner_id=task_id,
@@ -121,7 +129,7 @@ def train(
 
 
 def collect(
-    dataset: BaseDataset,
+    dataset: Dataset,
     *,
     dynamics_steps: int = DYNAMICS_STEPS,
     agent_steps: int = AGENT_STEPS,
@@ -131,9 +139,10 @@ def collect(
     eval_offline_n: int = EVAL_OFFLINE_N,
     eval_online_n: int = EVAL_ONLINE_N,
     save_interval: int = SAVE_INTERVAL,
+    device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
     task_id = task_id or f"{dataset.env_id}_scas-v0"
-    env = dataset.make_collect_env()
+    env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
@@ -148,6 +157,7 @@ def collect(
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
         save_interval=save_interval,
+        device=device,
     )
 
     minari_data = minari_col.save(f"train/{task_id}")
@@ -158,7 +168,7 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = get_dataset(DATASET_KEY)
+    dataset = HopperSimpleDataset(device=DEVICE).load()
     minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")

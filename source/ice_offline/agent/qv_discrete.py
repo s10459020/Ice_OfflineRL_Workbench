@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from ._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 class _Adam:
     def __init__(self, lr: float):
@@ -75,8 +76,9 @@ class QVAgentDiscrete(TorchAgent):
         learning_rate: float = 6.25e-5,
         gamma: float = 0.99,
         target_update_interval: int = 1000,
+        device: str = "cpu",
     ):
-        self.device = "cpu"
+        self.device = device
         self.learning_rate = learning_rate
         self.gamma = gamma
         self.target_update_interval = target_update_interval
@@ -117,13 +119,13 @@ class QVAgentDiscrete(TorchAgent):
                 a = q.argmax(dim=1).long()
         return int(a.cpu().numpy()[0])
 
-    def update(self, batch):
+    def update(self, batch: TorchBuffer):
         self._grad_step += 1
-        o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(batch["act"], dtype=torch.long, device=self.device).view(-1)
-        r = torch.as_tensor(batch["rew"], dtype=torch.float32, device=self.device).view(-1, 1)
-        on = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=self.device)
-        d = torch.as_tensor(batch["done"], dtype=torch.float32, device=self.device).view(-1, 1)
+        o = batch.obs_list
+        a = batch.act_list.long().view(-1)
+        r = batch.rew_list.view(-1, 1)
+        on = batch.next_obs_list
+        d = batch.done_list.view(-1, 1)
 
         loss = self.loss_critic(o, a, r, on, d)
         self.optim.zero_grad()

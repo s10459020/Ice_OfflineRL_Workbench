@@ -5,6 +5,7 @@ import numpy as np
 import torch.nn.functional as F
 
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 class _M(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -186,10 +187,10 @@ class ScasDynamic(TorchAgent):
             p.requires_grad = False
         return self.model
     
-    def update(self, batch):
-        s = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
-        sn = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=self.device)
+    def update(self, batch: TorchBuffer):
+        s = batch.obs_list
+        a = batch.act_list
+        sn = batch.next_obs_list
 
         self.optimizer.zero_grad()
         loss = self.loss_dynamic(s, a, sn)
@@ -256,12 +257,12 @@ class ScasAgent(TorchAgent):
             a = self.actor.pi_act(s)
         return a.cpu().numpy()
 
-    def update(self, batch):
-        s = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
-        r = torch.as_tensor(batch["rew"], dtype=torch.float32, device=self.device).view(-1, 1)
-        d = torch.as_tensor(batch["done"], dtype=torch.float32, device=self.device).view(-1, 1)
-        sn = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=self.device)
+    def update(self, batch: TorchBuffer):
+        s = batch.obs_list
+        a = batch.act_list
+        r = batch.rew_list.view(-1, 1)
+        d = batch.done_list.view(-1, 1)
+        sn = batch.next_obs_list
       
         # update every cycle
         self.critic_optimizer.zero_grad()

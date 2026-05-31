@@ -4,8 +4,8 @@ import numpy as np
 import torch
 
 from ice_offline.agent.cql_continuous import CQLAgentContinuous
-from ice_offline.dataset._lookup import get_dataset
-from ice_offline.dataset._spec import BaseDataset
+from ice_offline.dataset._spec import Dataset, TorchBuffer
+from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
 from ice_offline.data.state.hopper import HopperState
 from ice_offline.data.state.hopper import HopperStateIO
@@ -15,7 +15,6 @@ from ice_offline.run.evaluator import Evaluator
 from ice_offline.tools.printer import print_stage
 
 
-DATASET_KEY = "hopper_simple"
 BATCH_SIZE = 256
 STEPS = 200_000
 EVAL_INTERVAL = 2_000
@@ -23,10 +22,15 @@ EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
 SAVE_INTERVAL = 20_000
 SEED = 42
+DEVICE = "cuda:0"
 
 
-def eval_loss(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    o, a, r, on, d = episode_batch
+def eval_loss(agent: CQLAgentContinuous, batch: TorchBuffer) -> dict[str, float]:
+    o = batch.obs_list
+    a = batch.act_list
+    r = batch.rew_list.view(-1, 1)
+    on = batch.next_obs_list
+    d = batch.done_list.view(-1, 1)
     with torch.no_grad():
         loss_td_parts = agent.loss_td(o, a, r, on, d)
         loss_cql_parts = agent.loss_conservative(o, a, on)
@@ -40,13 +44,12 @@ def eval_loss(agent: CQLAgentContinuous, episode_batch: tuple[torch.Tensor, torc
         }
 
 
-def eval_return(episode_batch: tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]) -> dict[str, float]:
-    _, _, r, _, _ = episode_batch
-    return {"return": float(r.sum().item())}
+def eval_return(batch: TorchBuffer) -> dict[str, float]:
+    return {"return": float(batch.rew_list.sum().item())}
 
 
 def train(
-    dataset: BaseDataset,
+    dataset: Dataset,
     *,
     steps: int = STEPS,
     task_id: str = None,
@@ -57,18 +60,20 @@ def train(
     eval_env: gym.Env | None = None,
     save_interval: int = SAVE_INTERVAL,
     seed: int = SEED,
+    device: str = DEVICE,
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
 
     task_id = task_id or f"{dataset.env_id}_cql-v0"
-    eval_env = eval_env or dataset.make_collect_env()
+    eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
     print_stage("Train CQL")
     agent = CQLAgentContinuous(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
+        device=device,
     )
 
     evaluator = Evaluator(
@@ -91,7 +96,7 @@ def train(
 
 
 def collect(
-    dataset: BaseDataset,
+    dataset: Dataset,
     *,
     steps: int = STEPS,
     task_id: str = None,
@@ -100,9 +105,10 @@ def collect(
     eval_offline_n: int = EVAL_OFFLINE_N,
     eval_online_n: int = EVAL_ONLINE_N,
     save_interval: int = SAVE_INTERVAL,
+    device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
     task_id = task_id or f"{dataset.env_id}_cql-v0"
-    env = dataset.make_collect_env()
+    env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
@@ -116,6 +122,7 @@ def collect(
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
         save_interval=save_interval,
+        device=device,
     )
 
     minari_data = minari_col.save(f"train/{task_id}")
@@ -126,7 +133,7 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = get_dataset(DATASET_KEY)
+    dataset = HopperSimpleDataset(device=DEVICE).load()
     minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")

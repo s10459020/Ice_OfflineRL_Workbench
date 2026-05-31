@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from scipy.stats import qmc
 
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 
 
@@ -227,12 +228,12 @@ class AsplAgent(TorchAgent):
     def set_seed(self, seed: int) -> None:
         self._lhs_sampler = qmc.LatinHypercube(d=self.act_dim, seed=seed)
 
-    def update(self, batch):
-        s = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(batch["act"], dtype=torch.float32, device=self.device)
-        r = torch.as_tensor(batch["rew"], dtype=torch.float32, device=self.device).view(-1, 1)
-        d = torch.as_tensor(batch["done"], dtype=torch.float32, device=self.device).view(-1, 1)
-        sn = torch.as_tensor(batch["next_obs"], dtype=torch.float32, device=self.device)
+    def update(self, batch: TorchBuffer):
+        s = batch.obs_list
+        a = batch.act_list
+        r = batch.rew_list.view(-1, 1)
+        d = batch.done_list.view(-1, 1)
+        sn = batch.next_obs_list
       
         self.update_step += 1
 

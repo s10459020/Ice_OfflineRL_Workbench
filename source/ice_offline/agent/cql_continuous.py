@@ -8,6 +8,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 def _load_squashed_gaussian_distribution():
     repo_root = Path(__file__).resolve().parents[3]
@@ -184,8 +185,7 @@ class CQLAgentContinuous(TorchAgent):
     n_action_samples: int = 10
     device: str = "cpu"
 
-    def __init__(self):
-        self.device = "cpu"
+    def __post_init__(self):
         self.policy = None
         self.critic = None
         self.actor_optim = None
@@ -237,18 +237,12 @@ class CQLAgentContinuous(TorchAgent):
                 a, _ = self.policy.sample(o)
         return a.cpu().numpy()
     
-    def update(self, batch):
-        observation = batch["obs"]
-        action = batch["act"]
-        reward = batch["rew"]
-        next_observation = batch["next_obs"]
-        done = batch["done"]
-
-        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(action, dtype=torch.float32, device=self.device)
-        r = torch.as_tensor(reward, dtype=torch.float32, device=self.device).view(-1, 1)
-        on = torch.as_tensor(next_observation, dtype=torch.float32, device=self.device)
-        d = torch.as_tensor(done, dtype=torch.float32, device=self.device).view(-1, 1)
+    def update(self, batch: TorchBuffer):
+        o = batch.obs_list
+        a = batch.act_list
+        r = batch.rew_list.view(-1, 1)
+        on = batch.next_obs_list
+        d = batch.done_list.view(-1, 1)
 
         critic_loss = self.loss_critic(o, a, r, on, d, update_alpha=True)
         self.critic_optim.zero_grad()

@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Normal
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -40,8 +41,8 @@ class _Pi(torch.nn.Module):
         return a_mean, logstd
 
 class BCAgentContinuousStochastic(TorchAgent):
-    def __init__(self, obs_size: int, act_size: int):
-        self.device = "cpu"
+    def __init__(self, obs_size: int, act_size: int, device: str = "cpu"):
+        self.device = device
         self.learning_rate = 1e-3
         self.policy = _Pi(obs_size, act_size).to(self.device)
         self.optimizer = torch.optim.Adam(
@@ -66,13 +67,9 @@ class BCAgentContinuousStochastic(TorchAgent):
             a = self.policy.mode(o) if greedy else self.policy.sample(o)
         return a.cpu().numpy()
 
-    def update(self, batch):
-        observation = batch["obs"]
-        action = batch["act"]
-
-        o = torch.as_tensor(observation, dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(action, dtype=torch.float32, device=self.device)
-
+    def update(self, batch: TorchBuffer):
+        o = batch.obs_list
+        a = batch.act_list
         loss = self._loss(o, a)
         self.optimizer.zero_grad()
         loss.backward()

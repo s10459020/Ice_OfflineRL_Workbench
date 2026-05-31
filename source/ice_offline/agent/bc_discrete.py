@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.dataset._spec import TorchBuffer
 
 
 class _Pi(torch.nn.Module):
@@ -26,8 +27,8 @@ class _Pi(torch.nn.Module):
 
 
 class BCAgentDiscrete(TorchAgent):
-    def __init__(self, obs_size: int, act_size: int, beta: float = 0.5):
-        self.device = "cpu"
+    def __init__(self, obs_size: int, act_size: int, beta: float = 0.5, device: str = "cpu"):
+        self.device = device
         self.learning_rate = 1e-3
         self.beta = beta
         self.policy = _Pi(obs_size, act_size).to(self.device)
@@ -61,9 +62,9 @@ class BCAgentDiscrete(TorchAgent):
                 a = torch.where(replace_mask, rand_a, a)
         return a.cpu().numpy()
 
-    def update(self, batch):
-        o = torch.as_tensor(batch["obs"], dtype=torch.float32, device=self.device)
-        a = torch.as_tensor(batch["act"], dtype=torch.long, device=self.device).view(-1)
+    def update(self, batch: TorchBuffer):
+        o = batch.obs_list
+        a = batch.act_list.long().view(-1)
         loss = self.loss_actor(o, a)
         self.optimizer.zero_grad()
         loss.backward()
