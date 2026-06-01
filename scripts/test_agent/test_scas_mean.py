@@ -1,9 +1,9 @@
-﻿import numpy as np
+import numpy as np
 import torch
 import gymnasium as gym
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.scas_min import ScasAgentMin, ScasDynamic
+from ice_offline.agent.scas_mean import ScasAgentMean, ScasDynamic
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.printer import print_stage
@@ -31,17 +31,17 @@ def test(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_scas-v0"
+    task_id = task_id or f"{dataset.env_id}_scas_mean-v0"
     eval_env = eval_env or dataset.make_env()
 
-    print_stage("Test SCAS")
+    print_stage("Test SCAS Mean")
     dynamics = ScasDynamic(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
     )
     dynamics.load(model_ref(f"{task_id}/dynamics", DYNAMICS_MODEL_STEP))
 
-    agent = ScasAgentMin(
+    agent = ScasAgentMean(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
         dynamics=dynamics,
@@ -56,7 +56,7 @@ def test(
             a = agent.act(o)
             o, r, terminated, truncated, _ = eval_env.step(a)
             rewards.append(r)
-            
+
             if terminated or truncated:
                 break
         total_reward = sum(rewards)
@@ -76,7 +76,7 @@ def collect(
     seed: int = SEED,
     print_interval: int = 0,
 ):
-    task_id = task_id or f"{dataset.env_id}_scas-v0"
+    task_id = task_id or f"{dataset.env_id}_scas_mean-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -101,7 +101,7 @@ if __name__ == "__main__":
     dataset = HopperSimpleDataset().load()
     returns, minari_data, state_data = collect(
         dataset=dataset,
-        task_id=f"{dataset.id}_scas-v0",
+        task_id=f"{dataset.id}_scas_mean-v0",
         episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,

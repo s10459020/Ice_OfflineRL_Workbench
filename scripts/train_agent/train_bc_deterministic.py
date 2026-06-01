@@ -53,11 +53,11 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_bc-v0"
+    task_id = task_id or f"{dataset.env_id}_bc_deterministic-v0"
     eval_env = eval_env or dataset.make_eval_env()
     dataset.set_seed(seed)
 
-    print_stage("Train BC")
+    print_stage("Train BC Deterministic")
     agent = BCAgentDeterministic(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
@@ -95,7 +95,7 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.env_id}_bc-v0"
+    task_id = task_id or f"{dataset.env_id}_bc_deterministic-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)

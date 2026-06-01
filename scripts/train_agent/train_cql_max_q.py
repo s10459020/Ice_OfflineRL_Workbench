@@ -1,10 +1,9 @@
-﻿import gymnasium as gym
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.scas_min import ScasAgentMin
-from ice_offline.agent.scas_min import ScasDynamic
+from ice_offline.agent.cql_max_q import CQLAgentMaxQ
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -17,8 +16,7 @@ from ice_offline.tools.printer import print_stage
 
 
 BATCH_SIZE = 256
-DYNAMICS_STEPS = 100_000
-AGENT_STEPS = 200_000
+STEPS = 200_000
 EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
@@ -27,30 +25,22 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, float]:
-    s = batch.obs_list
-    a = batch.act_list
-    sn = batch.next_obs_list
-    with torch.no_grad():
-        return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
-
-
-def eval_loss_agent(agent: ScasAgentMin, batch: TorchBuffer) -> dict[str, float]:
-    s = batch.obs_list
+def eval_loss(agent: CQLAgentMaxQ, batch: TorchBuffer) -> dict[str, float]:
+    o = batch.obs_list
     a = batch.act_list
     r = batch.rew_list.view(-1, 1)
-    sn = batch.next_obs_list
+    on = batch.next_obs_list
     d = batch.done_list.view(-1, 1)
     with torch.no_grad():
-        loss_td3 = agent.loss_td3(s)
-        loss_correction = agent.loss_correction(s, sn)
-        loss_critic = agent.loss_critic(s, a, r, sn, d)
-        loss_actor = agent.loss_actor(s, sn)
+        loss_td_parts = agent.loss_td(o, a, r, on, d)
+        loss_cql_parts = agent.loss_conservative(o, a, on)
+        loss_critic = agent.loss_critic(o, a, r, on, d, update_alpha=False)
+        loss_actor = agent.loss_actor(o, update_alpha=False)
         return {
-            "loss_td3": float(loss_td3.item()),
-            "loss_correction": float(loss_correction.item()),
-            "loss_critic": float(loss_critic.item()),
+            "loss_q_td": float(loss_td_parts.sum().item()),
+            "loss_q_cql": float(loss_cql_parts.sum().item()),
             "loss_actor": float(loss_actor.item()),
+            "loss_critic": float(loss_critic.item()),
         }
 
 
@@ -61,8 +51,7 @@ def eval_return(batch: TorchBuffer) -> dict[str, float]:
 def train(
     dataset: Dataset,
     *,
-    dynamics_steps: int = DYNAMICS_STEPS,
-    agent_steps: int = AGENT_STEPS,
+    steps: int = STEPS,
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -76,63 +65,40 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_scas-v0"
+    task_id = task_id or f"{dataset.env_id}_cql_max_q-v0"
     eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
-    print_stage("Train SCAS Dynamics")
-    dynamics = ScasDynamic(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
+    print_stage("Train CQL Max Q")
+    agent = CQLAgentMaxQ(
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
         device=device,
     )
-    dynamics_evaluator = Evaluator(
-        runner_id=task_id,
-        eval_interval=eval_interval,
-        eval_offline_n=eval_offline_n,
-        eval_offline_fns=[eval_loss_dynamic],
-    )
-    for step in range(1, dynamics_steps + 1):
-        batch = dataset.sample_batch(batch_size)
-        dynamics.update(batch)
-        dynamics_evaluator.eval(step=step, agent=dynamics, batch_loader=dataset, batch_size=batch_size)
-        dynamics_evaluator.print(step)
-        dynamics_evaluator.recode(step)
-        if step % save_interval == 0 or step == dynamics_steps:
-            dynamics.save(f"{task_id}/dynamics", step)
 
-    print_stage("Train SCAS Agent")
-    agent = ScasAgentMin(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
-        dynamics=dynamics,
-        max_action=1.0,
-        device=device,
-    )
-    agent_evaluator = Evaluator(
+    evaluator = Evaluator(
         runner_id=task_id,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
-        eval_offline_fns=[eval_loss_agent],
+        eval_offline_fns=[eval_loss],
         eval_online_fns=[eval_return],
-        recode_reset=False,
     )
-    for step in range(1, agent_steps + 1):
+
+    for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         agent.update(batch)
-        agent_evaluator.eval(step=step, agent=agent, batch_loader=dataset, batch_size=batch_size, eval_env=eval_env)
-        agent_evaluator.print(step)
-        agent_evaluator.recode(step)
-        if step % save_interval == 0 or step == agent_steps:
+        evaluator.eval(step=step, agent=agent, batch_loader=dataset, batch_size=batch_size, eval_env=eval_env)
+        evaluator.print(step)
+        evaluator.recode(step)
+        if step % save_interval == 0 or step == steps:
             agent.save(task_id, step)
 
 
 def collect(
     dataset: Dataset,
     *,
-    dynamics_steps: int = DYNAMICS_STEPS,
-    agent_steps: int = AGENT_STEPS,
+    steps: int = STEPS,
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -141,7 +107,7 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.env_id}_scas-v0"
+    task_id = task_id or f"{dataset.env_id}_cql_max_q-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -151,8 +117,7 @@ def collect(
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
-        dynamics_steps=dynamics_steps,
-        agent_steps=agent_steps,
+        steps=steps,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
@@ -173,9 +138,3 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
-
-
-
-
-
