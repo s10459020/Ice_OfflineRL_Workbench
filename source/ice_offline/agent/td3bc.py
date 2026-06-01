@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -143,7 +143,7 @@ class _TD3_Critic(torch.nn.Module):
 
 
 @dataclass
-class TD3BCAgentContinuous(TorchAgent):
+class TD3BCAgent(TorchAgent):
     obs_size: int
     act_size: int
     actor_learning_rate: float = 3e-4
@@ -293,19 +293,14 @@ class TD3BCAgentContinuous(TorchAgent):
     # ====================
     # Actor mathmatics
     # ====================
-    def loss_bc(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        a_pred = self.actor.pi_act(o)
+    def loss_bc(self, a: torch.Tensor, a_pred: torch.Tensor) -> torch.Tensor:
         return ((a - a_pred) ** 2).mean()
 
-    def loss_td3(self, o: torch.Tensor) -> torch.Tensor:
-        a_pred = self.actor.pi_act(o)
+    def loss_td3(self, o: torch.Tensor, a_pred: torch.Tensor) -> torch.Tensor:
         q = self.critic.q1(o, a_pred)
         lam = self.alpha / q.abs().mean().detach()
         return lam * -q.mean()
 
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
         a_pred = self.actor.pi_act(o)
-        q = self.critic.q1(o, a_pred)
-        lam = self.alpha / q.abs().mean().detach()
-        bc_loss = ((a - a_pred) ** 2).mean()
-        return lam * -q.mean() + bc_loss
+        return self.loss_td3(o, a_pred) + self.loss_bc(a, a_pred)

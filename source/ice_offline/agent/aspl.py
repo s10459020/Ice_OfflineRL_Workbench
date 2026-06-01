@@ -183,19 +183,16 @@ class AsplAgent(TorchAgent):
     act_dim: int
     max_action: float
     tau: float = 0.005
-    beta: float = 3e-3
     alpha: float = 2.5
-    lmbda: float = 0.25
     gamma: float = 0.99
     q_mean: float = 0
-    max_weight: float = 50.0
     noise_clip: float = 0.5
     update_step: int = 0
     policy_freq: int = 2
     policy_noise: float = 0.2
     learning_rate: float = 3e-4
     num_sample: int = 1
-    device: torch.device = "cpu"
+    device: str = "cpu"
 
     def __post_init__(self) -> None:
         self.actor = _TD3_Actor(self.obs_dim, self.act_dim, tau=self.tau, max_action=self.max_action).to(self.device)

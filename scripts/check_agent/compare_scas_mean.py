@@ -9,8 +9,8 @@ from _lib import sample_transition
 from _lib import torch_buffer
 from SCAS_main import SCAS as ref_scas
 from SCAS_main import model as ref_model
-from ice_offline.agent.scas import ScasAgent
-from ice_offline.agent.scas import ScasDynamic
+from ice_offline.agent.scas_mean import ScasAgentMean
+from ice_offline.agent.scas_mean import ScasDynamic
 from ice_offline.tools.printer import print_stage
 
 
@@ -31,7 +31,7 @@ MAX_ACTION = 1.0
 # ====================
 def _all_pairs(
     ref: Any,
-    our: ScasAgent,
+    our: ScasAgentMean,
     ref_dynamics: torch.nn.Module,
     our_dynamics: ScasDynamic,
 ):
@@ -137,7 +137,7 @@ def ref_loss_critic(
         next_action = (ref.actor_target(sn) + noise).clamp(-ref.max_action, ref.max_action)
         target_q1, target_q2, target_q3, target_q4 = ref.critic_target(sn, next_action)
         target_q = torch.cat([target_q1, target_q2, target_q3, target_q4], dim=1)
-        target_q, _ = torch.min(target_q, dim=1, keepdim=True)
+        target_q = torch.mean(target_q, dim=1, keepdim=True)
         y = r + not_done * ref.discount * target_q
     q1, q2, q3, q4 = ref.critic(s, a)
     loss_q1 = F.mse_loss(q1, y)
@@ -207,7 +207,7 @@ def ref_update(ref: Any, s: torch.Tensor, a: torch.Tensor, r: torch.Tensor, sn: 
 
 def ref_update_and_collect_params(
     ref: Any,
-    our: ScasAgent,
+    our: ScasAgentMean,
     ref_dynamics: torch.nn.Module,
     our_dynamics: ScasDynamic,
     s: torch.Tensor,
@@ -225,7 +225,7 @@ def ref_update_and_collect_params(
 # ====================
 def our_update_and_collect_params(
     ref: Any,
-    our: ScasAgent,
+    our: ScasAgentMean,
     ref_dynamics: torch.nn.Module,
     our_dynamics: ScasDynamic,
     s: torch.Tensor,
@@ -241,9 +241,9 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> tuple[ScasAgent, ScasDynamic]:
+def build_our() -> tuple[ScasAgentMean, ScasDynamic]:
     our_dynamics = ScasDynamic(obs_dim=OBS_DIM, act_dim=ACT_DIM, device=DEVICE)
-    our = ScasAgent(
+    our = ScasAgentMean(
         obs_dim=OBS_DIM,
         act_dim=ACT_DIM,
         dynamics=our_dynamics,
@@ -262,11 +262,11 @@ def build_ref() -> tuple[Any, torch.nn.Module]:
         max_action=MAX_ACTION,
         replay_buffer=None,
         dynamics=ref_dynamics,
-        antmaze=False,
+        antmaze=True,
     )
     return ref, ref_dynamics
 
-def init_compare() -> tuple[Any, ScasAgent, torch.nn.Module, ScasDynamic]:
+def init_compare() -> tuple[Any, ScasAgentMean, torch.nn.Module, ScasDynamic]:
     print_stage("Init")
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -277,7 +277,7 @@ def init_compare() -> tuple[Any, ScasAgent, torch.nn.Module, ScasDynamic]:
             our_param.copy_(ref_param)
     return ref, our, ref_dynamics, our_dynamics
 
-def compare_act(ref: Any, our: ScasAgent) -> None:
+def compare_act(ref: Any, our: ScasAgentMean) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, _, _, _, _ = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
@@ -302,7 +302,7 @@ def compare_act(ref: Any, our: ScasAgent) -> None:
 
 def compare_loss(
     ref: Any,
-    our: ScasAgent,
+    our: ScasAgentMean,
     ref_dynamics: torch.nn.Module,
     our_dynamics: ScasDynamic,
 ) -> None:
@@ -354,7 +354,7 @@ def compare_loss(
 
 def compare_param(
     ref: Any,
-    our: ScasAgent,
+    our: ScasAgentMean,
     ref_dynamics: torch.nn.Module,
     our_dynamics: ScasDynamic,
 ) -> None:

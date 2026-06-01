@@ -169,7 +169,7 @@ class ScasDynamic(TorchAgent):
     obs_dim: int
     act_dim: int
     learning_rate: float = 1e-3
-    device: torch.device = "cpu"
+    device: str = "cpu"
 
     def __post_init__(self) -> None:
         self.model = _M(self.obs_dim, self.act_dim).to(self.device)
@@ -217,7 +217,7 @@ class ScasDynamic(TorchAgent):
         
 
 @dataclass
-class ScasAgent(TorchAgent):
+class ScasAgentMin(TorchAgent):
     obs_dim: int
     act_dim: int
     dynamics: ScasDynamic
@@ -230,7 +230,7 @@ class ScasAgent(TorchAgent):
     update_step: int = 0
     policy_freq: int = 2
     max_weight: float = 50.0
-    device: torch.device = "cpu"
+    device: str = "cpu"
 
     def __post_init__(self) -> None:
         self.actor = _TD3_Actor(self.obs_dim, self.act_dim, tau=self.tau, max_action=self.max_action).to(self.device)

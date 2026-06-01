@@ -3,8 +3,8 @@ import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.scas import ScasAgent
-from ice_offline.agent.scas import ScasDynamic
+from ice_offline.agent.scas_min import ScasAgentMin
+from ice_offline.agent.scas_min import ScasDynamic
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -35,7 +35,7 @@ def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, fl
         return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
 
 
-def eval_loss_agent(agent: ScasAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_agent(agent: ScasAgentMin, batch: TorchBuffer) -> dict[str, float]:
     s = batch.obs_list
     a = batch.act_list
     r = batch.rew_list.view(-1, 1)
@@ -102,7 +102,7 @@ def train(
             dynamics.save(f"{task_id}/dynamics", step)
 
     print_stage("Train SCAS Agent")
-    agent = ScasAgent(
+    agent = ScasAgentMin(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
         dynamics=dynamics,

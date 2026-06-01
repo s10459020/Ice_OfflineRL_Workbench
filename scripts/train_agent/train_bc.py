@@ -3,7 +3,7 @@ import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+from ice_offline.agent.bc_deterministic import BCAgentDeterministic
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -27,7 +27,7 @@ DEVICE = "cuda:0"
 BATCH_SIZE = 256
 
 
-def eval_loss_pi(agent: BCAgentContinuousDeterministic, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_pi(agent: BCAgentDeterministic, batch: TorchBuffer) -> dict[str, float]:
     with torch.no_grad():
         return {"loss_actor": float(agent.loss_actor(batch.obs_list, batch.act_list).item())}
 
@@ -58,7 +58,7 @@ def train(
     dataset.set_seed(seed)
 
     print_stage("Train BC")
-    agent = BCAgentContinuousDeterministic(
+    agent = BCAgentDeterministic(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,

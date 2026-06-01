@@ -3,7 +3,7 @@ import torch
 import gymnasium as gym
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.cql_continuous import CQLAgentContinuous
+from ice_offline.agent.cql import CQLAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.printer import print_stage
@@ -34,7 +34,7 @@ def test(
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test CQL")
-    agent = CQLAgentContinuous(
+    agent = CQLAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )

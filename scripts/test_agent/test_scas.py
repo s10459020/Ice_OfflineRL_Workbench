@@ -3,7 +3,7 @@ import torch
 import gymnasium as gym
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.scas import ScasAgent, ScasDynamic
+from ice_offline.agent.scas_min import ScasAgentMin, ScasDynamic
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.printer import print_stage
@@ -41,7 +41,7 @@ def test(
     )
     dynamics.load(model_ref(f"{task_id}/dynamics", DYNAMICS_MODEL_STEP))
 
-    agent = ScasAgent(
+    agent = ScasAgentMin(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
         dynamics=dynamics,

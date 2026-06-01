@@ -32,7 +32,7 @@ class _Pi(torch.nn.Module):
 
 
 @dataclass
-class BCAgentContinuousDeterministic(TorchAgent):
+class BCAgentDeterministic(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3

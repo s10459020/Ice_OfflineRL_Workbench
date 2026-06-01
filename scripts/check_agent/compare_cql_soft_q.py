@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import torch
 
 from _lib import assert_callback
@@ -8,7 +8,7 @@ from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.models.torch import build_squashed_gaussian_distribution
 from d3rlpy_master.d3rlpy.models.torch import get_parameter
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.cql_continuous import CQLAgentContinuous
+from ice_offline.agent.cql_soft_q import CQLAgentSoftQ
 from ice_offline.tools.printer import print_stage
 
 
@@ -26,7 +26,7 @@ N_TEST_BATCHES = 30
 # ====================
 # Mapping
 # ====================
-def _all_pairs(our: CQLAgentContinuous, ref):
+def _all_pairs(our: CQLAgentSoftQ, ref):
     ref_policy = ref.impl.modules.policy
     ref_q1 = ref.impl.modules.q_funcs[0]
     ref_q2 = ref.impl.modules.q_funcs[1]
@@ -168,7 +168,7 @@ def ref_loss_alpha_cql(
         * conservative_loss_detached
     ).mean()
 
-def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: CQLAgentContinuous):
+def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: CQLAgentSoftQ):
     _ = ref.impl.inner_update(batch, step)
     return [x for _, x in _all_pairs(our, ref)]
 
@@ -177,7 +177,7 @@ def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: CQ
 # Our define
 # ====================
 def our_update_and_collect_params(
-    our: CQLAgentContinuous,
+    our: CQLAgentSoftQ,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -192,17 +192,17 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> CQLAgentContinuous:
-    return CQLAgentContinuous(obs_size=OBS_DIM, act_size=ACT_DIM)
+def build_our() -> CQLAgentSoftQ:
+    return CQLAgentSoftQ(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_ref():
-    config = algos.CQLConfig()
+    config = algos.CQLConfig(soft_q_backup=True)
     ref = config.create(device=DEVICE)
     ref.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert ref.impl is not None
     return ref
 
-def init_compare() -> tuple[CQLAgentContinuous, object]:
+def init_compare() -> tuple[CQLAgentSoftQ, object]:
     print_stage("Init")
     our = build_our()
     ref = build_ref()
@@ -211,7 +211,7 @@ def init_compare() -> tuple[CQLAgentContinuous, object]:
             our_param.copy_(ref_param)
     return our, ref
 
-def compare_act(our: CQLAgentContinuous, ref) -> None:
+def compare_act(our: CQLAgentSoftQ, ref) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s_single, _, _, _, _ = sample_transition(1, OBS_DIM, ACT_DIM, DEVICE)
@@ -251,7 +251,7 @@ def compare_act(our: CQLAgentContinuous, ref) -> None:
 
         print(f"batch={i}/{N_TEST_BATCHES} act_match=True")
 
-def compare_loss(our: CQLAgentContinuous, ref) -> None:
+def compare_loss(our: CQLAgentSoftQ, ref) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
@@ -308,7 +308,7 @@ def compare_loss(our: CQLAgentContinuous, ref) -> None:
 
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
-def compare_param(our: CQLAgentContinuous, ref) -> None:
+def compare_param(our: CQLAgentSoftQ, ref) -> None:
     print_stage("Update Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)

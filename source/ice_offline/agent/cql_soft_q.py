@@ -114,6 +114,7 @@ class _QQ(torch.nn.Module):
         gamma: float,
         tau: float,
         alpha_threshold: float,
+        conservative_weight: float,
         n_action_samples: int,
         device: str,
     ):
@@ -122,6 +123,7 @@ class _QQ(torch.nn.Module):
         self.gamma = gamma
         self.tau = tau
         self.alpha_threshold = alpha_threshold
+        self.conservative_weight = conservative_weight
         self.n_action_samples = n_action_samples
         self.device = device
 
@@ -179,7 +181,7 @@ class _QQ(torch.nn.Module):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
 @dataclass
-class CQLAgentContinuous(TorchAgent):
+class CQLAgentSoftQ(TorchAgent):
     obs_size: int
     act_size: int
     tau: float = 0.005
@@ -187,6 +189,7 @@ class CQLAgentContinuous(TorchAgent):
     actor_initial_alpha: float = 1.0
     critic_initial_alpha: float = 1.0
     alpha_threshold: float = 10.0
+    conservative_weight: float = 5.0
     actor_learning_rate: float = 1e-4
     critic_learning_rate: float = 3e-4
     actor_alpha_learning_rate: float = 1e-4
@@ -208,6 +211,7 @@ class CQLAgentContinuous(TorchAgent):
             gamma=self.gamma,
             tau=self.tau,
             alpha_threshold=self.alpha_threshold,
+            conservative_weight=self.conservative_weight,
             n_action_samples=self.n_action_samples,
             device=self.device,
         ).to(self.device)
@@ -305,13 +309,13 @@ class CQLAgentContinuous(TorchAgent):
         # DQN target: r + gamma*                    targ_Q2_min  * (1-done) # target Q
         # SAC target: r + gamma* ( targ_Q2_min - alpha* log_pi2 )* (1-done) # maximum entropy
         #
-        # DQN form
         # max_q_backup(max Q): False
-        # soft_q_backup(SAC form): False 
+        # soft_q_backup(SAC form): True 
         with torch.no_grad():
-            an = self.policy.mode(on)
+            an, log_prob = self.policy.sample(on)
             qn = self.critic.tqq_min(on, an)
-            return r + self.critic.gamma * qn * (1.0 - d)
+            entropy = self.policy.temp() * log_prob
+            return r + self.critic.gamma * (qn - entropy) * (1.0 - d)
 
     def loss_td(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # TD3 Double Q 
@@ -367,7 +371,7 @@ class CQLAgentContinuous(TorchAgent):
         # Lagrange 乘子: alpha
         loss_td = self.loss_td(o, a, r, on, d)             # (2,)
         loss_cql = self.loss_conservative(o, a, on)         # (2,)
-        loss_cql = 5.0 * (loss_cql - self.critic.alpha_threshold)  # fix weight
+        loss_cql = self.critic.conservative_weight * (loss_cql - self.critic.alpha_threshold)
 
         if update_alpha:
             self.update_alpha_cql(loss_cql.detach())

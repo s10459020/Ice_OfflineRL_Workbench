@@ -3,7 +3,7 @@ import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.cql_continuous import CQLAgentContinuous
+from ice_offline.agent.cql import CQLAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -25,7 +25,7 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss(agent: CQLAgentContinuous, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss(agent: CQLAgent, batch: TorchBuffer) -> dict[str, float]:
     o = batch.obs_list
     a = batch.act_list
     r = batch.rew_list.view(-1, 1)
@@ -70,7 +70,7 @@ def train(
     dataset.set_seed(seed)
 
     print_stage("Train CQL")
-    agent = CQLAgentContinuous(
+    agent = CQLAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,

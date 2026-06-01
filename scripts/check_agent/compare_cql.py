@@ -1,11 +1,14 @@
-import numpy as np
+﻿import numpy as np
 import torch
+
 from _lib import assert_callback
 from _lib import sample_transition
 from _lib import torch_buffer
 from d3rlpy_master.d3rlpy import algos
+from d3rlpy_master.d3rlpy.models.torch import build_squashed_gaussian_distribution
+from d3rlpy_master.d3rlpy.models.torch import get_parameter
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.iql_continuous import IQLAgentContinuous
+from ice_offline.agent.cql import CQLAgent
 from ice_offline.tools.printer import print_stage
 
 
@@ -23,21 +26,21 @@ N_TEST_BATCHES = 30
 # ====================
 # Mapping
 # ====================
-def _all_pairs(our: IQLAgentContinuous, ref):
+def _all_pairs(our: CQLAgent, ref):
     ref_policy = ref.impl.modules.policy
     ref_q1 = ref.impl.modules.q_funcs[0]
     ref_q2 = ref.impl.modules.q_funcs[1]
     ref_t1 = ref.impl.modules.targ_q_funcs[0]
     ref_t2 = ref.impl.modules.targ_q_funcs[1]
-    ref_v = ref.impl.modules.value_func
     return [
-        (our.actor.hidden[0].weight, ref_policy._encoder._layers[0].weight),
-        (our.actor.hidden[0].bias, ref_policy._encoder._layers[0].bias),
-        (our.actor.hidden[2].weight, ref_policy._encoder._layers[2].weight),
-        (our.actor.hidden[2].bias, ref_policy._encoder._layers[2].bias),
-        (our.actor.mean_head.weight, ref_policy._mu.weight),
-        (our.actor.mean_head.bias, ref_policy._mu.bias),
-        (our.actor.logstd, ref_policy._logstd),
+        (our.policy.hidden[0].weight, ref_policy._encoder._layers[0].weight),
+        (our.policy.hidden[0].bias, ref_policy._encoder._layers[0].bias),
+        (our.policy.hidden[2].weight, ref_policy._encoder._layers[2].weight),
+        (our.policy.hidden[2].bias, ref_policy._encoder._layers[2].bias),
+        (our.policy.mean_head.weight, ref_policy._mu.weight),
+        (our.policy.mean_head.bias, ref_policy._mu.bias),
+        (our.policy.logstd_head.weight, ref_policy._logstd.weight),
+        (our.policy.logstd_head.bias, ref_policy._logstd.bias),
         (our.critic.q1.network[0].weight, ref_q1._encoder._layers[0].weight),
         (our.critic.q1.network[0].bias, ref_q1._encoder._layers[0].bias),
         (our.critic.q1.network[2].weight, ref_q1._encoder._layers[2].weight),
@@ -62,12 +65,8 @@ def _all_pairs(our: IQLAgentContinuous, ref):
         (our.critic.targ_q2.network[2].bias, ref_t2._encoder._layers[2].bias),
         (our.critic.targ_q2.network[4].weight, ref_t2._fc.weight),
         (our.critic.targ_q2.network[4].bias, ref_t2._fc.bias),
-        (our.v.network[0].weight, ref_v._encoder._layers[0].weight),
-        (our.v.network[0].bias, ref_v._encoder._layers[0].bias),
-        (our.v.network[2].weight, ref_v._encoder._layers[2].weight),
-        (our.v.network[2].bias, ref_v._encoder._layers[2].bias),
-        (our.v.network[4].weight, ref_v._fc.weight),
-        (our.v.network[4].bias, ref_v._fc.bias),
+        (our.policy.log_alpha, ref.impl.modules.log_temp._parameter),
+        (our.critic.log_alpha, ref.impl.modules.log_alpha._parameter),
     ]
 
 
@@ -108,14 +107,68 @@ def ref_action_best_single(ref, obs_t: torch.Tensor) -> np.ndarray:
 def ref_action_sample_single(ref, obs_t: torch.Tensor) -> np.ndarray:
     return ref_action_sample_batch(ref, obs_t)[0]
 
-def ref_loss_pack(ref, batch: TorchMiniBatch, obs_t: torch.Tensor):
+def ref_loss_td(ref, batch: TorchMiniBatch) -> torch.Tensor:
     q_tpn = ref.impl.compute_target(batch)
-    critic_obj = ref.impl.compute_critic_loss(batch, q_tpn)
-    action = ref.impl.modules.policy(obs_t)
-    actor = ref.impl.compute_actor_loss(batch, action).actor_loss
-    return critic_obj, actor
+    q_forwarders = ref.impl._q_func_forwarder.forwarders
+    loss_td1 = q_forwarders[0].compute_error(
+        observations=batch.observations,
+        actions=batch.actions,
+        rewards=batch.rewards,
+        target=q_tpn,
+        terminals=batch.terminals,
+        gamma=ref.impl._gamma**batch.intervals,
+        reduction="none",
+    ).mean()
+    loss_td2 = q_forwarders[1].compute_error(
+        observations=batch.observations,
+        actions=batch.actions,
+        rewards=batch.rewards,
+        target=q_tpn,
+        terminals=batch.terminals,
+        gamma=ref.impl._gamma**batch.intervals,
+        reduction="none",
+    ).mean()
+    return torch.stack([loss_td1, loss_td2], dim=0)
 
-def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: IQLAgentContinuous):
+def ref_loss_conservative_scaled(ref, batch: TorchMiniBatch) -> torch.Tensor:
+    return ref.impl._compute_conservative_loss(
+        obs_t=batch.observations,
+        act_t=batch.actions,
+        obs_tp1=batch.next_observations,
+        returns_to_go=batch.returns_to_go,
+    )
+
+def ref_loss_conservative(ref, batch: TorchMiniBatch) -> torch.Tensor:
+    loss_scaled = ref_loss_conservative_scaled(ref, batch)
+    return loss_scaled / ref.impl._conservative_weight + ref.impl._alpha_threshold
+
+def ref_loss_critic(ref, batch: TorchMiniBatch) -> torch.Tensor:
+    q_tpn = ref.impl.compute_target(batch)
+    return ref.impl.compute_critic_loss(batch, q_tpn).critic_loss
+
+def ref_loss_actor(ref, batch: TorchMiniBatch) -> torch.Tensor:
+    action = ref.impl.modules.policy(batch.observations)
+    return ref.impl.compute_actor_loss(batch, action).actor_loss
+
+def ref_loss_alpha_sac(ref, obs_t: torch.Tensor) -> torch.Tensor:
+    action_out = ref.impl.modules.policy(obs_t)
+    dist = build_squashed_gaussian_distribution(action_out)
+    _, log_prob = dist.sample_with_log_prob()
+    return -(
+        get_parameter(ref.impl.modules.log_temp).exp()
+        * (log_prob.detach() - ref.impl.action_size)
+    ).mean()
+
+def ref_loss_alpha_cql(
+    ref,
+    conservative_loss_detached: torch.Tensor,
+) -> torch.Tensor:
+    return -(
+        get_parameter(ref.impl.modules.log_alpha).exp().clamp(0, 1e6)
+        * conservative_loss_detached
+    ).mean()
+
+def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: CQLAgent):
     _ = ref.impl.inner_update(batch, step)
     return [x for _, x in _all_pairs(our, ref)]
 
@@ -124,7 +177,7 @@ def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: IQ
 # Our define
 # ====================
 def our_update_and_collect_params(
-    our: IQLAgentContinuous,
+    our: CQLAgent,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -139,17 +192,17 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> IQLAgentContinuous:
-    return IQLAgentContinuous(obs_size=OBS_DIM, act_size=ACT_DIM)
+def build_our() -> CQLAgent:
+    return CQLAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_ref():
-    config = algos.IQLConfig()
+    config = algos.CQLConfig()
     ref = config.create(device=DEVICE)
     ref.create_impl(observation_shape=(OBS_DIM,), action_size=ACT_DIM)
     assert ref.impl is not None
     return ref
 
-def init_compare() -> tuple[IQLAgentContinuous, object]:
+def init_compare() -> tuple[CQLAgent, object]:
     print_stage("Init")
     our = build_our()
     ref = build_ref()
@@ -158,7 +211,7 @@ def init_compare() -> tuple[IQLAgentContinuous, object]:
             our_param.copy_(ref_param)
     return our, ref
 
-def compare_act(our: IQLAgentContinuous, ref) -> None:
+def compare_act(our: CQLAgent, ref) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s_single, _, _, _, _ = sample_transition(1, OBS_DIM, ACT_DIM, DEVICE)
@@ -198,47 +251,64 @@ def compare_act(our: IQLAgentContinuous, ref) -> None:
 
         print(f"batch={i}/{N_TEST_BATCHES} act_match=True")
 
-def compare_loss(our: IQLAgentContinuous, ref) -> None:
+def compare_loss(our: CQLAgent, ref) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
         batch = _torch_batch(s, a, r, sn, d)
+        conservative_scaled = ref_loss_conservative_scaled(ref, batch).detach()
 
-        # loss q
+        # loss td
         assert_callback(
-            lambda: [ref_loss_pack(ref, batch, s)[0].q_loss],
-            lambda: [our.loss_q(s, a, r, sn, d)],
-            label=f"loss_q[{i}]",
+            lambda: [ref_loss_td(ref, batch)],
+            lambda: [our.loss_td(s, a, r, sn, d)],
+            label=f"loss_td[{i}]",
             seed=SEED + i,
         )
 
-        # loss v
+        # loss conservative
         assert_callback(
-            lambda: [ref_loss_pack(ref, batch, s)[0].v_loss],
-            lambda: [our.loss_v(s, a)],
-            label=f"loss_v[{i}]",
+            lambda: [ref_loss_conservative(ref, batch)],
+            lambda: [our.loss_conservative(s, a, sn)],
+            label=f"loss_conservative[{i}]",
             seed=SEED + i,
         )
 
         # loss actor
         assert_callback(
-            lambda: [ref_loss_pack(ref, batch, s)[1]],
-            lambda: [our.loss_actor(s, a)],
+            lambda: [ref_loss_actor(ref, batch)],
+            lambda: [our.loss_actor(s, update_alpha=True)],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
 
         # loss critic
         assert_callback(
-            lambda: [ref_loss_pack(ref, batch, s)[0].critic_loss],
-            lambda: [our.loss_critic(s, a, r, sn, d)],
+            lambda: [ref_loss_critic(ref, batch)],
+            lambda: [our.loss_critic(s, a, r, sn, d, update_alpha=True)],
             label=f"loss_critic[{i}]",
+            seed=SEED + i,
+        )
+
+        # loss alpha sac
+        assert_callback(
+            lambda: [ref_loss_alpha_sac(ref, s)],
+            lambda: [our.loss_alpha_sac(our.policy.sample(s)[1].detach())],
+            label=f"loss_alpha_sac[{i}]",
+            seed=SEED + i,
+        )
+
+        # loss alpha cql
+        assert_callback(
+            lambda: [ref_loss_alpha_cql(ref, conservative_scaled)],
+            lambda: [our.loss_alpha_cql(conservative_scaled)],
+            label=f"loss_alpha_cql[{i}]",
             seed=SEED + i,
         )
 
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
-def compare_param(our: IQLAgentContinuous, ref) -> None:
+def compare_param(our: CQLAgent, ref) -> None:
     print_stage("Update Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)

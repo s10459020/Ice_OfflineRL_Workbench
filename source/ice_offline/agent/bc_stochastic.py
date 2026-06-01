@@ -1,4 +1,4 @@
-﻿"""Behavior Cloning continuous agent (stochastic)."""
+﻿"""Behavior Cloning agent (stochastic)."""
 
 from dataclasses import dataclass
 
@@ -43,7 +43,7 @@ class _Pi(torch.nn.Module):
         return a_mean, logstd
 
 @dataclass
-class BCAgentContinuousStochastic(TorchAgent):
+class BCAgentStochastic(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3

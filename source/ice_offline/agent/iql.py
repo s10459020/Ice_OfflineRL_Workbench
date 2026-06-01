@@ -1,4 +1,6 @@
-﻿"""Implicit Q-Learning continuous agent (minimal fixed structure)."""
+﻿"""Implicit Q-Learning agent (minimal fixed structure)."""
+
+from dataclasses import dataclass
 
 import numpy as np
 import torch
@@ -120,40 +122,23 @@ class _QQ(torch.nn.Module):
             for p_targ, p in zip(self.targ_q2.parameters(), self.q2.parameters()):
                 p_targ.data.mul_(1.0 - self.tau).add_(self.tau * p.data)
 
-class IQLAgentContinuous(TorchAgent):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        actor_learning_rate: float = 3e-4,
-        critic_learning_rate: float = 3e-4,
-        gamma: float = 0.99,
-        q_tau: float = 0.005,
-        v_tau: float = 0.7,
-        beta: float = 3.0,
-        max_weight: float = 100.0,
-        device: str = "cpu",
-    ):
-        self.device = device
-        self.obs_size = obs_size
-        self.act_size = act_size
-        self.actor_learning_rate = actor_learning_rate
-        self.critic_learning_rate = critic_learning_rate
-        self.gamma = gamma
-        self.q_tau = q_tau
-        self.v_tau = v_tau
-        self.beta = beta
-        self.max_weight = max_weight
-        self.actor = None
-        self.critic = None
-        self.v = None
-        self.actor_optim = None
-        self.critic_optim = None
-        self.obs_size = obs_size
-        self.act_size = act_size
-        self.actor = _Pi(obs_size, act_size, beta=self.beta, max_weight=self.max_weight).to(self.device)
-        self.critic = _QQ(obs_size, act_size, tau=self.q_tau).to(self.device)
-        self.v = _V(obs_size, tau=self.v_tau).to(self.device)
+@dataclass
+class IQLAgent(TorchAgent):
+    obs_size: int
+    act_size: int
+    actor_learning_rate: float = 3e-4
+    critic_learning_rate: float = 3e-4
+    gamma: float = 0.99
+    q_tau: float = 0.005
+    v_tau: float = 0.7
+    beta: float = 3.0
+    max_weight: float = 100.0
+    device: str = "cpu"
+
+    def __post_init__(self) -> None:
+        self.actor = _Pi(self.obs_size, self.act_size, beta=self.beta, max_weight=self.max_weight).to(self.device)
+        self.critic = _QQ(self.obs_size, self.act_size, tau=self.q_tau).to(self.device)
+        self.v = _V(self.obs_size, tau=self.v_tau).to(self.device)
         self.actor_optim = _Adam(self.actor_learning_rate)(
             self.actor.parameters()
         )

@@ -10,7 +10,7 @@ from ice_offline.tools.printer import print_stage
 from ice_offline.data.state.hopper import HopperState, HopperStateIO
 from ice_offline.data.state.op_collector import StateCollectWrapper
 from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.agent.bc_continuous_deterministic import BCAgentContinuousDeterministic
+from ice_offline.agent.bc_deterministic import BCAgentDeterministic
 from ice_offline.agent._spec import model_ref
 
 
@@ -35,7 +35,7 @@ def train(
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test BC")
-    agent = BCAgentContinuousDeterministic(
+    agent = BCAgentDeterministic(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )

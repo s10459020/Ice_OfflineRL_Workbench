@@ -1,4 +1,4 @@
-﻿﻿"""Implicit Q-Learning discrete agent (Q-learning symmetric version)."""
+"""Implicit Q-Learning discrete agent (Q-learning symmetric version)."""
 
 import numpy as np
 import torch
