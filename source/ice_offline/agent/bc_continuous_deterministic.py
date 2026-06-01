@@ -36,7 +36,6 @@ class BCAgentContinuousDeterministic(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
-    expl_noise_std: float = 0.1
     device: str = "cpu"
 
     # ====================
@@ -56,21 +55,17 @@ class BCAgentContinuousDeterministic(TorchAgent):
     # ====================
     # Public API
     # ====================
-    def act(self, observation, greedy: bool = True):
+    def act(self, observation):
         observation_np = np.asarray(observation, dtype=np.float32)[None, :]
         o = torch.as_tensor(observation_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
             a = self.policy.mode(o)
-            if not greedy:
-                a = (a + torch.randn_like(a) * self.expl_noise_std).clamp(-1.0, 1.0)
         return a.cpu().numpy()[0]
 
-    def act_batch(self, observation_batch, greedy: bool = True):
+    def act_batch(self, observation_batch):
         o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
         with torch.no_grad():
             a = self.policy.mode(o)
-            if not greedy:
-                a = (a + torch.randn_like(a) * self.expl_noise_std).clamp(-1.0, 1.0)
         return a.cpu().numpy()
 
     def update(self, batch: TorchBuffer):

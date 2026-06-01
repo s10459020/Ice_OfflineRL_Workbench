@@ -211,14 +211,14 @@ class AsplAgent(TorchAgent):
     # ====================
     # public API
     # ====================
-    def act(self, observation, greedy: bool = True):
+    def act(self, observation):
         s_np = np.asarray(observation, dtype=np.float32)[None, :]
         s = torch.as_tensor(s_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
             a = self.actor.pi_act(s)
         return a.cpu().numpy()[0]
 
-    def act_batch(self, observation_batch, greedy: bool = True):
+    def act_batch(self, observation_batch):
         s_np = np.asarray(observation_batch, dtype=np.float32)
         s = torch.as_tensor(s_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():

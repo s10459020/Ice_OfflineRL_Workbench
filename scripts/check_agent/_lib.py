@@ -4,9 +4,40 @@ from typing import Callable
 
 import numpy as np
 import torch
+from ice_offline.dataset._spec import TorchBuffer
 
 
 Callback = Callable[[], list[Any]]
+
+
+def sample_transition(
+    batch_size: int,
+    obs_dim: int,
+    act_dim: int,
+    device: str = "cpu",
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    s = torch.as_tensor(np.random.standard_normal((batch_size, obs_dim)), dtype=torch.float32, device=device)
+    a = torch.as_tensor(np.random.standard_normal((batch_size, act_dim)), dtype=torch.float32, device=device)
+    r = torch.as_tensor(np.random.standard_normal((batch_size, 1)), dtype=torch.float32, device=device)
+    sn = torch.as_tensor(np.random.standard_normal((batch_size, obs_dim)), dtype=torch.float32, device=device)
+    d = torch.as_tensor(np.random.randint(0, 2, size=(batch_size, 1)), dtype=torch.float32, device=device)
+    return s, a, r, sn, d
+
+
+def torch_buffer(
+    s: torch.Tensor,
+    a: torch.Tensor,
+    r: torch.Tensor,
+    sn: torch.Tensor,
+    d: torch.Tensor,
+) -> TorchBuffer:
+    return TorchBuffer(
+        obs_list=s,
+        next_obs_list=sn,
+        act_list=a,
+        rew_list=r,
+        done_list=d,
+    )
 
 
 def _set_seed(seed: int) -> None:
