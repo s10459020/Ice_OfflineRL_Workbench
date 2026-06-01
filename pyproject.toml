@@ -9,10 +9,10 @@ description = "Offline RL workbench"
 requires-python = ">=3.10,<3.13"
 
 dependencies = [
-    "numpy<2",
+    "numpy",
     "torch>=2.5",
-    "gymnasium",
-    "minari",
+    "gymnasium[mujoco]",
+    "minari[create]",
     "minigrid",
     "h5py",
     "matplotlib",
