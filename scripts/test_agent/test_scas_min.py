@@ -101,7 +101,7 @@ if __name__ == "__main__":
     dataset = HopperSimpleDataset().load()
     returns, minari_data, state_data = collect(
         dataset=dataset,
-        task_id=f"{dataset.id}_scas_min-v0",
+        task_id=f"{dataset.id}-scas_min-v0",
         episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,

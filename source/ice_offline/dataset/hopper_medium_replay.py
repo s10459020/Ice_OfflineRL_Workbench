@@ -7,7 +7,7 @@ from ice_offline.dataset._spec import Dataset
 
 @dataclass
 class HopperMediumReplayDataset(Dataset):
-    id: str = "hopper_medium_replay_d4rl"
+    id: str = "hopper_medium_replay"
     env_id: str = "Hopper-v5"
     dataset_path: str | Path = Path("tmps/datasets/d4rl/hopper_medium_replay-v2.hdf5")
 

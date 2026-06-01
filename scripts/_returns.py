@@ -64,56 +64,56 @@ def save_returns_boxplot(plot_name: str, *dataset_paths: str) -> Path:
 
 IDS_SIMPLE = (
     "mujoco/hopper/simple-v0/data/main_data.hdf5",
-    "test/hopper_simple_random-v0/data/main_data.hdf5",
-    "test/hopper_simple_bc-v0/data/main_data.hdf5",
+    "test/hopper_simple-random-v0/data/main_data.hdf5",
+    "test/hopper_simple-bc_deterministic-v0/data/main_data.hdf5",
     "test/hopper_simple_cql-v0/data/main_data.hdf5",
-    "test/hopper_simple_iql-v0/data/main_data.hdf5",
-    "test/hopper_simple_aspl-v0/data/main_data.hdf5",
-    "test/hopper_simple_scas-v0/data/main_data.hdf5",
+    "test/hopper_simple-iql-v0/data/main_data.hdf5",
+    "test/hopper_simple-aspl-v0/data/main_data.hdf5",
+    "test/hopper_simple-scas-v0/data/main_data.hdf5",
 )
 IDS_MEDIUM = (
     "mujoco/hopper/medium-v0/data/main_data.hdf5",
-    "test/hopper_medium_random-v0/data/main_data.hdf5",
-    "test/hopper_medium_bc-v0/data/main_data.hdf5",
+    "test/hopper_medium-random-v0/data/main_data.hdf5",
+    "test/hopper_medium-bc_deterministic-v0/data/main_data.hdf5",
     "test/hopper_medium_cql-v0/data/main_data.hdf5",
-    "test/hopper_medium_iql-v0/data/main_data.hdf5",
-    "test/hopper_medium_aspl-v0/data/main_data.hdf5",
-    "test/hopper_medium_scas-v0/data/main_data.hdf5",
+    "test/hopper_medium-iql-v0/data/main_data.hdf5",
+    "test/hopper_medium-aspl-v0/data/main_data.hdf5",
+    "test/hopper_medium-scas-v0/data/main_data.hdf5",
 )
 IDS_EXPERT = (
     "mujoco/hopper/expert-v0/data/main_data.hdf5",
-    "test/hopper_expert_random-v0/data/main_data.hdf5",
-    "test/hopper_expert_bc-v0/data/main_data.hdf5",
+    "test/hopper_expert-random-v0/data/main_data.hdf5",
+    "test/hopper_expert-bc_deterministic-v0/data/main_data.hdf5",
     "test/hopper_expert_cql-v0/data/main_data.hdf5",
-    "test/hopper_expert_iql-v0/data/main_data.hdf5",
-    "test/hopper_expert_aspl-v0/data/main_data.hdf5",
-    "test/hopper_expert_scas-v0/data/main_data.hdf5",
+    "test/hopper_expert-iql-v0/data/main_data.hdf5",
+    "test/hopper_expert-aspl-v0/data/main_data.hdf5",
+    "test/hopper_expert-scas-v0/data/main_data.hdf5",
 )
 IDS_MEDIUM_REPLAY = (
-    "test/hopper_medium_replay_d4rl_random-v0/data/main_data.hdf5",
-    "test/hopper_medium_replay_d4rl_bc-v0/data/main_data.hdf5",
+    "test/hopper_medium_replay-random-v0/data/main_data.hdf5",
+    "test/hopper_medium_replay-bc_deterministic-v0/data/main_data.hdf5",
     "test/hopper_medium_replay_d4rl_cql-v0/data/main_data.hdf5",
-    "test/hopper_medium_replay_d4rl_iql-v0/data/main_data.hdf5",
-    "test/hopper_medium_replay_d4rl_aspl-v0/data/main_data.hdf5",
-    "test/hopper_medium_replay_d4rl_scas-v0/data/main_data.hdf5",
+    "test/hopper_medium_replay-iql-v0/data/main_data.hdf5",
+    "test/hopper_medium_replay-aspl-v0/data/main_data.hdf5",
+    "test/hopper_medium_replay-scas-v0/data/main_data.hdf5",
 )
 IDS_MEDIUM_EXPERT = (
-    "test/hopper_medium_expert_d4rl_random-v0/data/main_data.hdf5",
-    "test/hopper_medium_expert_d4rl_bc-v0/data/main_data.hdf5",
+    "test/hopper_medium_expert-random-v0/data/main_data.hdf5",
+    "test/hopper_medium_expert-bc_deterministic-v0/data/main_data.hdf5",
     "test/hopper_medium_expert_d4rl_cql-v0/data/main_data.hdf5",
-    "test/hopper_medium_expert_d4rl_iql-v0/data/main_data.hdf5",
-    "test/hopper_medium_expert_d4rl_aspl-v0/data/main_data.hdf5",
-    "test/hopper_medium_expert_d4rl_scas-v0/data/main_data.hdf5",
+    "test/hopper_medium_expert-iql-v0/data/main_data.hdf5",
+    "test/hopper_medium_expert-aspl-v0/data/main_data.hdf5",
+    "test/hopper_medium_expert-scas-v0/data/main_data.hdf5",
 )
 
 
 if __name__ == "__main__":
-    # save_returns_csv("hopper_simple_returns.csv", *IDS_SIMPLE)
-    # save_returns_boxplot("hopper_simple_returns_boxplot.png", *IDS_SIMPLE)
-    # save_returns_csv("hopper_medium_returns.csv", *IDS_MEDIUM)
-    # save_returns_boxplot("hopper_medium_returns_boxplot.png", *IDS_MEDIUM)
-    # save_returns_csv("hopper_expert_returns.csv", *IDS_EXPERT)
-    # save_returns_boxplot("hopper_expert_returns_boxplot.png", *IDS_EXPERT)
+    # save_returns_csv("hopper_simple-returns.csv", *IDS_SIMPLE)
+    # save_returns_boxplot("hopper_simple-returns_boxplot.png", *IDS_SIMPLE)
+    # save_returns_csv("hopper_medium-returns.csv", *IDS_MEDIUM)
+    # save_returns_boxplot("hopper_medium-returns_boxplot.png", *IDS_MEDIUM)
+    # save_returns_csv("hopper_expert-returns.csv", *IDS_EXPERT)
+    # save_returns_boxplot("hopper_expert-returns_boxplot.png", *IDS_EXPERT)
     save_returns_csv("hopper_medium_replay_returns.csv", *IDS_MEDIUM_REPLAY)
     save_returns_boxplot("hopper_medium_replay_returns_boxplot.png", *IDS_MEDIUM_REPLAY)
     save_returns_csv("hopper_medium_expert_returns.csv", *IDS_MEDIUM_EXPERT)

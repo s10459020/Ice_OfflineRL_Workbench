@@ -1,11 +1,16 @@
 from pathlib import Path
 
+import matplotlib
+
 from ice_offline.dataset.hopper_expert import HopperExpertDataset
 from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_medium_d4rl import HopperMediumD4rlDataset
 from ice_offline.dataset.hopper_medium_expert import HopperMediumExpertDataset
 from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+
+matplotlib.use("Agg")
+
 from ice_offline.plot.plotter import plot_csv
 
 
@@ -15,18 +20,18 @@ SHOW = False
 
 DATASET_LIST = [
     HopperSimpleDataset,
-    # HopperMediumDataset,
-    # HopperExpertDataset,
-    # HopperMediumD4rlDataset,
-    # HopperMediumReplayDataset,
-    # HopperMediumExpertDataset,
+    HopperMediumDataset,
+    HopperExpertDataset,
+    HopperMediumD4rlDataset,
+    HopperMediumReplayDataset,
+    HopperMediumExpertDataset,
 ]
 
 AGENT_LIST = [
     "bc_deterministic",
-    # "bc_stochastic",
-    # "td3bc",
-    # "iql",
+    "bc_stochastic",
+    "td3bc",
+    "iql",
     # "cql",
     # "cql_max_q",
     # "cql_soft_q",
@@ -49,7 +54,7 @@ def plot(dataset_path: str, *, show: bool = False) -> None:
 
 def plot_agent(agent_id: str, dataset_cls) -> None:
     dataset = dataset_cls()
-    dataset_path = f"train/{dataset.id}_{agent_id}-v0"
+    dataset_path = f"{dataset.id}-{agent_id}-v0"
     plot(dataset_path, show=SHOW)
 
 

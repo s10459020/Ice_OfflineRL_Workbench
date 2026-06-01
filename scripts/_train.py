@@ -24,6 +24,8 @@ TRAIN_KWARGS = {
     "steps": 200_000,
     "save_interval": 20_000,
     "eval_interval": 2_000,
+    "eval_online_n": 20,
+    "eval_offline_n": 30,
 }
 
 SCAS_KWARGS = {
@@ -32,24 +34,24 @@ SCAS_KWARGS = {
 
 DATASET_LIST = [
     HopperSimpleDataset,
-    # HopperMediumDataset,
-    # HopperExpertDataset,
-    # HopperMediumD4rlDataset,
-    # HopperMediumReplayDataset,
-    # HopperMediumExpertDataset,
+    HopperMediumDataset,
+    HopperExpertDataset,
+    HopperMediumD4rlDataset,
+    HopperMediumReplayDataset,
+    HopperMediumExpertDataset,
 ]
 
 AGENT_LIST = [
-    ("bc_deterministic", train_bc_deterministic.collect),
+    # ("bc_deterministic", train_bc_deterministic.collect),
     # ("bc_stochastic", train_bc_stochastic.collect),
     # ("td3bc", train_td3bc.collect),
     # ("iql", train_iql.collect),
     # ("cql", train_cql.collect),
-    # ("cql_max_q", train_cql_max_q.collect),
-    # ("cql_soft_q", train_cql_soft_q.collect),
-    # ("aspl", train_aspl.collect),
-    # ("scas_mean", train_scas_mean.collect),
-    # ("scas_min", train_scas_min.collect),
+     ("cql_max_q", train_cql_max_q.collect),
+     ("cql_soft_q", train_cql_soft_q.collect),
+     ("aspl", train_aspl.collect),
+     ("scas_mean", train_scas_mean.collect),
+     ("scas_min", train_scas_min.collect),
 ]
 
 
@@ -58,7 +60,7 @@ def collect_agent(agent_id: str, trainer, dataset):
     if agent_id in ("scas_mean", "scas_min"):
         train_kwargs.update({k: v for k, v in SCAS_KWARGS.items() if v is not None})
 
-    task_id = f"{dataset.id}_{agent_id}-v0"
+    task_id = f"{dataset.id}-{agent_id}-v0"
     return trainer(dataset=dataset, task_id=task_id, device=DEVICE, **train_kwargs)
 
 

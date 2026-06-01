@@ -22,18 +22,18 @@ PRINT_INTERVAL = 1
 
 DATASET_LIST = [
     HopperSimpleDataset,
-    # HopperMediumDataset,
-    # HopperExpertDataset,
-    # HopperMediumD4rlDataset,
-    # HopperMediumReplayDataset,
-    # HopperMediumExpertDataset,
+    HopperMediumDataset,
+    HopperExpertDataset,
+    HopperMediumD4rlDataset,
+    HopperMediumReplayDataset,
+    HopperMediumExpertDataset,
 ]
 
 AGENT_LIST = [
     ("bc_deterministic", test_bc_deterministic.collect),
-    # ("bc_stochastic", test_bc_stochastic.collect),
-    # ("td3bc", test_td3bc.collect),
-    # ("iql", test_iql.collect),
+    ("bc_stochastic", test_bc_stochastic.collect),
+    ("td3bc", test_td3bc.collect),
+    ("iql", test_iql.collect),
     # ("cql", test_cql.collect),
     # ("cql_max_q", test_cql_max_q.collect),
     # ("cql_soft_q", test_cql_soft_q.collect),
@@ -51,7 +51,7 @@ TEST_KWARGS = {
 
 def collect_agent(agent_id: str, tester, dataset):
     test_kwargs = {k: v for k, v in TEST_KWARGS.items() if v is not None}
-    task_id = f"{dataset.id}_{agent_id}-v0"
+    task_id = f"{dataset.id}-{agent_id}-v0"
     return tester(dataset=dataset, task_id=task_id, **test_kwargs)
 
 
