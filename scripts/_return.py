@@ -6,6 +6,7 @@ import numpy as np
 
 from ice_offline.data.minari.loader import MinariLoader
 from ice_offline.tools.paths import minari_root
+from _skip import skip_missing_data
 
 
 RETURNS_ROOT = Path("tmps/returns")
@@ -172,11 +173,7 @@ def returns(dataset_path: str) -> list[float]:
 
 if __name__ == "__main__":
     for dataset_path in RETURNS_LIST:
-        data_path = Path(dataset_path)
-        if not data_path.exists():
-            data_path = minari_root() / dataset_path
-        if not data_path.exists():
-            print(f"skip missing: {dataset_path}")
+        if skip_missing_data(dataset_path):
             continue
         print(f"returns={dataset_path}")
         returns(dataset_path)

@@ -7,10 +7,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from _return import returns
+from _skip import skip_missing_data
 
 
 PLOT_ROOT = Path("plot")
-
 
 AGENT_LIST = [
     "bc_deterministic",
@@ -25,95 +25,68 @@ AGENT_LIST = [
     "scas_min",
 ]
 
-D4RL_RANDOM_RETURNS = "tmps/datasets/d4rl/hopper_random-v2.hdf5"
+DATASET_LIST = [
+    ("random", "hopper_random"),
+    ("replay", "hopper_replay"),
+    ("expert_d4rl", "hopper_expert_d4rl"),
+    ("medium_d4rl", "hopper_medium_d4rl"),
+    ("medium_replay", "hopper_medium_replay"),
+    ("medium_expert", "hopper_medium_expert"),
+    ("simple", "hopper_simple"),
+    ("medium", "hopper_medium"),
+    ("expert", "hopper_expert"),
+]
 
+BOTTOM_LIST = [
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "test/hopper_simple-random-v0/data/main_data.hdf5",
+    "test/hopper_medium-random-v0/data/main_data.hdf5",
+    "test/hopper_expert-random-v0/data/main_data.hdf5",
+]
 
-def agent_member(dataset_id: str, agent_id: str) -> tuple[str, str]:
-    return agent_id, f"test/{dataset_id}-{agent_id}-v0/data/main_data.hdf5"
-
-
-def agent_members(dataset_id: str) -> list[tuple[str, str]]:
-    return [agent_member(dataset_id, agent_id) for agent_id in AGENT_LIST]
-
-
-GROUPS = [
-    (
-        "random",
-        [
-            ("random_dataset", D4RL_RANDOM_RETURNS),
-            *agent_members("hopper_random"),
-        ],
-    ),
-    (
-        "replay",
-        [
-            ("random_dataset", D4RL_RANDOM_RETURNS),
-            *agent_members("hopper_replay"),
-            ("dataset", "tmps/datasets/d4rl/hopper_full_replay-v2.hdf5"),
-        ],
-    ),
-    (
-        "expert_d4rl",
-        [
-            ("random_dataset", D4RL_RANDOM_RETURNS),
-            *agent_members("hopper_expert_d4rl"),
-            ("dataset", "tmps/datasets/d4rl/hopper_expert-v2.hdf5"),
-        ],
-    ),
-    (
-        "medium_d4rl",
-        [
-            ("random_dataset", D4RL_RANDOM_RETURNS),
-            *agent_members("hopper_medium_d4rl"),
-            ("dataset", "tmps/datasets/d4rl/hopper_medium-v2.hdf5"),
-        ],
-    ),
-    (
-        "medium_replay",
-        [
-            ("random_dataset", D4RL_RANDOM_RETURNS),
-            *agent_members("hopper_medium_replay"),
-            ("dataset", "tmps/datasets/d4rl/hopper_medium_replay-v2.hdf5"),
-        ],
-    ),
-    (
-        "medium_expert",
-        [
-            ("random_dataset", D4RL_RANDOM_RETURNS),
-            *agent_members("hopper_medium_expert"),
-            ("dataset", "tmps/datasets/d4rl/hopper_medium_expert-v2.hdf5"),
-        ],
-    ),
-    (
-        "simple",
-        [
-            agent_member("hopper_simple", "random"),
-            *agent_members("hopper_simple"),
-            ("dataset", "mujoco/hopper/simple-v0/data/main_data.hdf5"),
-        ],
-    ),
-    (
-        "medium",
-        [
-            agent_member("hopper_medium", "random"),
-            *agent_members("hopper_medium"),
-            ("dataset", "mujoco/hopper/medium-v0/data/main_data.hdf5"),
-        ],
-    ),
-    (
-        "expert",
-        [
-            agent_member("hopper_expert", "random"),
-            *agent_members("hopper_expert"),
-            ("dataset", "mujoco/hopper/expert-v0/data/main_data.hdf5"),
-        ],
-    ),
+TOP_LIST = [
+    "",
+    "tmps/datasets/d4rl/hopper_full_replay-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_expert-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_medium-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_medium_replay-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_medium_expert-v2.hdf5",
+    "mujoco/hopper/simple-v0/data/main_data.hdf5",
+    "mujoco/hopper/medium-v0/data/main_data.hdf5",
+    "mujoco/hopper/expert-v0/data/main_data.hdf5",
 ]
 
 
-def save_boxplot(index: int, group_name: str, members: list[tuple[str, str]]) -> Path:
-    labels = [label for label, _ in members]
-    values = [returns(dataset_path) for _, dataset_path in members]
+def agent_path(dataset_id: str, agent_id: str) -> str:
+    return f"test/{dataset_id}-{agent_id}-v0/data/main_data.hdf5"
+
+
+def add_member(labels: list[str], values: list[list[float]], label: str, dataset_path: str) -> None:
+    if not dataset_path:
+        return
+    if skip_missing_data(dataset_path):
+        return
+    labels.append(label)
+    values.append(returns(dataset_path))
+
+
+def save_boxplot(index: int, group_name: str, dataset_id: str, bottom_path: str, top_path: str) -> Path:
+    labels = []
+    values = []
+
+    add_member(labels, values, "random", bottom_path)
+    for agent_id in AGENT_LIST:
+        add_member(labels, values, agent_id, agent_path(dataset_id, agent_id))
+    add_member(labels, values, "dataset", top_path)
+
+    if len(values) == 0:
+        print(f"skip empty: {group_name}")
+        return PLOT_ROOT / f"{index}. {group_name}.png"
 
     PLOT_ROOT.mkdir(parents=True, exist_ok=True)
     out_path = PLOT_ROOT / f"{index}. {group_name}.png"
@@ -133,6 +106,9 @@ def save_boxplot(index: int, group_name: str, members: list[tuple[str, str]]) ->
 
 
 if __name__ == "__main__":
-    for i, (group_name, members) in enumerate(GROUPS, start=1):
+    for i, ((group_name, dataset_id), bottom_path, top_path) in enumerate(
+        zip(DATASET_LIST, BOTTOM_LIST, TOP_LIST),
+        start=1,
+    ):
         print(f"group={group_name}")
-        save_boxplot(i, group_name, members)
+        save_boxplot(i, group_name, dataset_id, bottom_path, top_path)

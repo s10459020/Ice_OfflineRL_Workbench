@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 
 from _return import returns, returns_path
+from _skip import data_exists
 
 
 OUTPUT_ROOT = Path("tmps/returns")
@@ -32,12 +33,12 @@ DATASET_LIST = [
 ]
 
 BOTTOM_LIST = [
-    "tmps/datasets/d4rl/hopper_random-v2.hdf5"
-    "tmps/datasets/d4rl/hopper_random-v2.hdf5"
-    "tmps/datasets/d4rl/hopper_random-v2.hdf5"
-    "tmps/datasets/d4rl/hopper_random-v2.hdf5"
-    "tmps/datasets/d4rl/hopper_random-v2.hdf5"
-    "tmps/datasets/d4rl/hopper_random-v2.hdf5"
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
+    "tmps/datasets/d4rl/hopper_random-v2.hdf5",
     "test/hopper_simple-random-v0/data/main_data.hdf5",
     "test/hopper_medium-random-v0/data/main_data.hdf5",
     "test/hopper_expert-random-v0/data/main_data.hdf5",
@@ -61,9 +62,7 @@ def source_exists(dataset_path: str) -> bool:
         return False
     if returns_path(dataset_path).exists():
         return True
-    if dataset_path.startswith("tmps/"):
-        return Path(dataset_path).exists()
-    return (Path("tmps/datasets") / dataset_path).exists()
+    return data_exists(dataset_path)
 
 
 def return_values(dataset_path: str) -> list[float] | None:

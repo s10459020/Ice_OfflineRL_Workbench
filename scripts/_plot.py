@@ -15,6 +15,7 @@ from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 matplotlib.use("Agg")
 
 from ice_offline.plot.plotter import plot_csv
+from _skip import skip_missing
 
 
 EVAL_ROOT = Path("tmps/eval")
@@ -50,9 +51,12 @@ AGENT_LIST = [
 
 def plot(dataset_path: str, output_path: Path, *, show: bool = False) -> None:
     eval_dir = EVAL_ROOT / dataset_path
+    if skip_missing(dataset_path, eval_dir):
+        return
     csv_paths = [str(path) for path in sorted(eval_dir.glob("*.csv"))]
     if len(csv_paths) == 0:
-        raise FileNotFoundError(f"no csv found: {eval_dir}")
+        print(f"skip missing csv: {eval_dir}")
+        return
     output_path.parent.mkdir(parents=True, exist_ok=True)
     plot_csv(csv_paths=csv_paths, plot_name=dataset_path, show=show, output_path=str(output_path))
     print(f"saved: {output_path}")
