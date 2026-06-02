@@ -65,7 +65,7 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_cql-v0"
+    task_id = task_id or f"{dataset.id}-cql-v0"
     eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
@@ -107,7 +107,7 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.env_id}_cql-v0"
+    task_id = task_id or f"{dataset.id}-cql-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -138,7 +138,6 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
 
 
 

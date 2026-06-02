@@ -1,5 +1,14 @@
 import torch
 
+from ice_offline.dataset.halfcheetah_expert import HalfCheetahExpertDataset
+from ice_offline.dataset.halfcheetah_expert_d4rl import HalfCheetahExpertD4rlDataset
+from ice_offline.dataset.halfcheetah_medium import HalfCheetahMediumDataset
+from ice_offline.dataset.halfcheetah_medium_d4rl import HalfCheetahMediumD4rlDataset
+from ice_offline.dataset.halfcheetah_medium_expert import HalfCheetahMediumExpertDataset
+from ice_offline.dataset.halfcheetah_medium_replay import HalfCheetahMediumReplayDataset
+from ice_offline.dataset.halfcheetah_random import HalfCheetahRandomDataset
+from ice_offline.dataset.halfcheetah_replay import HalfCheetahReplayDataset
+from ice_offline.dataset.halfcheetah_simple import HalfCheetahSimpleDataset
 from ice_offline.dataset.hopper_expert import HopperExpertDataset
 from ice_offline.dataset.hopper_expert_d4rl import HopperExpertD4rlDataset
 from ice_offline.dataset.hopper_medium import HopperMediumDataset
@@ -36,28 +45,37 @@ SCAS_KWARGS = {
 }
 
 DATASET_LIST = [
-    # HopperRandomDataset,
-    # HopperReplayDataset,
-    HopperMediumD4rlDataset,
-    HopperMediumReplayDataset,
-    HopperMediumExpertDataset,
-    # HopperExpertD4rlDataset,
-    HopperSimpleDataset,
-    HopperMediumDataset,
-    HopperExpertDataset,
+    HopperRandomDataset,
+    HopperReplayDataset,
+    # HopperMediumReplayDataset,
+    # HopperMediumD4rlDataset,
+    # HopperMediumExpertDataset,
+    HopperExpertD4rlDataset,
+    # HopperSimpleDataset,
+    # HopperMediumDataset,
+    # HopperExpertDataset,
+    # HalfCheetahRandomDataset,
+    # HalfCheetahReplayDataset,
+    # HalfCheetahMediumReplayDataset,
+    # HalfCheetahMediumD4rlDataset,
+    # HalfCheetahMediumExpertDataset,
+    # HalfCheetahExpertD4rlDataset,
+    # HalfCheetahSimpleDataset,
+    # HalfCheetahMediumDataset,
+    # HalfCheetahExpertDataset,
 ]
 
 AGENT_LIST = [
-    # ("bc_deterministic", train_bc_deterministic.collect),
-    # ("bc_stochastic", train_bc_stochastic.collect),
-    # ("td3bc", train_td3bc.collect),
-    # ("iql", train_iql.collect),
-     ("cql", train_cql.collect),
-    # ("cql_max_q", train_cql_max_q.collect),
-    # ("cql_soft_q", train_cql_soft_q.collect),
-    # ("aspl", train_aspl.collect),
-    # ("scas_mean", train_scas_mean.collect),
-    # ("scas_min", train_scas_min.collect),
+    ("bc_deterministic", train_bc_deterministic.collect),
+    ("bc_stochastic", train_bc_stochastic.collect),
+    ("td3bc", train_td3bc.collect),
+    ("iql", train_iql.collect),
+    ("cql", train_cql.collect),
+    ("cql_max_q", train_cql_max_q.collect),
+    ("cql_soft_q", train_cql_soft_q.collect),
+    ("aspl", train_aspl.collect),
+    ("scas_mean", train_scas_mean.collect),
+    ("scas_min", train_scas_min.collect),
 ]
 
 

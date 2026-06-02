@@ -12,7 +12,7 @@ from ice_offline.data.state.hopper import HopperState, HopperStateIO
 from ice_offline.data.state.op_collector import StateCollectWrapper
 
 
-DYNAMICS_MODEL_STEP = 200_000
+DYNAMICS_MODEL_STEP = 100_000
 AGENT_MODEL_STEP = 200_000
 EPISODES = 10
 SEED = 42
@@ -31,7 +31,7 @@ def test(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_scas_mean-v0"
+    task_id = task_id or f"{dataset.id}-scas_mean-v0"
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test SCAS Mean")
@@ -76,7 +76,7 @@ def collect(
     seed: int = SEED,
     print_interval: int = 0,
 ):
-    task_id = task_id or f"{dataset.env_id}_scas_mean-v0"
+    task_id = task_id or f"{dataset.id}-scas_mean-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)

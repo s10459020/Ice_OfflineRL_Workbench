@@ -30,7 +30,7 @@ def test(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_cql-v0"
+    task_id = task_id or f"{dataset.id}-cql-v0"
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test CQL")
@@ -68,7 +68,7 @@ def collect(
     seed: int = SEED,
     print_interval: int = 0,
 ):
-    task_id = task_id or f"{dataset.env_id}_cql-v0"
+    task_id = task_id or f"{dataset.id}-cql-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     dataset = HopperSimpleDataset().load()
     returns, minari_data, state_data = collect(
         dataset=dataset,
-        task_id=f"{dataset.id}_cql-v0",
+        task_id=f"{dataset.id}-cql-v0",
         episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,
