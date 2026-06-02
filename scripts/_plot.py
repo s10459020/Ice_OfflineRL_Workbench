@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib
 
 from ice_offline.dataset.hopper_expert import HopperExpertDataset
+from ice_offline.dataset.hopper_expert_d4rl import HopperExpertD4rlDataset
 from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_medium_d4rl import HopperMediumD4rlDataset
 from ice_offline.dataset.hopper_medium_expert import HopperMediumExpertDataset
@@ -21,14 +22,15 @@ PLOT_ROOT = Path("plot/agent")
 SHOW = False
 
 DATASET_LIST = [
-    HopperSimpleDataset,
-    HopperMediumDataset,
-    HopperExpertDataset,
     HopperRandomDataset,
     HopperReplayDataset,
+    HopperExpertD4rlDataset,
     HopperMediumD4rlDataset,
     HopperMediumReplayDataset,
     HopperMediumExpertDataset,
+    HopperSimpleDataset,
+    HopperMediumDataset,
+    HopperExpertDataset,
 ]
 
 AGENT_LIST = [
