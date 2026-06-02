@@ -5,6 +5,8 @@ from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_medium_d4rl import HopperMediumD4rlDataset
 from ice_offline.dataset.hopper_medium_expert import HopperMediumExpertDataset
 from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
+from ice_offline.dataset.hopper_random import HopperRandomDataset
+from ice_offline.dataset.hopper_replay import HopperReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from train_agent import train_aspl
 from train_agent import train_bc_deterministic
@@ -36,6 +38,8 @@ DATASET_LIST = [
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
+    # HopperRandomDataset,
+    # HopperReplayDataset,
     HopperMediumD4rlDataset,
     HopperMediumReplayDataset,
     HopperMediumExpertDataset,
@@ -46,12 +50,12 @@ AGENT_LIST = [
     # ("bc_stochastic", train_bc_stochastic.collect),
     # ("td3bc", train_td3bc.collect),
     # ("iql", train_iql.collect),
-    # ("cql", train_cql.collect),
-     ("cql_max_q", train_cql_max_q.collect),
-     ("cql_soft_q", train_cql_soft_q.collect),
-     ("aspl", train_aspl.collect),
-     ("scas_mean", train_scas_mean.collect),
-     ("scas_min", train_scas_min.collect),
+     ("cql", train_cql.collect),
+    # ("cql_max_q", train_cql_max_q.collect),
+    # ("cql_soft_q", train_cql_soft_q.collect),
+    # ("aspl", train_aspl.collect),
+    # ("scas_mean", train_scas_mean.collect),
+    # ("scas_min", train_scas_min.collect),
 ]
 
 

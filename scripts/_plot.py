@@ -7,6 +7,8 @@ from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_medium_d4rl import HopperMediumD4rlDataset
 from ice_offline.dataset.hopper_medium_expert import HopperMediumExpertDataset
 from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
+from ice_offline.dataset.hopper_random import HopperRandomDataset
+from ice_offline.dataset.hopper_replay import HopperReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 
 matplotlib.use("Agg")
@@ -22,6 +24,8 @@ DATASET_LIST = [
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
+    HopperRandomDataset,
+    HopperReplayDataset,
     HopperMediumD4rlDataset,
     HopperMediumReplayDataset,
     HopperMediumExpertDataset,

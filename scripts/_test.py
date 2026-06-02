@@ -3,6 +3,8 @@ from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_medium_d4rl import HopperMediumD4rlDataset
 from ice_offline.dataset.hopper_medium_expert import HopperMediumExpertDataset
 from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
+from ice_offline.dataset.hopper_random import HopperRandomDataset
+from ice_offline.dataset.hopper_replay import HopperReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from test_agent import test_aspl
 from test_agent import test_bc_deterministic
@@ -24,23 +26,25 @@ DATASET_LIST = [
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
+    HopperRandomDataset,
+    HopperReplayDataset,
     HopperMediumD4rlDataset,
     HopperMediumReplayDataset,
     HopperMediumExpertDataset,
 ]
 
 AGENT_LIST = [
-    ("bc_deterministic", test_bc_deterministic.collect),
-    ("bc_stochastic", test_bc_stochastic.collect),
-    ("td3bc", test_td3bc.collect),
-    ("iql", test_iql.collect),
-    # ("cql", test_cql.collect),
-    # ("cql_max_q", test_cql_max_q.collect),
-    # ("cql_soft_q", test_cql_soft_q.collect),
-    # ("aspl", test_aspl.collect),
-    # ("scas_mean", test_scas_mean.collect),
-    # ("scas_min", test_scas_min.collect),
-    # ("random", test_random.collect),
+    # ("bc_deterministic", test_bc_deterministic.collect),
+    # ("bc_stochastic", test_bc_stochastic.collect),
+    # ("td3bc", test_td3bc.collect),
+    # ("iql", test_iql.collect),
+     ("cql", test_cql.collect),
+     ("cql_max_q", test_cql_max_q.collect),
+     ("cql_soft_q", test_cql_soft_q.collect),
+     ("aspl", test_aspl.collect),
+     ("scas_mean", test_scas_mean.collect),
+     ("scas_min", test_scas_min.collect),
+     ("random", test_random.collect),
 ]
 
 TEST_KWARGS = {
