@@ -1,9 +1,9 @@
-import numpy as np
+﻿import numpy as np
 import torch
 from _lib import assert_callback
 from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.discrete.cql_discrete import CQLAgentDiscrete
+from ice_offline.agent.discrete.cql_discrete import CQLDiscreteAgent
 from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 # ====================
@@ -20,7 +20,7 @@ N_TEST_BATCHES = 30
 # Mapping: all_pairs
 # ====================
 
-def _all_pairs(our_agent: CQLAgentDiscrete, algo):
+def _all_pairs(our_agent: CQLDiscreteAgent, algo):
     d3_q = algo.impl.modules.q_funcs[0]
     d3_targ_q = algo.impl.modules.targ_q_funcs[0]
     our_q = our_agent.critic._q
@@ -43,8 +43,8 @@ def _all_pairs(our_agent: CQLAgentDiscrete, algo):
 # common
 # ====================
 
-def build_our_agent() -> CQLAgentDiscrete:
-    return CQLAgentDiscrete(obs_size=OBS_DIM, act_size=N_ACTIONS)
+def build_our_agent() -> CQLDiscreteAgent:
+    return CQLDiscreteAgent(obs_size=OBS_DIM, act_size=N_ACTIONS)
 
 def build_d3rl():
     config = algos.DiscreteCQLConfig()
@@ -127,12 +127,12 @@ def _d3rl_loss_critic(algo, obs_t, act_t, rew_t, next_obs_t, done_t) -> torch.Te
 # Our Math
 # ====================
 
-def _ref_update_and_collect_params(d3rl, batch: TorchMiniBatch, step: int, our_agent: CQLAgentDiscrete):
+def _ref_update_and_collect_params(d3rl, batch: TorchMiniBatch, step: int, our_agent: CQLDiscreteAgent):
     _ = d3rl.impl.inner_update(batch, step)
     return [x for _, x in _all_pairs(our_agent, d3rl)]
 
 def _our_update_and_collect_params(
-    our_agent: CQLAgentDiscrete,
+    our_agent: CQLDiscreteAgent,
     obs_t: torch.Tensor,
     act_t: torch.Tensor,
     rew_t: torch.Tensor,
@@ -145,7 +145,7 @@ def _our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def init_compare() -> tuple[CQLAgentDiscrete, object]:
+def init_compare() -> tuple[CQLDiscreteAgent, object]:
     print_stage("Init")
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -156,7 +156,7 @@ def init_compare() -> tuple[CQLAgentDiscrete, object]:
             our_param.copy_(d3_param)
     return our_agent, d3rl
 
-def compare_act(our_agent: CQLAgentDiscrete, d3rl) -> None:
+def compare_act(our_agent: CQLDiscreteAgent, d3rl) -> None:
     print_stage("Act Compare")
     rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
@@ -178,7 +178,7 @@ def compare_act(our_agent: CQLAgentDiscrete, d3rl) -> None:
         )
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
-def compare_loss(our_agent: CQLAgentDiscrete, d3rl) -> None:
+def compare_loss(our_agent: CQLDiscreteAgent, d3rl) -> None:
     print_stage("Loss Compare")
     rng = np.random.default_rng(SEED + 1)
     for i in range(1, N_TEST_BATCHES + 1):
@@ -205,7 +205,7 @@ def compare_loss(our_agent: CQLAgentDiscrete, d3rl) -> None:
         )
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
-def compare_param(our_agent: CQLAgentDiscrete, d3rl) -> None:
+def compare_param(our_agent: CQLDiscreteAgent, d3rl) -> None:
     print_stage("Update Compare")
     rng = np.random.default_rng(SEED + 2)
     for i in range(1, N_TEST_BATCHES + 1):
@@ -234,3 +234,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

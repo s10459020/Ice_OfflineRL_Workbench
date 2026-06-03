@@ -1,35 +1,53 @@
-﻿import gymnasium as gym
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.bc_stochastic import BCStochasticAgent
+from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.data.state.hopper import HopperState, HopperStateIO
+from ice_offline.data.state.hopper import HopperState
+from ice_offline.data.state.hopper import HopperStateIO
 from ice_offline.data.state.op_collector import StateCollectWrapper
 from ice_offline.data.state.op_dataset import StateDataset
 from ice_offline.run.evaluator import Evaluator
 from ice_offline.tools.printer import print_stage
 
 
-DATASET_CLASS = HopperSimpleDataset
-
+BATCH_SIZE = 256
 STEPS = 200_000
-SAVE_INTERVAL = 20_000
 EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
-
+SAVE_INTERVAL = 20_000
 SEED = 42
 DEVICE = "cuda:0"
-BATCH_SIZE = 256
 
 
-def eval_loss_pi(agent: BCStochasticAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss(agent: SDCCQLAgent, batch: TorchBuffer) -> dict[str, float]:
+    o = batch.obs_list
+    a = batch.act_list
+    r = batch.rew_list.view(-1, 1)
+    on = batch.next_obs_list
+    d = batch.done_list.view(-1, 1)
     with torch.no_grad():
-        return {"loss_actor": float(agent.loss_actor(batch.obs_list, batch.act_list).item())}
+        loss_td_parts = agent.loss_td(o, a, r, on, d)
+        loss_cql_parts = agent.loss_conservative(o, a, on)
+        loss_critic = agent.loss_critic(o, a, r, on, d, update_alpha=False)
+        loss_actor = agent.loss_actor(o, update_alpha=False)
+        loss_dynamics = agent.loss_dynamics(o, a, on)
+        loss_transition = agent.loss_transition(o, on)
+        loss_sdc = agent.loss_state_deviation(o)
+        return {
+            "loss_q_td": float(loss_td_parts.sum().item()),
+            "loss_q_cql": float(loss_cql_parts.sum().item()),
+            "loss_actor": float(loss_actor.item()),
+            "loss_critic": float(loss_critic.item()),
+            "loss_dynamics": float(loss_dynamics.item()),
+            "loss_transition": float(loss_transition.item()),
+            "loss_sdc": float(loss_sdc.item()),
+        }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
@@ -53,12 +71,12 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_bc_stochastic-v0"
-    eval_env = eval_env or dataset.make_eval_env()
+    task_id = task_id or f"{dataset.id}-sdc_cql-v0"
+    eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
-    print_stage("Train BC Stochastic")
-    agent = BCStochasticAgent(
+    print_stage("Train SDC CQL")
+    agent = SDCCQLAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,
@@ -69,7 +87,7 @@ def train(
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
-        eval_offline_fns=[eval_loss_pi],
+        eval_offline_fns=[eval_loss],
         eval_online_fns=[eval_return],
     )
 
@@ -90,12 +108,12 @@ def collect(
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
-    eval_online_n: int = EVAL_ONLINE_N,
     eval_offline_n: int = EVAL_OFFLINE_N,
+    eval_online_n: int = EVAL_ONLINE_N,
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.env_id}_bc_stochastic-v0"
+    task_id = task_id or f"{dataset.id}-sdc_cql-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -121,9 +139,8 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = DATASET_CLASS(device=DEVICE).load()
+    dataset = HopperSimpleDataset(device=DEVICE).load()
     minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-

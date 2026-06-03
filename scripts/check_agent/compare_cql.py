@@ -33,14 +33,14 @@ def _all_pairs(our: CQLAgent, ref):
     ref_t1 = ref.impl.modules.targ_q_funcs[0]
     ref_t2 = ref.impl.modules.targ_q_funcs[1]
     return [
-        (our.policy.hidden[0].weight, ref_policy._encoder._layers[0].weight),
-        (our.policy.hidden[0].bias, ref_policy._encoder._layers[0].bias),
-        (our.policy.hidden[2].weight, ref_policy._encoder._layers[2].weight),
-        (our.policy.hidden[2].bias, ref_policy._encoder._layers[2].bias),
-        (our.policy.mean_head.weight, ref_policy._mu.weight),
-        (our.policy.mean_head.bias, ref_policy._mu.bias),
-        (our.policy.logstd_head.weight, ref_policy._logstd.weight),
-        (our.policy.logstd_head.bias, ref_policy._logstd.bias),
+        (our.actor.pi.hidden[0].weight, ref_policy._encoder._layers[0].weight),
+        (our.actor.pi.hidden[0].bias, ref_policy._encoder._layers[0].bias),
+        (our.actor.pi.hidden[2].weight, ref_policy._encoder._layers[2].weight),
+        (our.actor.pi.hidden[2].bias, ref_policy._encoder._layers[2].bias),
+        (our.actor.pi.mean_head.weight, ref_policy._mu.weight),
+        (our.actor.pi.mean_head.bias, ref_policy._mu.bias),
+        (our.actor.pi.logstd_head.weight, ref_policy._logstd.weight),
+        (our.actor.pi.logstd_head.bias, ref_policy._logstd.bias),
         (our.critic.q1.network[0].weight, ref_q1._encoder._layers[0].weight),
         (our.critic.q1.network[0].bias, ref_q1._encoder._layers[0].bias),
         (our.critic.q1.network[2].weight, ref_q1._encoder._layers[2].weight),
@@ -65,7 +65,7 @@ def _all_pairs(our: CQLAgent, ref):
         (our.critic.targ_q2.network[2].bias, ref_t2._encoder._layers[2].bias),
         (our.critic.targ_q2.network[4].weight, ref_t2._fc.weight),
         (our.critic.targ_q2.network[4].bias, ref_t2._fc.bias),
-        (our.policy.log_alpha, ref.impl.modules.log_temp._parameter),
+        (our.actor.pi.log_alpha, ref.impl.modules.log_temp._parameter),
         (our.critic.log_alpha, ref.impl.modules.log_alpha._parameter),
     ]
 
@@ -293,7 +293,7 @@ def compare_loss(our: CQLAgent, ref) -> None:
         # loss alpha sac
         assert_callback(
             lambda: [ref_loss_alpha_sac(ref, s)],
-            lambda: [our.loss_alpha_sac(our.policy.sample(s)[1].detach())],
+            lambda: [our.loss_alpha_sac(our.actor.sample(s)[1].detach())],
             label=f"loss_alpha_sac[{i}]",
             seed=SEED + i,
         )

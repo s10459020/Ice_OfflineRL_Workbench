@@ -24,6 +24,7 @@ from test_agent import test_cql_max_q
 from test_agent import test_cql_soft_q
 from test_agent import test_iql
 from test_agent import test_random
+from test_agent import test_sdc_cql
 from test_agent import test_scas_mean
 from test_agent import test_scas_min
 from test_agent import test_td3bc
@@ -59,6 +60,7 @@ AGENT_LIST = [
     ("td3bc", test_td3bc.collect),
     ("iql", test_iql.collect),
     ("cql", test_cql.collect),
+    ("sdc_cql", test_sdc_cql.collect),
     ("cql_max_q", test_cql_max_q.collect),
     ("cql_soft_q", test_cql_soft_q.collect),
     ("aspl", test_aspl.collect),

@@ -1,4 +1,4 @@
-"""Q discrete agent (basic Q-learning in offline batch setting)."""
+﻿"""Q discrete agent (basic Q-learning in offline batch setting)."""
 
 import numpy as np
 import torch
@@ -50,7 +50,7 @@ class _TQ(torch.nn.Module):
     def tq(self, o: torch.Tensor) -> torch.Tensor:
         return self._targ_q(o)
 
-class QAgentDiscrete(TorchAgent):
+class QDiscreteAgent(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -143,3 +143,4 @@ class QAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d)
+

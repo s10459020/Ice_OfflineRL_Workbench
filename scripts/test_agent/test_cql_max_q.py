@@ -1,9 +1,9 @@
-import numpy as np
+﻿import numpy as np
 import torch
 import gymnasium as gym
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.cql_max_q import CQLAgentMaxQ
+from ice_offline.agent.cql_max_q import CQLMaxQAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.printer import print_stage
@@ -34,7 +34,7 @@ def test(
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test CQL Max Q")
-    agent = CQLAgentMaxQ(
+    agent = CQLMaxQAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
@@ -102,3 +102,4 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+

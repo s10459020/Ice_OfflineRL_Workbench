@@ -1,27 +1,31 @@
-from ice_offline.agent.bc_deterministic import BCAgentDeterministic
-from ice_offline.agent.bc_stochastic import BCAgentStochastic
-from ice_offline.agent.discrete.bc_discrete import BCAgentDiscrete
+﻿from ice_offline.agent.bc_deterministic import BCDeterministicAgent
+from ice_offline.agent.bc_stochastic import BCStochasticAgent
+from ice_offline.agent.discrete.bc_discrete import BCDiscreteAgent
 from ice_offline.agent.cql import CQLAgent
-from ice_offline.agent.cql_max_q import CQLAgentMaxQ
-from ice_offline.agent.cql_soft_q import CQLAgentSoftQ
-from ice_offline.agent.discrete.cql_discrete import CQLAgentDiscrete
+from ice_offline.agent.cql_max_q import CQLMaxQAgent
+from ice_offline.agent.cql_soft_q import CQLSoftQAgent
+from ice_offline.agent.discrete.cql_discrete import CQLDiscreteAgent
 from ice_offline.agent.iql import IQLAgent
-from ice_offline.agent.discrete.iql_discrete import IQLAgentDiscrete
+from ice_offline.agent.discrete.iql_discrete import IQLDiscreteAgent
+from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.agent._spec import TorchAgent
 
 
 AGENT_LOOKUP = {
-    "bc_deterministic": BCAgentDeterministic,
-    "bc_discrete": BCAgentDiscrete,
-    "bc_stochastic": BCAgentStochastic,
+    "bc_deterministic": BCDeterministicAgent,
+    "bc_discrete": BCDiscreteAgent,
+    "bc_stochastic": BCStochasticAgent,
     "cql": CQLAgent,
-    "cql_max_q": CQLAgentMaxQ,
-    "cql_soft_q": CQLAgentSoftQ,
-    "cql_discrete": CQLAgentDiscrete,
+    "cql_max_q": CQLMaxQAgent,
+    "cql_soft_q": CQLSoftQAgent,
+    "cql_discrete": CQLDiscreteAgent,
     "iql": IQLAgent,
-    "iql_discrete": IQLAgentDiscrete,
+    "iql_discrete": IQLDiscreteAgent,
+    "sdc_cql": SDCCQLAgent,
 }
 
 
 def get_agent(agent_id: str, obs_size: int, act_size: int) -> TorchAgent:
     return AGENT_LOOKUP[agent_id](obs_size=obs_size, act_size=act_size)
+
+

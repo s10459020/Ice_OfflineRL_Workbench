@@ -25,6 +25,7 @@ from train_agent import train_cql
 from train_agent import train_cql_max_q
 from train_agent import train_cql_soft_q
 from train_agent import train_iql
+from train_agent import train_sdc_cql
 from train_agent import train_scas_mean
 from train_agent import train_scas_min
 from train_agent import train_td3bc
@@ -71,6 +72,7 @@ AGENT_LIST = [
     ("td3bc", train_td3bc.collect),
     ("iql", train_iql.collect),
     ("cql", train_cql.collect),
+    ("sdc_cql", train_sdc_cql.collect),
     ("cql_max_q", train_cql_max_q.collect),
     ("cql_soft_q", train_cql_soft_q.collect),
     ("aspl", train_aspl.collect),

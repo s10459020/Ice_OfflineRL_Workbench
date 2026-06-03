@@ -1,9 +1,9 @@
-import gymnasium as gym
+﻿import gymnasium as gym
 import minari
 import numpy as np
 import torch
 
-from ice_offline.agent.cql_max_q import CQLAgentMaxQ
+from ice_offline.agent.cql_max_q import CQLMaxQAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -25,7 +25,7 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss(agent: CQLAgentMaxQ, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss(agent: CQLMaxQAgent, batch: TorchBuffer) -> dict[str, float]:
     o = batch.obs_list
     a = batch.act_list
     r = batch.rew_list.view(-1, 1)
@@ -70,7 +70,7 @@ def train(
     dataset.set_seed(seed)
 
     print_stage("Train CQL Max Q")
-    agent = CQLAgentMaxQ(
+    agent = CQLMaxQAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,
@@ -138,3 +138,4 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+

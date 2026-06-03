@@ -3,7 +3,7 @@ import torch
 import gymnasium as gym
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.scas_min import ScasAgentMin, ScasDynamic
+from ice_offline.agent.scas_min import ScasMinAgent, ScasDynamicAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.printer import print_stage
@@ -35,13 +35,13 @@ def test(
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test SCAS Min")
-    dynamics = ScasDynamic(
+    dynamics = ScasDynamicAgent(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
     )
     dynamics.load(model_ref(f"{task_id}/dynamics", DYNAMICS_MODEL_STEP))
 
-    agent = ScasAgentMin(
+    agent = ScasMinAgent(
         obs_dim=dataset.obs_dim,
         act_dim=dataset.act_dim,
         dynamics=dynamics,
@@ -110,3 +110,4 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+

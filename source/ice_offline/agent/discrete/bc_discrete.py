@@ -1,4 +1,4 @@
-"""Behavior Cloning discrete agent (minimal fixed structure)."""
+﻿"""Behavior Cloning discrete agent (minimal fixed structure)."""
 
 import numpy as np
 import torch
@@ -26,7 +26,7 @@ class _Pi(torch.nn.Module):
         return Categorical(logits=logits)
 
 
-class BCAgentDiscrete(TorchAgent):
+class BCDiscreteAgent(TorchAgent):
     def __init__(self, obs_size: int, act_size: int, beta: float = 0.5, device: str = "cpu"):
         self.device = device
         self.learning_rate = 1e-3
@@ -92,3 +92,4 @@ class BCAgentDiscrete(TorchAgent):
         loss_bc = self.loss_bc(logits, a)
         loss_regular = self.loss_regular(logits)
         return loss_bc + loss_regular
+

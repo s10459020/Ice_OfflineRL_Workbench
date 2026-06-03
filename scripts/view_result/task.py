@@ -49,6 +49,7 @@ AGENT_ID_LIST = [
     "td3bc",
     "iql",
     "cql",
+    "sdc_cql",
     "cql_max_q",
     "cql_soft_q",
     "aspl",

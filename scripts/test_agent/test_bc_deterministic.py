@@ -10,7 +10,7 @@ from ice_offline.tools.printer import print_stage
 from ice_offline.data.state.hopper import HopperState, HopperStateIO
 from ice_offline.data.state.op_collector import StateCollectWrapper
 from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.agent.bc_deterministic import BCAgentDeterministic
+from ice_offline.agent.bc_deterministic import BCDeterministicAgent
 from ice_offline.agent._spec import model_ref
 
 
@@ -35,7 +35,7 @@ def train(
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test BC Deterministic")
-    agent = BCAgentDeterministic(
+    agent = BCDeterministicAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
@@ -102,3 +102,4 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+

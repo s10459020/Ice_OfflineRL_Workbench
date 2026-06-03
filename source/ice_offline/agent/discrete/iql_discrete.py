@@ -1,4 +1,4 @@
-"""Implicit Q-Learning discrete agent (Q-learning symmetric version)."""
+﻿"""Implicit Q-Learning discrete agent (Q-learning symmetric version)."""
 
 import numpy as np
 import torch
@@ -50,7 +50,7 @@ class _V(torch.nn.Module):
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.network(o)
 
-class IQLAgentDiscrete(TorchAgent):
+class IQLDiscreteAgent(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -142,3 +142,4 @@ class IQLAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
+

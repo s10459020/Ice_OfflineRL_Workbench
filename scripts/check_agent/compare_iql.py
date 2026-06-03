@@ -31,13 +31,13 @@ def _all_pairs(our: IQLAgent, ref):
     ref_t2 = ref.impl.modules.targ_q_funcs[1]
     ref_v = ref.impl.modules.value_func
     return [
-        (our.actor.hidden[0].weight, ref_policy._encoder._layers[0].weight),
-        (our.actor.hidden[0].bias, ref_policy._encoder._layers[0].bias),
-        (our.actor.hidden[2].weight, ref_policy._encoder._layers[2].weight),
-        (our.actor.hidden[2].bias, ref_policy._encoder._layers[2].bias),
-        (our.actor.mean_head.weight, ref_policy._mu.weight),
-        (our.actor.mean_head.bias, ref_policy._mu.bias),
-        (our.actor.logstd, ref_policy._logstd),
+        (our.actor.pi.hidden[0].weight, ref_policy._encoder._layers[0].weight),
+        (our.actor.pi.hidden[0].bias, ref_policy._encoder._layers[0].bias),
+        (our.actor.pi.hidden[2].weight, ref_policy._encoder._layers[2].weight),
+        (our.actor.pi.hidden[2].bias, ref_policy._encoder._layers[2].bias),
+        (our.actor.pi.mean_head.weight, ref_policy._mu.weight),
+        (our.actor.pi.mean_head.bias, ref_policy._mu.bias),
+        (our.actor.pi.logstd, ref_policy._logstd),
         (our.critic.q1.network[0].weight, ref_q1._encoder._layers[0].weight),
         (our.critic.q1.network[0].bias, ref_q1._encoder._layers[0].bias),
         (our.critic.q1.network[2].weight, ref_q1._encoder._layers[2].weight),
@@ -62,12 +62,12 @@ def _all_pairs(our: IQLAgent, ref):
         (our.critic.targ_q2.network[2].bias, ref_t2._encoder._layers[2].bias),
         (our.critic.targ_q2.network[4].weight, ref_t2._fc.weight),
         (our.critic.targ_q2.network[4].bias, ref_t2._fc.bias),
-        (our.v.network[0].weight, ref_v._encoder._layers[0].weight),
-        (our.v.network[0].bias, ref_v._encoder._layers[0].bias),
-        (our.v.network[2].weight, ref_v._encoder._layers[2].weight),
-        (our.v.network[2].bias, ref_v._encoder._layers[2].bias),
-        (our.v.network[4].weight, ref_v._fc.weight),
-        (our.v.network[4].bias, ref_v._fc.bias),
+        (our.critic.v.network[0].weight, ref_v._encoder._layers[0].weight),
+        (our.critic.v.network[0].bias, ref_v._encoder._layers[0].bias),
+        (our.critic.v.network[2].weight, ref_v._encoder._layers[2].weight),
+        (our.critic.v.network[2].bias, ref_v._encoder._layers[2].bias),
+        (our.critic.v.network[4].weight, ref_v._fc.weight),
+        (our.critic.v.network[4].bias, ref_v._fc.bias),
     ]
 
 

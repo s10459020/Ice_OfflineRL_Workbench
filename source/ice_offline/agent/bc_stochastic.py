@@ -10,7 +10,13 @@ from ice_offline.agent._spec import TorchAgent
 from ice_offline.dataset._spec import TorchBuffer
 
 class _Pi(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        min_logstd: float = -4.0,
+        max_logstd: float = 15.0,
+    ):
         super().__init__()
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
@@ -20,39 +26,44 @@ class _Pi(torch.nn.Module):
         )
         self.mean_head = torch.nn.Linear(256, act_size)
         self.logstd_head = torch.nn.Linear(256, act_size)
-        self.min_logstd = -4.0
-        self.max_logstd = 15.0
+        self.min_logstd = min_logstd
+        self.max_logstd = max_logstd
 
     def dist(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         h = self.network(o)
         mean = self.mean_head(h)
         logstd = self.logstd_head(h).clamp(self.min_logstd, self.max_logstd)
-        a_mean = torch.tanh(mean)
-        return a_mean, logstd
+        return torch.tanh(mean), logstd
 
-    def mode(self, o: torch.Tensor) -> torch.Tensor:
-        a_mean, _ = self.dist(o)
-        return a_mean
+
+class _Actor(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int):
+        super().__init__()
+        self.pi = _Pi(obs_size, act_size)
+
+    def forward(self, o: torch.Tensor) -> torch.Tensor:
+        mean, _ = self.pi.dist(o)
+        return mean
 
     def sample(self, o: torch.Tensor) -> torch.Tensor:
-        a_mean, logstd = self.dist(o)
-        return Normal(a_mean, logstd.exp()).rsample().clamp(-1.0, 1.0)
+        mean, logstd = self.pi.dist(o)
+        return Normal(mean, logstd.exp()).rsample().clamp(-1.0, 1.0)
 
-    def forward(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        a_mean, logstd = self.dist(o)
-        return a_mean, logstd
 
 @dataclass
-class BCAgentStochastic(TorchAgent):
+class BCStochasticAgent(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
     device: str = "cpu"
 
+    # ====================
+    # Init
+    # ====================
     def __post_init__(self):
-        self.policy = _Pi(self.obs_size, self.act_size).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.policy.parameters(),
+        self.actor = _Actor(self.obs_size, self.act_size).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(),
             lr=self.learning_rate,
             betas=(0.9, 0.999),
             eps=1e-8,
@@ -60,40 +71,55 @@ class BCAgentStochastic(TorchAgent):
             amsgrad=False,
         )
 
+    # ====================
+    # Act
+    # ====================
     def act(self, observation, greedy: bool = True):
-        observation_np = np.asarray(observation, dtype=np.float32)[None, :]
-        o = torch.as_tensor(observation_np, dtype=torch.float32, device=self.device)
+        o_np = np.asarray(observation, dtype=np.float32)[None, :]
+        o = torch.as_tensor(o_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            a = self.policy.mode(o) if greedy else self.policy.sample(o)
+            a = self.actor(o) if greedy else self.actor.sample(o)
         return a.cpu().numpy()[0]
 
     def act_batch(self, observation_batch, greedy: bool = True):
-        o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
+        o_np = np.asarray(observation_batch, dtype=np.float32)
+        o = torch.as_tensor(o_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            a = self.policy.mode(o) if greedy else self.policy.sample(o)
+            a = self.actor(o) if greedy else self.actor.sample(o)
         return a.cpu().numpy()
 
+    # ====================
+    # Update
+    # ====================
     def update(self, batch: TorchBuffer):
         o = batch.obs_list
         a = batch.act_list
-        loss = self._loss(o, a)
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+        self.update_actor(o, a)
 
+    def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:
+        self.actor_optimizer.zero_grad()
+        loss = self.loss_actor(o, a)
+        loss.backward()
+        self.actor_optimizer.step()
+
+    # ====================
+    # Save and load
+    # ====================
     def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
-            "pi": self.policy.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
+            "actor": self.actor.state_dict(),
+            "actor_optimizer": self.actor_optimizer.state_dict(),
         }
 
     def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
-        self.policy.load_state_dict(state["pi"])
-        self.optimizer.load_state_dict(state["optimizer"])
+        self.actor.load_state_dict(state["actor"])
+        self.actor_optimizer.load_state_dict(state["actor_optimizer"])
 
-    def _loss(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        a_pred = self.policy.sample(o)
+    # ====================
+    # Actor loss
+    # ====================
+    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        # Stochastic BC: sample from the actor and minimize imitation error.
+        a_pred = self.actor.sample(o)
         return F.mse_loss(a_pred, a)
 
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        return self._loss(o, a)

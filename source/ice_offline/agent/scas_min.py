@@ -57,28 +57,29 @@ class _Q(torch.nn.Module):
         return self.network(x)
 
 class _TD3_Actor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, tau: float = 0.005, max_action: float = 1.0):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        tau: float = 0.005,
+        noise_scale: float = 0.2,
+        noise_clip: float = 0.5,
+        max_action: float = 1.0,
+    ):
         super().__init__()
         self.tau = tau
+        self.noise_scale = noise_scale
+        self.noise_clip = noise_clip
+        self.max_action = max_action
         self.pi = _Pi(obs_size, act_size, max_action)
         self.tpi = _Pi(obs_size, act_size, max_action)
         self.sync_target_hard()
 
-    # ====================
-    # callable
-    # ====================
-    def pi_act(self, o: torch.Tensor) -> torch.Tensor:
-        return self.pi(o)
-    
-    def tpi_act(self, o: torch.Tensor) -> torch.Tensor:
-        return self.tpi(o)
+    def noise_action(self, a: torch.Tensor) -> torch.Tensor:
+        noise = torch.randn_like(a) * self.noise_scale
+        noise = noise.clamp(-self.noise_clip, self.noise_clip)
+        return (a + noise).clamp(-self.max_action, self.max_action)
 
-    # ====================
-    # target sync
-    # ====================
-    def get_parameters(self):
-        return self.pi.parameters()
-    
     def sync_target_hard(self) -> None:
         self.tpi.load_state_dict(self.pi.state_dict())
         
@@ -105,47 +106,38 @@ class _TD3_Critic(torch.nn.Module):
         self.tq4 = _Q(obs_size, act_size)
         self.sync_target_hard()
  
-
-    # ====================
-    # callable
-    # ====================
-    def q_values(self, o: torch.Tensor, a: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        return (self.q1(o, a), self.q2(o, a), self.q3(o, a), self.q4(o, a))
-
     def q_min(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        q1, q2, q3, q4 = self.q_values(o, a) # (B, 1) *4   
+        q1 = self.q1(o, a)
+        q2 = self.q2(o, a)
+        q3 = self.q3(o, a)
+        q4 = self.q4(o, a)
         q_cat = torch.cat([q1, q2, q3, q4], dim=1) # (B, 4)     
         q_min, _ = torch.min(q_cat, dim=1) # (B,)       
         return q_min
     
     def q_mean(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        q1, q2, q3, q4 = self.q_values(o, a)                       
+        q1 = self.q1(o, a)
+        q2 = self.q2(o, a)
+        q3 = self.q3(o, a)
+        q4 = self.q4(o, a)
         return (q1 + q2 + q3 + q4) / 4
-    
-    def tq_values(self, o: torch.Tensor, a: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        return (self.tq1(o, a), self.tq2(o, a), self.tq3(o, a), self.tq4(o, a))
 
     def tq_min(self, sn: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        tq1, tq2, tq3, tq4 = self.tq_values(sn, a) # (B, 1) *4   
+        tq1 = self.tq1(sn, a)
+        tq2 = self.tq2(sn, a)
+        tq3 = self.tq3(sn, a)
+        tq4 = self.tq4(sn, a)
         tq_cat = torch.cat([tq1, tq2, tq3, tq4], dim=1) # (B, 4)     
         tq_min, _ = torch.min(tq_cat, dim=1, keepdim=True) # (B, 1)       
         return tq_min
     
     def tq_mean(self, sn: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        tq1, tq2, tq3, tq4 = self.tq_values(sn, a)                       
+        tq1 = self.tq1(sn, a)
+        tq2 = self.tq2(sn, a)
+        tq3 = self.tq3(sn, a)
+        tq4 = self.tq4(sn, a)
         return (tq1 + tq2 + tq3 + tq4) / 4.0
 
-    # ====================
-    # sync
-    # ====================
-    def get_parameters(self):
-        return (
-            list(self.q1.parameters())
-            + list(self.q2.parameters())
-            + list(self.q3.parameters())
-            + list(self.q4.parameters())
-        )
-    
     def sync_target_hard(self) -> None:
         self.tq1.load_state_dict(self.q1.state_dict())
         self.tq2.load_state_dict(self.q2.state_dict())
@@ -165,7 +157,7 @@ class _TD3_Critic(torch.nn.Module):
                 tp.data.copy_(self.tau * p.data + (1 - self.tau) * tp.data)
 
 @dataclass
-class ScasDynamic(TorchAgent):
+class ScasDynamicAgent(TorchAgent):
     obs_dim: int
     act_dim: int
     learning_rate: float = 1e-3
@@ -217,10 +209,10 @@ class ScasDynamic(TorchAgent):
         
 
 @dataclass
-class ScasAgentMin(TorchAgent):
+class ScasMinAgent(TorchAgent):
     obs_dim: int
     act_dim: int
-    dynamics: ScasDynamic
+    dynamics: ScasDynamicAgent
     max_action: float = 1.0
     tau: float = 0.005
     beta: float = 3e-3
@@ -237,8 +229,14 @@ class ScasAgentMin(TorchAgent):
         self.critic = _TD3_Critic(self.obs_dim, self.act_dim, tau=self.tau).to(self.device)
         self.dynamics = self.dynamics.prepare().to(self.device)
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.get_parameters(), lr=2e-4)
-        self.critic_optimizer = torch.optim.Adam(self.critic.get_parameters(), lr=3e-4)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=2e-4)
+        self.critic_optimizer = torch.optim.Adam(
+            list(self.critic.q1.parameters())
+            + list(self.critic.q2.parameters())
+            + list(self.critic.q3.parameters())
+            + list(self.critic.q4.parameters()),
+            lr=3e-4,
+        )
 
     # ====================
     # public API
@@ -247,14 +245,14 @@ class ScasAgentMin(TorchAgent):
         s_np = np.asarray(observation, dtype=np.float32)[None, :]
         s = torch.as_tensor(s_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            a = self.actor.pi_act(s)
+            a = self.actor.pi(s)
         return a.cpu().numpy()[0]
 
     def act_batch(self, observation_batch):
         s_np = np.asarray(observation_batch, dtype=np.float32)
         s = torch.as_tensor(s_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            a = self.actor.pi_act(s)
+            a = self.actor.pi(s)
         return a.cpu().numpy()
 
     def update(self, batch: TorchBuffer):
@@ -304,9 +302,7 @@ class ScasAgentMin(TorchAgent):
     # ====================
     def td_target(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            an = self.actor.tpi_act(sn)
-            noise = (torch.randn_like(an) * 0.2).clamp(-0.5, 0.5)
-            an = (an + noise).clamp(-self.max_action, self.max_action)
+            an = self.actor.noise_action(self.actor.tpi(sn))
             tq = self.critic.tq_min(sn,an)
             return r + self.gamma * tq * (1 - d)
     
@@ -319,7 +315,10 @@ class ScasAgentMin(TorchAgent):
         d: torch.Tensor,
     ) -> torch.Tensor:
         y = self.td_target(sn, r, d)
-        q1, q2, q3, q4 = self.critic.q_values(o, a)
+        q1 = self.critic.q1(o, a)
+        q2 = self.critic.q2(o, a)
+        q3 = self.critic.q3(o, a)
+        q4 = self.critic.q4(o, a)
         loss_q1 = F.mse_loss(q1, y)
         loss_q2 = F.mse_loss(q2, y)
         loss_q3 = F.mse_loss(q3, y)
@@ -334,16 +333,16 @@ class ScasAgentMin(TorchAgent):
         return s + noise
     
     def loss_td3(self, s:torch.Tensor) -> torch.Tensor:
-        a = self.actor.pi_act(s)
+        a = self.actor.pi(s)
         q = self.critic.q_min(s, a)
         alpha = 1.0 / q.abs().mean().detach() # TD3BC (1-alpha)
         return -alpha * q.mean() # mean over batch
     
     def loss_correction(self, s: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
         # R2 = E_{s,s'~D}, {ps~perturbed(s)} [exp( alpha* ( V' - V ) ) * ||M(s,a) - s'||^2]
-        a = self.actor.pi_act(s)
+        a = self.actor.pi(s)
         v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))
-        an = self.actor.pi_act(sn)
+        an = self.actor.pi(sn)
         vn = self.critic.q_mean(sn, an) # scas V(s') = Q(s', pi(s'))
         ps = self._s_perturbed(s)
 
@@ -356,3 +355,6 @@ class ScasAgentMin(TorchAgent):
 
     def loss_actor(self, s: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
         return (1.0 - self.lmbda) * self.loss_td3(s) + self.lmbda * self.loss_correction(s, sn)
+
+
+

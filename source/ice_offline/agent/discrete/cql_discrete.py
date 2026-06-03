@@ -52,7 +52,7 @@ class _TQ(torch.nn.Module):
     def tq(self, o: torch.Tensor) -> torch.Tensor:
         return self._targ_q(o)
 
-class CQLAgentDiscrete(TorchAgent):
+class CQLDiscreteAgent(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -158,3 +158,4 @@ class CQLAgentDiscrete(TorchAgent):
         loss_td = self.loss_td(o, a, r, on, d)
         loss_cql = self.loss_conservative(o, a)
         return loss_td + self.alpha * loss_cql
+

@@ -18,21 +18,18 @@ class _Pi(torch.nn.Module):
             torch.nn.Linear(256, act_size),
         )
 
-    def dist(self, o: torch.Tensor) -> torch.Tensor:
-        return self.network(o)
-
-    def mode(self, o: torch.Tensor) -> torch.Tensor:
-        return torch.tanh(self.dist(o))
-
-    def sample(self, o: torch.Tensor) -> torch.Tensor:
-        return self.mode(o)
-
     def forward(self, o: torch.Tensor) -> torch.Tensor:
-        return self.mode(o)
+        return torch.tanh(self.network(o))
+
+
+class _Actor(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int):
+        super().__init__()
+        self.pi = _Pi(obs_size, act_size)
 
 
 @dataclass
-class BCAgentDeterministic(TorchAgent):
+class BCDeterministicAgent(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -42,9 +39,9 @@ class BCAgentDeterministic(TorchAgent):
     # Init
     # ====================
     def __post_init__(self):
-        self.policy = _Pi(self.obs_size, self.act_size).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.policy.parameters(),
+        self.actor = _Actor(self.obs_size, self.act_size).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(
+            self.actor.parameters(),
             lr=self.learning_rate,
             betas=(0.9, 0.999),
             eps=1e-8,
@@ -53,43 +50,53 @@ class BCAgentDeterministic(TorchAgent):
         )
 
     # ====================
-    # Public API
+    # Act
     # ====================
     def act(self, observation):
         observation_np = np.asarray(observation, dtype=np.float32)[None, :]
         o = torch.as_tensor(observation_np, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            a = self.policy.mode(o)
+            a = self.actor.pi(o)
         return a.cpu().numpy()[0]
 
     def act_batch(self, observation_batch):
         o = torch.as_tensor(np.asarray(observation_batch), dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            a = self.policy.mode(o)
+            a = self.actor.pi(o)
         return a.cpu().numpy()
 
+    # ====================
+    # Update
+    # ====================
     def update(self, batch: TorchBuffer):
-        loss = self.loss_actor(batch.obs_list, batch.act_list)
+        o = batch.obs_list
+        a = batch.act_list
+        self.update_actor(o, a)
 
-        self.optimizer.zero_grad()
+    def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:
+        self.actor_optimizer.zero_grad()
+        loss = self.loss_actor(o, a)
         loss.backward()
-        self.optimizer.step()
+        self.actor_optimizer.step()
 
+    # ====================
+    # Save and load
+    # ====================
     def _save_dict(self) -> dict[str, torch.Tensor]:
         return {
-            "pi": self.policy.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
+            "actor": self.actor.state_dict(),
+            "actor_optimizer": self.actor_optimizer.state_dict(),
         }
 
     def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
-        self.policy.load_state_dict(state["pi"])
-        self.optimizer.load_state_dict(state["optimizer"])
+        self.actor.load_state_dict(state["actor"])
+        self.actor_optimizer.load_state_dict(state["actor_optimizer"])
 
     # ====================
-    # bc mathmatics
+    # Actor loss
     # ====================
     def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        # loss_BC = E{log pi(a|s)}
-        # if pi is gaussian, loss_BC => MSE(a, pi(s))
-        a_pred = self.policy.mode(o)
+        # BC: minimize imitation error on dataset actions.
+        a_pred = self.actor.pi(o)
         return F.mse_loss(a_pred, a)
+

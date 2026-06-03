@@ -9,7 +9,7 @@ from d3rlpy_master.d3rlpy.models.torch.policies import NormalPolicy
 from d3rlpy_master.d3rlpy.models.torch.policies import build_gaussian_distribution
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
 from ice_offline.agent.bc_stochastic import (
-    BCAgentStochastic,
+    BCStochasticAgent,
 )
 from ice_offline.tools.printer import print_stage
 
@@ -28,16 +28,16 @@ N_TEST_BATCHES = 30
 # ====================
 # Mapping
 # ====================
-def _all_pairs(our: BCAgentStochastic, ref_policy: NormalPolicy):
+def _all_pairs(our: BCStochasticAgent, ref_policy: NormalPolicy):
     return [
-        (our.policy.network[0].weight, ref_policy._encoder._layers[0].weight),
-        (our.policy.network[0].bias, ref_policy._encoder._layers[0].bias),
-        (our.policy.network[2].weight, ref_policy._encoder._layers[2].weight),
-        (our.policy.network[2].bias, ref_policy._encoder._layers[2].bias),
-        (our.policy.mean_head.weight, ref_policy._mu.weight),
-        (our.policy.mean_head.bias, ref_policy._mu.bias),
-        (our.policy.logstd_head.weight, ref_policy._logstd.weight),
-        (our.policy.logstd_head.bias, ref_policy._logstd.bias),
+        (our.actor.pi.network[0].weight, ref_policy._encoder._layers[0].weight),
+        (our.actor.pi.network[0].bias, ref_policy._encoder._layers[0].bias),
+        (our.actor.pi.network[2].weight, ref_policy._encoder._layers[2].weight),
+        (our.actor.pi.network[2].bias, ref_policy._encoder._layers[2].bias),
+        (our.actor.pi.mean_head.weight, ref_policy._mu.weight),
+        (our.actor.pi.mean_head.bias, ref_policy._mu.bias),
+        (our.actor.pi.logstd_head.weight, ref_policy._logstd.weight),
+        (our.actor.pi.logstd_head.bias, ref_policy._logstd.bias),
     ]
 
 
@@ -94,7 +94,7 @@ def ref_update_and_collect_params(
     ref,
     batch: TorchMiniBatch,
     step: int,
-    our: BCAgentStochastic,
+    our: BCStochasticAgent,
     ref_policy: NormalPolicy,
 ):
     _ = ref.impl.inner_update(batch, step)
@@ -105,7 +105,7 @@ def ref_update_and_collect_params(
 # Our define
 # ====================
 def our_update_and_collect_params(
-    our: BCAgentStochastic,
+    our: BCStochasticAgent,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -120,8 +120,8 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> BCAgentStochastic:
-    return BCAgentStochastic(obs_size=OBS_DIM, act_size=ACT_DIM)
+def build_our() -> BCStochasticAgent:
+    return BCStochasticAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_ref():
     config = algos.BCConfig(policy_type="stochastic")
@@ -130,7 +130,7 @@ def build_ref():
     assert ref.impl is not None
     return ref
 
-def init_compare() -> tuple[BCAgentStochastic, object, NormalPolicy]:
+def init_compare() -> tuple[BCStochasticAgent, object, NormalPolicy]:
     print_stage("Init")
     our = build_our()
     ref = build_ref()
@@ -140,7 +140,7 @@ def init_compare() -> tuple[BCAgentStochastic, object, NormalPolicy]:
             our_param.copy_(ref_param)
     return our, ref, ref_policy
 
-def compare_act(our: BCAgentStochastic, ref_policy: NormalPolicy) -> None:
+def compare_act(our: BCStochasticAgent, ref_policy: NormalPolicy) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         obs_single, _, _, _, _ = sample_transition(1, OBS_DIM, ACT_DIM, DEVICE)
@@ -180,7 +180,7 @@ def compare_act(our: BCAgentStochastic, ref_policy: NormalPolicy) -> None:
 
         print(f"batch={i}/{N_TEST_BATCHES} act_match=True")
 
-def compare_loss(our: BCAgentStochastic, ref_policy: NormalPolicy) -> None:
+def compare_loss(our: BCStochasticAgent, ref_policy: NormalPolicy) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, _, _, _ = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
@@ -196,7 +196,7 @@ def compare_loss(our: BCAgentStochastic, ref_policy: NormalPolicy) -> None:
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
 def compare_param(
-    our: BCAgentStochastic,
+    our: BCStochasticAgent,
     ref,
     ref_policy: NormalPolicy,
 ) -> None:
@@ -226,3 +226,4 @@ if __name__ == "__main__":
     compare_param(our, ref, ref_policy)
     print_stage("Result")
     print("PASS: act, act_batch, sample, loss, and full update params are aligned with d3rl.")
+

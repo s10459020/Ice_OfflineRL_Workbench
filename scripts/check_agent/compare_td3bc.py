@@ -203,7 +203,7 @@ def compare_loss(our: TD3BCAgent, ref) -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
         batch = _torch_batch(s, a, r, sn, d)
-        a_pred = our.actor.pi_act(s)
+        a_pred = our.actor.pi(s)
 
         # target action
         assert_callback(

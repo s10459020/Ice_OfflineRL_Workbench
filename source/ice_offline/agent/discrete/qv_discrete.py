@@ -65,7 +65,7 @@ class _TQ(torch.nn.Module):
     def tq(self, o: torch.Tensor) -> torch.Tensor:
         return self._targ_q(o)
 
-class QVAgentDiscrete(TorchAgent):
+class QVDiscreteAgent(TorchAgent):
     # ====================
     # Init
     # ====================
@@ -168,3 +168,4 @@ class QVAgentDiscrete(TorchAgent):
 
     def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self._loss_q(o, a, r, on, d) + self._loss_v(o, a)
+

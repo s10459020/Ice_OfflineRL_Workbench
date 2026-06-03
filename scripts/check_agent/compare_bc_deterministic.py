@@ -8,7 +8,7 @@ from d3rlpy_master.d3rlpy.models.torch.imitators import compute_deterministic_im
 from d3rlpy_master.d3rlpy.models.torch.policies import DeterministicPolicy
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
 from ice_offline.agent.bc_deterministic import (
-    BCAgentDeterministic,
+    BCDeterministicAgent,
 )
 from ice_offline.tools.printer import print_stage
 
@@ -27,14 +27,14 @@ N_TEST_BATCHES = 30
 # ====================
 # Mapping
 # ====================
-def _all_pairs(our: BCAgentDeterministic, ref_policy: DeterministicPolicy):
+def _all_pairs(our: BCDeterministicAgent, ref_policy: DeterministicPolicy):
     return [
-        (our.policy.network[0].weight, ref_policy._encoder._layers[0].weight),
-        (our.policy.network[0].bias, ref_policy._encoder._layers[0].bias),
-        (our.policy.network[2].weight, ref_policy._encoder._layers[2].weight),
-        (our.policy.network[2].bias, ref_policy._encoder._layers[2].bias),
-        (our.policy.network[4].weight, ref_policy._fc.weight),
-        (our.policy.network[4].bias, ref_policy._fc.bias),
+        (our.actor.pi.network[0].weight, ref_policy._encoder._layers[0].weight),
+        (our.actor.pi.network[0].bias, ref_policy._encoder._layers[0].bias),
+        (our.actor.pi.network[2].weight, ref_policy._encoder._layers[2].weight),
+        (our.actor.pi.network[2].bias, ref_policy._encoder._layers[2].bias),
+        (our.actor.pi.network[4].weight, ref_policy._fc.weight),
+        (our.actor.pi.network[4].bias, ref_policy._fc.bias),
     ]
 
 
@@ -83,7 +83,7 @@ def ref_update_and_collect_params(
     ref,
     batch: TorchMiniBatch,
     step: int,
-    our: BCAgentDeterministic,
+    our: BCDeterministicAgent,
     ref_policy: DeterministicPolicy,
 ):
     _ = ref.impl.inner_update(batch, step)
@@ -94,7 +94,7 @@ def ref_update_and_collect_params(
 # Our define
 # ====================
 def our_update_and_collect_params(
-    our: BCAgentDeterministic,
+    our: BCDeterministicAgent,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -109,8 +109,8 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> BCAgentDeterministic:
-    return BCAgentDeterministic(obs_size=OBS_DIM, act_size=ACT_DIM)
+def build_our() -> BCDeterministicAgent:
+    return BCDeterministicAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_ref():
     config = algos.BCConfig()
@@ -119,7 +119,7 @@ def build_ref():
     assert ref.impl is not None
     return ref
 
-def init_compare() -> tuple[BCAgentDeterministic, object, DeterministicPolicy]:
+def init_compare() -> tuple[BCDeterministicAgent, object, DeterministicPolicy]:
     print_stage("Init")
     our = build_our()
     ref = build_ref()
@@ -130,7 +130,7 @@ def init_compare() -> tuple[BCAgentDeterministic, object, DeterministicPolicy]:
     return our, ref, ref_policy
 
 def compare_act(
-    our: BCAgentDeterministic,
+    our: BCDeterministicAgent,
     ref_policy: DeterministicPolicy,
 ) -> None:
     print_stage("Act Compare")
@@ -157,7 +157,7 @@ def compare_act(
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
 def compare_loss(
-    our: BCAgentDeterministic,
+    our: BCDeterministicAgent,
     ref_policy: DeterministicPolicy,
 ) -> None:
     print_stage("Loss Compare")
@@ -175,7 +175,7 @@ def compare_loss(
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
 def compare_param(
-    our: BCAgentDeterministic,
+    our: BCDeterministicAgent,
     ref,
     ref_policy: DeterministicPolicy,
 ) -> None:
@@ -205,3 +205,4 @@ if __name__ == "__main__":
     compare_param(our, ref, ref_policy)
     print_stage("Result")
     print("PASS: act, act_batch, loss, and full update params are aligned with d3rl.")
+

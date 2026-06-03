@@ -1,11 +1,11 @@
-import numpy as np
+﻿import numpy as np
 import torch
 from _lib import assert_callback
 from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.models.torch.imitators import compute_discrete_imitation_loss
 from d3rlpy_master.d3rlpy.models.torch.policies import CategoricalPolicy
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.discrete.bc_discrete import BCAgentDiscrete
+from ice_offline.agent.discrete.bc_discrete import BCDiscreteAgent
 from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.printer import print_stage
 # ====================
@@ -22,7 +22,7 @@ N_TEST_BATCHES = 30
 # Mapping: all_pairs
 # ====================
 
-def _all_pairs(our_agent: BCAgentDiscrete, d3_policy: CategoricalPolicy):
+def _all_pairs(our_agent: BCDiscreteAgent, d3_policy: CategoricalPolicy):
     return [
         (our_agent.policy.network[0].weight, d3_policy._encoder._layers[0].weight),
         (our_agent.policy.network[0].bias, d3_policy._encoder._layers[0].bias),
@@ -35,8 +35,8 @@ def _all_pairs(our_agent: BCAgentDiscrete, d3_policy: CategoricalPolicy):
 # common
 # ====================
 
-def build_our_agent() -> BCAgentDiscrete:
-    return BCAgentDiscrete(obs_size=OBS_DIM, act_size=N_ACTIONS)
+def build_our_agent() -> BCDiscreteAgent:
+    return BCDiscreteAgent(obs_size=OBS_DIM, act_size=N_ACTIONS)
 
 def build_d3rl():
     config = algos.DiscreteBCConfig()
@@ -94,13 +94,13 @@ def d3rl_action_best_single(policy: CategoricalPolicy, obs_t: torch.Tensor) -> n
 # ====================
 
 def _our_loss_bc(
-    our_agent: BCAgentDiscrete, obs_t: torch.Tensor, act_t: torch.Tensor
+    our_agent: BCDiscreteAgent, obs_t: torch.Tensor, act_t: torch.Tensor
 ) -> torch.Tensor:
     logits = our_agent.policy(obs_t).logits
     return our_agent.loss_bc(logits, act_t)
 
 def _our_loss_regular(
-    our_agent: BCAgentDiscrete, obs_t: torch.Tensor
+    our_agent: BCDiscreteAgent, obs_t: torch.Tensor
 ) -> torch.Tensor:
     logits = our_agent.policy(obs_t).logits
     return our_agent.loss_regular(logits)
@@ -123,14 +123,14 @@ def _ref_update_and_collect_params(
     d3rl,
     batch: TorchMiniBatch,
     step: int,
-    our_agent: BCAgentDiscrete,
+    our_agent: BCDiscreteAgent,
     d3_policy: CategoricalPolicy,
 ):
     _ = d3rl.impl.inner_update(batch, step)
     return [x for _, x in _all_pairs(our_agent, d3_policy)]
 
 def _our_update_and_collect_params(
-    our_agent: BCAgentDiscrete,
+    our_agent: BCDiscreteAgent,
     obs_t: torch.Tensor,
     act_t: torch.Tensor,
     d3_policy: CategoricalPolicy,
@@ -140,7 +140,7 @@ def _our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def init_compare() -> tuple[BCAgentDiscrete, object, CategoricalPolicy]:
+def init_compare() -> tuple[BCDiscreteAgent, object, CategoricalPolicy]:
     print_stage("Init")
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -152,7 +152,7 @@ def init_compare() -> tuple[BCAgentDiscrete, object, CategoricalPolicy]:
             our_param.copy_(d3_param)
     return our_agent, d3rl, d3_policy
 
-def compare_act(our_agent: BCAgentDiscrete, d3_policy: CategoricalPolicy) -> None:
+def compare_act(our_agent: BCDiscreteAgent, d3_policy: CategoricalPolicy) -> None:
     print_stage("Act Compare")
     rng = np.random.default_rng(SEED)
     for i in range(1, N_TEST_BATCHES + 1):
@@ -174,7 +174,7 @@ def compare_act(our_agent: BCAgentDiscrete, d3_policy: CategoricalPolicy) -> Non
         )
         print(f"batch={i}/{N_TEST_BATCHES} action_match=True")
 
-def compare_loss(our_agent: BCAgentDiscrete, d3_policy: CategoricalPolicy) -> None:
+def compare_loss(our_agent: BCDiscreteAgent, d3_policy: CategoricalPolicy) -> None:
     print_stage("Loss Compare")
     rng = np.random.default_rng(SEED + 1)
     for i in range(1, N_TEST_BATCHES + 1):
@@ -199,7 +199,7 @@ def compare_loss(our_agent: BCAgentDiscrete, d3_policy: CategoricalPolicy) -> No
         )
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
-def compare_param(our_agent: BCAgentDiscrete, d3rl, d3_policy: CategoricalPolicy) -> None:
+def compare_param(our_agent: BCDiscreteAgent, d3rl, d3_policy: CategoricalPolicy) -> None:
     print_stage("Update Compare")
     rng = np.random.default_rng(SEED + 2)
     for i in range(1, N_TEST_BATCHES + 1):
@@ -226,3 +226,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
