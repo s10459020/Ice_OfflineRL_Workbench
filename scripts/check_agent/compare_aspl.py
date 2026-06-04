@@ -15,6 +15,7 @@ from _lib import assert_callback
 from _lib import sample_transition
 from _lib import torch_buffer
 from ASPL_source.agent.policy.aspl_policy import ASPLPolicy
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.aspl import AsplAgent
 from ice_offline.tools.printer import print_stage
 import _lib
@@ -222,7 +223,6 @@ def build_our() -> AsplAgent:
     return AsplAgent(
         obs_size=obs_size,
         act_size=act_size,
-        max_action=MAX_ACTION,
     )
 
 def build_ref() -> ASPLPolicy:
@@ -256,7 +256,7 @@ def init_compare() -> tuple[ASPLPolicy, AsplAgent]:
         np.random.seed(seed)
         torch.manual_seed(seed)
         sampler_holder["sampler"] = qmc.LatinHypercube(d=our.act_size, seed=seed)
-        our.set_seed(seed)
+        our.actor.set_seed(seed)
 
     _lib._set_seed = _set_seed_patched
 
@@ -294,10 +294,11 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, "cpu")
+        batch = agent_batch(torch_buffer(s, a, r, sn, d))
         ref.total_it = i
         our.update_step = i
         ref.mean_abs_q = 0.0
-        our.q_mean = 0.0
+        our.critic.q_mean = 0.0
 
         # loss td
         assert_callback(
@@ -318,7 +319,7 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
         # loss actor
         assert_callback(
             lambda: [ref._compute_actor_loss(s).detach().cpu()],
-            lambda: [our.loss_td3_variant(s).detach().cpu()],
+            lambda: [our.loss_td3(batch).detach().cpu()],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
@@ -326,7 +327,7 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
         # loss critic
         assert_callback(
             lambda: [ref_loss_critic(ref, s, a, sn, r, d).detach().cpu()],
-            lambda: [our.loss_critic(s, a, r, sn, d).detach().cpu()],
+            lambda: [our.loss_critic(batch).detach().cpu()],
             label=f"loss_critic[{i}]",
             seed=SEED + i,
         )
@@ -338,7 +339,7 @@ def compare_param(ref: ASPLPolicy, our: AsplAgent) -> None:
     ref.total_it = 0
     our.update_step = 0
     ref.mean_abs_q = 0.0
-    our.q_mean = 0.0
+    our.critic.q_mean = 0.0
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, "cpu")
 

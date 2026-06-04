@@ -4,13 +4,14 @@ import torch
 import torch.nn.functional as F
 from scipy.stats import qmc
 
+from ice_offline.agent._spec import AgentBatch
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3 import TD3Critic
-from ice_offline.dataset._spec import TorchBuffer
 
 
 class _Pi(torch.nn.Module):
+    # source design
     def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0):
         super().__init__()
         self.max_action = max_action
@@ -41,6 +42,7 @@ class _Pi(torch.nn.Module):
 
 
 class _Q(torch.nn.Module):
+    # source design
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
         self.network = torch.nn.Sequential(
@@ -79,35 +81,81 @@ class _Q(torch.nn.Module):
         return self.network(x)
 
 
+class AsplActor(TD3Actor):
+    def __init__(self, seed: int = 42, num_sample: int = 1, *args, **kwargs):
+        super().__init__(*args, pi_cls=_Pi, **kwargs)
+        self.num_sample = num_sample
+        self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
+
+    def set_seed(self, seed: int) -> None:
+        self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
+
+    def sample_actions_lhs(self, batch_size: int) -> torch.Tensor:
+        samples = self._lhs_sampler.random(n=self.num_sample) # (N, A)[0 ~ 1]
+
+        samples = qmc.scale(
+            samples, 
+            [-self.max_action] * self.act_size, 
+            [self.max_action] * self.act_size
+        ) # [-a ~ a]
+
+        samples = torch.as_tensor(
+            samples,
+            dtype=torch.float32,
+            device=next(self.pi.parameters()).device
+        )
+
+        samples = samples.unsqueeze(1) # (N, 1, A)
+        samples = samples.repeat(1, batch_size, 1) # (N, B, A)
+        return samples
+
+    def action_distance(self, a: torch.Tensor, a_samples: torch.Tensor) -> torch.Tensor:
+        # d(a,a~) = [ (a - a~) / (a_max - a_min) ]^2
+        # source use constant (a_max-a_min) ~= 2*a_max
+        # d range: [-0.5, 0.5]
+        # a shape: (B, A)
+        # a_samples shape: (N, B, A)
+        diff = (a - a_samples)**2 # (N, B, A) 
+        normalize = (2 * self.max_action)**2
+        result = diff / normalize 
+        return result.mean(dim=2, keepdim=True) # (N, B, 1)
+
+
+class AsplCritic(TD3Critic):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, q_cls=_Q, **kwargs)
+        self.q_mean = 0.0
+
+    def update_q_mean(self, update_step: int, target: torch.Tensor) -> float:
+        current = torch.abs(target).mean().item() # mean(B, 1) > (1)
+        self.q_mean = ((update_step - 1) * self.q_mean + current) / update_step
+        return self.q_mean
+
+    def q_pseudo(self, update_step: int, q_target: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
+        # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
+        # c is scaling coefficent
+        # q use q_target in source
+        # q_target range: [-Q, Q], shape: (B, 1)
+        with torch.no_grad():
+            c = self.update_q_mean(update_step, q_target) # (1)
+            return q_target - c * action_distance  # (N, B, 1)
+
+
 @dataclass
 class AsplAgent(TD3Agent):
-    max_action: float = 1.0
-    tau: float = 0.005
     alpha: float = 2.5
-    q_mean: float = 0
-    noise_clip: float = 0.5
-    noise_scale: float = 0.2
     learning_rate: float = 3e-4
-    num_sample: int = 1
 
     def __post_init__(self) -> None:
-        self.actor = TD3Actor(
-            self.obs_size,
-            self.act_size,
-            tau=self.tau,
-            noise_scale=self.noise_scale,
-            noise_clip=self.noise_clip,
-            max_action=self.max_action,
-            pi_cls=_Pi,
+        self.actor = AsplActor(
+            obs_size=self.obs_size,
+            act_size=self.act_size,
         ).to(self.device)
-        self.critic = TD3Critic(
+        self.critic = AsplCritic(
             self.obs_size,
             self.act_size,
             q_count=self.q_count,
-            tau=self.tau,
-            q_cls=_Q,
         ).to(self.device)
-        self._lhs_sampler = qmc.LatinHypercube(d=self.act_size)
         self.actor_learning_rate = self.learning_rate
         self.critic_learning_rate = self.learning_rate
 
@@ -122,92 +170,6 @@ class AsplAgent(TD3Agent):
 
         # ignore use_lr_scheduler
 
-
-    # ====================
-    # Update
-    # ====================
-    def set_seed(self, seed: int) -> None:
-        self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
-
-    def update(self, batch: TorchBuffer):
-        s = batch.obs_list
-        a = batch.act_list
-        r = batch.rew_list.view(-1, 1)
-        d = batch.done_list.view(-1, 1)
-        sn = batch.next_obs_list
-
-        self.update_step += 1
-        self.update_critic(s, a, r, sn, d)
-
-        if self.update_step % self.update_actor_interval == 0:
-            self.update_actor(s)
-            self.critic.update_target_soft()
-            self.actor.update_target_soft()
-
-    def update_actor(self, s: torch.Tensor) -> None:
-        self.actor_optimizer.zero_grad()
-        actor_loss = self.loss_td3_variant(s)
-        actor_loss.backward()
-        self.actor_optimizer.step()
-  
-    # ====================
-    # common
-    # ====================
-    def _sample_lhs_actions(self, batch_size: int, num_samples: int) -> torch.Tensor:
-        samples = self._lhs_sampler.random(n=num_samples) # (N, A)[0 ~ 1]
-
-        samples = qmc.scale(
-            samples, 
-            [-self.max_action] * self.act_size, 
-            [self.max_action] * self.act_size
-        ) # [-a ~ a]
-
-        samples = torch.as_tensor(
-            samples,
-            dtype=torch.float32,
-            device=self.device
-        )
-
-        samples = samples.unsqueeze(1) # (N, 1, A)
-        samples = samples.repeat(1, batch_size, 1) # (N, B, A)
-        return samples
-
-
-    # ====================
-    # critic mathmatics
-    # ====================
-    def target_td3(self, sn: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        with torch.no_grad():
-            an = self.actor.noise_action(self.actor.tpi(sn))
-            tq = self.critic.tq_min(sn,an)
-            return r + self.gamma * tq * (1.0 - d)
-    
-    def _c(self, target: torch.Tensor):
-        current = torch.abs(target).mean().item() # mean(B, 1) > (1)
-        self.q_mean = ((self.update_step - 1) * self.q_mean + current) / self.update_step
-        return self.q_mean
-
-    def _d(self, a:torch.Tensor, a_samples: torch.Tensor):
-        # d(a,a~) = [ (a - a~) / (a_max - a_min) ]^2
-        # source use constant (a_max-a_min) ~= 2*a_max
-        # d range: [-0.5, 0.5]
-        # a shape: (B, A)
-        # a_samples shape: (N, B, A)
-        diff = (a - a_samples)**2 # (N, B, A) 
-        normalize = (2 * self.max_action)**2
-        result = diff / normalize 
-        return result.mean(dim=2, keepdim=True) # (N, B, 1)
-        
-    def _q_pseudo(self, a: torch.Tensor, a_sample: torch.Tensor, q_target: torch.Tensor):
-        # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
-        # c is scaling coefficent
-        # q use q_target in source
-        # q_target range: [-Q, Q], shape: (B, 1)
-        with torch.no_grad():
-            d = self._d(a, a_sample) # (N, B, 1)
-            c = self._c(q_target) # (1)
-            return q_target - c * d  # (N, B, 1)
-
     def loss_td_with_target(self, o: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
         # double Q TD
         q1 = self.critic.q_networks[0](o, a)
@@ -218,11 +180,12 @@ class AsplAgent(TD3Agent):
     
     def loss_punish_with_target(self, s: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
-        a_samples = self._sample_lhs_actions(s.shape[0], self.num_sample)                      # (N,B,A)
-        q_pseudo = self._q_pseudo(a, a_samples, q_target)                                # (N,B,1)
+        a_samples = self.actor.sample_actions_lhs(s.shape[0])                                # (N,B,A)
+        action_distance = self.actor.action_distance(a, a_samples)                            # (N,B,1)
+        q_pseudo = self.critic.q_pseudo(self.update_step, q_target, action_distance)           # (N,B,1)
 
         # reshape
-        s_reshape = s.unsqueeze(0).expand(self.num_sample, -1, -1).reshape(-1, s.shape[1])  # (B,S) > (1,B,S) > (N,B,S) > (N*B,S)
+        s_reshape = s.unsqueeze(0).expand(self.actor.num_sample, -1, -1).reshape(-1, s.shape[1])  # (B,S) > (1,B,S) > (N,B,S) > (N*B,S)
         a_samples_reshape = a_samples.view(-1, a.shape[1])                                  # (N,B,A) > (N*B,A)
         q_pseudo_reshape = q_pseudo.view(-1, 1)                                             # (N*B,1)  
         
@@ -233,16 +196,10 @@ class AsplAgent(TD3Agent):
         losses = [F.mse_loss(q_value, q_pseudo_reshape) for q_value in q_values]
         return sum(losses)
 
-    def loss_critic(
-        self,
-        s: torch.Tensor,
-        a: torch.Tensor,
-        r: torch.Tensor,
-        sn: torch.Tensor,
-        d: torch.Tensor,
-    ) -> torch.Tensor:
+    def loss_critic(self, batch: AgentBatch) -> torch.Tensor:
         # loss = TD + alpha * Punish
         # source use same noise target
+        s, a, r, d, sn = batch
         q_target = self.target_td3(sn, r, d)
         loss_td = self.loss_td_with_target(s, a, q_target)
         loss_aspl = self.loss_punish_with_target(s, a, q_target)
@@ -252,10 +209,11 @@ class AsplAgent(TD3Agent):
     # ====================
     # actor mathmatics
     # ====================  
-    def loss_td3_variant(self, s:torch.Tensor) -> torch.Tensor:
-        # TD3 + action noise
+    def loss_td3(self, batch: AgentBatch) -> torch.Tensor:
+        # use q1 for actor update
+        s, _, _, _, _ = batch
         a = self.actor.noise_action(self.actor.pi(s))
-        q = self.critic.q_networks[0](s, a)
+        q = self.critic.q_networks[0](s, a) 
         return -q.mean() # mean over batch
 
 

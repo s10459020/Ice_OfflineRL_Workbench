@@ -3,6 +3,7 @@ import minari
 import numpy as np
 import torch
 
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.aspl import AsplAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
@@ -26,18 +27,15 @@ DEVICE = "cuda:0"
 
 
 def eval_loss_aspl(agent: AsplAgent, batch: TorchBuffer) -> dict[str, float]:
-    s = batch.obs_list
-    a = batch.act_list
-    r = batch.rew_list.view(-1, 1)
-    sn = batch.next_obs_list
-    d = batch.done_list.view(-1, 1)
+    batch = agent_batch(batch)
+    s, a, r, d, sn = batch
     with torch.no_grad():
-        q_target = agent.td_target(sn, r, d)
+        q_target = agent.target_td3(sn, r, d)
         return {
             "loss_td": float(agent.loss_td_with_target(s, a, q_target).item()),
             "loss_punish": float(agent.loss_punish_with_target(s, a, q_target).item()),
-            "loss_actor": float(agent.loss_td3_variant(s).item()),
-            "loss_critic": float(agent.loss_critic(s, a, r, sn, d).item()),
+            "loss_actor": float(agent.loss_td3(batch).item()),
+            "loss_critic": float(agent.loss_critic(batch).item()),
        }
 
 
@@ -70,10 +68,9 @@ def train(
     agent = AsplAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
-        max_action=1.0,
         device=device,
     )
-    agent.set_seed(seed)
+    agent.actor.set_seed(seed)
 
     evaluator = Evaluator(
         runner_id=task_id,

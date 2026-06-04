@@ -4,7 +4,9 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
+from ice_offline.agent._spec import AgentBatch
 from ice_offline.agent._spec import TorchAgent
+from ice_offline.agent._spec import agent_batch
 from ice_offline.dataset._spec import TorchBuffer
 
 
@@ -51,6 +53,8 @@ class TD3Actor(torch.nn.Module):
         pi_cls: type[torch.nn.Module] = _Pi,
     ):
         super().__init__()
+        self.obs_size = obs_size
+        self.act_size = act_size
         self.tau = tau
         self.noise_scale = noise_scale * max_action
         self.noise_clip = noise_clip
@@ -182,28 +186,24 @@ class TD3Agent(TorchAgent):
     # Update
     # ====================
     def update(self, batch: TorchBuffer):
-        o = batch.obs_list
-        a = batch.act_list
-        r = batch.rew_list.view(-1, 1)
-        on = batch.next_obs_list
-        d = batch.done_list.view(-1, 1)
+        batch = agent_batch(batch)
 
         self.update_step += 1
-        self.update_critic(o, a, r, on, d)
+        self.update_critic(batch)
         if self.update_step % self.update_actor_interval == 0:
-            self.update_actor(o)
+            self.update_actor(batch)
             self.critic.update_target_soft()
             self.actor.update_target_soft()
 
-    def update_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> None:
+    def update_critic(self, batch: AgentBatch) -> None:
         self.critic_optimizer.zero_grad()
-        critic_loss = self.loss_critic(o, a, r, on, d)
+        critic_loss = self.loss_critic(batch)
         critic_loss.backward()
         self.critic_optimizer.step()
 
-    def update_actor(self, o: torch.Tensor) -> None:
+    def update_actor(self, batch: AgentBatch) -> None:
         self.actor_optimizer.zero_grad()
-        actor_loss = self.loss_actor(o)
+        actor_loss = self.loss_actor(batch)
         actor_loss.backward()
         self.actor_optimizer.step()
 
@@ -237,21 +237,23 @@ class TD3Agent(TorchAgent):
             tq = self.critic.tq_min(on, an)
             return r + self.gamma * tq * (1.0 - d)
 
-    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def loss_critic(self, batch: AgentBatch) -> torch.Tensor:
         # loss = E{s,a,r,s'~D}[ MSE(Q(s,a) - y) ]
+        o, a, r, d, on = batch
         target = self.target_td3(on, r, d)
         return sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
 
     # ====================
     # Actor loss
     # ====================
-    def loss_td3(self, o: torch.Tensor) -> torch.Tensor:
+    def loss_td3(self, batch: AgentBatch) -> torch.Tensor:
         # loss = E{s~D}[ -Q(s,pi(s)) ]
         # with normalization trick
+        o, _, _, _, _ = batch
         a = self.actor.pi(o)
         q = self.critic.q_min(o, a)
         alpha = 1.0 / q.abs().mean().detach() # normalize
         return -alpha * q.mean()
 
-    def loss_actor(self, o: torch.Tensor) -> torch.Tensor:
-        return self.loss_td3(o)
+    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+        return self.loss_td3(batch)

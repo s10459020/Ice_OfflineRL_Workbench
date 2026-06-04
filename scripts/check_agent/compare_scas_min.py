@@ -9,6 +9,7 @@ from _lib import sample_transition
 from _lib import torch_buffer
 from SCAS_main import SCAS as ref_scas
 from SCAS_main import model as ref_model
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.scas_min import ScasMinAgent
 from ice_offline.agent.scas_min import ScasDynamicAgent
 from ice_offline.tools.printer import print_stage
@@ -247,7 +248,6 @@ def build_our() -> tuple[ScasMinAgent, ScasDynamicAgent]:
         obs_size=obs_size,
         act_size=act_size,
         dynamics=our_dynamics,
-        max_action=MAX_ACTION,
         device=DEVICE,
     )
     return our, our_dynamics
@@ -309,6 +309,7 @@ def compare_loss(
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, DEVICE)
+        our_batch = agent_batch(torch_buffer(s, a, r, sn, d))
 
         # loss dynamic
         assert_callback(
@@ -321,7 +322,7 @@ def compare_loss(
         # loss td3
         assert_callback(
             lambda: [ref_loss_actor_td3(ref, s, sn)],
-            lambda: [our.loss_td3(s)],
+            lambda: [our.loss_td3(our_batch)],
             label=f"loss_td3[{i}]",
             seed=SEED + i,
         )
@@ -329,7 +330,7 @@ def compare_loss(
         # loss correction
         assert_callback(
             lambda: [ref_loss_actor_correction(ref, s, sn)],
-            lambda: [our.loss_correction(s, sn)],
+            lambda: [our.loss_correction(our_batch)],
             label=f"loss_correction[{i}]",
             seed=SEED + i,
         )
@@ -337,7 +338,7 @@ def compare_loss(
         # loss actor
         assert_callback(
             lambda: [ref_loss_actor_total(ref, s, sn)],
-            lambda: [our.loss_actor(s, sn)],
+            lambda: [our.loss_actor(our_batch)],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
@@ -345,7 +346,7 @@ def compare_loss(
         # loss critic
         assert_callback(
             lambda: [ref_loss_critic(ref, s, a, r, sn, d)],
-            lambda: [our.loss_critic(s, a, r, sn, d)],
+            lambda: [our.loss_critic(our_batch)],
             label=f"loss_critic[{i}]",
             seed=SEED + i,
         )

@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import torch
 
+from ice_offline.agent._spec import AgentBatch
 from ice_offline.agent.td3 import TD3Agent
-from ice_offline.dataset._spec import TorchBuffer
 
 
 @dataclass
@@ -11,35 +11,12 @@ class TD3BCAgent(TD3Agent):
     alpha: float = 2.5
 
     # ====================
-    # Update
-    # ====================
-    def update(self, batch: TorchBuffer):
-        o = batch.obs_list
-        a = batch.act_list
-        r = batch.rew_list.view(-1, 1)
-        on = batch.next_obs_list
-        d = batch.done_list.view(-1, 1)
-
-        self.update_critic(o, a, r, on, d)
-
-        self.update_step += 1
-        if self.update_step % self.update_actor_interval == 0:
-            self.update_actor(o, a)
-            self.critic.update_target_soft()
-            self.actor.update_target_soft()
-
-    def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:
-        self.actor_optimizer.zero_grad()
-        actor_loss = self.loss_actor(o, a)
-        actor_loss.backward()
-        self.actor_optimizer.step()
-
-    # ====================
     # Actor loss
     # ====================
-    def loss_bc(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_bc(self, batch: AgentBatch) -> torch.Tensor:
+        o, a, _, _, _ = batch
         a_pred = self.actor.pi(o)
         return ((a - a_pred) ** 2).mean()
 
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        return self.alpha * self.loss_td3(o) + self.loss_bc(o, a)
+    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+        return self.alpha * self.loss_td3(batch) + self.loss_bc(batch)

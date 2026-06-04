@@ -3,6 +3,7 @@ import minari
 import numpy as np
 import torch
 
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
@@ -26,18 +27,13 @@ DEVICE = "cuda:0"
 
 
 def eval_loss(agent: TD3BCAgent, batch: TorchBuffer) -> dict[str, float]:
-    o = batch.obs_list
-    a = batch.act_list
-    r = batch.rew_list.view(-1, 1)
-    on = batch.next_obs_list
-    d = batch.done_list.view(-1, 1)
+    batch = agent_batch(batch)
     with torch.no_grad():
-        a_pred = agent.actor.pi_act(o)
         return {
-            "loss_bc": float(agent.loss_bc(a, a_pred).item()),
-            "loss_td3": float(agent.loss_td3(o, a_pred).item()),
-            "loss_actor": float(agent.loss_actor(o, a).item()),
-            "loss_critic": float(agent.loss_critic(o, a, r, on, d).item()),
+            "loss_bc": float(agent.loss_bc(batch).item()),
+            "loss_td3": float(agent.loss_td3(batch).item()),
+            "loss_actor": float(agent.loss_actor(batch).item()),
+            "loss_critic": float(agent.loss_critic(batch).item()),
         }
 
 

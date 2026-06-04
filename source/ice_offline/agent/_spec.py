@@ -4,7 +4,21 @@ from pathlib import Path
 
 import torch
 
+from ice_offline.dataset._spec import TorchBuffer
 from ice_offline.tools.paths import model_root
+
+
+AgentBatch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
+
+
+def agent_batch(batch: TorchBuffer) -> AgentBatch:
+    return (
+        batch.obs_list,
+        batch.act_list,
+        batch.rew_list.view(-1, 1),
+        batch.done_list.view(-1, 1),
+        batch.next_obs_list,
+    )
 
 
 def model_ref(model_id: str, step: int) -> Path:

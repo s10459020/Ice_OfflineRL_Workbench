@@ -3,6 +3,7 @@ import minari
 import numpy as np
 import torch
 
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.scas_min import ScasMinAgent
 from ice_offline.agent.scas_min import ScasDynamicAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
@@ -36,16 +37,12 @@ def eval_loss_dynamic(dynamics: ScasDynamicAgent, batch: TorchBuffer) -> dict[st
 
 
 def eval_loss_agent(agent: ScasMinAgent, batch: TorchBuffer) -> dict[str, float]:
-    s = batch.obs_list
-    a = batch.act_list
-    r = batch.rew_list.view(-1, 1)
-    sn = batch.next_obs_list
-    d = batch.done_list.view(-1, 1)
+    batch = agent_batch(batch)
     with torch.no_grad():
-        loss_td3 = agent.loss_td3(s)
-        loss_correction = agent.loss_correction(s, sn)
-        loss_critic = agent.loss_critic(s, a, r, sn, d)
-        loss_actor = agent.loss_actor(s, sn)
+        loss_td3 = agent.loss_td3(batch)
+        loss_correction = agent.loss_correction(batch)
+        loss_critic = agent.loss_critic(batch)
+        loss_actor = agent.loss_actor(batch)
         return {
             "loss_td3": float(loss_td3.item()),
             "loss_correction": float(loss_correction.item()),
@@ -106,7 +103,6 @@ def train(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         dynamics=dynamics,
-        max_action=1.0,
         device=device,
     )
     agent_evaluator = Evaluator(

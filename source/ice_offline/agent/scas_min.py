@@ -3,6 +3,7 @@
 import torch
 import torch.nn.functional as F
 
+from ice_offline.agent._spec import AgentBatch
 from ice_offline.agent._spec import TorchAgent
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
@@ -38,11 +39,10 @@ class ScasDynamicAgent(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
-    noise_scale: float = 3e-3
     device: str = "cpu"
 
     def __post_init__(self) -> None:
-        self.model = _M(self.obs_size, self.act_size, noise_scale=self.noise_scale).to(self.device)
+        self.model = _M(self.obs_size, self.act_size).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=self.learning_rate,
@@ -91,14 +91,13 @@ class ScasMinAgent(TD3Agent):
     dynamics: ScasDynamicAgent | None = None
     actor_learning_rate: float = 2e-4
     critic_learning_rate: float = 3e-4
-    max_action: float = 1.0
     alpha: float = 5.0
     lmbda: float = 0.25
     q_count: int = 4
     max_weight: float = 50.0
 
     def __post_init__(self) -> None:
-        self.actor = TD3Actor(self.obs_size, self.act_size, max_action=self.max_action).to(self.device)
+        self.actor = TD3Actor(self.obs_size, self.act_size).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, q_count=self.q_count).to(self.device)
         self.dynamics = self.dynamics.prepare().to(self.device)
 
@@ -109,34 +108,11 @@ class ScasMinAgent(TD3Agent):
         )
 
     # ====================
-    # Update
-    # ====================
-    def update(self, batch: TorchBuffer):
-        s = batch.obs_list
-        a = batch.act_list
-        r = batch.rew_list.view(-1, 1)
-        d = batch.done_list.view(-1, 1)
-        sn = batch.next_obs_list
-      
-        self.update_critic(s, a, r, sn, d)
-
-        self.update_step += 1
-        if self.update_step % self.update_actor_interval == 0:
-            self.update_actor(s, sn)
-            self.critic.update_target_soft()
-            self.actor.update_target_soft()
-
-    def update_actor(self, o: torch.Tensor, on: torch.Tensor) -> None:
-        self.actor_optimizer.zero_grad()
-        actor_loss = self.loss_actor(o, on)
-        actor_loss.backward()
-        self.actor_optimizer.step()
-
-    # ====================
     # Actor loss
     # ====================    
-    def loss_correction(self, s: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
+    def loss_correction(self, batch: AgentBatch) -> torch.Tensor:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( alpha* ( V' - V ) ) * ||M(ps,a) - s'||^2]
+        s, _, _, _, sn = batch
         a = self.actor.pi(s)
         v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))
         an = self.actor.pi(sn)
@@ -150,8 +126,8 @@ class ScasMinAgent(TD3Agent):
         mse_M = (self.dynamics(ps, a) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
-    def loss_actor(self, s: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
-        return (1.0 - self.lmbda) * self.loss_td3(s) + self.lmbda * self.loss_correction(s, sn)
+    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+        return (1.0 - self.lmbda) * self.loss_td3(batch) + self.lmbda * self.loss_correction(batch)
 
 
 

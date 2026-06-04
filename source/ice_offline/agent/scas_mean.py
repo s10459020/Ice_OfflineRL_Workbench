@@ -12,8 +12,7 @@ class ScasMeanAgent(ScasMinAgent):
     # Critic loss
     # ====================
     def target_td3(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        # target = r + gamma * Q(o',a') * (1-done)
-        # TD3: noise action a' for policy smoothing
+        # use tq_mean instead of tq_min to compute target value
         with torch.no_grad():
             an = self.actor.noise_action(self.actor.tpi(on))
             tq = self.critic.tq_mean(on, an)

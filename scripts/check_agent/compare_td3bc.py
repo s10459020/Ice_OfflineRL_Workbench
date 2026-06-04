@@ -6,6 +6,7 @@ from _lib import sample_transition
 from _lib import torch_buffer
 from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.td3bc_source import TD3BCSourceAgent
 from ice_offline.tools.printer import print_stage
 
@@ -203,12 +204,13 @@ def compare_loss(our: TD3BCSourceAgent, ref) -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
         batch = _torch_batch(s, a, r, sn, d)
+        our_batch = agent_batch(torch_buffer(s, a, r, sn, d))
         a_pred = our.actor.pi(s)
 
         # loss bc
         assert_callback(
             lambda: [ref_loss_pack(ref, batch)[2].bc_loss],
-            lambda: [our.loss_bc(a, a_pred)],
+            lambda: [our.loss_bc(our_batch, a_pred)],
             label=f"loss_bc[{i}]",
             seed=SEED + i,
         )
@@ -216,7 +218,7 @@ def compare_loss(our: TD3BCSourceAgent, ref) -> None:
         # loss td3
         assert_callback(
             lambda: [ref_loss_td3(ref, batch)],
-            lambda: [our.loss_td3(s, a_pred)],
+            lambda: [our.loss_td3(our_batch, a_pred)],
             label=f"loss_td3[{i}]",
             seed=SEED + i,
         )
@@ -224,7 +226,7 @@ def compare_loss(our: TD3BCSourceAgent, ref) -> None:
         # loss actor
         assert_callback(
             lambda: [ref_loss_pack(ref, batch)[2].actor_loss],
-            lambda: [our.loss_actor(s, a)],
+            lambda: [our.loss_actor(our_batch)],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
@@ -232,7 +234,7 @@ def compare_loss(our: TD3BCSourceAgent, ref) -> None:
         # loss critic
         assert_callback(
             lambda: [ref_loss_pack(ref, batch)[1]],
-            lambda: [our.loss_critic(s, a, r, sn, d)],
+            lambda: [our.loss_critic(our_batch)],
             label=f"loss_critic[{i}]",
             seed=SEED + i,
         )
