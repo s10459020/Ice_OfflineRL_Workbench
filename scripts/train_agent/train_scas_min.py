@@ -33,7 +33,7 @@ def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, fl
     a = batch.act_list
     sn = batch.next_obs_list
     with torch.no_grad():
-        return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
+        return {"1. loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
 
 
 def eval_loss_agent(agent: ScasMinAgent, batch: TorchBuffer) -> dict[str, float]:
@@ -44,15 +44,15 @@ def eval_loss_agent(agent: ScasMinAgent, batch: TorchBuffer) -> dict[str, float]
         loss_critic = agent.loss_critic(batch)
         loss_actor = agent.loss_actor(batch)
         return {
-            "loss_td3": float(loss_td3.item()),
-            "loss_correction": float(loss_correction.item()),
-            "loss_critic": float(loss_critic.item()),
-            "loss_actor": float(loss_actor.item()),
+            "2. loss_td3": float(loss_td3.item()),
+            "3. loss_correction": float(loss_correction.item()),
+            "4. loss_actor": float(loss_actor.item()),
+            "5. loss_critic": float(loss_critic.item()),
         }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"6. return": float(batch.rew_list.sum().item())}
 
 
 def train(
@@ -169,11 +169,3 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
-
-
-
-
-
-
-

@@ -18,49 +18,21 @@ from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
 from ice_offline.dataset.hopper_replay import HopperReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.dataset.walker2d_expert import Walker2dExpertDataset
+from ice_offline.dataset.walker2d_expert_d4rl import Walker2dExpertD4rlDataset
+from ice_offline.dataset.walker2d_medium import Walker2dMediumDataset
+from ice_offline.dataset.walker2d_medium_d4rl import Walker2dMediumD4rlDataset
+from ice_offline.dataset.walker2d_medium_expert import Walker2dMediumExpertDataset
+from ice_offline.dataset.walker2d_medium_replay import Walker2dMediumReplayDataset
+from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
+from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
+from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
 from ice_offline.tools.paths import minari_root
-
-
-DATASET_CLASS_LIST = [
-    HopperRandomDataset,
-    HopperReplayDataset,
-    HopperMediumReplayDataset,
-    HopperMediumD4rlDataset,
-    HopperMediumExpertDataset,
-    HopperExpertD4rlDataset,
-    HopperSimpleDataset,
-    HopperMediumDataset,
-    HopperExpertDataset,
-    HalfCheetahRandomDataset,
-    HalfCheetahReplayDataset,
-    HalfCheetahMediumReplayDataset,
-    HalfCheetahMediumD4rlDataset,
-    HalfCheetahMediumExpertDataset,
-    HalfCheetahExpertD4rlDataset,
-    HalfCheetahSimpleDataset,
-    HalfCheetahMediumDataset,
-    HalfCheetahExpertDataset,
-]
-
-AGENT_ID_LIST = [
-    "random",
-    "bc_deterministic",
-    "bc_stochastic",
-    "td3bc",
-    "iql",
-    "cql",
-    "sdc_cql",
-    "cql_max_q",
-    "cql_soft_q",
-    "aspl",
-    "scas_mean",
-    "scas_min",
-]
-
 
 RANDOM_DATASET_CLASS_BY_ENV_NAME = {
     "hopper": HopperRandomDataset,
     "halfcheetah": HalfCheetahRandomDataset,
+    "walker2d": Walker2dRandomDataset,
 }
 
 

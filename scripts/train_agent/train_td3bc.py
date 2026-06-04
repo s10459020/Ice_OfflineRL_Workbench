@@ -30,15 +30,15 @@ def eval_loss(agent: TD3BCAgent, batch: TorchBuffer) -> dict[str, float]:
     batch = agent_batch(batch)
     with torch.no_grad():
         return {
-            "loss_bc": float(agent.loss_bc(batch).item()),
-            "loss_td3": float(agent.loss_td3(batch).item()),
-            "loss_actor": float(agent.loss_actor(batch).item()),
-            "loss_critic": float(agent.loss_critic(batch).item()),
+            "1. loss_td3": float(agent.loss_td3(batch).item()),
+            "2. loss_bc": float(agent.loss_bc(batch).item()),
+            "3. loss_actor": float(agent.loss_actor(batch).item()),
+            "4. loss_critic": float(agent.loss_critic(batch).item()),
         }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"5. return": float(batch.rew_list.sum().item())}
 
 
 def train(
