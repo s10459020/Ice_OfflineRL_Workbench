@@ -39,7 +39,6 @@ class _Pi(torch.nn.Module):
         act_size: int,
         min_logstd: float = -20.0,
         max_logstd: float = 2.0,
-        initial_alpha: float = 1.0,
     ):
         super().__init__()
         self.act_size = act_size
@@ -53,11 +52,6 @@ class _Pi(torch.nn.Module):
         self.logstd_head = torch.nn.Linear(256, act_size)
         self.min_logstd = min_logstd
         self.max_logstd = max_logstd
-        self.log_alpha = torch.nn.Parameter(torch.zeros(1, 1, dtype=torch.float32))
-        self.log_alpha.data.fill_(math.log(initial_alpha))
-
-    def temp(self) -> torch.Tensor:
-        return self.log_alpha.exp()
 
     def dist(self, o: torch.Tensor) -> _SquashedGaussianDistribution:
         h = self.hidden(o)
@@ -65,11 +59,21 @@ class _Pi(torch.nn.Module):
         logstd = self.logstd_head(h).clamp(self.min_logstd, self.max_logstd)
         return _SquashedGaussianDistribution(loc=mean, std=logstd.exp())
 
-class _Actor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int):
+class _SAC_Actor(torch.nn.Module):
+    def __init__(
+            self, 
+            obs_size: int, 
+            act_size: int,
+            initial_temp: float = 1.0,
+        ):
         super().__init__()
         self.pi = _Pi(obs_size, act_size)
+        self.log_temp = torch.nn.Parameter(torch.zeros(1, 1, dtype=torch.float32))
+        self.log_temp.data.fill_(math.log(initial_temp))
 
+    # ====================
+    # public API
+    # ====================
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         return self.pi.dist(o).mode()
 
@@ -88,6 +92,22 @@ class _Actor(torch.nn.Module):
         a = a.reshape(-1, a.shape[-1])                  # (B, N, A) => (B*N, A)
         log_prob = log_prob.reshape(-1, 1)              # (B, N, 1) => (B*N, 1)
         return a, log_prob
+    
+    # ====================
+    # entropy temperature
+    # ====================
+    def loss_temp(self, log_prob: torch.Tensor) -> torch.Tensor:
+        # loss = -E[ alpha * (log_pi - target_entropy) ]
+        # SAC: 若log_prob長期偏大，則加強修改力度
+        with torch.no_grad():
+            target_alpha = log_prob - self.act_size
+        return -(self.log_temp.exp() * target_alpha).mean()
+    
+    def update_temp(self, log_prob: torch.Tensor) -> None:
+        self.alpha_optim.zero_grad()
+        alpha_loss = self.loss_temp(log_prob)
+        alpha_loss.backward()
+        self.alpha_optim.step()
 
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -196,14 +216,15 @@ class CQLAgent(TorchAgent):
     actor_alpha_learning_rate: float = 1e-4
     critic_alpha_learning_rate: float = 1e-4
     device: str = "cpu"
+    initial_temp: float = 1.0
 
     def __post_init__(self):
+        self.log_temp = torch.nn.Parameter(torch.zeros(1, 1, dtype=torch.float32))
+        self.log_temp.data.fill_(math.log(self.initial_temp))
+
         self.actor = _Actor(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
-        self.critic = _Critic(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-            device=self.device,
-        ).to(self.device)
+        self.critic = _Critic(obs_size=self.obs_size, act_size=self.act_size, device=self.device).to(self.device)
+
         self.actor_optim = torch.optim.Adam(
             list(self.actor.pi.hidden.parameters())
             + list(self.actor.pi.mean_head.parameters())
@@ -293,12 +314,6 @@ class CQLAgent(TorchAgent):
         alpha_loss.backward()
         self.alpha_prime_optim.step()
 
-    def update_alpha_sac(self, log_prob_detached: torch.Tensor) -> None:
-        self.alpha_optim.zero_grad()
-        alpha_loss = self.loss_alpha_sac(log_prob_detached)
-        alpha_loss.backward()
-        self.alpha_optim.step()
-
     # ====================
     # Save and load
     # ====================
@@ -324,14 +339,9 @@ class CQLAgent(TorchAgent):
     # Critic loss
     # ====================
     def td_target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        #  AC target: r + gamma*                             Q2  * (1-done)
-        # TD3 target: r + gamma*                         Q2_min  * (1-done) # Clipped Double Q
-        # DQN target: r + gamma*                  target_Q2_min  * (1-done) # target Q
-        # SAC target: r + gamma* (target_Q2_min - alpha* log_pi2 )* (1-done) # maximum entropy
-        #
         # DQN form
         # max_q_backup(max Q): False
-        # soft_q_backup(SAC form): False 
+        
         with torch.no_grad():
             an = self.actor(on)
             qn = self.critic.target_q_min(on, an)
@@ -408,7 +418,7 @@ class CQLAgent(TorchAgent):
         if update_alpha:
             self.update_alpha_sac(log_prob.detach())
         q_t = self.critic.q_min(o, a)
-        return (self.actor.pi.temp() * log_prob - q_t).mean()
+        return (self.critic.temp() * log_prob - q_t).mean()
 
     def loss_alpha_sac(self, log_prob_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * (log_pi - target_entropy) ]

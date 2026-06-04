@@ -17,8 +17,8 @@ from ice_offline.tools.printer import print_stage
 # ====================
 # Config
 # ====================
-OBS_DIM = 8
-ACT_DIM = 3
+obs_size = 8
+act_size = 3
 DEVICE = "cpu"
 SEED = 42
 BATCH_SIZE = 64
@@ -62,61 +62,61 @@ def _all_pairs(
         (our.actor.tpi.network[4].weight, ref.actor_target.l3.weight),
         (our.actor.tpi.network[4].bias, ref.actor_target.l3.bias),
         # critic q1
-        (our.critic.q1.network[0].weight, ref.critic.l1.weight),
-        (our.critic.q1.network[0].bias, ref.critic.l1.bias),
-        (our.critic.q1.network[2].weight, ref.critic.l2.weight),
-        (our.critic.q1.network[2].bias, ref.critic.l2.bias),
-        (our.critic.q1.network[4].weight, ref.critic.l3.weight),
-        (our.critic.q1.network[4].bias, ref.critic.l3.bias),
+        (our.critic.q_networks[0].network[0].weight, ref.critic.l1.weight),
+        (our.critic.q_networks[0].network[0].bias, ref.critic.l1.bias),
+        (our.critic.q_networks[0].network[2].weight, ref.critic.l2.weight),
+        (our.critic.q_networks[0].network[2].bias, ref.critic.l2.bias),
+        (our.critic.q_networks[0].network[4].weight, ref.critic.l3.weight),
+        (our.critic.q_networks[0].network[4].bias, ref.critic.l3.bias),
         # critic q2
-        (our.critic.q2.network[0].weight, ref.critic.l4.weight),
-        (our.critic.q2.network[0].bias, ref.critic.l4.bias),
-        (our.critic.q2.network[2].weight, ref.critic.l5.weight),
-        (our.critic.q2.network[2].bias, ref.critic.l5.bias),
-        (our.critic.q2.network[4].weight, ref.critic.l6.weight),
-        (our.critic.q2.network[4].bias, ref.critic.l6.bias),
+        (our.critic.q_networks[1].network[0].weight, ref.critic.l4.weight),
+        (our.critic.q_networks[1].network[0].bias, ref.critic.l4.bias),
+        (our.critic.q_networks[1].network[2].weight, ref.critic.l5.weight),
+        (our.critic.q_networks[1].network[2].bias, ref.critic.l5.bias),
+        (our.critic.q_networks[1].network[4].weight, ref.critic.l6.weight),
+        (our.critic.q_networks[1].network[4].bias, ref.critic.l6.bias),
         # critic q3
-        (our.critic.q3.network[0].weight, ref.critic.l7.weight),
-        (our.critic.q3.network[0].bias, ref.critic.l7.bias),
-        (our.critic.q3.network[2].weight, ref.critic.l8.weight),
-        (our.critic.q3.network[2].bias, ref.critic.l8.bias),
-        (our.critic.q3.network[4].weight, ref.critic.l9.weight),
-        (our.critic.q3.network[4].bias, ref.critic.l9.bias),
+        (our.critic.q_networks[2].network[0].weight, ref.critic.l7.weight),
+        (our.critic.q_networks[2].network[0].bias, ref.critic.l7.bias),
+        (our.critic.q_networks[2].network[2].weight, ref.critic.l8.weight),
+        (our.critic.q_networks[2].network[2].bias, ref.critic.l8.bias),
+        (our.critic.q_networks[2].network[4].weight, ref.critic.l9.weight),
+        (our.critic.q_networks[2].network[4].bias, ref.critic.l9.bias),
         # critic q4
-        (our.critic.q4.network[0].weight, ref.critic.l10.weight),
-        (our.critic.q4.network[0].bias, ref.critic.l10.bias),
-        (our.critic.q4.network[2].weight, ref.critic.l11.weight),
-        (our.critic.q4.network[2].bias, ref.critic.l11.bias),
-        (our.critic.q4.network[4].weight, ref.critic.l12.weight),
-        (our.critic.q4.network[4].bias, ref.critic.l12.bias),
+        (our.critic.q_networks[3].network[0].weight, ref.critic.l10.weight),
+        (our.critic.q_networks[3].network[0].bias, ref.critic.l10.bias),
+        (our.critic.q_networks[3].network[2].weight, ref.critic.l11.weight),
+        (our.critic.q_networks[3].network[2].bias, ref.critic.l11.bias),
+        (our.critic.q_networks[3].network[4].weight, ref.critic.l12.weight),
+        (our.critic.q_networks[3].network[4].bias, ref.critic.l12.bias),
         # critic target q1
-        (our.critic.tq1.network[0].weight, ref.critic_target.l1.weight),
-        (our.critic.tq1.network[0].bias, ref.critic_target.l1.bias),
-        (our.critic.tq1.network[2].weight, ref.critic_target.l2.weight),
-        (our.critic.tq1.network[2].bias, ref.critic_target.l2.bias),
-        (our.critic.tq1.network[4].weight, ref.critic_target.l3.weight),
-        (our.critic.tq1.network[4].bias, ref.critic_target.l3.bias),
+        (our.critic.tq_networks[0].network[0].weight, ref.critic_target.l1.weight),
+        (our.critic.tq_networks[0].network[0].bias, ref.critic_target.l1.bias),
+        (our.critic.tq_networks[0].network[2].weight, ref.critic_target.l2.weight),
+        (our.critic.tq_networks[0].network[2].bias, ref.critic_target.l2.bias),
+        (our.critic.tq_networks[0].network[4].weight, ref.critic_target.l3.weight),
+        (our.critic.tq_networks[0].network[4].bias, ref.critic_target.l3.bias),
         # critic target q2
-        (our.critic.tq2.network[0].weight, ref.critic_target.l4.weight),
-        (our.critic.tq2.network[0].bias, ref.critic_target.l4.bias),
-        (our.critic.tq2.network[2].weight, ref.critic_target.l5.weight),
-        (our.critic.tq2.network[2].bias, ref.critic_target.l5.bias),
-        (our.critic.tq2.network[4].weight, ref.critic_target.l6.weight),
-        (our.critic.tq2.network[4].bias, ref.critic_target.l6.bias),
+        (our.critic.tq_networks[1].network[0].weight, ref.critic_target.l4.weight),
+        (our.critic.tq_networks[1].network[0].bias, ref.critic_target.l4.bias),
+        (our.critic.tq_networks[1].network[2].weight, ref.critic_target.l5.weight),
+        (our.critic.tq_networks[1].network[2].bias, ref.critic_target.l5.bias),
+        (our.critic.tq_networks[1].network[4].weight, ref.critic_target.l6.weight),
+        (our.critic.tq_networks[1].network[4].bias, ref.critic_target.l6.bias),
         # critic target q3
-        (our.critic.tq3.network[0].weight, ref.critic_target.l7.weight),
-        (our.critic.tq3.network[0].bias, ref.critic_target.l7.bias),
-        (our.critic.tq3.network[2].weight, ref.critic_target.l8.weight),
-        (our.critic.tq3.network[2].bias, ref.critic_target.l8.bias),
-        (our.critic.tq3.network[4].weight, ref.critic_target.l9.weight),
-        (our.critic.tq3.network[4].bias, ref.critic_target.l9.bias),
+        (our.critic.tq_networks[2].network[0].weight, ref.critic_target.l7.weight),
+        (our.critic.tq_networks[2].network[0].bias, ref.critic_target.l7.bias),
+        (our.critic.tq_networks[2].network[2].weight, ref.critic_target.l8.weight),
+        (our.critic.tq_networks[2].network[2].bias, ref.critic_target.l8.bias),
+        (our.critic.tq_networks[2].network[4].weight, ref.critic_target.l9.weight),
+        (our.critic.tq_networks[2].network[4].bias, ref.critic_target.l9.bias),
         # critic target q4
-        (our.critic.tq4.network[0].weight, ref.critic_target.l10.weight),
-        (our.critic.tq4.network[0].bias, ref.critic_target.l10.bias),
-        (our.critic.tq4.network[2].weight, ref.critic_target.l11.weight),
-        (our.critic.tq4.network[2].bias, ref.critic_target.l11.bias),
-        (our.critic.tq4.network[4].weight, ref.critic_target.l12.weight),
-        (our.critic.tq4.network[4].bias, ref.critic_target.l12.bias),
+        (our.critic.tq_networks[3].network[0].weight, ref.critic_target.l10.weight),
+        (our.critic.tq_networks[3].network[0].bias, ref.critic_target.l10.bias),
+        (our.critic.tq_networks[3].network[2].weight, ref.critic_target.l11.weight),
+        (our.critic.tq_networks[3].network[2].bias, ref.critic_target.l11.bias),
+        (our.critic.tq_networks[3].network[4].weight, ref.critic_target.l12.weight),
+        (our.critic.tq_networks[3].network[4].bias, ref.critic_target.l12.bias),
     ]
 
 
@@ -242,10 +242,10 @@ def our_update_and_collect_params(
 # Compare
 # ====================
 def build_our() -> tuple[ScasMinAgent, ScasDynamicAgent]:
-    our_dynamics = ScasDynamicAgent(obs_dim=OBS_DIM, act_dim=ACT_DIM, device=DEVICE)
+    our_dynamics = ScasDynamicAgent(obs_size=obs_size, act_size=act_size, device=DEVICE)
     our = ScasMinAgent(
-        obs_dim=OBS_DIM,
-        act_dim=ACT_DIM,
+        obs_size=obs_size,
+        act_size=act_size,
         dynamics=our_dynamics,
         max_action=MAX_ACTION,
         device=DEVICE,
@@ -255,10 +255,10 @@ def build_our() -> tuple[ScasMinAgent, ScasDynamicAgent]:
 def build_ref() -> tuple[Any, torch.nn.Module]:
     ref_model.device = torch.device(DEVICE)
     ref_scas.device = torch.device(DEVICE)
-    ref_dynamics = ref_model.Dynamics(OBS_DIM, ACT_DIM).to(DEVICE)
+    ref_dynamics = ref_model.Dynamics(obs_size, act_size).to(DEVICE)
     ref = ref_scas.SCAS(
-        state_dim=OBS_DIM,
-        action_dim=ACT_DIM,
+        state_dim=obs_size,
+        action_dim=act_size,
         max_action=MAX_ACTION,
         replay_buffer=None,
         dynamics=ref_dynamics,
@@ -280,7 +280,7 @@ def init_compare() -> tuple[Any, ScasMinAgent, torch.nn.Module, ScasDynamicAgent
 def compare_act(ref: Any, our: ScasMinAgent) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
-        s, _, _, _, _ = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
+        s, _, _, _, _ = sample_transition(BATCH_SIZE, obs_size, act_size, DEVICE)
 
         # act best
         assert_callback(
@@ -308,7 +308,7 @@ def compare_loss(
 ) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
+        s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, DEVICE)
 
         # loss dynamic
         assert_callback(
@@ -360,7 +360,7 @@ def compare_param(
 ) -> None:
     print_stage("Update Compare")
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, r, sn, d = sample_transition(1, OBS_DIM, ACT_DIM, DEVICE)
+        s, a, r, sn, d = sample_transition(1, obs_size, act_size, DEVICE)
 
         # update params
         assert_callback(
@@ -373,7 +373,7 @@ def compare_param(
         print(f"batch={i}/{N_TEST_BATCHES} single_param_match=True")
 
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
+        s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, DEVICE)
 
         # update params
         assert_callback(

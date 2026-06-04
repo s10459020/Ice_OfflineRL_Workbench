@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import types
 
 import numpy as np
@@ -23,8 +23,8 @@ import _lib
 # ====================
 # Config
 # ====================
-OBS_DIM = 8
-ACT_DIM = 3
+obs_size = 8
+act_size = 3
 SEED = 42
 BATCH_SIZE = 64
 N_TEST_BATCHES = 30
@@ -55,81 +55,81 @@ def _all_pairs(ref: ASPLPolicy, our: AsplAgent):
         (ref.actor_target.layers[6].weight, our.actor.tpi.network[6].weight),
         (ref.actor_target.layers[6].bias, our.actor.tpi.network[6].bias),
         # critic q1
-        (ref.critic.q_networks[0][0].weight, our.critic.q1.network[0].weight),
-        (ref.critic.q_networks[0][0].bias, our.critic.q1.network[0].bias),
-        (ref.critic.q_networks[0][2].weight, our.critic.q1.network[2].weight),
-        (ref.critic.q_networks[0][2].bias, our.critic.q1.network[2].bias),
-        (ref.critic.q_networks[0][3].weight, our.critic.q1.network[3].weight),
-        (ref.critic.q_networks[0][3].bias, our.critic.q1.network[3].bias),
-        (ref.critic.q_networks[0][5].weight, our.critic.q1.network[5].weight),
-        (ref.critic.q_networks[0][5].bias, our.critic.q1.network[5].bias),
-        (ref.critic.q_networks[0][6].weight, our.critic.q1.network[6].weight),
-        (ref.critic.q_networks[0][6].bias, our.critic.q1.network[6].bias),
-        (ref.critic.q_networks[0][8].weight, our.critic.q1.network[8].weight),
-        (ref.critic.q_networks[0][8].bias, our.critic.q1.network[8].bias),
-        (ref.critic.q_networks[0][9].weight, our.critic.q1.network[9].weight),
-        (ref.critic.q_networks[0][9].bias, our.critic.q1.network[9].bias),
-        (ref.critic.q_networks[0][11].weight, our.critic.q1.network[11].weight),
-        (ref.critic.q_networks[0][11].bias, our.critic.q1.network[11].bias),
-        (ref.critic.q_networks[0][12].weight, our.critic.q1.network[12].weight),
-        (ref.critic.q_networks[0][12].bias, our.critic.q1.network[12].bias),
+        (ref.critic.q_networks[0][0].weight, our.critic.q_networks[0].network[0].weight),
+        (ref.critic.q_networks[0][0].bias, our.critic.q_networks[0].network[0].bias),
+        (ref.critic.q_networks[0][2].weight, our.critic.q_networks[0].network[2].weight),
+        (ref.critic.q_networks[0][2].bias, our.critic.q_networks[0].network[2].bias),
+        (ref.critic.q_networks[0][3].weight, our.critic.q_networks[0].network[3].weight),
+        (ref.critic.q_networks[0][3].bias, our.critic.q_networks[0].network[3].bias),
+        (ref.critic.q_networks[0][5].weight, our.critic.q_networks[0].network[5].weight),
+        (ref.critic.q_networks[0][5].bias, our.critic.q_networks[0].network[5].bias),
+        (ref.critic.q_networks[0][6].weight, our.critic.q_networks[0].network[6].weight),
+        (ref.critic.q_networks[0][6].bias, our.critic.q_networks[0].network[6].bias),
+        (ref.critic.q_networks[0][8].weight, our.critic.q_networks[0].network[8].weight),
+        (ref.critic.q_networks[0][8].bias, our.critic.q_networks[0].network[8].bias),
+        (ref.critic.q_networks[0][9].weight, our.critic.q_networks[0].network[9].weight),
+        (ref.critic.q_networks[0][9].bias, our.critic.q_networks[0].network[9].bias),
+        (ref.critic.q_networks[0][11].weight, our.critic.q_networks[0].network[11].weight),
+        (ref.critic.q_networks[0][11].bias, our.critic.q_networks[0].network[11].bias),
+        (ref.critic.q_networks[0][12].weight, our.critic.q_networks[0].network[12].weight),
+        (ref.critic.q_networks[0][12].bias, our.critic.q_networks[0].network[12].bias),
         # critic q2
-        (ref.critic.q_networks[1][0].weight, our.critic.q2.network[0].weight),
-        (ref.critic.q_networks[1][0].bias, our.critic.q2.network[0].bias),
-        (ref.critic.q_networks[1][2].weight, our.critic.q2.network[2].weight),
-        (ref.critic.q_networks[1][2].bias, our.critic.q2.network[2].bias),
-        (ref.critic.q_networks[1][3].weight, our.critic.q2.network[3].weight),
-        (ref.critic.q_networks[1][3].bias, our.critic.q2.network[3].bias),
-        (ref.critic.q_networks[1][5].weight, our.critic.q2.network[5].weight),
-        (ref.critic.q_networks[1][5].bias, our.critic.q2.network[5].bias),
-        (ref.critic.q_networks[1][6].weight, our.critic.q2.network[6].weight),
-        (ref.critic.q_networks[1][6].bias, our.critic.q2.network[6].bias),
-        (ref.critic.q_networks[1][8].weight, our.critic.q2.network[8].weight),
-        (ref.critic.q_networks[1][8].bias, our.critic.q2.network[8].bias),
-        (ref.critic.q_networks[1][9].weight, our.critic.q2.network[9].weight),
-        (ref.critic.q_networks[1][9].bias, our.critic.q2.network[9].bias),
-        (ref.critic.q_networks[1][11].weight, our.critic.q2.network[11].weight),
-        (ref.critic.q_networks[1][11].bias, our.critic.q2.network[11].bias),
-        (ref.critic.q_networks[1][12].weight, our.critic.q2.network[12].weight),
-        (ref.critic.q_networks[1][12].bias, our.critic.q2.network[12].bias),
+        (ref.critic.q_networks[1][0].weight, our.critic.q_networks[1].network[0].weight),
+        (ref.critic.q_networks[1][0].bias, our.critic.q_networks[1].network[0].bias),
+        (ref.critic.q_networks[1][2].weight, our.critic.q_networks[1].network[2].weight),
+        (ref.critic.q_networks[1][2].bias, our.critic.q_networks[1].network[2].bias),
+        (ref.critic.q_networks[1][3].weight, our.critic.q_networks[1].network[3].weight),
+        (ref.critic.q_networks[1][3].bias, our.critic.q_networks[1].network[3].bias),
+        (ref.critic.q_networks[1][5].weight, our.critic.q_networks[1].network[5].weight),
+        (ref.critic.q_networks[1][5].bias, our.critic.q_networks[1].network[5].bias),
+        (ref.critic.q_networks[1][6].weight, our.critic.q_networks[1].network[6].weight),
+        (ref.critic.q_networks[1][6].bias, our.critic.q_networks[1].network[6].bias),
+        (ref.critic.q_networks[1][8].weight, our.critic.q_networks[1].network[8].weight),
+        (ref.critic.q_networks[1][8].bias, our.critic.q_networks[1].network[8].bias),
+        (ref.critic.q_networks[1][9].weight, our.critic.q_networks[1].network[9].weight),
+        (ref.critic.q_networks[1][9].bias, our.critic.q_networks[1].network[9].bias),
+        (ref.critic.q_networks[1][11].weight, our.critic.q_networks[1].network[11].weight),
+        (ref.critic.q_networks[1][11].bias, our.critic.q_networks[1].network[11].bias),
+        (ref.critic.q_networks[1][12].weight, our.critic.q_networks[1].network[12].weight),
+        (ref.critic.q_networks[1][12].bias, our.critic.q_networks[1].network[12].bias),
         # critic target q1
-        (ref.critic_target.q_networks[0][0].weight, our.critic.tq1.network[0].weight),
-        (ref.critic_target.q_networks[0][0].bias, our.critic.tq1.network[0].bias),
-        (ref.critic_target.q_networks[0][2].weight, our.critic.tq1.network[2].weight),
-        (ref.critic_target.q_networks[0][2].bias, our.critic.tq1.network[2].bias),
-        (ref.critic_target.q_networks[0][3].weight, our.critic.tq1.network[3].weight),
-        (ref.critic_target.q_networks[0][3].bias, our.critic.tq1.network[3].bias),
-        (ref.critic_target.q_networks[0][5].weight, our.critic.tq1.network[5].weight),
-        (ref.critic_target.q_networks[0][5].bias, our.critic.tq1.network[5].bias),
-        (ref.critic_target.q_networks[0][6].weight, our.critic.tq1.network[6].weight),
-        (ref.critic_target.q_networks[0][6].bias, our.critic.tq1.network[6].bias),
-        (ref.critic_target.q_networks[0][8].weight, our.critic.tq1.network[8].weight),
-        (ref.critic_target.q_networks[0][8].bias, our.critic.tq1.network[8].bias),
-        (ref.critic_target.q_networks[0][9].weight, our.critic.tq1.network[9].weight),
-        (ref.critic_target.q_networks[0][9].bias, our.critic.tq1.network[9].bias),
-        (ref.critic_target.q_networks[0][11].weight, our.critic.tq1.network[11].weight),
-        (ref.critic_target.q_networks[0][11].bias, our.critic.tq1.network[11].bias),
-        (ref.critic_target.q_networks[0][12].weight, our.critic.tq1.network[12].weight),
-        (ref.critic_target.q_networks[0][12].bias, our.critic.tq1.network[12].bias),
+        (ref.critic_target.q_networks[0][0].weight, our.critic.tq_networks[0].network[0].weight),
+        (ref.critic_target.q_networks[0][0].bias, our.critic.tq_networks[0].network[0].bias),
+        (ref.critic_target.q_networks[0][2].weight, our.critic.tq_networks[0].network[2].weight),
+        (ref.critic_target.q_networks[0][2].bias, our.critic.tq_networks[0].network[2].bias),
+        (ref.critic_target.q_networks[0][3].weight, our.critic.tq_networks[0].network[3].weight),
+        (ref.critic_target.q_networks[0][3].bias, our.critic.tq_networks[0].network[3].bias),
+        (ref.critic_target.q_networks[0][5].weight, our.critic.tq_networks[0].network[5].weight),
+        (ref.critic_target.q_networks[0][5].bias, our.critic.tq_networks[0].network[5].bias),
+        (ref.critic_target.q_networks[0][6].weight, our.critic.tq_networks[0].network[6].weight),
+        (ref.critic_target.q_networks[0][6].bias, our.critic.tq_networks[0].network[6].bias),
+        (ref.critic_target.q_networks[0][8].weight, our.critic.tq_networks[0].network[8].weight),
+        (ref.critic_target.q_networks[0][8].bias, our.critic.tq_networks[0].network[8].bias),
+        (ref.critic_target.q_networks[0][9].weight, our.critic.tq_networks[0].network[9].weight),
+        (ref.critic_target.q_networks[0][9].bias, our.critic.tq_networks[0].network[9].bias),
+        (ref.critic_target.q_networks[0][11].weight, our.critic.tq_networks[0].network[11].weight),
+        (ref.critic_target.q_networks[0][11].bias, our.critic.tq_networks[0].network[11].bias),
+        (ref.critic_target.q_networks[0][12].weight, our.critic.tq_networks[0].network[12].weight),
+        (ref.critic_target.q_networks[0][12].bias, our.critic.tq_networks[0].network[12].bias),
         # critic target q2
-        (ref.critic_target.q_networks[1][0].weight, our.critic.tq2.network[0].weight),
-        (ref.critic_target.q_networks[1][0].bias, our.critic.tq2.network[0].bias),
-        (ref.critic_target.q_networks[1][2].weight, our.critic.tq2.network[2].weight),
-        (ref.critic_target.q_networks[1][2].bias, our.critic.tq2.network[2].bias),
-        (ref.critic_target.q_networks[1][3].weight, our.critic.tq2.network[3].weight),
-        (ref.critic_target.q_networks[1][3].bias, our.critic.tq2.network[3].bias),
-        (ref.critic_target.q_networks[1][5].weight, our.critic.tq2.network[5].weight),
-        (ref.critic_target.q_networks[1][5].bias, our.critic.tq2.network[5].bias),
-        (ref.critic_target.q_networks[1][6].weight, our.critic.tq2.network[6].weight),
-        (ref.critic_target.q_networks[1][6].bias, our.critic.tq2.network[6].bias),
-        (ref.critic_target.q_networks[1][8].weight, our.critic.tq2.network[8].weight),
-        (ref.critic_target.q_networks[1][8].bias, our.critic.tq2.network[8].bias),
-        (ref.critic_target.q_networks[1][9].weight, our.critic.tq2.network[9].weight),
-        (ref.critic_target.q_networks[1][9].bias, our.critic.tq2.network[9].bias),
-        (ref.critic_target.q_networks[1][11].weight, our.critic.tq2.network[11].weight),
-        (ref.critic_target.q_networks[1][11].bias, our.critic.tq2.network[11].bias),
-        (ref.critic_target.q_networks[1][12].weight, our.critic.tq2.network[12].weight),
-        (ref.critic_target.q_networks[1][12].bias, our.critic.tq2.network[12].bias),
+        (ref.critic_target.q_networks[1][0].weight, our.critic.tq_networks[1].network[0].weight),
+        (ref.critic_target.q_networks[1][0].bias, our.critic.tq_networks[1].network[0].bias),
+        (ref.critic_target.q_networks[1][2].weight, our.critic.tq_networks[1].network[2].weight),
+        (ref.critic_target.q_networks[1][2].bias, our.critic.tq_networks[1].network[2].bias),
+        (ref.critic_target.q_networks[1][3].weight, our.critic.tq_networks[1].network[3].weight),
+        (ref.critic_target.q_networks[1][3].bias, our.critic.tq_networks[1].network[3].bias),
+        (ref.critic_target.q_networks[1][5].weight, our.critic.tq_networks[1].network[5].weight),
+        (ref.critic_target.q_networks[1][5].bias, our.critic.tq_networks[1].network[5].bias),
+        (ref.critic_target.q_networks[1][6].weight, our.critic.tq_networks[1].network[6].weight),
+        (ref.critic_target.q_networks[1][6].bias, our.critic.tq_networks[1].network[6].bias),
+        (ref.critic_target.q_networks[1][8].weight, our.critic.tq_networks[1].network[8].weight),
+        (ref.critic_target.q_networks[1][8].bias, our.critic.tq_networks[1].network[8].bias),
+        (ref.critic_target.q_networks[1][9].weight, our.critic.tq_networks[1].network[9].weight),
+        (ref.critic_target.q_networks[1][9].bias, our.critic.tq_networks[1].network[9].bias),
+        (ref.critic_target.q_networks[1][11].weight, our.critic.tq_networks[1].network[11].weight),
+        (ref.critic_target.q_networks[1][11].bias, our.critic.tq_networks[1].network[11].bias),
+        (ref.critic_target.q_networks[1][12].weight, our.critic.tq_networks[1].network[12].weight),
+        (ref.critic_target.q_networks[1][12].bias, our.critic.tq_networks[1].network[12].bias),
     ]
 
 
@@ -220,15 +220,15 @@ def our_update_and_collect_params(
 # ====================
 def build_our() -> AsplAgent:
     return AsplAgent(
-        obs_dim=OBS_DIM,
-        act_dim=ACT_DIM,
+        obs_size=obs_size,
+        act_size=act_size,
         max_action=MAX_ACTION,
     )
 
 def build_ref() -> ASPLPolicy:
     return ASPLPolicy(
-        state_dim=OBS_DIM,
-        action_dim=ACT_DIM,
+        state_dim=obs_size,
+        action_dim=act_size,
         max_action=MAX_ACTION,
         use_lr_scheduler="none",
     )
@@ -239,7 +239,7 @@ def init_compare() -> tuple[ASPLPolicy, AsplAgent]:
     aspl_policy_module.device = torch.device("cpu")
     ref = build_ref()
     our = build_our()
-    sampler_holder = {"sampler": qmc.LatinHypercube(d=our.act_dim, seed=SEED)}
+    sampler_holder = {"sampler": qmc.LatinHypercube(d=our.act_size, seed=SEED)}
 
     def _sample_actions_seeded(batch_size: int, action_dim: int) -> torch.Tensor:
         samples = sampler_holder["sampler"].random(n=ref.num_sampled_actions)
@@ -255,7 +255,7 @@ def init_compare() -> tuple[ASPLPolicy, AsplAgent]:
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        sampler_holder["sampler"] = qmc.LatinHypercube(d=our.act_dim, seed=seed)
+        sampler_holder["sampler"] = qmc.LatinHypercube(d=our.act_size, seed=seed)
         our.set_seed(seed)
 
     _lib._set_seed = _set_seed_patched
@@ -269,8 +269,8 @@ def init_compare() -> tuple[ASPLPolicy, AsplAgent]:
 def compare_act(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
-        s_single, _, _, _, _ = sample_transition(1, OBS_DIM, ACT_DIM, "cpu")
-        s, _, _, _, _ = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, "cpu")
+        s_single, _, _, _, _ = sample_transition(1, obs_size, act_size, "cpu")
+        s, _, _, _, _ = sample_transition(BATCH_SIZE, obs_size, act_size, "cpu")
 
         # act best
         assert_callback(
@@ -293,7 +293,7 @@ def compare_act(ref: ASPLPolicy, our: AsplAgent) -> None:
 def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, "cpu")
+        s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, "cpu")
         ref.total_it = i
         our.update_step = i
         ref.mean_abs_q = 0.0
@@ -302,7 +302,7 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
         # loss td
         assert_callback(
             lambda: [ref_loss_td_with_target(ref, s, a, ref_td_target(ref, sn, r, d)).detach().cpu()],
-            lambda: [our.loss_td_with_target(s, a, our.td_target(sn, r, d)).detach().cpu()],
+            lambda: [our.loss_td_with_target(s, a, our.target_td3(sn, r, d)).detach().cpu()],
             label=f"loss_td[{i}]",
             seed=SEED + i,
         )
@@ -310,7 +310,7 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
         # loss punish
         assert_callback(
             lambda: [ref_loss_punish_with_target(ref, s, a, ref_td_target(ref, sn, r, d)).detach().cpu()],
-            lambda: [our.loss_punish_with_target(s, a, our.td_target(sn, r, d)).detach().cpu()],
+            lambda: [our.loss_punish_with_target(s, a, our.target_td3(sn, r, d)).detach().cpu()],
             label=f"loss_punish[{i}]",
             seed=SEED + i,
         )
@@ -340,7 +340,7 @@ def compare_param(ref: ASPLPolicy, our: AsplAgent) -> None:
     ref.mean_abs_q = 0.0
     our.q_mean = 0.0
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, "cpu")
+        s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, "cpu")
 
         # update params
         assert_callback(

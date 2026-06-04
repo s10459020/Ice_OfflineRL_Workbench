@@ -324,12 +324,6 @@ class CQLSoftQAgent(TorchAgent):
     # Critic loss
     # ====================
     def td_target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        #  AC target: r + gamma*                             Q2  * (1-done)
-        # TD3 target: r + gamma*                         Q2_min  * (1-done) # Clipped Double Q
-        # DQN target: r + gamma*                    targ_Q2_min  * (1-done) # target Q
-        # SAC target: r + gamma* ( targ_Q2_min - alpha* log_pi2 )* (1-done) # maximum entropy
-        #
-        # max_q_backup(max Q): False
         # soft_q_backup(SAC form): True 
         with torch.no_grad():
             an, log_prob = self.actor.sample(on)

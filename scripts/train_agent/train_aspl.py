@@ -68,8 +68,8 @@ def train(
 
     print_stage("Train ASPL")
     agent = AsplAgent(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
         max_action=1.0,
         device=device,
     )

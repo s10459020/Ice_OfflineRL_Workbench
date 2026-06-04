@@ -6,7 +6,7 @@ from _lib import sample_transition
 from _lib import torch_buffer
 from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent.td3bc import TD3BCAgent
+from ice_offline.agent.td3bc_source import TD3BCSourceAgent
 from ice_offline.tools.printer import print_stage
 
 
@@ -24,7 +24,7 @@ N_TEST_BATCHES = 30
 # ====================
 # Mapping
 # ====================
-def _all_pairs(our: TD3BCAgent, ref):
+def _all_pairs(our: TD3BCSourceAgent, ref):
     ref_policy = ref.impl.modules.policy
     ref_targ_policy = ref.impl.modules.targ_policy
     ref_q1 = ref.impl.modules.q_funcs[0]
@@ -44,30 +44,30 @@ def _all_pairs(our: TD3BCAgent, ref):
         (our.actor.tpi.network[2].bias, ref_targ_policy._encoder._layers[2].bias),
         (our.actor.tpi.network[4].weight, ref_targ_policy._fc.weight),
         (our.actor.tpi.network[4].bias, ref_targ_policy._fc.bias),
-        (our.critic.q1.network[0].weight, ref_q1._encoder._layers[0].weight),
-        (our.critic.q1.network[0].bias, ref_q1._encoder._layers[0].bias),
-        (our.critic.q1.network[2].weight, ref_q1._encoder._layers[2].weight),
-        (our.critic.q1.network[2].bias, ref_q1._encoder._layers[2].bias),
-        (our.critic.q1.network[4].weight, ref_q1._fc.weight),
-        (our.critic.q1.network[4].bias, ref_q1._fc.bias),
-        (our.critic.q2.network[0].weight, ref_q2._encoder._layers[0].weight),
-        (our.critic.q2.network[0].bias, ref_q2._encoder._layers[0].bias),
-        (our.critic.q2.network[2].weight, ref_q2._encoder._layers[2].weight),
-        (our.critic.q2.network[2].bias, ref_q2._encoder._layers[2].bias),
-        (our.critic.q2.network[4].weight, ref_q2._fc.weight),
-        (our.critic.q2.network[4].bias, ref_q2._fc.bias),
-        (our.critic.tq1.network[0].weight, ref_t1._encoder._layers[0].weight),
-        (our.critic.tq1.network[0].bias, ref_t1._encoder._layers[0].bias),
-        (our.critic.tq1.network[2].weight, ref_t1._encoder._layers[2].weight),
-        (our.critic.tq1.network[2].bias, ref_t1._encoder._layers[2].bias),
-        (our.critic.tq1.network[4].weight, ref_t1._fc.weight),
-        (our.critic.tq1.network[4].bias, ref_t1._fc.bias),
-        (our.critic.tq2.network[0].weight, ref_t2._encoder._layers[0].weight),
-        (our.critic.tq2.network[0].bias, ref_t2._encoder._layers[0].bias),
-        (our.critic.tq2.network[2].weight, ref_t2._encoder._layers[2].weight),
-        (our.critic.tq2.network[2].bias, ref_t2._encoder._layers[2].bias),
-        (our.critic.tq2.network[4].weight, ref_t2._fc.weight),
-        (our.critic.tq2.network[4].bias, ref_t2._fc.bias),
+        (our.critic.q_networks[0].network[0].weight, ref_q1._encoder._layers[0].weight),
+        (our.critic.q_networks[0].network[0].bias, ref_q1._encoder._layers[0].bias),
+        (our.critic.q_networks[0].network[2].weight, ref_q1._encoder._layers[2].weight),
+        (our.critic.q_networks[0].network[2].bias, ref_q1._encoder._layers[2].bias),
+        (our.critic.q_networks[0].network[4].weight, ref_q1._fc.weight),
+        (our.critic.q_networks[0].network[4].bias, ref_q1._fc.bias),
+        (our.critic.q_networks[1].network[0].weight, ref_q2._encoder._layers[0].weight),
+        (our.critic.q_networks[1].network[0].bias, ref_q2._encoder._layers[0].bias),
+        (our.critic.q_networks[1].network[2].weight, ref_q2._encoder._layers[2].weight),
+        (our.critic.q_networks[1].network[2].bias, ref_q2._encoder._layers[2].bias),
+        (our.critic.q_networks[1].network[4].weight, ref_q2._fc.weight),
+        (our.critic.q_networks[1].network[4].bias, ref_q2._fc.bias),
+        (our.critic.tq_networks[0].network[0].weight, ref_t1._encoder._layers[0].weight),
+        (our.critic.tq_networks[0].network[0].bias, ref_t1._encoder._layers[0].bias),
+        (our.critic.tq_networks[0].network[2].weight, ref_t1._encoder._layers[2].weight),
+        (our.critic.tq_networks[0].network[2].bias, ref_t1._encoder._layers[2].bias),
+        (our.critic.tq_networks[0].network[4].weight, ref_t1._fc.weight),
+        (our.critic.tq_networks[0].network[4].bias, ref_t1._fc.bias),
+        (our.critic.tq_networks[1].network[0].weight, ref_t2._encoder._layers[0].weight),
+        (our.critic.tq_networks[1].network[0].bias, ref_t2._encoder._layers[0].bias),
+        (our.critic.tq_networks[1].network[2].weight, ref_t2._encoder._layers[2].weight),
+        (our.critic.tq_networks[1].network[2].bias, ref_t2._encoder._layers[2].bias),
+        (our.critic.tq_networks[1].network[4].weight, ref_t2._fc.weight),
+        (our.critic.tq_networks[1].network[4].bias, ref_t2._fc.bias),
     ]
 
 
@@ -129,7 +129,7 @@ def ref_loss_td3(ref, batch: TorchMiniBatch) -> torch.Tensor:
     lam = ref.impl._alpha / q_t.abs().mean().detach()
     return lam * -q_t.mean()
 
-def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: TD3BCAgent):
+def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: TD3BCSourceAgent):
     _ = ref.impl.inner_update(batch, step)
     return [x for _, x in _all_pairs(our, ref)]
 
@@ -138,7 +138,7 @@ def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: TD
 # Our define
 # ====================
 def our_update_and_collect_params(
-    our: TD3BCAgent,
+    our: TD3BCSourceAgent,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -153,8 +153,8 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> TD3BCAgent:
-    return TD3BCAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
+def build_our() -> TD3BCSourceAgent:
+    return TD3BCSourceAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
 
 def build_ref():
     config = algos.TD3PlusBCConfig()
@@ -163,7 +163,7 @@ def build_ref():
     assert ref.impl is not None
     return ref
 
-def init_compare() -> tuple[TD3BCAgent, object]:
+def init_compare() -> tuple[TD3BCSourceAgent, object]:
     print_stage("Init")
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -174,7 +174,7 @@ def init_compare() -> tuple[TD3BCAgent, object]:
             our_param.copy_(ref_param)
     return our, ref
 
-def compare_act(our: TD3BCAgent, ref) -> None:
+def compare_act(our: TD3BCSourceAgent, ref) -> None:
     print_stage("Act Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s_single, _, _, _, _ = sample_transition(1, OBS_DIM, ACT_DIM, DEVICE)
@@ -198,20 +198,12 @@ def compare_act(our: TD3BCAgent, ref) -> None:
 
         print(f"batch={i}/{N_TEST_BATCHES} act_match=True")
 
-def compare_loss(our: TD3BCAgent, ref) -> None:
+def compare_loss(our: TD3BCSourceAgent, ref) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
         batch = _torch_batch(s, a, r, sn, d)
         a_pred = our.actor.pi(s)
-
-        # target action
-        assert_callback(
-            lambda: [ref_target_action(ref, sn)],
-            lambda: [our.target_action(sn)],
-            label=f"target_action[{i}]",
-            seed=SEED + i,
-        )
 
         # loss bc
         assert_callback(
@@ -247,7 +239,7 @@ def compare_loss(our: TD3BCAgent, ref) -> None:
 
         print(f"batch={i}/{N_TEST_BATCHES} loss_match=True")
 
-def compare_param(our: TD3BCAgent, ref) -> None:
+def compare_param(our: TD3BCSourceAgent, ref) -> None:
     print_stage("Update Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)

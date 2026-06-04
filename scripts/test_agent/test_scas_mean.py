@@ -36,14 +36,14 @@ def test(
 
     print_stage("Test SCAS Mean")
     dynamics = ScasDynamicAgent(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
     )
     dynamics.load(model_ref(f"{task_id}/dynamics", DYNAMICS_MODEL_STEP))
 
     agent = ScasMeanAgent(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
         dynamics=dynamics,
     )
     agent.load(model_ref(task_id, AGENT_MODEL_STEP))

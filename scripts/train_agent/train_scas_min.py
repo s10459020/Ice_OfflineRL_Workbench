@@ -82,8 +82,8 @@ def train(
 
     print_stage("Train SCAS Min Dynamics")
     dynamics = ScasDynamicAgent(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
         device=device,
     )
     dynamics_evaluator = Evaluator(
@@ -103,8 +103,8 @@ def train(
 
     print_stage("Train SCAS Min Agent")
     agent = ScasMinAgent(
-        obs_dim=dataset.obs_dim,
-        act_dim=dataset.act_dim,
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
         dynamics=dynamics,
         max_action=1.0,
         device=device,
