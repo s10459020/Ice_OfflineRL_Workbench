@@ -5,7 +5,7 @@ import torch
 
 from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.scas_mean import ScasMeanAgent
-from ice_offline.agent.scas_mean import ScasDynamicAgent
+from ice_offline.agent.scas_mean import ScasDynamic
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -28,7 +28,7 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss_dynamic(dynamics: ScasDynamicAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, float]:
     s = batch.obs_list
     a = batch.act_list
     sn = batch.next_obs_list
@@ -78,7 +78,7 @@ def train(
     dataset.set_seed(seed)
 
     print_stage("Train SCAS Mean Dynamics")
-    dynamics = ScasDynamicAgent(
+    dynamics = ScasDynamic(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,
@@ -169,4 +169,5 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
 

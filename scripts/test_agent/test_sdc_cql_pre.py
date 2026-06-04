@@ -1,19 +1,19 @@
-﻿import numpy as np
-import torch
 import gymnasium as gym
+import numpy as np
+import torch
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.scas_min import ScasMinAgent, ScasDynamic
+from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.printer import print_stage
 from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.data.state.hopper import HopperState, HopperStateIO
+from ice_offline.data.state.hopper import HopperState
+from ice_offline.data.state.hopper import HopperStateIO
 from ice_offline.data.state.op_collector import StateCollectWrapper
 
 
-DYNAMICS_MODEL_STEP = 100_000
-AGENT_MODEL_STEP = 200_000
+MODEL_STEP = 200_000
 EPISODES = 10
 SEED = 42
 PRINT_INTERVAL = 1
@@ -31,22 +31,15 @@ def test(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.id}-scas_min-v0"
+    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
     eval_env = eval_env or dataset.make_env()
 
-    print_stage("Test SCAS Min")
-    dynamics = ScasDynamic(
+    print_stage("Test SDC CQL Pre")
+    agent = SDCCQLPreAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
-    dynamics.load(model_ref(f"{task_id}/dynamics", DYNAMICS_MODEL_STEP))
-
-    agent = ScasMinAgent(
-        obs_size=dataset.obs_dim,
-        act_size=dataset.act_dim,
-        dynamics=dynamics,
-    )
-    agent.load(model_ref(task_id, AGENT_MODEL_STEP))
+    agent.load(model_ref(task_id, MODEL_STEP))
 
     returns = []
     for episode in range(1, episodes + 1):
@@ -56,7 +49,7 @@ def test(
             a = agent.act(o)
             o, r, terminated, truncated, _ = eval_env.step(a)
             rewards.append(r)
-            
+
             if terminated or truncated:
                 break
         total_reward = sum(rewards)
@@ -76,7 +69,7 @@ def collect(
     seed: int = SEED,
     print_interval: int = 0,
 ):
-    task_id = task_id or f"{dataset.id}-scas_min-v0"
+    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -101,7 +94,7 @@ if __name__ == "__main__":
     dataset = HopperSimpleDataset().load()
     returns, minari_data, state_data = collect(
         dataset=dataset,
-        task_id=f"{dataset.id}-scas_min-v0",
+        task_id=f"{dataset.id}-sdc_cql_pre-v0",
         episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,
@@ -110,5 +103,3 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
-

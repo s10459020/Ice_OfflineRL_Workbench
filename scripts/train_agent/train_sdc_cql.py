@@ -3,6 +3,7 @@ import minari
 import numpy as np
 import torch
 
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
@@ -26,22 +27,18 @@ DEVICE = "cuda:0"
 
 
 def eval_loss(agent: SDCCQLAgent, batch: TorchBuffer) -> dict[str, float]:
-    o = batch.obs_list
-    a = batch.act_list
-    r = batch.rew_list.view(-1, 1)
-    on = batch.next_obs_list
-    d = batch.done_list.view(-1, 1)
+    batch = agent_batch(batch)
     with torch.no_grad():
-        loss_td_parts = agent.loss_td(o, a, r, on, d)
-        loss_cql_parts = agent.loss_conservative(o, a, on)
-        loss_critic = agent.loss_critic(o, a, r, on, d, update_alpha=False)
-        loss_actor = agent.loss_actor(o, update_alpha=False)
-        loss_dynamics = agent.loss_dynamics(o, a, on)
-        loss_transition = agent.loss_transition(o, on)
-        loss_sdc = agent.loss_state_deviation(o)
+        loss_td = agent.loss_td(batch)
+        loss_suppress = agent.loss_suppress(batch)
+        loss_critic = agent.loss_critic(batch)
+        loss_actor = agent.loss_actor(batch)
+        loss_dynamics = agent.loss_dynamics(batch)
+        loss_transition = agent.loss_transition(batch)
+        loss_sdc = agent.loss_state_deviation(batch[0])
         return {
-            "loss_q_td": float(loss_td_parts.sum().item()),
-            "loss_q_cql": float(loss_cql_parts.sum().item()),
+            "loss_q_td": float(loss_td.item()),
+            "loss_q_suppress": float(loss_suppress.sum().item()),
             "loss_actor": float(loss_actor.item()),
             "loss_critic": float(loss_critic.item()),
             "loss_dynamics": float(loss_dynamics.item()),

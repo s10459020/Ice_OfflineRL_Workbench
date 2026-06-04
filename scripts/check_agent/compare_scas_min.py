@@ -11,7 +11,7 @@ from SCAS_main import SCAS as ref_scas
 from SCAS_main import model as ref_model
 from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.scas_min import ScasMinAgent
-from ice_offline.agent.scas_min import ScasDynamicAgent
+from ice_offline.agent.scas_min import ScasDynamic
 from ice_offline.tools.printer import print_stage
 
 
@@ -34,7 +34,7 @@ def _all_pairs(
     ref: Any,
     our: ScasMinAgent,
     ref_dynamics: torch.nn.Module,
-    our_dynamics: ScasDynamicAgent,
+    our_dynamics: ScasDynamic,
 ):
     return [
         # dynamics M
@@ -210,7 +210,7 @@ def ref_update_and_collect_params(
     ref: Any,
     our: ScasMinAgent,
     ref_dynamics: torch.nn.Module,
-    our_dynamics: ScasDynamicAgent,
+    our_dynamics: ScasDynamic,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -228,7 +228,7 @@ def our_update_and_collect_params(
     ref: Any,
     our: ScasMinAgent,
     ref_dynamics: torch.nn.Module,
-    our_dynamics: ScasDynamicAgent,
+    our_dynamics: ScasDynamic,
     s: torch.Tensor,
     a: torch.Tensor,
     r: torch.Tensor,
@@ -242,8 +242,8 @@ def our_update_and_collect_params(
 # ====================
 # Compare
 # ====================
-def build_our() -> tuple[ScasMinAgent, ScasDynamicAgent]:
-    our_dynamics = ScasDynamicAgent(obs_size=obs_size, act_size=act_size, device=DEVICE)
+def build_our() -> tuple[ScasMinAgent, ScasDynamic]:
+    our_dynamics = ScasDynamic(obs_size=obs_size, act_size=act_size, device=DEVICE)
     our = ScasMinAgent(
         obs_size=obs_size,
         act_size=act_size,
@@ -266,7 +266,7 @@ def build_ref() -> tuple[Any, torch.nn.Module]:
     )
     return ref, ref_dynamics
 
-def init_compare() -> tuple[Any, ScasMinAgent, torch.nn.Module, ScasDynamicAgent]:
+def init_compare() -> tuple[Any, ScasMinAgent, torch.nn.Module, ScasDynamic]:
     print_stage("Init")
     torch.manual_seed(SEED)
     np.random.seed(SEED)
@@ -304,7 +304,7 @@ def compare_loss(
     ref: Any,
     our: ScasMinAgent,
     ref_dynamics: torch.nn.Module,
-    our_dynamics: ScasDynamicAgent,
+    our_dynamics: ScasDynamic,
 ) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
@@ -357,7 +357,7 @@ def compare_param(
     ref: Any,
     our: ScasMinAgent,
     ref_dynamics: torch.nn.Module,
-    our_dynamics: ScasDynamicAgent,
+    our_dynamics: ScasDynamic,
 ) -> None:
     print_stage("Update Compare")
     for i in range(1, N_TEST_BATCHES + 1):
@@ -397,4 +397,5 @@ if __name__ == "__main__":
     compare_param(ref, our, ref_dynamics, our_dynamics)
     print_stage("Result")
     print("PASS: compare_scas finished.")
+
 

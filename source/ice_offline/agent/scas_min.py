@@ -35,7 +35,7 @@ class _M(torch.nn.Module):
         return o + noise
 
 @dataclass
-class ScasDynamicAgent(TorchAgent):
+class ScasDynamic(TorchAgent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -88,7 +88,7 @@ class ScasDynamicAgent(TorchAgent):
 
 @dataclass
 class ScasMinAgent(TD3Agent):
-    dynamics: ScasDynamicAgent | None = None
+    dynamics: ScasDynamic | None = None
     actor_learning_rate: float = 2e-4
     critic_learning_rate: float = 3e-4
     alpha: float = 5.0
@@ -128,6 +128,7 @@ class ScasMinAgent(TD3Agent):
 
     def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
         return (1.0 - self.lmbda) * self.loss_td3(batch) + self.lmbda * self.loss_correction(batch)
+
 
 
 

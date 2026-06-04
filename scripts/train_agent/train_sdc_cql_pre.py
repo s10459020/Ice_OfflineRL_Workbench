@@ -4,8 +4,8 @@ import numpy as np
 import torch
 
 from ice_offline.agent._spec import agent_batch
-from ice_offline.agent.scas_min import ScasMinAgent
-from ice_offline.agent.scas_min import ScasDynamic
+from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
+from ice_offline.agent.sdc_cql_pre import SDCCQLPreModel
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -18,7 +18,7 @@ from ice_offline.tools.printer import print_stage
 
 
 BATCH_SIZE = 256
-DYNAMICS_STEPS = 100_000
+MODEL_STEPS = 100_000
 AGENT_STEPS = 200_000
 EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
@@ -28,26 +28,31 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, float]:
-    s = batch.obs_list
-    a = batch.act_list
-    sn = batch.next_obs_list
+def eval_loss_model(model: SDCCQLPreModel, batch: TorchBuffer) -> dict[str, float]:
     with torch.no_grad():
-        return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
+        loss_dynamics = model.loss_dynamics(batch)
+        loss_transition = model.loss_transition(batch)
+        return {
+            "loss_dynamics": float(loss_dynamics.item()),
+            "loss_transition": float(loss_transition.item()),
+            "loss_state_models": float((loss_dynamics + loss_transition).item()),
+        }
 
 
-def eval_loss_agent(agent: ScasMinAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_agent(agent: SDCCQLPreAgent, batch: TorchBuffer) -> dict[str, float]:
     batch = agent_batch(batch)
     with torch.no_grad():
-        loss_td3 = agent.loss_td3(batch)
-        loss_correction = agent.loss_correction(batch)
+        loss_td = agent.loss_td(batch)
+        loss_suppress = agent.loss_suppress(batch)
         loss_critic = agent.loss_critic(batch)
         loss_actor = agent.loss_actor(batch)
+        loss_sdc = agent.loss_state_deviation(batch[0])
         return {
-            "loss_td3": float(loss_td3.item()),
-            "loss_correction": float(loss_correction.item()),
-            "loss_critic": float(loss_critic.item()),
+            "loss_q_td": float(loss_td.item()),
+            "loss_q_suppress": float(loss_suppress.sum().item()),
             "loss_actor": float(loss_actor.item()),
+            "loss_critic": float(loss_critic.item()),
+            "loss_sdc": float(loss_sdc.item()),
         }
 
 
@@ -58,7 +63,7 @@ def eval_return(batch: TorchBuffer) -> dict[str, float]:
 def train(
     dataset: Dataset,
     *,
-    dynamics_steps: int = DYNAMICS_STEPS,
+    model_steps: int = MODEL_STEPS,
     agent_steps: int = AGENT_STEPS,
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
@@ -73,36 +78,36 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_scas_min-v0"
+    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
     eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
-    print_stage("Train SCAS Min Dynamics")
-    dynamics = ScasDynamic(
+    print_stage("Train SDC CQL Pre State Models")
+    state_models = SDCCQLPreModel(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,
     )
-    dynamics_evaluator = Evaluator(
+    model_evaluator = Evaluator(
         runner_id=task_id,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
-        eval_offline_fns=[eval_loss_dynamic],
+        eval_offline_fns=[eval_loss_model],
     )
-    for step in range(1, dynamics_steps + 1):
+    for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
-        dynamics.update(batch)
-        dynamics_evaluator.eval(step=step, agent=dynamics, batch_loader=dataset, batch_size=batch_size)
-        dynamics_evaluator.print(step)
-        dynamics_evaluator.recode(step)
-        if step % save_interval == 0 or step == dynamics_steps:
-            dynamics.save(f"{task_id}/dynamics", step)
+        state_models.update(batch)
+        model_evaluator.eval(step=step, agent=state_models, batch_loader=dataset, batch_size=batch_size)
+        model_evaluator.print(step)
+        model_evaluator.recode(step)
+        if step % save_interval == 0 or step == model_steps:
+            state_models.save(f"{task_id}/state_models", step)
 
-    print_stage("Train SCAS Min Agent")
-    agent = ScasMinAgent(
+    print_stage("Train SDC CQL Pre Agent")
+    agent = SDCCQLPreAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
-        dynamics=dynamics,
+        state_models=state_models,
         device=device,
     )
     agent_evaluator = Evaluator(
@@ -128,7 +133,7 @@ def collect(
     dataset: Dataset,
     *,
     steps: int = AGENT_STEPS,
-    steps_dynamic: int = DYNAMICS_STEPS,
+    steps_model: int = MODEL_STEPS,
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -137,7 +142,7 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.env_id}_scas_min-v0"
+    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -147,7 +152,7 @@ def collect(
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
-        dynamics_steps=steps_dynamic,
+        model_steps=steps_model,
         agent_steps=steps,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
@@ -156,24 +161,18 @@ def collect(
         device=device,
     )
 
-    minari_data = minari_col.save(f"train/{task_id}")
-    state_data = state_col.save(f"train/{task_id}")
+    minari_data = minari_col.save(task_id)
+    state_data = state_col.save(task_id)
     minari_col.close()
 
     return minari_data, state_data
 
 
 if __name__ == "__main__":
-    dataset = HopperSimpleDataset(device=DEVICE).load()
-    minari_data, state_data = collect(dataset=dataset)
+    dataset = HopperSimpleDataset().load()
+    minari_data, state_data = collect(dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
-
-
-
-
-
-
+    print(f"state_data={state_data}")
 

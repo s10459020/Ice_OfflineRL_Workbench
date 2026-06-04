@@ -3,8 +3,9 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
+from ice_offline.agent._spec import AgentBatch
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.cql import CQLAgent
-from ice_offline.agent.cql import _Adam
 from ice_offline.dataset._spec import TorchBuffer
 
 
@@ -59,34 +60,38 @@ class SDCCQLAgent(CQLAgent):
         super().__post_init__()
         self.dynamics = _DynamicsModel(self.obs_size, self.act_size).to(self.device)
         self.transition = _TransitionModel(self.obs_size, self.state_transition_noise_size).to(self.device)
-        self.dynamics_optim = _Adam(self.dynamics_learning_rate)(self.dynamics.parameters())
-        self.transition_optim = _Adam(self.transition_learning_rate)(self.transition.parameters())
+        self.dynamics_optimizer = torch.optim.Adam(
+            self.dynamics.parameters(),
+            lr=self.dynamics_learning_rate,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+            weight_decay=0.0,
+            amsgrad=False,
+        )
+        self.transition_optimizer = torch.optim.Adam(
+            self.transition.parameters(),
+            lr=self.transition_learning_rate,
+            betas=(0.9, 0.999),
+            eps=1e-8,
+            weight_decay=0.0,
+            amsgrad=False,
+        )
 
     def update(self, batch: TorchBuffer):
-        o = batch.obs_list
-        a = batch.act_list
-        r = batch.rew_list.view(-1, 1)
-        on = batch.next_obs_list
-        d = batch.done_list.view(-1, 1)
+        batch = agent_batch(batch)
 
-        model_loss = self.loss_state_models(o, a, on)
-        self.dynamics_optim.zero_grad()
-        self.transition_optim.zero_grad()
-        model_loss.backward()
-        self.dynamics_optim.step()
-        self.transition_optim.step()
-
-        critic_loss = self.loss_critic(o, a, r, on, d, update_alpha=True)
-        self.critic_optim.zero_grad()
-        critic_loss.backward()
-        self.critic_optim.step()
-
-        actor_loss = self.loss_actor(o)
-        self.actor_optim.zero_grad()
-        actor_loss.backward()
-        self.actor_optim.step()
-
+        self.update_state_models(batch)
+        self.update_critic(batch)
+        self.update_actor(batch)
         self.critic.update_target_soft()
+
+    def update_state_models(self, batch: AgentBatch) -> None:
+        self.dynamics_optimizer.zero_grad()
+        self.transition_optimizer.zero_grad()
+        model_loss = self.loss_state_models(batch)
+        model_loss.backward()
+        self.dynamics_optimizer.step()
+        self.transition_optimizer.step()
 
     def _save_dict(self) -> dict[str, torch.Tensor]:
         state = super()._save_dict()
@@ -94,8 +99,8 @@ class SDCCQLAgent(CQLAgent):
             {
                 "dynamics": self.dynamics.state_dict(),
                 "transition": self.transition.state_dict(),
-                "dynamics_optimizer": self.dynamics_optim.state_dict(),
-                "transition_optimizer": self.transition_optim.state_dict(),
+                "dynamics_optimizer": self.dynamics_optimizer.state_dict(),
+                "transition_optimizer": self.transition_optimizer.state_dict(),
             }
         )
         return state
@@ -104,23 +109,27 @@ class SDCCQLAgent(CQLAgent):
         super()._load_dict(state)
         self.dynamics.load_state_dict(state["dynamics"])
         self.transition.load_state_dict(state["transition"])
-        self.dynamics_optim.load_state_dict(state["dynamics_optimizer"])
-        self.transition_optim.load_state_dict(state["transition_optimizer"])
+        self.dynamics_optimizer.load_state_dict(state["dynamics_optimizer"])
+        self.transition_optimizer.load_state_dict(state["transition_optimizer"])
 
-    def loss_state_models(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
+    def loss_state_models(self, batch: AgentBatch) -> torch.Tensor:
+        o, a, _, _, on = batch
         dynamics_loss = F.mse_loss(self.dynamics(o, a), on)
         transition_loss = F.mse_loss(self.transition(o, 1).squeeze(1), on)
         return dynamics_loss + transition_loss
 
-    def loss_dynamics(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
+    def loss_dynamics(self, batch: AgentBatch) -> torch.Tensor:
+        o, a, _, _, on = batch
         return F.mse_loss(self.dynamics(o, a), on)
 
-    def loss_transition(self, o: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
+    def loss_transition(self, batch: AgentBatch) -> torch.Tensor:
+        o, _, _, _, on = batch
         return F.mse_loss(self.transition(o, 1).squeeze(1), on)
 
-    def loss_actor(self, o: torch.Tensor, update_alpha: bool = True) -> torch.Tensor:
+    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+        o, _, _, _, _ = batch
         a, _ = self.actor.sample(o)
-        q_t = self.critic.qq_min(o, a)
+        q_t = self.critic.q_min(o, a)
         sdc = self.loss_state_deviation(o)
         return -q_t.mean() + self.sdc_weight * (sdc - self.sdc_threshold)
 

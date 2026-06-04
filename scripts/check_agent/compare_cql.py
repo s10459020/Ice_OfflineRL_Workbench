@@ -8,6 +8,7 @@ from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.models.torch import build_squashed_gaussian_distribution
 from d3rlpy_master.d3rlpy.models.torch import get_parameter
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
+from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.tools.printer import print_stage
 
@@ -33,40 +34,40 @@ def _all_pairs(our: CQLAgent, ref):
     ref_t1 = ref.impl.modules.targ_q_funcs[0]
     ref_t2 = ref.impl.modules.targ_q_funcs[1]
     return [
-        (our.actor.pi.hidden[0].weight, ref_policy._encoder._layers[0].weight),
-        (our.actor.pi.hidden[0].bias, ref_policy._encoder._layers[0].bias),
-        (our.actor.pi.hidden[2].weight, ref_policy._encoder._layers[2].weight),
-        (our.actor.pi.hidden[2].bias, ref_policy._encoder._layers[2].bias),
+        (our.actor.pi.network[0].weight, ref_policy._encoder._layers[0].weight),
+        (our.actor.pi.network[0].bias, ref_policy._encoder._layers[0].bias),
+        (our.actor.pi.network[2].weight, ref_policy._encoder._layers[2].weight),
+        (our.actor.pi.network[2].bias, ref_policy._encoder._layers[2].bias),
         (our.actor.pi.mean_head.weight, ref_policy._mu.weight),
         (our.actor.pi.mean_head.bias, ref_policy._mu.bias),
         (our.actor.pi.logstd_head.weight, ref_policy._logstd.weight),
         (our.actor.pi.logstd_head.bias, ref_policy._logstd.bias),
-        (our.critic.q1.network[0].weight, ref_q1._encoder._layers[0].weight),
-        (our.critic.q1.network[0].bias, ref_q1._encoder._layers[0].bias),
-        (our.critic.q1.network[2].weight, ref_q1._encoder._layers[2].weight),
-        (our.critic.q1.network[2].bias, ref_q1._encoder._layers[2].bias),
-        (our.critic.q1.network[4].weight, ref_q1._fc.weight),
-        (our.critic.q1.network[4].bias, ref_q1._fc.bias),
-        (our.critic.q2.network[0].weight, ref_q2._encoder._layers[0].weight),
-        (our.critic.q2.network[0].bias, ref_q2._encoder._layers[0].bias),
-        (our.critic.q2.network[2].weight, ref_q2._encoder._layers[2].weight),
-        (our.critic.q2.network[2].bias, ref_q2._encoder._layers[2].bias),
-        (our.critic.q2.network[4].weight, ref_q2._fc.weight),
-        (our.critic.q2.network[4].bias, ref_q2._fc.bias),
-        (our.critic.targ_q1.network[0].weight, ref_t1._encoder._layers[0].weight),
-        (our.critic.targ_q1.network[0].bias, ref_t1._encoder._layers[0].bias),
-        (our.critic.targ_q1.network[2].weight, ref_t1._encoder._layers[2].weight),
-        (our.critic.targ_q1.network[2].bias, ref_t1._encoder._layers[2].bias),
-        (our.critic.targ_q1.network[4].weight, ref_t1._fc.weight),
-        (our.critic.targ_q1.network[4].bias, ref_t1._fc.bias),
-        (our.critic.targ_q2.network[0].weight, ref_t2._encoder._layers[0].weight),
-        (our.critic.targ_q2.network[0].bias, ref_t2._encoder._layers[0].bias),
-        (our.critic.targ_q2.network[2].weight, ref_t2._encoder._layers[2].weight),
-        (our.critic.targ_q2.network[2].bias, ref_t2._encoder._layers[2].bias),
-        (our.critic.targ_q2.network[4].weight, ref_t2._fc.weight),
-        (our.critic.targ_q2.network[4].bias, ref_t2._fc.bias),
-        (our.actor.pi.log_alpha, ref.impl.modules.log_temp._parameter),
-        (our.critic.log_alpha, ref.impl.modules.log_alpha._parameter),
+        (our.critic.q_networks[0].network[0].weight, ref_q1._encoder._layers[0].weight),
+        (our.critic.q_networks[0].network[0].bias, ref_q1._encoder._layers[0].bias),
+        (our.critic.q_networks[0].network[2].weight, ref_q1._encoder._layers[2].weight),
+        (our.critic.q_networks[0].network[2].bias, ref_q1._encoder._layers[2].bias),
+        (our.critic.q_networks[0].network[4].weight, ref_q1._fc.weight),
+        (our.critic.q_networks[0].network[4].bias, ref_q1._fc.bias),
+        (our.critic.q_networks[1].network[0].weight, ref_q2._encoder._layers[0].weight),
+        (our.critic.q_networks[1].network[0].bias, ref_q2._encoder._layers[0].bias),
+        (our.critic.q_networks[1].network[2].weight, ref_q2._encoder._layers[2].weight),
+        (our.critic.q_networks[1].network[2].bias, ref_q2._encoder._layers[2].bias),
+        (our.critic.q_networks[1].network[4].weight, ref_q2._fc.weight),
+        (our.critic.q_networks[1].network[4].bias, ref_q2._fc.bias),
+        (our.critic.tq_networks[0].network[0].weight, ref_t1._encoder._layers[0].weight),
+        (our.critic.tq_networks[0].network[0].bias, ref_t1._encoder._layers[0].bias),
+        (our.critic.tq_networks[0].network[2].weight, ref_t1._encoder._layers[2].weight),
+        (our.critic.tq_networks[0].network[2].bias, ref_t1._encoder._layers[2].bias),
+        (our.critic.tq_networks[0].network[4].weight, ref_t1._fc.weight),
+        (our.critic.tq_networks[0].network[4].bias, ref_t1._fc.bias),
+        (our.critic.tq_networks[1].network[0].weight, ref_t2._encoder._layers[0].weight),
+        (our.critic.tq_networks[1].network[0].bias, ref_t2._encoder._layers[0].bias),
+        (our.critic.tq_networks[1].network[2].weight, ref_t2._encoder._layers[2].weight),
+        (our.critic.tq_networks[1].network[2].bias, ref_t2._encoder._layers[2].bias),
+        (our.critic.tq_networks[1].network[4].weight, ref_t2._fc.weight),
+        (our.critic.tq_networks[1].network[4].bias, ref_t2._fc.bias),
+        (our.temp.log_alpha, ref.impl.modules.log_temp._parameter),
+        (our.multiplier.log_cql_multiplier, ref.impl.modules.log_alpha._parameter),
     ]
 
 
@@ -128,9 +129,9 @@ def ref_loss_td(ref, batch: TorchMiniBatch) -> torch.Tensor:
         gamma=ref.impl._gamma**batch.intervals,
         reduction="none",
     ).mean()
-    return torch.stack([loss_td1, loss_td2], dim=0)
+    return loss_td1 + loss_td2
 
-def ref_loss_conservative_scaled(ref, batch: TorchMiniBatch) -> torch.Tensor:
+def ref_loss_suppress_scaled(ref, batch: TorchMiniBatch) -> torch.Tensor:
     return ref.impl._compute_conservative_loss(
         obs_t=batch.observations,
         act_t=batch.actions,
@@ -138,8 +139,8 @@ def ref_loss_conservative_scaled(ref, batch: TorchMiniBatch) -> torch.Tensor:
         returns_to_go=batch.returns_to_go,
     )
 
-def ref_loss_conservative(ref, batch: TorchMiniBatch) -> torch.Tensor:
-    loss_scaled = ref_loss_conservative_scaled(ref, batch)
+def ref_loss_suppress(ref, batch: TorchMiniBatch) -> torch.Tensor:
+    loss_scaled = ref_loss_suppress_scaled(ref, batch)
     return loss_scaled / ref.impl._conservative_weight + ref.impl._alpha_threshold
 
 def ref_loss_critic(ref, batch: TorchMiniBatch) -> torch.Tensor:
@@ -159,13 +160,13 @@ def ref_loss_alpha_sac(ref, obs_t: torch.Tensor) -> torch.Tensor:
         * (log_prob.detach() - ref.impl.action_size)
     ).mean()
 
-def ref_loss_alpha_cql(
+def ref_loss_cql_multiplier(
     ref,
-    conservative_loss_detached: torch.Tensor,
+    suppress_loss_detached: torch.Tensor,
 ) -> torch.Tensor:
     return -(
         get_parameter(ref.impl.modules.log_alpha).exp().clamp(0, 1e6)
-        * conservative_loss_detached
+        * suppress_loss_detached
     ).mean()
 
 def ref_update_and_collect_params(ref, batch: TorchMiniBatch, step: int, our: CQLAgent):
@@ -256,28 +257,29 @@ def compare_loss(our: CQLAgent, ref) -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
         batch = _torch_batch(s, a, r, sn, d)
-        conservative_scaled = ref_loss_conservative_scaled(ref, batch).detach()
+        our_batch = agent_batch(torch_buffer(s, a, r, sn, d))
+        suppress_scaled = ref_loss_suppress_scaled(ref, batch).detach()
 
         # loss td
         assert_callback(
             lambda: [ref_loss_td(ref, batch)],
-            lambda: [our.loss_td(s, a, r, sn, d)],
+            lambda: [our.loss_td(our_batch)],
             label=f"loss_td[{i}]",
             seed=SEED + i,
         )
 
-        # loss conservative
+        # loss suppress
         assert_callback(
-            lambda: [ref_loss_conservative(ref, batch)],
-            lambda: [our.loss_conservative(s, a, sn)],
-            label=f"loss_conservative[{i}]",
+            lambda: [ref_loss_suppress(ref, batch)],
+            lambda: [our.loss_suppress(our_batch)],
+            label=f"loss_suppress[{i}]",
             seed=SEED + i,
         )
 
         # loss actor
         assert_callback(
             lambda: [ref_loss_actor(ref, batch)],
-            lambda: [our.loss_actor(s, update_alpha=True)],
+            lambda: [our.loss_actor(our_batch)],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
@@ -285,7 +287,7 @@ def compare_loss(our: CQLAgent, ref) -> None:
         # loss critic
         assert_callback(
             lambda: [ref_loss_critic(ref, batch)],
-            lambda: [our.loss_critic(s, a, r, sn, d, update_alpha=True)],
+            lambda: [our.loss_critic(our_batch)],
             label=f"loss_critic[{i}]",
             seed=SEED + i,
         )
@@ -293,16 +295,16 @@ def compare_loss(our: CQLAgent, ref) -> None:
         # loss alpha sac
         assert_callback(
             lambda: [ref_loss_alpha_sac(ref, s)],
-            lambda: [our.loss_alpha_sac(our.actor.sample(s)[1].detach())],
+            lambda: [our.temp.loss(our.actor.sample(s)[1])],
             label=f"loss_alpha_sac[{i}]",
             seed=SEED + i,
         )
 
         # loss alpha cql
         assert_callback(
-            lambda: [ref_loss_alpha_cql(ref, conservative_scaled)],
-            lambda: [our.loss_alpha_cql(conservative_scaled)],
-            label=f"loss_alpha_cql[{i}]",
+            lambda: [ref_loss_cql_multiplier(ref, suppress_scaled)],
+            lambda: [our.multiplier.loss(suppress_scaled)],
+            label=f"loss_cql_multiplier[{i}]",
             seed=SEED + i,
         )
 

@@ -26,6 +26,8 @@ from train_agent import train_cql_max_q
 from train_agent import train_cql_soft_q
 from train_agent import train_iql
 from train_agent import train_sdc_cql
+from train_agent import train_sdc_cql_pre
+from train_agent import train_scas_aspl
 from train_agent import train_scas_mean
 from train_agent import train_scas_min
 from train_agent import train_td3bc
@@ -43,6 +45,10 @@ TRAIN_KWARGS = {
 
 SCAS_KWARGS = {
     "steps_dynamic": 100_000,
+}
+
+SDC_PRE_KWARGS = {
+    "steps_model": 100_000,
 }
 
 DATASET_LIST = [
@@ -73,9 +79,11 @@ AGENT_LIST = [
     ("iql", train_iql.collect),
     ("cql", train_cql.collect),
     ("sdc_cql", train_sdc_cql.collect),
+    ("sdc_cql_pre", train_sdc_cql_pre.collect),
     ("cql_max_q", train_cql_max_q.collect),
     ("cql_soft_q", train_cql_soft_q.collect),
     ("aspl", train_aspl.collect),
+    ("scas_aspl", train_scas_aspl.collect),
     ("scas_mean", train_scas_mean.collect),
     ("scas_min", train_scas_min.collect),
 ]
@@ -83,8 +91,10 @@ AGENT_LIST = [
 
 def collect_agent(agent_id: str, trainer, dataset):
     train_kwargs = {k: v for k, v in TRAIN_KWARGS.items() if v is not None}
-    if agent_id in ("scas_mean", "scas_min"):
+    if agent_id in ("scas_aspl", "scas_mean", "scas_min"):
         train_kwargs.update({k: v for k, v in SCAS_KWARGS.items() if v is not None})
+    if agent_id == "sdc_cql_pre":
+        train_kwargs.update({k: v for k, v in SDC_PRE_KWARGS.items() if v is not None})
 
     task_id = f"{dataset.id}-{agent_id}-v0"
     return trainer(dataset=dataset, task_id=task_id, device=DEVICE, **train_kwargs)

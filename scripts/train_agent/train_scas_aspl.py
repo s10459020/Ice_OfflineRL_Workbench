@@ -1,10 +1,10 @@
-﻿import gymnasium as gym
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
 
 from ice_offline.agent._spec import agent_batch
-from ice_offline.agent.scas_min import ScasMinAgent
+from ice_offline.agent.scas_aspl import ScasAsplAgent
 from ice_offline.agent.scas_min import ScasDynamic
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
@@ -36,15 +36,19 @@ def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, fl
         return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
 
 
-def eval_loss_agent(agent: ScasMinAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_agent(agent: ScasAsplAgent, batch: TorchBuffer) -> dict[str, float]:
     batch = agent_batch(batch)
+    s, a, r, d, sn = batch
     with torch.no_grad():
-        loss_td3 = agent.loss_td3(batch)
+        q_target = agent.target_td3(sn, r, d)
+        loss_td = agent.loss_td_with_target(s, a, q_target)
+        loss_punish = agent.loss_punish_with_target(s, a, q_target)
         loss_correction = agent.loss_correction(batch)
         loss_critic = agent.loss_critic(batch)
         loss_actor = agent.loss_actor(batch)
         return {
-            "loss_td3": float(loss_td3.item()),
+            "loss_td": float(loss_td.item()),
+            "loss_punish": float(loss_punish.item()),
             "loss_correction": float(loss_correction.item()),
             "loss_critic": float(loss_critic.item()),
             "loss_actor": float(loss_actor.item()),
@@ -73,11 +77,11 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.env_id}_scas_min-v0"
+    task_id = task_id or f"{dataset.id}-scas_aspl-v0"
     eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
-    print_stage("Train SCAS Min Dynamics")
+    print_stage("Train SCAS ASPL Dynamics")
     dynamics = ScasDynamic(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
@@ -98,13 +102,14 @@ def train(
         if step % save_interval == 0 or step == dynamics_steps:
             dynamics.save(f"{task_id}/dynamics", step)
 
-    print_stage("Train SCAS Min Agent")
-    agent = ScasMinAgent(
+    print_stage("Train SCAS ASPL Agent")
+    agent = ScasAsplAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         dynamics=dynamics,
         device=device,
     )
+    agent.actor.set_seed(seed)
     agent_evaluator = Evaluator(
         runner_id=task_id,
         eval_interval=eval_interval,
@@ -137,7 +142,7 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.env_id}_scas_min-v0"
+    task_id = task_id or f"{dataset.id}-scas_aspl-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -156,24 +161,17 @@ def collect(
         device=device,
     )
 
-    minari_data = minari_col.save(f"train/{task_id}")
-    state_data = state_col.save(f"train/{task_id}")
+    minari_data = minari_col.save(task_id)
+    state_data = state_col.save(task_id)
     minari_col.close()
 
     return minari_data, state_data
 
 
 if __name__ == "__main__":
-    dataset = HopperSimpleDataset(device=DEVICE).load()
-    minari_data, state_data = collect(dataset=dataset)
+    dataset = HopperSimpleDataset().load()
+    minari_data, state_data = collect(dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
-
-
-
-
-
-
-
+    print(f"state_data={state_data}")

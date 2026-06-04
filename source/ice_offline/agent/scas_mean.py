@@ -1,8 +1,8 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import torch
 
-from ice_offline.agent.scas_min import ScasDynamicAgent
+from ice_offline.agent.scas_min import ScasDynamic
 from ice_offline.agent.scas_min import ScasMinAgent
 
 
@@ -17,3 +17,4 @@ class ScasMeanAgent(ScasMinAgent):
             an = self.actor.noise_action(self.actor.tpi(on))
             tq = self.critic.tq_mean(on, an)
             return r + self.gamma * tq * (1 - d)
+

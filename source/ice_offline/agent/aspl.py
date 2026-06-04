@@ -124,12 +124,12 @@ class AsplActor(TD3Actor):
 class AsplCritic(TD3Critic):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, q_cls=_Q, **kwargs)
-        self.q_mean = 0.0
+        self.moving_avg = 0.0
 
-    def update_q_mean(self, update_step: int, target: torch.Tensor) -> float:
+    def update_moving_avg(self, update_step: int, target: torch.Tensor) -> float:
         current = torch.abs(target).mean().item() # mean(B, 1) > (1)
-        self.q_mean = ((update_step - 1) * self.q_mean + current) / update_step
-        return self.q_mean
+        self.moving_avg = ((update_step - 1) * self.moving_avg + current) / update_step
+        return self.moving_avg
 
     def q_pseudo(self, update_step: int, q_target: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
         # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
@@ -137,7 +137,7 @@ class AsplCritic(TD3Critic):
         # q use q_target in source
         # q_target range: [-Q, Q], shape: (B, 1)
         with torch.no_grad():
-            c = self.update_q_mean(update_step, q_target) # (1)
+            c = self.update_moving_avg(update_step, q_target) # (1)
             return q_target - c * action_distance  # (N, B, 1)
 
 
