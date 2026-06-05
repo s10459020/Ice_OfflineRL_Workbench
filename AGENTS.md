@@ -8,6 +8,7 @@
 6. 全專案禁止使用 `from __future__ import annotations`；不得新增此行。
 7. 不要使用 `del` 來處理未使用參數；保留原參數即可。
 8. 不要加入多餘的防衛性檢查；以極簡、直通邏輯為主。
+9. `__init__.py` 僅作為 package marker，不得 import 子模組、不得轉發名稱、不得維護 `__all__` 匯出包裝；所有使用端必須直接 import 具體模組，以避免 package import 提前載入無關或開發中的檔案。
 
 目前專案理解（2026-04-30）：
 1. dataset 主來源為 Minari 格式資料集；專案多數流程以 `dataset_id` 配合 `minari.load_dataset(...)` 讀取資料，路徑根目錄由 `source/ice_offline/tools/paths.py` 的 `minari_root()` 管理（預設 `tmps/datasets`）。
