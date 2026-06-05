@@ -8,7 +8,7 @@ from ice_offline.agent.discrete.cql_discrete import CQLDiscreteAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.discrete.iql_discrete import IQLDiscreteAgent
 from ice_offline.agent.sdc_cql import SDCCQLAgent
-from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
+from ice_offline.agent.sdc_pre import SDCPreAgent
 from ice_offline.agent.scas_aspl import ScasAsplAgent
 from ice_offline.agent._spec import Agent
 
@@ -24,7 +24,7 @@ AGENT_LOOKUP = {
     "iql": IQLAgent,
     "iql_discrete": IQLDiscreteAgent,
     "sdc_cql": SDCCQLAgent,
-    "sdc_cql_pre": SDCCQLPreAgent,
+    "sdc_pre": SDCPreAgent,
     "scas_aspl": ScasAsplAgent,
 }
 

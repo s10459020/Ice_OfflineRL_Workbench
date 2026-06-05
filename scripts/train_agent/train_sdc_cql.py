@@ -35,20 +35,22 @@ def eval_loss(agent: SDCCQLAgent, batch: Batch) -> dict[str, float]:
         loss_actor = agent.loss_actor(batch)
         loss_dynamics = agent.loss_dynamics(batch)
         loss_transition = agent.loss_transition(batch)
+        loss_state_models = agent.loss_state_models(batch)
         loss_sdc = agent.loss_state_deviation(batch[0])
         return {
-            "loss_q_td": float(loss_td.item()),
-            "loss_q_suppress": float(loss_suppress.sum().item()),
-            "loss_actor": float(loss_actor.item()),
-            "loss_critic": float(loss_critic.item()),
-            "loss_dynamics": float(loss_dynamics.item()),
-            "loss_transition": float(loss_transition.item()),
-            "loss_sdc": float(loss_sdc.item()),
+            "1. loss_dynamics": float(loss_dynamics.item()),
+            "2. loss_transition": float(loss_transition.item()),
+            "3. loss_state_models": float(loss_state_models.item()),
+            "4. loss_sdc": float(loss_sdc.item()),
+            "5. loss_actor": float(loss_actor.item()),
+            "6. loss_td": float(loss_td.item()),
+            "7. loss_suppress": float(loss_suppress.sum().item()),
+            "8. loss_critic": float(loss_critic.item()),
         }
 
 
 def eval_return(batch: Batch) -> dict[str, float]:
-    return {"return": float(batch[2].sum().item())}
+    return {"9. return": float(batch[2].sum().item())}
 
 
 def train(

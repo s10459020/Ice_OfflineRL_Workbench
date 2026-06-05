@@ -35,7 +35,7 @@ from train_agent import train_cql_max_q
 from train_agent import train_cql_soft_q
 from train_agent import train_iql
 from train_agent import train_sdc_cql
-from train_agent import train_sdc_cql_pre
+from train_agent import train_sdc_pre
 from train_agent import train_scas_aspl
 from train_agent import train_scas_mean
 from train_agent import train_scas_min
@@ -47,7 +47,7 @@ DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TRAIN_KWARGS = {
     "steps": 200_000,
     "save_interval": 20_000,
-    "eval_interval": 2_000,
+    "eval_interval": 2000,
     "eval_online_n": 20,
     "eval_offline_n": 30,
 }
@@ -61,24 +61,24 @@ SDC_PRE_KWARGS = {
 }
 
 DATASET_LIST = [
-    # HopperRandomDataset,
-    # HopperReplayDataset,
-    # HopperMediumReplayDataset,
-    # HopperMediumD4rlDataset,
-    # HopperMediumExpertDataset,
-    # HopperExpertD4rlDataset,
-    # HopperSimpleDataset,
-    # HopperMediumDataset,
-    # HopperExpertDataset,
-    # HalfCheetahRandomDataset,
-    # HalfCheetahReplayDataset,
-    # HalfCheetahMediumReplayDataset,
-    # HalfCheetahMediumD4rlDataset,
-    # HalfCheetahMediumExpertDataset,
-    # HalfCheetahExpertD4rlDataset,
-    # HalfCheetahSimpleDataset,
-    # HalfCheetahMediumDataset,
-    # HalfCheetahExpertDataset,
+    HopperRandomDataset,
+    HopperReplayDataset,
+    HopperMediumReplayDataset,
+    HopperMediumD4rlDataset,
+    HopperMediumExpertDataset,
+    HopperExpertD4rlDataset,
+    HopperSimpleDataset,
+    HopperMediumDataset,
+    HopperExpertDataset,
+    HalfCheetahRandomDataset,
+    HalfCheetahReplayDataset,
+    HalfCheetahMediumReplayDataset,
+    HalfCheetahMediumD4rlDataset,
+    HalfCheetahMediumExpertDataset,
+    HalfCheetahExpertD4rlDataset,
+    HalfCheetahSimpleDataset,
+    HalfCheetahMediumDataset,
+    HalfCheetahExpertDataset,
     Walker2dRandomDataset,
     Walker2dReplayDataset,
     Walker2dMediumReplayDataset,
@@ -91,19 +91,19 @@ DATASET_LIST = [
 ]
 
 AGENT_LIST = [
-    ("bc_deterministic", train_bc_deterministic.collect),
-    ("bc_stochastic", train_bc_stochastic.collect),
+    # ("bc_deterministic", train_bc_deterministic.collect),
+    # ("bc_stochastic", train_bc_stochastic.collect),
     ("td3bc", train_td3bc.collect),
-    ("iql", train_iql.collect),
-    ("cql", train_cql.collect),
+    # ("iql", train_iql.collect),
+    # ("cql", train_cql.collect),
+    # ("cql_max_q", train_cql_max_q.collect),
+    # ("cql_soft_q", train_cql_soft_q.collect),
+    # ("aspl", train_aspl.collect),
     ("sdc_cql", train_sdc_cql.collect),
-    ("sdc_cql_pre", train_sdc_cql_pre.collect),
-    ("cql_max_q", train_cql_max_q.collect),
-    ("cql_soft_q", train_cql_soft_q.collect),
-    ("aspl", train_aspl.collect),
+    ("sdc_pre", train_sdc_pre.collect),
+    # ("scas_mean", train_scas_mean.collect),
+    # ("scas_min", train_scas_min.collect),
     ("scas_aspl", train_scas_aspl.collect),
-    ("scas_mean", train_scas_mean.collect),
-    ("scas_min", train_scas_min.collect),
 ]
 
 
@@ -111,7 +111,7 @@ def collect_agent(agent_id: str, trainer, dataset):
     train_kwargs = {k: v for k, v in TRAIN_KWARGS.items() if v is not None}
     if agent_id in ("scas_aspl", "scas_mean", "scas_min"):
         train_kwargs.update({k: v for k, v in SCAS_KWARGS.items() if v is not None})
-    if agent_id == "sdc_cql_pre":
+    if agent_id == "sdc_pre":
         train_kwargs.update({k: v for k, v in SDC_PRE_KWARGS.items() if v is not None})
 
     task_id = f"{dataset.id}-{agent_id}-v0"

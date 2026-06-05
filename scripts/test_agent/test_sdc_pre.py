@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
+from ice_offline.agent.sdc_pre import SDCPreAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.tools.paths import dataset_root
@@ -32,11 +32,11 @@ def test(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
+    task_id = task_id or f"{dataset.id}-sdc_pre-v0"
     eval_env = eval_env or dataset.make_env()
 
-    print_stage("Test SDC CQL Pre")
-    agent = SDCCQLPreAgent(
+    print_stage("Test SDC Pre")
+    agent = SDCPreAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
@@ -70,7 +70,7 @@ def collect(
     seed: int = SEED,
     print_interval: int = 0,
 ):
-    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
+    task_id = task_id or f"{dataset.id}-sdc_pre-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     dataset = HopperSimpleDataset()
     returns, minari_data, state_data = collect(
         dataset=dataset,
-        task_id=f"{dataset.id}-sdc_cql_pre-v0",
+        task_id=f"{dataset.id}-sdc_pre-v0",
         episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,

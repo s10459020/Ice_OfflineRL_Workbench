@@ -34,7 +34,7 @@ from test_agent import test_cql_soft_q
 from test_agent import test_iql
 from test_agent import test_random
 from test_agent import test_sdc_cql
-from test_agent import test_sdc_cql_pre
+from test_agent import test_sdc_pre
 from test_agent import test_scas_aspl
 from test_agent import test_scas_mean
 from test_agent import test_scas_min
@@ -45,24 +45,24 @@ EPISODES = 100
 PRINT_INTERVAL = 1
 
 DATASET_LIST = [
-    # HopperRandomDataset,
-    # HopperReplayDataset,
-    # HopperMediumReplayDataset,
-    # HopperMediumD4rlDataset,
-    # HopperMediumExpertDataset,
-    # HopperExpertD4rlDataset,
-    # HopperSimpleDataset,
-    # HopperMediumDataset,
-    # HopperExpertDataset,
-    # HalfCheetahRandomDataset,
-    # HalfCheetahReplayDataset,
-    # HalfCheetahMediumReplayDataset,
-    # HalfCheetahMediumD4rlDataset,
-    # HalfCheetahMediumExpertDataset,
-    # HalfCheetahExpertD4rlDataset,
-    # HalfCheetahSimpleDataset,
-    # HalfCheetahMediumDataset,
-    # HalfCheetahExpertDataset,
+    HopperRandomDataset,
+    HopperReplayDataset,
+    HopperMediumReplayDataset,
+    HopperMediumD4rlDataset,
+    HopperMediumExpertDataset,
+    HopperExpertD4rlDataset,
+    HopperSimpleDataset,
+    HopperMediumDataset,
+    HopperExpertDataset,
+    HalfCheetahRandomDataset,
+    HalfCheetahReplayDataset,
+    HalfCheetahMediumReplayDataset,
+    HalfCheetahMediumD4rlDataset,
+    HalfCheetahMediumExpertDataset,
+    HalfCheetahExpertD4rlDataset,
+    HalfCheetahSimpleDataset,
+    HalfCheetahMediumDataset,
+    HalfCheetahExpertDataset,
     Walker2dRandomDataset,
     Walker2dReplayDataset,
     Walker2dMediumReplayDataset,
@@ -75,20 +75,20 @@ DATASET_LIST = [
 ]
 
 AGENT_LIST = [
-    ("bc_deterministic", test_bc_deterministic.collect),
-    ("bc_stochastic", test_bc_stochastic.collect),
-    ("td3bc", test_td3bc.collect),
-    ("iql", test_iql.collect),
-    ("cql", test_cql.collect),
+    # ("bc_deterministic", test_bc_deterministic.collect),
+    # ("bc_stochastic", test_bc_stochastic.collect),
+    # ("iql", test_iql.collect),
+    # ("cql", test_cql.collect),
     ("sdc_cql", test_sdc_cql.collect),
-    ("sdc_cql_pre", test_sdc_cql_pre.collect),
-    ("cql_max_q", test_cql_max_q.collect),
-    ("cql_soft_q", test_cql_soft_q.collect),
-    ("aspl", test_aspl.collect),
+    ("sdc_pre", test_sdc_pre.collect),
+    # ("cql_max_q", test_cql_max_q.collect),
+    # ("cql_soft_q", test_cql_soft_q.collect),
+    # ("aspl", test_aspl.collect),
     ("scas_aspl", test_scas_aspl.collect),
-    ("scas_mean", test_scas_mean.collect),
-    ("scas_min", test_scas_min.collect),
-    ("random", test_random.collect),
+    # ("scas_mean", test_scas_mean.collect),
+    # ("scas_min", test_scas_min.collect),
+    ("td3bc", test_td3bc.collect),
+    # ("random", test_random.collect),
 ]
 
 TEST_KWARGS = {
