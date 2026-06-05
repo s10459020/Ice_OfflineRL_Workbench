@@ -18,6 +18,15 @@ from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
 from ice_offline.dataset.hopper_replay import HopperReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.dataset.walker2d_expert import Walker2dExpertDataset
+from ice_offline.dataset.walker2d_expert_d4rl import Walker2dExpertD4rlDataset
+from ice_offline.dataset.walker2d_medium import Walker2dMediumDataset
+from ice_offline.dataset.walker2d_medium_d4rl import Walker2dMediumD4rlDataset
+from ice_offline.dataset.walker2d_medium_expert import Walker2dMediumExpertDataset
+from ice_offline.dataset.walker2d_medium_replay import Walker2dMediumReplayDataset
+from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
+from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
+from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
 from train_agent import train_aspl
 from train_agent import train_bc_deterministic
 from train_agent import train_bc_stochastic
@@ -52,12 +61,12 @@ SDC_PRE_KWARGS = {
 }
 
 DATASET_LIST = [
-    HopperRandomDataset,
-    HopperReplayDataset,
+    # HopperRandomDataset,
+    # HopperReplayDataset,
     # HopperMediumReplayDataset,
     # HopperMediumD4rlDataset,
     # HopperMediumExpertDataset,
-    HopperExpertD4rlDataset,
+    # HopperExpertD4rlDataset,
     # HopperSimpleDataset,
     # HopperMediumDataset,
     # HopperExpertDataset,
@@ -70,6 +79,15 @@ DATASET_LIST = [
     # HalfCheetahSimpleDataset,
     # HalfCheetahMediumDataset,
     # HalfCheetahExpertDataset,
+    Walker2dRandomDataset,
+    Walker2dReplayDataset,
+    Walker2dMediumReplayDataset,
+    Walker2dMediumD4rlDataset,
+    Walker2dMediumExpertDataset,
+    Walker2dExpertD4rlDataset,
+    Walker2dSimpleDataset,
+    Walker2dMediumDataset,
+    Walker2dExpertDataset,
 ]
 
 AGENT_LIST = [

@@ -34,15 +34,15 @@ def eval_loss(agent: CQLMaxQAgent, batch: TorchBuffer) -> dict[str, float]:
         loss_critic = agent.loss_critic(batch)
         loss_actor = agent.loss_actor(batch)
         return {
-            "loss_q_td": float(loss_td.item()),
-            "loss_q_suppress": float(loss_suppress.sum().item()),
-            "loss_actor": float(loss_actor.item()),
-            "loss_critic": float(loss_critic.item()),
+            "1. loss_td": float(loss_td.item()),
+            "2. loss_suppress": float(loss_suppress.sum().item()),
+            "3. loss_critic": float(loss_critic.item()),
+            "4. loss_actor": float(loss_actor.item()),
         }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"5. return": float(batch.rew_list.sum().item())}
 
 
 def train(
@@ -135,4 +135,3 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-

@@ -33,15 +33,15 @@ def eval_loss(agent: IQLAgent, batch: TorchBuffer) -> dict[str, float]:
     d = batch.done_list.view(-1, 1)
     with torch.no_grad():
         return {
-            "loss_q": float(agent.loss_q(o, a, r, on, d).item()),
-            "loss_v": float(agent.loss_v(o, a).item()),
-            "loss_actor": float(agent.loss_actor(o, a).item()),
-            "loss_critic": float(agent.loss_critic(o, a, r, on, d).item()),
+            "1. loss_q": float(agent.loss_q(o, a, r, on, d).item()),
+            "2. loss_v": float(agent.loss_v(o, a).item()),
+            "3. loss_critic": float(agent.loss_critic(o, a, r, on, d).item()),
+            "4. loss_actor": float(agent.loss_actor(o, a).item()),
         }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"5. return": float(batch.rew_list.sum().item())}
 
 
 def train(
@@ -134,7 +134,6 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
 
 
 

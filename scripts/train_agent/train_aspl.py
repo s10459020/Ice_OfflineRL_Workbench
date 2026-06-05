@@ -32,15 +32,15 @@ def eval_loss_aspl(agent: AsplAgent, batch: TorchBuffer) -> dict[str, float]:
     with torch.no_grad():
         q_target = agent.target_td3(sn, r, d)
         return {
-            "loss_td": float(agent.loss_td_with_target(s, a, q_target).item()),
-            "loss_punish": float(agent.loss_punish_with_target(s, a, q_target).item()),
-            "loss_actor": float(agent.loss_td3(batch).item()),
-            "loss_critic": float(agent.loss_critic(batch).item()),
+            "1. loss_td": float(agent.loss_td_with_target(s, a, q_target).item()),
+            "2. loss_punish": float(agent.loss_punish_with_target(s, a, q_target).item()),
+            "3. loss_actor": float(agent.loss_td3(batch).item()),
+            "4. loss_critic": float(agent.loss_critic(batch).item()),
        }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"5. return": float(batch.rew_list.sum().item())}
 
 
 def train(
@@ -134,8 +134,6 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
-
-
 
 
 

@@ -8,16 +8,11 @@ import matplotlib.pyplot as plt
 
 from view_result.returns import returns
 from view_result.skip import skip_missing_data
-from view_result.task import AGENT_ID_LIST
-from view_result.task import DATASET_CLASS_LIST
 from view_result.task import boxplot_output_path
 from view_result.task import bottom_dataset_path
 from view_result.task import dataset_group_name
 from view_result.task import test_dataset_path
 from view_result.task import top_dataset_path
-
-
-AGENT_LIST = [agent_id for agent_id in AGENT_ID_LIST if agent_id != "random"]
 
 
 def add_member(labels: list[str], values: list[list[float]], label: str, dataset_path: str) -> None:
@@ -29,7 +24,7 @@ def add_member(labels: list[str], values: list[list[float]], label: str, dataset
     values.append(returns(dataset_path))
 
 
-def save_boxplot(index: int, dataset_cls) -> Path:
+def save_boxplot(index: int, dataset_cls, agent_list: list[str]) -> Path:
     group_name = dataset_group_name(dataset_cls)
     bottom_path = bottom_dataset_path(dataset_cls)
     top_path = top_dataset_path(dataset_cls)
@@ -37,7 +32,7 @@ def save_boxplot(index: int, dataset_cls) -> Path:
     values = []
 
     add_member(labels, values, "random", bottom_path)
-    for agent_id in AGENT_LIST:
+    for agent_id in agent_list:
         add_member(labels, values, agent_id, test_dataset_path(dataset_cls, agent_id))
     add_member(labels, values, "dataset", top_path)
 
@@ -62,12 +57,13 @@ def save_boxplot(index: int, dataset_cls) -> Path:
     return out_path
 
 
-def main() -> None:
-    for i, dataset_cls in enumerate(DATASET_CLASS_LIST, start=1):
+def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
+    agent_list = [agent_id for agent_id in agent_id_list if agent_id != "random"]
+    for i, dataset_cls in enumerate(dataset_class_list, start=1):
         group_name = dataset_group_name(dataset_cls)
         print(f"group={group_name}")
-        save_boxplot(i, dataset_cls)
+        save_boxplot(i, dataset_cls, agent_list)
 
 
 if __name__ == "__main__":
-    main()
+    main([], [])

@@ -7,25 +7,12 @@ import numpy as np
 from ice_offline.data.minari.loader import MinariLoader
 from ice_offline.tools.paths import minari_root
 from view_result.skip import skip_missing_data
-from view_result.task import AGENT_ID_LIST
-from view_result.task import DATASET_CLASS_LIST
 from view_result.task import is_d4rl_dataset_path
 from view_result.task import source_dataset_path
 from view_result.task import test_dataset_path
 
 
 RETURNS_ROOT = Path("tmps/returns")
-
-SOURCE_DATASET_LIST = [source_dataset_path(dataset_cls) for dataset_cls in DATASET_CLASS_LIST]
-
-RETURNS_LIST = [
-    *SOURCE_DATASET_LIST,
-    *[
-        test_dataset_path(dataset_cls, agent_id)
-        for dataset_cls in DATASET_CLASS_LIST
-        for agent_id in AGENT_ID_LIST
-    ],
-]
 
 
 def returns_path(dataset_path: str) -> Path:
@@ -76,8 +63,18 @@ def returns(dataset_path: str) -> list[float]:
     return values
 
 
-def main() -> None:
-    for dataset_path in RETURNS_LIST:
+def returns_list(dataset_class_list: list, agent_id_list: list[str]) -> list[str]:
+    source_dataset_list = [source_dataset_path(dataset_cls) for dataset_cls in dataset_class_list]
+    test_dataset_list = [
+        test_dataset_path(dataset_cls, agent_id)
+        for dataset_cls in dataset_class_list
+        for agent_id in agent_id_list
+    ]
+    return [*source_dataset_list, *test_dataset_list]
+
+
+def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
+    for dataset_path in returns_list(dataset_class_list, agent_id_list):
         if skip_missing_data(dataset_path):
             continue
         print(f"returns={dataset_path}")
@@ -85,4 +82,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main([], [])

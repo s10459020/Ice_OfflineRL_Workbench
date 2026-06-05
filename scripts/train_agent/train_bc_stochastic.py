@@ -29,11 +29,11 @@ BATCH_SIZE = 256
 
 def eval_loss_pi(agent: BCStochasticAgent, batch: TorchBuffer) -> dict[str, float]:
     with torch.no_grad():
-        return {"loss_actor": float(agent.loss_actor(batch.obs_list, batch.act_list).item())}
+        return {"1. loss_actor": float(agent.loss_actor(batch.obs_list, batch.act_list).item())}
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"2. return": float(batch.rew_list.sum().item())}
 
 
 def train(

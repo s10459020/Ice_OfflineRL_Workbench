@@ -6,8 +6,6 @@ matplotlib.use("Agg")
 
 from ice_offline.plot.plotter import plot_csv
 from view_result.skip import skip_missing
-from view_result.task import AGENT_ID_LIST
-from view_result.task import DATASET_CLASS_LIST
 from view_result.task import dataset_id
 from view_result.task import plot_output_path
 
@@ -36,12 +34,12 @@ def plot_agent(index: int, agent_id: str, dataset_cls) -> None:
     plot(dataset_path, output_path, show=SHOW)
 
 
-def main() -> None:
-    for i, dataset_cls in enumerate(DATASET_CLASS_LIST, start=1):
-        for agent_id in AGENT_ID_LIST:
+def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
+    for i, dataset_cls in enumerate(dataset_class_list, start=1):
+        for agent_id in agent_id_list:
             print(f"dataset={dataset_id(dataset_cls)}, agent={agent_id}")
             plot_agent(i, agent_id, dataset_cls)
 
 
 if __name__ == "__main__":
-    main()
+    main([], [])
