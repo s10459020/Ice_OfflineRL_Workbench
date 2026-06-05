@@ -170,6 +170,9 @@ class AsplAgent(TD3Agent):
 
         # ignore use_lr_scheduler
 
+    def set_seed(self, seed: int) -> None:
+        self.actor.set_seed(seed)
+
     def loss_td_with_target(self, o: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
         # double Q TD
         q1 = self.critic.q_networks[0](o, a)

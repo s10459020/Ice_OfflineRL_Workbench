@@ -13,7 +13,7 @@ from ice_offline.store.state.hopper import HopperState, HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
 
 
-DYNAMICS_MODEL_STEP = 100_000
+DYNAMIC_STEP = 100_000
 AGENT_MODEL_STEP = 200_000
 EPISODES = 10
 SEED = 42
@@ -25,9 +25,11 @@ def test(
     *,
     task_id: str = None,
     episodes: int = EPISODES,
+    agent_model_step: int = AGENT_MODEL_STEP,
+    dynamic_step: int = DYNAMIC_STEP,
     eval_env: gym.Env | None = None,
     seed: int = SEED,
-    print_interval: int = 0,
+    print_interval: int = PRINT_INTERVAL,
 ) -> list[float]:
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -40,14 +42,14 @@ def test(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
-    dynamics.load(model_ref(f"{task_id}/dynamics", DYNAMICS_MODEL_STEP))
+    dynamics.load(model_ref(f"{task_id}/dynamics", dynamic_step))
 
     agent = ScasMeanAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         dynamics=dynamics,
     )
-    agent.load(model_ref(task_id, AGENT_MODEL_STEP))
+    agent.load(model_ref(task_id, agent_model_step))
 
     returns = []
     for episode in range(1, episodes + 1):
@@ -74,8 +76,10 @@ def collect(
     *,
     task_id: str = None,
     episodes: int = EPISODES,
+    model_step: int = AGENT_MODEL_STEP,
+    dynamic_step: int = DYNAMIC_STEP,
     seed: int = SEED,
-    print_interval: int = 0,
+    print_interval: int = PRINT_INTERVAL,
 ):
     task_id = task_id or f"{dataset.id}-scas_mean-v0"
     env = dataset.make_env()
@@ -86,6 +90,8 @@ def collect(
         dataset=dataset,
         task_id=task_id,
         episodes=episodes,
+        agent_model_step=model_step,
+        dynamic_step=dynamic_step,
         eval_env=minari_col,
         seed=seed,
         print_interval=print_interval,

@@ -34,6 +34,9 @@ class ScasAsplAgent(ScasMinAgent):
             lr=self.critic_learning_rate,
         )
 
+    def set_seed(self, seed: int) -> None:
+        self.actor.set_seed(seed)
+
     # ====================
     # Critic loss
     # ====================

@@ -70,7 +70,7 @@ def train(
         act_size=dataset.act_dim,
         device=device,
     )
-    agent.actor.set_seed(seed)
+    agent.set_seed(seed)
 
     evaluator = Evaluator(
         runner_id=task_id,

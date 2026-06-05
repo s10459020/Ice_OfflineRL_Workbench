@@ -24,9 +24,10 @@ def test(
     *,
     task_id: str = None,
     episodes: int = EPISODES,
+    model_step: int = MODEL_STEP,
     eval_env: gym.Env | None = None,
     seed: int = SEED,
-    print_interval: int = 0,
+    print_interval: int = PRINT_INTERVAL,
 ) -> list[float]:
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -39,7 +40,7 @@ def test(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
-    agent.load(model_ref(task_id, MODEL_STEP))
+    agent.load(model_ref(task_id, model_step))
 
     returns = []
     for episode in range(1, episodes + 1):
@@ -66,8 +67,9 @@ def collect(
     *,
     task_id: str = None,
     episodes: int = EPISODES,
+    model_step: int = MODEL_STEP,
     seed: int = SEED,
-    print_interval: int = 0,
+    print_interval: int = PRINT_INTERVAL,
 ):
     task_id = task_id or f"{dataset.id}-cql_soft_q-v0"
     env = dataset.make_env()
@@ -78,6 +80,7 @@ def collect(
         dataset=dataset,
         task_id=task_id,
         episodes=episodes,
+        model_step=model_step,
         eval_env=minari_col,
         seed=seed,
         print_interval=print_interval,

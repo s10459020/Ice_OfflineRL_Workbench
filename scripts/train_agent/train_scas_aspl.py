@@ -19,7 +19,7 @@ from ice_offline.tools.printer import print_stage
 
 
 BATCH_SIZE = 256
-DYNAMICS_STEPS = 100_000
+DYNAMIC_STEPS = 100_000
 AGENT_STEPS = 200_000
 EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
@@ -64,7 +64,7 @@ def eval_return(batch: Batch) -> dict[str, float]:
 def train(
     dataset: Dataset,
     *,
-    dynamics_steps: int = DYNAMICS_STEPS,
+    dynamic_steps: int = DYNAMIC_STEPS,
     agent_steps: int = AGENT_STEPS,
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
@@ -95,13 +95,13 @@ def train(
         eval_offline_n=eval_offline_n,
         eval_offline_fns=[eval_loss_dynamic],
     )
-    for step in range(1, dynamics_steps + 1):
+    for step in range(1, dynamic_steps + 1):
         batch = dataset.sample_batch(batch_size)
         dynamics.update(batch)
         dynamics_evaluator.eval(step=step, agent=dynamics, batch_loader=dataset, batch_size=batch_size)
         dynamics_evaluator.print(step)
         dynamics_evaluator.recode(step)
-        if step % save_interval == 0 or step == dynamics_steps:
+        if step % save_interval == 0 or step == dynamic_steps:
             dynamics.save(f"{task_id}/dynamics", step)
 
     print_stage("Train SCAS ASPL Agent")
@@ -111,7 +111,7 @@ def train(
         dynamics=dynamics,
         device=device,
     )
-    agent.actor.set_seed(seed)
+    agent.set_seed(seed)
     agent_evaluator = Evaluator(
         runner_id=task_id,
         eval_interval=eval_interval,
@@ -135,7 +135,7 @@ def collect(
     dataset: Dataset,
     *,
     steps: int = AGENT_STEPS,
-    steps_dynamic: int = DYNAMICS_STEPS,
+    dynamic_step: int = DYNAMIC_STEPS,
     task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -154,7 +154,7 @@ def collect(
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
-        dynamics_steps=steps_dynamic,
+        dynamic_steps=dynamic_step,
         agent_steps=steps,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,

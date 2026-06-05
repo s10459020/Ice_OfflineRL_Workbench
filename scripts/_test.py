@@ -40,9 +40,19 @@ from test_agent import test_scas_mean
 from test_agent import test_scas_min
 from test_agent import test_td3bc
 
+TEST_KWARGS = {
+    "episodes": 100,
+    "print_interval": 1,
+}
 
-EPISODES = 100
-PRINT_INTERVAL = 1
+SDC_KWARGS = {
+    "model_step": 100_000,
+}
+
+SCAS_KWARGS = {
+    "model_step": 100_000,
+    "dynamic_step": 100_000,
+}
 
 DATASET_LIST = [
     HopperRandomDataset,
@@ -75,37 +85,36 @@ DATASET_LIST = [
 ]
 
 AGENT_LIST = [
-    # ("bc_deterministic", test_bc_deterministic.collect),
-    # ("bc_stochastic", test_bc_stochastic.collect),
-    # ("iql", test_iql.collect),
-    # ("cql", test_cql.collect),
+    ("bc_deterministic", test_bc_deterministic.collect),
+    ("bc_stochastic", test_bc_stochastic.collect),
+    ("iql", test_iql.collect),
+    ("cql", test_cql.collect),
     ("sdc_cql", test_sdc_cql.collect),
     ("sdc_pre", test_sdc_pre.collect),
-    # ("cql_max_q", test_cql_max_q.collect),
-    # ("cql_soft_q", test_cql_soft_q.collect),
-    # ("aspl", test_aspl.collect),
+    ("cql_max_q", test_cql_max_q.collect),
+    ("cql_soft_q", test_cql_soft_q.collect),
+    ("aspl", test_aspl.collect),
     ("scas_aspl", test_scas_aspl.collect),
-    # ("scas_mean", test_scas_mean.collect),
-    # ("scas_min", test_scas_min.collect),
+    ("scas_mean", test_scas_mean.collect),
+    ("scas_min", test_scas_min.collect),
     ("td3bc", test_td3bc.collect),
-    # ("random", test_random.collect),
+    ("random", test_random.collect),
 ]
-
-TEST_KWARGS = {
-    "episodes": EPISODES,
-    "print_interval": PRINT_INTERVAL,
-}
 
 
 def collect_agent(agent_id: str, tester, dataset):
     test_kwargs = {k: v for k, v in TEST_KWARGS.items() if v is not None}
+    if agent_id in ("scas_aspl", "scas_mean", "scas_min"):
+        test_kwargs.update({k: v for k, v in SCAS_KWARGS.items() if v is not None})
+    elif agent_id != "random":
+        test_kwargs.update({k: v for k, v in SDC_KWARGS.items() if v is not None})
     task_id = f"{dataset.id}-{agent_id}-v0"
     return tester(dataset=dataset, task_id=task_id, **test_kwargs)
 
 
 if __name__ == "__main__":
     for dataset_cls in DATASET_LIST:
-        dataset = dataset_cls().load()
+        dataset = dataset_cls()
 
         for agent_id, tester in AGENT_LIST:
             print(f"dataset={dataset.id}, agent={agent_id}")

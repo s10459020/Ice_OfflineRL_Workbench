@@ -23,7 +23,7 @@ def test(
     episodes: int = EPISODES,
     eval_env: gym.Env | None = None,
     seed: int = SEED,
-    print_interval: int = 0,
+    print_interval: int = PRINT_INTERVAL,
 ) -> list[float]:
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -57,7 +57,7 @@ def collect(
     task_id: str = None,
     episodes: int = EPISODES,
     seed: int = SEED,
-    print_interval: int = 0,
+    print_interval: int = PRINT_INTERVAL,
 ):
     task_id = task_id or f"{dataset.env_id}_random-v0"
     env = dataset.make_env()

@@ -13,7 +13,7 @@ class Dataset:
     # ====================
     # Dataset identity
     # ====================
-    id: str
+    id: str = ""
     env_id: str = ""
     path: Path = Path()
     seed: int = 0

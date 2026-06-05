@@ -5,18 +5,15 @@ import matplotlib
 matplotlib.use("Agg")
 
 from ice_offline.plot.plotter import plot_csv
-from view_result.skip import skip_missing
-from view_result.task import dataset_id
-from view_result.task import plot_output_path
 
 
-EVAL_ROOT = Path("tmps/eval")
 SHOW = False
 
 
 def plot(path: str, output_path: Path, *, show: bool = False) -> None:
-    eval_dir = EVAL_ROOT / path
-    if skip_missing(path, eval_dir):
+    eval_dir = Path(path)
+    if not eval_dir.exists():
+        print(f"skip missing: {path}")
         return
     csv_paths = [str(path) for path in sorted(eval_dir.glob("*.csv"))]
     if len(csv_paths) == 0:
@@ -28,16 +25,17 @@ def plot(path: str, output_path: Path, *, show: bool = False) -> None:
 
 
 def plot_agent(index: int, agent_id: str, dataset_cls) -> None:
-    id_ = dataset_id(dataset_cls)
-    path = f"{id_}-{agent_id}-v0"
-    output_path = plot_output_path(index, dataset_cls, agent_id)
-    plot(path, output_path, show=SHOW)
+    dataset = dataset_cls()
+    task_id = f"{dataset.id}-{agent_id}-v0"
+    path = Path("tmps/eval") / task_id
+    output_path = Path("tmps/view") / dataset.env_id / "plot" / agent_id / f"{index}. {dataset.id}.png"
+    plot(str(path), output_path, show=SHOW)
 
 
 def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
     for i, dataset_cls in enumerate(dataset_class_list, start=1):
         for agent_id in agent_id_list:
-            print(f"dataset={dataset_id(dataset_cls)}, agent={agent_id}")
+            print(f"dataset={dataset_cls().id}, agent={agent_id}")
             plot_agent(i, agent_id, dataset_cls)
 
 

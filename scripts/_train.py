@@ -47,13 +47,13 @@ DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 TRAIN_KWARGS = {
     "steps": 200_000,
     "save_interval": 20_000,
-    "eval_interval": 2000,
+    "eval_interval": 2_000,
     "eval_online_n": 20,
     "eval_offline_n": 30,
 }
 
 SCAS_KWARGS = {
-    "steps_dynamic": 100_000,
+    "dynamic_step": 100_000,
 }
 
 SDC_PRE_KWARGS = {
@@ -91,18 +91,18 @@ DATASET_LIST = [
 ]
 
 AGENT_LIST = [
-    # ("bc_deterministic", train_bc_deterministic.collect),
-    # ("bc_stochastic", train_bc_stochastic.collect),
+    ("bc_deterministic", train_bc_deterministic.collect),
+    ("bc_stochastic", train_bc_stochastic.collect),
     ("td3bc", train_td3bc.collect),
-    # ("iql", train_iql.collect),
-    # ("cql", train_cql.collect),
-    # ("cql_max_q", train_cql_max_q.collect),
-    # ("cql_soft_q", train_cql_soft_q.collect),
-    # ("aspl", train_aspl.collect),
+    ("iql", train_iql.collect),
+    ("cql", train_cql.collect),
+    ("cql_max_q", train_cql_max_q.collect),
+    ("cql_soft_q", train_cql_soft_q.collect),
+    ("aspl", train_aspl.collect),
     ("sdc_cql", train_sdc_cql.collect),
     ("sdc_pre", train_sdc_pre.collect),
-    # ("scas_mean", train_scas_mean.collect),
-    # ("scas_min", train_scas_min.collect),
+    ("scas_mean", train_scas_mean.collect),
+    ("scas_min", train_scas_min.collect),
     ("scas_aspl", train_scas_aspl.collect),
 ]
 
@@ -120,7 +120,7 @@ def collect_agent(agent_id: str, trainer, dataset):
 
 if __name__ == "__main__":
     for dataset_cls in DATASET_LIST:
-        dataset = dataset_cls(device=DEVICE).load()
+        dataset = dataset_cls(device=DEVICE)
 
         for agent_id, trainer in AGENT_LIST:
             print(f"dataset={dataset.id}, agent={agent_id}")

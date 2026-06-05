@@ -24,6 +24,9 @@ class Agent:
     def act_best(self, observation: Any) -> Any:
         return self.act(observation)
 
+    def set_seed(self, seed: int) -> None:
+        pass
+
     # ====================
     # Training
     # ====================
