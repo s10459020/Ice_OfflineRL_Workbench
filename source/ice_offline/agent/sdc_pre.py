@@ -12,7 +12,7 @@ from ice_offline.dataset._spec import TorchBuffer
 
 
 @dataclass
-class SDCCQLPreModel(TorchAgent):
+class SDCPreModel(TorchAgent):
     obs_size: int
     act_size: int
     state_transition_noise_size: int = 8
@@ -101,8 +101,8 @@ class SDCCQLPreModel(TorchAgent):
 
 
 @dataclass
-class SDCCQLPreAgent(CQLAgent):
-    state_models: SDCCQLPreModel | None = None
+class SDCPreAgent(CQLAgent):
+    state_models: SDCPreModel | None = None
     state_transition_noise_size: int = 8
     state_noise_beta: float = 0.1
     sdc_weight: float = 1.0
@@ -188,4 +188,3 @@ class SDCCQLPreAgent(CQLAgent):
     def gaussian_kernel(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         dist = torch.cdist(x, y).pow(2)
         return torch.exp(-dist / (2.0 * self.mmd_sigma**2))
-

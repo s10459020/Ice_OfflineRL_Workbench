@@ -33,7 +33,7 @@ def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, fl
     a = batch.act_list
     sn = batch.next_obs_list
     with torch.no_grad():
-        return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
+        return {"1. loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
 
 
 def eval_loss_agent(agent: ScasAsplAgent, batch: TorchBuffer) -> dict[str, float]:
@@ -43,20 +43,22 @@ def eval_loss_agent(agent: ScasAsplAgent, batch: TorchBuffer) -> dict[str, float
         q_target = agent.target_td3(sn, r, d)
         loss_td = agent.loss_td_with_target(s, a, q_target)
         loss_punish = agent.loss_punish_with_target(s, a, q_target)
+        loss_td3 = agent.loss_td3(batch)
         loss_correction = agent.loss_correction(batch)
         loss_critic = agent.loss_critic(batch)
         loss_actor = agent.loss_actor(batch)
         return {
-            "loss_td": float(loss_td.item()),
-            "loss_punish": float(loss_punish.item()),
-            "loss_correction": float(loss_correction.item()),
-            "loss_critic": float(loss_critic.item()),
-            "loss_actor": float(loss_actor.item()),
+            "2. loss_td3": float(loss_td3.item()),
+            "3. loss_correction": float(loss_correction.item()),
+            "4. loss_actor": float(loss_actor.item()),
+            "5. loss_td": float(loss_td.item()),
+            "6. loss_punish": float(loss_punish.item()),
+            "7. loss_critic": float(loss_critic.item()),
         }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"8. return": float(batch.rew_list.sum().item())}
 
 
 def train(

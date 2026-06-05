@@ -4,8 +4,8 @@ import numpy as np
 import torch
 
 from ice_offline.agent._spec import agent_batch
-from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
-from ice_offline.agent.sdc_cql_pre import SDCCQLPreModel
+from ice_offline.agent.sdc_pre import SDCPreAgent
+from ice_offline.agent.sdc_pre import SDCPreModel
 from ice_offline.dataset._spec import Dataset, TorchBuffer
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.data.minari.collector import MinariCollectorWrapper
@@ -28,18 +28,19 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss_model(model: SDCCQLPreModel, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_model(model: SDCPreModel, batch: TorchBuffer) -> dict[str, float]:
     with torch.no_grad():
         loss_dynamics = model.loss_dynamics(batch)
         loss_transition = model.loss_transition(batch)
+        loss_state_models = model.loss_state_models(batch)
         return {
-            "loss_dynamics": float(loss_dynamics.item()),
-            "loss_transition": float(loss_transition.item()),
-            "loss_state_models": float((loss_dynamics + loss_transition).item()),
+            "1. loss_dynamics": float(loss_dynamics.item()),
+            "2. loss_transition": float(loss_transition.item()),
+            "3. loss_state_models": float(loss_state_models.item()),
         }
 
 
-def eval_loss_agent(agent: SDCCQLPreAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_agent(agent: SDCPreAgent, batch: TorchBuffer) -> dict[str, float]:
     batch = agent_batch(batch)
     with torch.no_grad():
         loss_td = agent.loss_td(batch)
@@ -48,16 +49,16 @@ def eval_loss_agent(agent: SDCCQLPreAgent, batch: TorchBuffer) -> dict[str, floa
         loss_actor = agent.loss_actor(batch)
         loss_sdc = agent.loss_state_deviation(batch[0])
         return {
-            "loss_q_td": float(loss_td.item()),
-            "loss_q_suppress": float(loss_suppress.sum().item()),
-            "loss_actor": float(loss_actor.item()),
-            "loss_critic": float(loss_critic.item()),
-            "loss_sdc": float(loss_sdc.item()),
+            "4. loss_sdc": float(loss_sdc.item()),
+            "5. loss_actor": float(loss_actor.item()),
+            "6. loss_td": float(loss_td.item()),
+            "7. loss_suppress": float(loss_suppress.sum().item()),
+            "8. loss_critic": float(loss_critic.item()),
         }
 
 
 def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+    return {"9. return": float(batch.rew_list.sum().item())}
 
 
 def train(
@@ -78,12 +79,12 @@ def train(
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
+    task_id = task_id or f"{dataset.id}-sdc_pre-v0"
     eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
-    print_stage("Train SDC CQL Pre State Models")
-    state_models = SDCCQLPreModel(
+    print_stage("Train SDC Pre State Models")
+    state_models = SDCPreModel(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         device=device,
@@ -103,8 +104,8 @@ def train(
         if step % save_interval == 0 or step == model_steps:
             state_models.save(f"{task_id}/state_models", step)
 
-    print_stage("Train SDC CQL Pre Agent")
-    agent = SDCCQLPreAgent(
+    print_stage("Train SDC Pre Agent")
+    agent = SDCPreAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         state_models=state_models,
@@ -142,7 +143,7 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.id}-sdc_cql_pre-v0"
+    task_id = task_id or f"{dataset.id}-sdc_pre-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
@@ -175,4 +176,3 @@ if __name__ == "__main__":
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
     print(f"state_data={state_data}")
-
