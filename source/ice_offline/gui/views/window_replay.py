@@ -1,4 +1,4 @@
-﻿import traceback
+import traceback
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
@@ -15,7 +15,7 @@ from ice_offline.gui.views.widget_render import RenderWidget
 from ice_offline.gui.views.widget_select import SelectWidget
 from ice_offline.gui.views.widget_setting import SettingWidget
 from ice_offline.gui.views.widget_slider import SliderWidget
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 class MainWindow(QMainWindow):
@@ -87,7 +87,7 @@ class MainWindow(QMainWindow):
         self._setting.changed.connect(self._on_setting_changed)
 
     def _on_button(self):
-        initial_dir = str(minari_root().resolve())
+        initial_dir = str(dataset_root().resolve())
         path, _ = QFileDialog.getOpenFileName(self, "Select Dataset", initial_dir, "All Files (*.*)")
         if not path:
             return

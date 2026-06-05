@@ -1,14 +1,14 @@
 ﻿環境固定規則：
 1. 未來提供任何可點擊的檔案超連結時，路徑一律使用 /E: 開頭（例如 /E:/Ice_OfflineRL_Workbench/AGENTS.md）。
 2. 任何與 d3rl 相關的參考查詢，優先且預設只從專案內 .venv 的原始碼搜尋；回覆時需附上對應的 /E: 開頭檔案連結。
-3. 本專案定位為 Offline RL 研究專案；所有建議、實作與評估以 Offline RL 工作流與研究可重現性為優先。
-4. 所有新建檔案必須使用 UTF-8 編碼；所有檔案讀取與寫入操作預設使用 UTF-8，以避免中文亂碼。
-5. 命名與匯出禁止使用別名設計（alias）。所有檔名、import、export 與對外 API 名稱必須使用單一正式名稱，不得以轉發或別名方式維持相容。
-6. 全專案禁止使用 `from __future__ import annotations`；不得新增此行。
-6. 全專案禁止使用 `from __future__ import annotations`；不得新增此行。
-7. 不要使用 `del` 來處理未使用參數；保留原參數即可。
-8. 不要加入多餘的防衛性檢查；以極簡、直通邏輯為主。
-9. `__init__.py` 僅作為 package marker，不得 import 子模組、不得轉發名稱、不得維護 `__all__` 匯出包裝；所有使用端必須直接 import 具體模組，以避免 package import 提前載入無關或開發中的檔案。
+3. 本專案所有 Python 指令、測試、編譯、檢查與互動執行一律使用專案內 `.venv` 的 Python，不使用系統 Python。
+4. 本專案定位為 Offline RL 研究專案；所有建議、實作與評估以 Offline RL 工作流與研究可重現性為優先。
+5. 所有新建檔案必須使用 UTF-8 編碼；所有檔案讀取與寫入操作預設使用 UTF-8，以避免中文亂碼。
+6. 命名與匯出禁止使用別名設計（alias）。所有檔名、import、export 與對外 API 名稱必須使用單一正式名稱，不得以轉發或別名方式維持相容。
+7. 全專案禁止使用 `from __future__ import annotations`；不得新增此行。
+8. 不要使用 `del` 來處理未使用參數；保留原參數即可。
+9. 不要加入多餘的防衛性檢查；以極簡、直通邏輯為主。
+10. `__init__.py` 僅作為 package marker，不得 import 子模組、不得轉發名稱、不得維護 `__all__` 匯出包裝；所有使用端必須直接 import 具體模組，以避免 package import 提前載入無關或開發中的檔案。
 
 目前專案理解（2026-04-30）：
 1. dataset 主來源為 Minari 格式資料集；專案多數流程以 `dataset_id` 配合 `minari.load_dataset(...)` 讀取資料，路徑根目錄由 `source/ice_offline/tools/paths.py` 的 `minari_root()` 管理（預設 `tmps/datasets`）。

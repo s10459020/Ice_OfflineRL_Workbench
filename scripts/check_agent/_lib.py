@@ -4,7 +4,7 @@ from typing import Callable
 
 import numpy as np
 import torch
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.dataset._types import Batch
 
 
 Callback = Callable[[], list[Any]]
@@ -30,14 +30,8 @@ def torch_buffer(
     r: torch.Tensor,
     sn: torch.Tensor,
     d: torch.Tensor,
-) -> TorchBuffer:
-    return TorchBuffer(
-        obs_list=s,
-        next_obs_list=sn,
-        act_list=a,
-        rew_list=r,
-        done_list=d,
-    )
+) -> Batch:
+    return (s, a, r, sn, d)
 
 
 def _set_seed(seed: int) -> None:

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import math
 import numpy as np
@@ -6,10 +6,8 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Normal
 
-from ice_offline.agent._spec import AgentBatch
-from ice_offline.agent._spec import TorchAgent
-from ice_offline.agent._spec import agent_batch
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.agent._spec import Agent
+from ice_offline.dataset._types import Batch
 
 
 class _SquashedGaussianDistribution:
@@ -177,7 +175,7 @@ class _SACTemperature(torch.nn.Module):
 
 
 @dataclass
-class SACAgent(TorchAgent):
+class SACAgent(Agent):
     obs_size: int
     act_size: int
     actor_learning_rate: float = 3e-4
@@ -236,20 +234,18 @@ class SACAgent(TorchAgent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: TorchBuffer):
-        batch = agent_batch(batch)
-
+    def update(self, batch: Batch):
         self.update_critic(batch)
         self.update_actor(batch)
         self.critic.update_target_soft()
 
-    def update_critic(self, batch: AgentBatch) -> None:
+    def update_critic(self, batch: Batch) -> None:
         self.critic_optimizer.zero_grad()
         critic_loss = self.loss_critic(batch)
         critic_loss.backward()
         self.critic_optimizer.step()
 
-    def update_actor(self, batch: AgentBatch) -> None:
+    def update_actor(self, batch: Batch) -> None:
         self.actor_optimizer.zero_grad()
         actor_loss = self.loss_actor(batch)
         actor_loss.backward()
@@ -289,19 +285,19 @@ class SACAgent(TorchAgent):
     def target_td(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         return self.target_sac(on, r, d)
 
-    def loss_td(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_td(self, batch: Batch) -> torch.Tensor:
         # loss = sum_i E{s,a,r,s'~D}[ MSE(Qi(s,a) - y) ]
-        o, a, r, d, on = batch
+        o, a, r, on, d = batch
         target = self.target_td(on, r, d)
         return sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
 
-    def loss_critic(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         return self.loss_td(batch)
 
     # ====================
     # Actor loss
     # ====================
-    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
         # loss = E{s~D,a~pi}[ temp * log pi(a|s) - min Q(s,a) ]
         o, _, _, _, _ = batch
         a, log_prob = self.actor.sample(o)

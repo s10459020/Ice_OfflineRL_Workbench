@@ -5,7 +5,7 @@ from typing import Any
 import gymnasium as gym
 import h5py
 import numpy as np
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 SampleBatch = list[Any]
@@ -85,7 +85,7 @@ class ValueCollector(gym.Wrapper):
     # helping
     # ====================
     def _resolve_output_path(self, dataset_id: str) -> Path:
-        return minari_root() / dataset_id / "data" / self._output_file_name
+        return dataset_root() / dataset_id / "data" / self._output_file_name
 
     def _sample_obs(self, env: gym.Env) -> SampleBatch:
         raise NotImplementedError

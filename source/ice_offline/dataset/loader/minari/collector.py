@@ -1,14 +1,14 @@
-﻿import os
+import os
 from typing import Any
 
 import minari
 
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 class MinariCollectorWrapper(minari.DataCollector):
     def __init__(self, *args, **kwargs) -> None:
-        os.environ.setdefault("MINARI_DATASETS_PATH", str(minari_root()))
+        os.environ.setdefault("MINARI_DATASETS_PATH", str(dataset_root()))
         super().__init__(*args, **kwargs)
 
     def reset(self, *args: Any, **kwargs: Any):

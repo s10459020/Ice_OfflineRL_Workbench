@@ -1,9 +1,9 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import math
 import torch
 
-from ice_offline.agent._spec import AgentBatch
+from ice_offline.dataset._types import Batch
 from ice_offline.agent.sac import SACAgent
 from ice_offline.agent.sac import SACActor
 from ice_offline.agent.sac import SACCritic
@@ -145,7 +145,7 @@ class CQLSoftQAgent(SACAgent):
     # ====================
     # Critic loss
     # ====================
-    def loss_suppress(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_suppress(self, batch: Batch) -> torch.Tensor:
         # L_CQL(H) = E_D[s]{log *              sum_a[exp(Q)] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
@@ -155,7 +155,7 @@ class CQLSoftQAgent(SACAgent):
         # E_D[s]: input o
         # E_D[s,a]: input o,a
         # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') 三種N次
-        o, a, _, _, on = batch
+        o, a, _, on, _ = batch
         batch_size = o.shape[0]
 
         a_s, logp = self.actor.sample_n(o, self.critic.n_action_samples)
@@ -176,7 +176,7 @@ class CQLSoftQAgent(SACAgent):
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
         return (logsumexp - data_q).mean(dim=[1, 2])        # (2), double Q
 
-    def loss_critic(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         # CQL loss: loss_td + multiplier * loss_suppress
         loss_td = self.loss_td(batch)
         loss_suppress = self.loss_suppress(batch)            # (2,)

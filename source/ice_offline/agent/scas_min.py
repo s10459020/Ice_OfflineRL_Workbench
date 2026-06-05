@@ -3,12 +3,11 @@
 import torch
 import torch.nn.functional as F
 
-from ice_offline.agent._spec import AgentBatch
-from ice_offline.agent._spec import TorchAgent
+from ice_offline.agent._spec import Agent
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3 import TD3Critic
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.dataset._types import Batch
 
 class _M(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, noise_scale: float = 3e-3):
@@ -35,7 +34,7 @@ class _M(torch.nn.Module):
         return o + noise
 
 @dataclass
-class ScasDynamic(TorchAgent):
+class ScasDynamic(Agent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -57,10 +56,8 @@ class ScasDynamic(TorchAgent):
             p.requires_grad = False
         return self.model
     
-    def update(self, batch: TorchBuffer):
-        s = batch.obs_list
-        a = batch.act_list
-        sn = batch.next_obs_list
+    def update(self, batch: Batch):
+        s, a, _, sn, _ = batch
 
         self.optimizer.zero_grad()
         loss = self.loss_dynamic(s, a, sn)
@@ -110,9 +107,9 @@ class ScasMinAgent(TD3Agent):
     # ====================
     # Actor loss
     # ====================    
-    def loss_correction(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_correction(self, batch: Batch) -> torch.Tensor:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( alpha* ( V' - V ) ) * ||M(ps,a) - s'||^2]
-        s, _, _, _, sn = batch
+        s, _, _, sn, _ = batch
         a = self.actor.pi(s)
         v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))
         an = self.actor.pi(sn)
@@ -126,7 +123,7 @@ class ScasMinAgent(TD3Agent):
         mse_M = (self.dynamics(ps, a) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
-    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
         return (1.0 - self.lmbda) * self.loss_td3(batch) + self.lmbda * self.loss_correction(batch)
 
 

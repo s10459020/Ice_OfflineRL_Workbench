@@ -1,16 +1,18 @@
-﻿import gymnasium as gym
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
 
 from ice_offline.agent.bc_stochastic import BCStochasticAgent
-from ice_offline.dataset._spec import Dataset, TorchBuffer
+from ice_offline.dataset._spec import Dataset
+from ice_offline.dataset._types import Batch
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.data.state.hopper import HopperState, HopperStateIO
-from ice_offline.data.state.op_collector import StateCollectWrapper
-from ice_offline.data.state.op_dataset import StateDataset
+from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.state.hopper import HopperState, HopperStateIO
+from ice_offline.store.state.op_collector import StateCollectWrapper
+from ice_offline.store.state.op_dataset import StateDataset
 from ice_offline.run.evaluator import Evaluator
+from ice_offline.tools.paths import dataset_root
 from ice_offline.tools.printer import print_stage
 
 
@@ -27,13 +29,13 @@ DEVICE = "cuda:0"
 BATCH_SIZE = 256
 
 
-def eval_loss_pi(agent: BCStochasticAgent, batch: TorchBuffer) -> dict[str, float]:
+def eval_loss_pi(agent: BCStochasticAgent, batch: Batch) -> dict[str, float]:
     with torch.no_grad():
-        return {"1. loss_actor": float(agent.loss_actor(batch.obs_list, batch.act_list).item())}
+        return {"1. loss_actor": float(agent.loss_actor(batch[0], batch[1]).item())}
 
 
-def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"2. return": float(batch.rew_list.sum().item())}
+def eval_return(batch: Batch) -> dict[str, float]:
+    return {"2. return": float(batch[2].sum().item())}
 
 
 def train(
@@ -114,14 +116,14 @@ def collect(
     )
 
     minari_data = minari_col.save(f"train/{task_id}")
-    state_data = state_col.save(f"train/{task_id}")
+    state_data = state_col.save(dataset_root() / "train" / task_id / "data" / "main_data.hdf5")
     minari_col.close()
 
     return minari_data, state_data
 
 
 if __name__ == "__main__":
-    dataset = DATASET_CLASS(device=DEVICE).load()
+    dataset = DATASET_CLASS(device=DEVICE)
     minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")

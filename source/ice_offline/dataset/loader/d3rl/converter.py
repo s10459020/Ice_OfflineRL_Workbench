@@ -1,13 +1,14 @@
-﻿from collections.abc import Iterable
+from collections.abc import Iterable
 
 import d3rlpy
 import numpy as np
 
-from ice_offline.data.minari.loader import MinariLoader
-from ice_offline.tools.paths import minari_root
+from ice_offline.dataset._types import Episode
+from ice_offline.dataset.loader.minari.loader import MinariLoader
+from ice_offline.tools.paths import dataset_root
 
 
-def _to_flatten(minari_episodes: Iterable) -> list[d3rlpy.dataset.Episode]:
+def _to_flatten(minari_episodes: Iterable[Episode]) -> list[d3rlpy.dataset.Episode]:
     """Converts loaded Minari episodes into d3rlpy Episode list."""
     episodes: list[d3rlpy.dataset.Episode] = []
 
@@ -37,10 +38,10 @@ def _to_flatten(minari_episodes: Iterable) -> list[d3rlpy.dataset.Episode]:
 
 def to_buffer(dataset_id: str, mode: str = "flatten") -> d3rlpy.dataset.ReplayBuffer:
     """Returns train-ready d3rlpy ReplayBuffer converted from Minari dataset id."""
-    dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
-    minari_dataset = MinariLoader(dataset_path)
+    path = dataset_root() / dataset_id / "data" / "main_data.hdf5"
+    minari_dataset = MinariLoader(path)
     if mode == "flatten":
-        episodes = _to_flatten(minari_dataset.iterate_episodes())
+        episodes = _to_flatten(minari_dataset.load_episodes())
     else:
         raise ValueError(f"Unsupported convert mode: {mode}")
     return d3rlpy.dataset.create_infinite_replay_buffer(episodes=episodes)

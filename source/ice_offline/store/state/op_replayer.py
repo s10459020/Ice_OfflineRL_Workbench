@@ -3,27 +3,22 @@
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.data.minari.loader import MinariLoader
-from ice_offline.data.state._spec import StateIO
-from ice_offline.data.state.op_dataset import StateDataset
-from ice_offline.tools.paths import minari_root
+from ice_offline.store.state._spec import StateIO
+from ice_offline.store.state.op_dataset import StateDataset
 
 
 class StateInjectWrapper(gym.Wrapper):
     def __init__(
         self,
         env: gym.Env,
-        dataset_id: str,
+        dataset,
         state_cls: type,
         state_io_cls: Type[StateIO],
     ) -> None:
         super().__init__(env)
+        self.dataset = dataset
         self._state_io = state_io_cls(env)
-        self._state_dataset = StateDataset.load_dataset(path=StateDataset.path(dataset_id), state_cls=state_cls)
-
-        dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
-        self.dataset = MinariLoader(dataset_path)
-        self.total_episodes = self.dataset.total_episodes
+        self._state_dataset = StateDataset.load_dataset(path=dataset.path.with_name("state_data.hdf5"), state_cls=state_cls)
 
         self._episode_index: int | None = None
         self._transition_index: int | None = None
@@ -74,10 +69,10 @@ class StateInjectWrapper(gym.Wrapper):
             return options["episode_index"]
         if seed is not None:
             rng = np.random.default_rng(seed)
-            return rng.integers(low=0, high=self.total_episodes)
+            return rng.integers(low=0, high=self.dataset.episode_count)
         if self._episode_index is None:
             return 0
-        return (self._episode_index + 1) % self.total_episodes
+        return (self._episode_index + 1) % self.dataset.episode_count
 
     def _frozen_step(self):
         transition_index = self._transition_index
@@ -86,7 +81,7 @@ class StateInjectWrapper(gym.Wrapper):
         return obs, 0.0, True, False, info
 
     def _load_episode_payload(self, episode_index: int) -> None:
-        trajectory = self.dataset[episode_index]
+        trajectory = self.dataset.episodes[episode_index]
         transition_count = len(trajectory.rewards)
         self._transition_count = transition_count
         self._actions = list(trajectory.actions)
@@ -112,19 +107,17 @@ class StateInjectWrapper(gym.Wrapper):
 
 
 def make_replayer(
-    dataset_id: str,
+    dataset,
     state_cls: type,
     state_io_cls: Type[StateIO],
     eval_env: gym.Env | None = None,
     render_mode: str | None = "human",
 ):
     if eval_env is None:
-        dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
-        dataset = MinariLoader(dataset_path)
         eval_env = gym.make(dataset.env_id, render_mode=render_mode)
     return StateInjectWrapper(
         env=eval_env,
-        dataset_id=dataset_id,
+        dataset=dataset,
         state_cls=state_cls,
         state_io_cls=state_io_cls,
     )

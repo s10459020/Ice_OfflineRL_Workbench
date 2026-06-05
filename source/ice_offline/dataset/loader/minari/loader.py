@@ -6,73 +6,24 @@ import h5py
 import numpy as np
 import torch
 
-from ice_offline.dataset._spec import TorchBuffer
-
-
-class MinariEpisode:
-    def __init__(
-        self,
-        observations: Any,
-        actions: np.ndarray,
-        rewards: np.ndarray,
-        terminations: np.ndarray,
-        truncations: np.ndarray,
-        infos: Any,
-    ) -> None:
-        self.observations = observations
-        self.actions = actions
-        self.rewards = rewards
-        self.terminations = terminations
-        self.truncations = truncations
-        self.infos = infos
+from ice_offline.dataset._types import Buffer, Episode, Metadata
 
 
 class MinariLoader:
-    def __init__(self, dataset_path: str | Path, device: str = "cpu") -> None:
-        self.dataset_path = Path(dataset_path)
+    # ====================
+    # Init
+    # ====================
+    def __init__(self, path: Path, device: str = "cpu") -> None:
+        self.path = Path(path)
         self.device = device
-        self.metadata_path = self.dataset_path.parent / "metadata.json"
-        self.metadata = self._read_metadata(self.metadata_path)
-        self.dataset_id = self.metadata.get("dataset_id")
-        self.env_id = self._read_env_id(self.metadata)
+        self.metadata_path = self.path.parent / "metadata.json"
+        raw_metadata = self._read_metadata(self.metadata_path)
+        self.dataset_id = raw_metadata.get("dataset_id")
 
-        self.episodes, self.buffer = self._load_data(self.dataset_path)
-        self._episode_keys = sorted(self.episodes.keys(), key=lambda key: int(key.split("_")[1]))
-        self.total_episodes = len(self._episode_keys)
-        self.episode_steps = [int(self.episodes[key]["rewards"].shape[0]) for key in self._episode_keys]
-        self.total_steps = int(sum(self.episode_steps))
-        self.obs_shape = tuple(int(x) for x in self.buffer.obs_list.shape[1:])
-        self.act_shape = tuple(int(x) for x in self.buffer.act_list.shape[1:])
-        self.obs_dim = int(np.prod(self.obs_shape)) if self.obs_shape else 1
-        self.act_dim = int(np.prod(self.act_shape)) if self.act_shape else 1
-        self.count = int(self.buffer.obs_list.shape[0])
-
-    def __getitem__(self, episode_index: int) -> MinariEpisode:
-        episode = self.episodes[self._episode_keys[episode_index]]
-        return MinariEpisode(
-            observations=episode["observations"],
-            actions=episode["actions"],
-            rewards=episode["rewards"],
-            terminations=episode["terminations"],
-            truncations=episode["truncations"],
-            infos=episode["infos"],
-        )
-
-    def iterate_episodes(self):
-        for episode_key in self._episode_keys:
-            episode = self.episodes[episode_key]
-            yield MinariEpisode(
-                observations=episode["observations"],
-                actions=episode["actions"],
-                rewards=episode["rewards"],
-                terminations=episode["terminations"],
-                truncations=episode["truncations"],
-                infos=episode["infos"],
-            )
-
-    def _load_data(self, dataset_path: Path) -> tuple[dict[str, dict[str, Any]], TorchBuffer]:
-        print(f"[data] loading: {dataset_path}")
-        episodes: dict[str, dict[str, Any]] = {}
+    # ====================
+    # Loading
+    # ====================
+    def load_buffer(self) -> Buffer:
         obs_list: list[np.ndarray | dict[str, np.ndarray]] = []
         next_obs_list: list[np.ndarray | dict[str, np.ndarray]] = []
         act_list: list[np.ndarray] = []
@@ -80,28 +31,15 @@ class MinariLoader:
         term_list: list[np.ndarray] = []
         trunc_list: list[np.ndarray] = []
 
-        with h5py.File(dataset_path, "r") as h5_file:
+        with h5py.File(self.path, "r") as h5_file:
             episode_keys = self._episode_keys_from_h5(h5_file)
-            total = len(episode_keys)
-            print(f"[data] episodes={total}")
-            for i, episode_key in enumerate(episode_keys):
+            for episode_key in episode_keys:
                 episode = h5_file[episode_key]
-
                 observations = self._read_node(episode["observations"])
                 actions = np.asarray(episode["actions"])
                 rewards = np.asarray(episode["rewards"])
                 terminations = np.asarray(episode["terminations"])
                 truncations = np.asarray(episode["truncations"])
-                infos = self._read_node(episode["infos"])
-
-                episodes[episode_key] = {
-                    "observations": observations,
-                    "actions": actions,
-                    "rewards": rewards,
-                    "terminations": terminations,
-                    "truncations": truncations,
-                    "infos": infos,
-                }
 
                 obs_list.append(self._slice_obs(observations, 0, -1))
                 next_obs_list.append(self._slice_obs(observations, 1, None))
@@ -109,52 +47,92 @@ class MinariLoader:
                 rew_list.append(rewards)
                 term_list.append(terminations)
                 trunc_list.append(truncations)
-                if (i + 1) % 100 == 0 or (i + 1) == total:
-                    print(f"[data] loaded {i + 1}/{total} episodes")
 
-        print("[data] concatenating buffer arrays...")
         term = np.concatenate(term_list, axis=0)
         trunc = np.concatenate(trunc_list, axis=0)
-        buffer = TorchBuffer(
-            obs_list=torch.as_tensor(self._concat_obs(obs_list), dtype=torch.float32, device=self.device),
-            next_obs_list=torch.as_tensor(self._concat_obs(next_obs_list), dtype=torch.float32, device=self.device),
-            act_list=torch.as_tensor(np.concatenate(act_list, axis=0), dtype=torch.float32, device=self.device),
-            rew_list=torch.as_tensor(np.concatenate(rew_list, axis=0), dtype=torch.float32, device=self.device),
-            done_list=torch.as_tensor(np.logical_or(term, trunc), dtype=torch.float32, device=self.device),
+        buffer = Buffer(
+            observations=torch.as_tensor(self._concat_obs(obs_list), dtype=torch.float32, device=self.device),
+            next_observations=torch.as_tensor(self._concat_obs(next_obs_list), dtype=torch.float32, device=self.device),
+            actions=torch.as_tensor(np.concatenate(act_list, axis=0), dtype=torch.float32, device=self.device),
+            rewards=torch.as_tensor(np.concatenate(rew_list, axis=0).reshape(-1, 1), dtype=torch.float32, device=self.device),
+            dones=torch.as_tensor(np.logical_or(term, trunc).reshape(-1, 1), dtype=torch.float32, device=self.device),
         )
-        print("[data] buffer ready")
-        return episodes, buffer
+        return buffer
 
+    def load_episodes(self) -> list[Episode]:
+        episodes: list[Episode] = []
+        with h5py.File(self.path, "r") as h5_file:
+            episode_keys = self._episode_keys_from_h5(h5_file)
+            for episode_key in episode_keys:
+                episode = h5_file[episode_key]
+                episodes.append(
+                    Episode(
+                        observations=self._read_node(episode["observations"]),
+                        actions=np.asarray(episode["actions"]),
+                        rewards=np.asarray(episode["rewards"]),
+                        terminations=np.asarray(episode["terminations"]),
+                        truncations=np.asarray(episode["truncations"]),
+                        infos=self._read_node(episode["infos"]),
+                    )
+                )
+
+        return episodes
+
+    # ====================
+    # Metadata
+    # ====================
+    def load_metadata(self) -> Metadata:
+        raw_metadata = self._read_metadata(self.metadata_path)
+        with h5py.File(self.path, "r") as h5_file:
+            episode_keys = self._episode_keys_from_h5(h5_file)
+            episode_steps = [int(h5_file[key]["rewards"].shape[0]) for key in episode_keys]
+            count = int(sum(episode_steps))
+
+            if episode_keys:
+                first = h5_file[episode_keys[0]]
+                observations = self._read_node(first["observations"])
+                actions = np.asarray(first["actions"])
+                if isinstance(observations, dict):
+                    first_obs = next(iter(observations.values()))
+                    obs_shape = tuple(int(x) for x in first_obs.shape[1:])
+                else:
+                    obs_shape = tuple(int(x) for x in observations.shape[1:])
+                act_shape = tuple(int(x) for x in actions.shape[1:])
+            else:
+                obs_shape = ()
+                act_shape = ()
+
+        return Metadata(
+            env_id=self._read_env_id(raw_metadata),
+            obs_shape=obs_shape,
+            act_shape=act_shape,
+            obs_dim=int(np.prod(obs_shape)) if obs_shape else 1,
+            act_dim=int(np.prod(act_shape)) if act_shape else 1,
+            count=count,
+            raw=raw_metadata,
+        )
+
+    # ====================
+    # HDF5 helpers
+    # ====================
     def _read_metadata(self, metadata_path: Path) -> dict:
         if not metadata_path.exists():
-            print(f"[metadata] missing: {metadata_path}")
             return {}
-        print(f"[metadata] loading: {metadata_path}")
         with metadata_path.open("r", encoding="utf-8") as file:
             metadata = json.load(file)
-        decoded = self._decode_metadata(metadata, path="$", depth=0)
-        print("[metadata] decode done")
-        return decoded
+        return self._decode_metadata(metadata)
 
-    def _decode_metadata(self, value, path: str, depth: int):
-        print(f"[metadata] depth={depth} path={path} type={type(value).__name__}")
+    def _decode_metadata(self, value):
         if isinstance(value, dict):
-            return {
-                key: self._decode_metadata(item, path=f"{path}.{key}", depth=depth + 1)
-                for key, item in value.items()
-            }
+            return {key: self._decode_metadata(item) for key, item in value.items()}
         if isinstance(value, list):
-            return [
-                self._decode_metadata(item, path=f"{path}[{i}]", depth=depth + 1)
-                for i, item in enumerate(value)
-            ]
+            return [self._decode_metadata(item) for item in value]
         if isinstance(value, str):
             try:
                 parsed = json.loads(value)
             except json.JSONDecodeError:
                 return value
-            print(f"[metadata] parsed-json path={path}")
-            return self._decode_metadata(parsed, path=path, depth=depth + 1)
+            return self._decode_metadata(parsed)
         return value
 
     def _read_env_id(self, metadata: dict) -> str:
@@ -171,10 +149,10 @@ class MinariLoader:
             return np.asarray(node)
         return {key: self._read_node(node[key]) for key in node.keys()}
 
-    def _slice_obs(self, obs_all, start: int, stop: int | None):
-        if isinstance(obs_all, dict):
-            return {key: value[start:stop] for key, value in obs_all.items()}
-        return obs_all[start:stop]
+    def _slice_obs(self, observations, start: int, stop: int | None):
+        if isinstance(observations, dict):
+            return {key: value[start:stop] for key, value in observations.items()}
+        return observations[start:stop]
 
     def _concat_obs(self, obs_list: list[np.ndarray | dict[str, np.ndarray]]):
         first = obs_list[0]

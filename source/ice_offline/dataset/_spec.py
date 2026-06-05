@@ -1,17 +1,11 @@
-﻿from dataclasses import dataclass, field
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import gymnasium as gym
 import torch
 
-
-@dataclass
-class TorchBuffer:
-    obs_list: torch.Tensor
-    next_obs_list: torch.Tensor
-    act_list: torch.Tensor
-    rew_list: torch.Tensor
-    done_list: torch.Tensor
+from ice_offline.dataset._types import Batch, Buffer, Episode, Metadata
+from ice_offline.dataset.loader._spec import DatasetLoader
 
 
 @dataclass
@@ -21,61 +15,94 @@ class Dataset:
     # ====================
     id: str
     env_id: str = ""
-    dataset_path: str | Path = Path()
+    path: Path = Path()
     seed: int = 0
     device: str = "cpu"
 
     # ====================
     # Loaded dataset info
     # ====================
-    buffer: TorchBuffer = field(init=False)
-    obs_shape: tuple[int, ...] = ()
-    act_shape: tuple[int, ...] = ()
-    obs_dim: int = 0
-    act_dim: int = 0
-    count: int = 0
+    loader: DatasetLoader = field(init=False)
+    _buffer: Buffer | None = field(init=False, default=None)
+    _episodes: list[Episode] | None = field(init=False, default=None)
+    _metadata: Metadata | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
-        self.dataset_path = Path(self.dataset_path)
         torch.manual_seed(self.seed)
+        self.loader = self.make_loader()
+        self._metadata = self.loader.load_metadata()
+        if not self.env_id:
+            self.env_id = self._metadata.env_id
 
     # ====================
     # Public API
     # ====================
-    def load(self, dataset_path: str | Path):
-        self.dataset_path = Path(dataset_path)
+    @property
+    def buffer(self) -> Buffer:
+        if self._buffer is None:
+            self._buffer = self.loader.load_buffer()
+        return self._buffer
 
-        loader = self.make_loader()
-        self.buffer = loader.buffer
-        self.obs_shape = loader.obs_shape
-        self.act_shape = loader.act_shape
-        self.obs_dim = loader.obs_dim
-        self.act_dim = loader.act_dim
-        self.count = loader.count
-        if not self.env_id:
-            self.env_id = loader.env_id
+    @property
+    def episodes(self) -> list[Episode]:
+        if self._episodes is None:
+            self._episodes = self.loader.load_episodes()
+        return self._episodes
 
-        return self
+    @property
+    def metadata(self) -> Metadata:
+        if self._metadata is None:
+            self._metadata = self.loader.load_metadata()
+        return self._metadata
+
+    @property
+    def obs_shape(self) -> tuple[int, ...]:
+        return self.metadata.obs_shape
+
+    @property
+    def act_shape(self) -> tuple[int, ...]:
+        return self.metadata.act_shape
+
+    @property
+    def obs_dim(self) -> int:
+        return self.metadata.obs_dim
+
+    @property
+    def act_dim(self) -> int:
+        return self.metadata.act_dim
+
+    @property
+    def count(self) -> int:
+        return self.metadata.count
+
+    @property
+    def episode_count(self) -> int:
+        return len(self.episodes)
+
+    @property
+    def step_counts(self) -> list[int]:
+        return [int(episode.rewards.shape[0]) for episode in self.episodes]
 
     def set_seed(self, seed: int | None = None) -> None:
         torch.manual_seed(seed)
 
-    def sample_batch(self, batch_size: int):
-        idx = torch.randint(self.count, (batch_size,), device=self.buffer.obs_list.device)
-        return TorchBuffer(
-            obs_list=self.buffer.obs_list[idx],
-            next_obs_list=self.buffer.next_obs_list[idx],
-            act_list=self.buffer.act_list[idx],
-            rew_list=self.buffer.rew_list[idx],
-            done_list=self.buffer.done_list[idx],
+    def sample_batch(self, batch_size: int) -> Batch:
+        buffer = self.buffer
+        idx = torch.randint(self.count, (batch_size,), device=self.device)
+        return (
+            buffer.observations[idx],
+            buffer.actions[idx],
+            buffer.rewards[idx],
+            buffer.next_observations[idx],
+            buffer.dones[idx],
         )
 
     # ====================
     # Loader binding
     # ====================
     def make_loader(self):
-        from ice_offline.data.minari.loader import MinariLoader
-        loader = MinariLoader(self.dataset_path, device=self.device)
+        from ice_offline.dataset.loader.minari.loader import MinariLoader
+        loader = MinariLoader(self.path, device=self.device)
         return loader
 
     # ====================

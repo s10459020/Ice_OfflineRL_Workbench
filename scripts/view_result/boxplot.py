@@ -9,31 +9,31 @@ import matplotlib.pyplot as plt
 from view_result.returns import returns
 from view_result.skip import skip_missing_data
 from view_result.task import boxplot_output_path
-from view_result.task import bottom_dataset_path
+from view_result.task import bottom_path
 from view_result.task import dataset_group_name
-from view_result.task import test_dataset_path
-from view_result.task import top_dataset_path
+from view_result.task import test_path
+from view_result.task import top_path
 
 
-def add_member(labels: list[str], values: list[list[float]], label: str, dataset_path: str) -> None:
-    if not dataset_path:
+def add_member(labels: list[str], values: list[list[float]], label: str, path: str) -> None:
+    if not path:
         return
-    if skip_missing_data(dataset_path):
+    if skip_missing_data(path):
         return
     labels.append(label)
-    values.append(returns(dataset_path))
+    values.append(returns(path))
 
 
 def save_boxplot(index: int, dataset_cls, agent_list: list[str]) -> Path:
     group_name = dataset_group_name(dataset_cls)
-    bottom_path = bottom_dataset_path(dataset_cls)
-    top_path = top_dataset_path(dataset_cls)
+    bottom_path = bottom_path(dataset_cls)
+    top_path = top_path(dataset_cls)
     labels = []
     values = []
 
     add_member(labels, values, "random", bottom_path)
     for agent_id in agent_list:
-        add_member(labels, values, agent_id, test_dataset_path(dataset_cls, agent_id))
+        add_member(labels, values, agent_id, test_path(dataset_cls, agent_id))
     add_member(labels, values, "dataset", top_path)
 
     if len(values) == 0:

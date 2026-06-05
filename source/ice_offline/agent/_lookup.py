@@ -10,7 +10,7 @@ from ice_offline.agent.discrete.iql_discrete import IQLDiscreteAgent
 from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
 from ice_offline.agent.scas_aspl import ScasAsplAgent
-from ice_offline.agent._spec import TorchAgent
+from ice_offline.agent._spec import Agent
 
 
 AGENT_LOOKUP = {
@@ -29,7 +29,5 @@ AGENT_LOOKUP = {
 }
 
 
-def get_agent(agent_id: str, obs_size: int, act_size: int) -> TorchAgent:
+def get_agent(agent_id: str, obs_size: int, act_size: int) -> Agent:
     return AGENT_LOOKUP[agent_id](obs_size=obs_size, act_size=act_size)
-
-

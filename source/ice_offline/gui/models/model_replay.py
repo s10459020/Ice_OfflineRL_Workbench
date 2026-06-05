@@ -4,10 +4,10 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.data.minari.loader import MinariLoader
-from ice_offline.data.state._spec import State, StateIO
-from ice_offline.data.state.op_converter import StateConverter
-from ice_offline.data.state.op_dataset import StateDataset
+from ice_offline.dataset._spec import Dataset
+from ice_offline.store.state._spec import State, StateIO
+from ice_offline.store.state.op_converter import StateConverter
+from ice_offline.store.state.op_dataset import StateDataset
 
 
 @dataclass(frozen=True)
@@ -32,19 +32,19 @@ class ReplayModel:
 
         main_data_path = Path(path)
         print("[replay] loading minari buffer ...")
-        minari_dataset = MinariLoader(path)
+        dataset = Dataset(id=main_data_path.parent.parent.name, path=main_data_path)
         print("[replay] minari loaded")
 
         state_data_path = main_data_path.with_name("state_data.hdf5")
         if not state_data_path.exists():
             print(f"[replay] missing state file -> convert: {state_data_path}")
-            converter = StateConverter(dataset=minari_dataset, converter_cls=self._state_converter_cls)
+            converter = StateConverter(dataset=dataset, converter_cls=self._state_converter_cls)
             converter.convert()
             print("[replay] state convert done")
         else:
             print(f"[replay] state file found: {state_data_path}")
 
-        env_id = minari_dataset.env_id
+        env_id = dataset.env_id
         print(f"[replay] creating env: {env_id}")
         self._env = gym.make(env_id, render_mode="rgb_array")
         self._env.reset()

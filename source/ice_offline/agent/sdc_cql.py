@@ -3,10 +3,8 @@ from dataclasses import dataclass
 import torch
 import torch.nn.functional as F
 
-from ice_offline.agent._spec import AgentBatch
-from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.cql import CQLAgent
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.dataset._types import Batch
 
 
 class _DynamicsModel(torch.nn.Module):
@@ -77,15 +75,13 @@ class SDCCQLAgent(CQLAgent):
             amsgrad=False,
         )
 
-    def update(self, batch: TorchBuffer):
-        batch = agent_batch(batch)
-
+    def update(self, batch: Batch):
         self.update_state_models(batch)
         self.update_critic(batch)
         self.update_actor(batch)
         self.critic.update_target_soft()
 
-    def update_state_models(self, batch: AgentBatch) -> None:
+    def update_state_models(self, batch: Batch) -> None:
         self.dynamics_optimizer.zero_grad()
         self.transition_optimizer.zero_grad()
         model_loss = self.loss_state_models(batch)
@@ -112,21 +108,21 @@ class SDCCQLAgent(CQLAgent):
         self.dynamics_optimizer.load_state_dict(state["dynamics_optimizer"])
         self.transition_optimizer.load_state_dict(state["transition_optimizer"])
 
-    def loss_state_models(self, batch: AgentBatch) -> torch.Tensor:
-        o, a, _, _, on = batch
+    def loss_state_models(self, batch: Batch) -> torch.Tensor:
+        o, a, _, on, _ = batch
         dynamics_loss = F.mse_loss(self.dynamics(o, a), on)
         transition_loss = F.mse_loss(self.transition(o, 1).squeeze(1), on)
         return dynamics_loss + transition_loss
 
-    def loss_dynamics(self, batch: AgentBatch) -> torch.Tensor:
-        o, a, _, _, on = batch
+    def loss_dynamics(self, batch: Batch) -> torch.Tensor:
+        o, a, _, on, _ = batch
         return F.mse_loss(self.dynamics(o, a), on)
 
-    def loss_transition(self, batch: AgentBatch) -> torch.Tensor:
-        o, _, _, _, on = batch
+    def loss_transition(self, batch: Batch) -> torch.Tensor:
+        o, _, _, on, _ = batch
         return F.mse_loss(self.transition(o, 1).squeeze(1), on)
 
-    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
         o, _, _, _, _ = batch
         a, _ = self.actor.sample(o)
         q_t = self.critic.q_min(o, a)

@@ -1,9 +1,10 @@
-﻿from typing import Any, Type
+﻿from pathlib import Path
+from typing import Any, Type
 
 import gymnasium as gym
 
-from ice_offline.data.state._spec import State, StateIO
-from ice_offline.data.state.op_dataset import StateDataset
+from ice_offline.store.state._spec import State, StateIO
+from ice_offline.store.state.op_dataset import StateDataset
 
 
 class StateCollectWrapper(gym.Wrapper):
@@ -20,10 +21,10 @@ class StateCollectWrapper(gym.Wrapper):
     # ====================
     # Public API
     # ====================
-    def save(self, dataset_id: str) -> StateDataset:
+    def save(self, path: Path) -> StateDataset:
         self._end_episode()
         return StateDataset.write(
-            path=StateDataset.path(dataset_id),
+            path=path.with_name("state_data.hdf5"),
             state_cls=self._state_cls,
             episodes=self._episodes,
         )

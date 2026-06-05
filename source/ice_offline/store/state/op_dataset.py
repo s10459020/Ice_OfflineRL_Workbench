@@ -1,11 +1,10 @@
-﻿from pathlib import Path
+from pathlib import Path
 from typing import Type
 
 import h5py
 import numpy as np
 
-from ice_offline.data.state._spec import State
-from ice_offline.tools.paths import minari_root
+from ice_offline.store.state._spec import State
 
 
 class StateDataset:
@@ -93,7 +92,3 @@ class StateDataset:
             counts.append(max(0, state_length - 1))
         return counts
 
-    @classmethod
-    def path(cls, dataset_id: str) -> Path:
-        base = minari_root()
-        return base / dataset_id / "data" / "state_data.hdf5"

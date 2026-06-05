@@ -6,8 +6,8 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch.distributions import Normal
-from ice_offline.agent._spec import TorchAgent
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.agent._spec import Agent
+from ice_offline.dataset._types import Batch
 
 class _Pi(torch.nn.Module):
     def __init__(
@@ -51,7 +51,7 @@ class _Actor(torch.nn.Module):
 
 
 @dataclass
-class BCStochasticAgent(TorchAgent):
+class BCStochasticAgent(Agent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -91,9 +91,8 @@ class BCStochasticAgent(TorchAgent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: TorchBuffer):
-        o = batch.obs_list
-        a = batch.act_list
+    def update(self, batch: Batch):
+        o, a, _, _, _ = batch
         self.update_actor(o, a)
 
     def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:

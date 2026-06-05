@@ -6,7 +6,6 @@ from _lib import sample_transition
 from _lib import torch_buffer
 from d3rlpy_master.d3rlpy import algos
 from d3rlpy_master.d3rlpy.torch_utility import TorchMiniBatch
-from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.td3bc_source import TD3BCSourceAgent
 from ice_offline.tools.printer import print_stage
 
@@ -204,7 +203,7 @@ def compare_loss(our: TD3BCSourceAgent, ref) -> None:
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
         batch = _torch_batch(s, a, r, sn, d)
-        our_batch = agent_batch(torch_buffer(s, a, r, sn, d))
+        our_batch = torch_buffer(s, a, r, sn, d)
         a_pred = our.actor.pi(s)
 
         # loss bc

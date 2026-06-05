@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from ice_offline.agent._spec import model_ref
 from ice_offline.tools.paths import model_root

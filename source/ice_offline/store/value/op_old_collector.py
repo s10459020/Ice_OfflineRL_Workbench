@@ -1,4 +1,4 @@
-﻿
+
 from pathlib import Path
 from collections.abc import Callable
 from enum import IntEnum
@@ -7,7 +7,7 @@ from typing import Any
 import gymnasium as gym
 import h5py
 import numpy as np
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 class MiniGridDirection(IntEnum):
@@ -148,7 +148,7 @@ class OldValueCollector(gym.Wrapper):
     # Path
     # ====================
     def _resolve_value_path(self, dataset_id: str) -> Path:
-        base = minari_root()
+        base = dataset_root()
         return base / dataset_id / "data" / "value_data.hdf5"
 
     def _end_episode(self) -> None:

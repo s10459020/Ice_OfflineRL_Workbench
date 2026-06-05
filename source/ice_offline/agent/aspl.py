@@ -4,10 +4,10 @@ import torch
 import torch.nn.functional as F
 from scipy.stats import qmc
 
-from ice_offline.agent._spec import AgentBatch
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3 import TD3Critic
+from ice_offline.dataset._types import Batch
 
 
 class _Pi(torch.nn.Module):
@@ -196,10 +196,10 @@ class AsplAgent(TD3Agent):
         losses = [F.mse_loss(q_value, q_pseudo_reshape) for q_value in q_values]
         return sum(losses)
 
-    def loss_critic(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         # loss = TD + alpha * Punish
         # source use same noise target
-        s, a, r, d, sn = batch
+        s, a, r, sn, d = batch
         q_target = self.target_td3(sn, r, d)
         loss_td = self.loss_td_with_target(s, a, q_target)
         loss_aspl = self.loss_punish_with_target(s, a, q_target)
@@ -209,7 +209,7 @@ class AsplAgent(TD3Agent):
     # ====================
     # actor mathmatics
     # ====================  
-    def loss_td3(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
         # use q1 for actor update
         s, _, _, _, _ = batch
         a = self.actor.noise_action(self.actor.pi(s))

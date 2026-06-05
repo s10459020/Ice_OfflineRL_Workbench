@@ -15,7 +15,6 @@ from _lib import assert_callback
 from _lib import sample_transition
 from _lib import torch_buffer
 from ASPL_source.agent.policy.aspl_policy import ASPLPolicy
-from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.aspl import AsplAgent
 from ice_offline.tools.printer import print_stage
 import _lib
@@ -294,7 +293,7 @@ def compare_loss(ref: ASPLPolicy, our: AsplAgent) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
         s, a, r, sn, d = sample_transition(BATCH_SIZE, obs_size, act_size, "cpu")
-        batch = agent_batch(torch_buffer(s, a, r, sn, d))
+        batch = torch_buffer(s, a, r, sn, d)
         ref.total_it = i
         our.update_step = i
         ref.mean_abs_q = 0.0

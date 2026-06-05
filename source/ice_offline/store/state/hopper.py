@@ -3,7 +3,7 @@ from typing import Any
 
 import numpy as np
 
-from ice_offline.data.state._spec import State, StateIO
+from ice_offline.store.state._spec import State, StateIO
 
 
 @dataclass(frozen=True)

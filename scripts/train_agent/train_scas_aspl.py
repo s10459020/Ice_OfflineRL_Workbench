@@ -3,17 +3,18 @@ import minari
 import numpy as np
 import torch
 
-from ice_offline.agent._spec import agent_batch
 from ice_offline.agent.scas_aspl import ScasAsplAgent
 from ice_offline.agent.scas_min import ScasDynamic
-from ice_offline.dataset._spec import Dataset, TorchBuffer
+from ice_offline.dataset._spec import Dataset
+from ice_offline.dataset._types import Batch
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.data.state.hopper import HopperState
-from ice_offline.data.state.hopper import HopperStateIO
-from ice_offline.data.state.op_collector import StateCollectWrapper
-from ice_offline.data.state.op_dataset import StateDataset
+from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.state.hopper import HopperState
+from ice_offline.store.state.hopper import HopperStateIO
+from ice_offline.store.state.op_collector import StateCollectWrapper
+from ice_offline.store.state.op_dataset import StateDataset
 from ice_offline.run.evaluator import Evaluator
+from ice_offline.tools.paths import dataset_root
 from ice_offline.tools.printer import print_stage
 
 
@@ -28,17 +29,16 @@ SEED = 42
 DEVICE = "cuda:0"
 
 
-def eval_loss_dynamic(dynamics: ScasDynamic, batch: TorchBuffer) -> dict[str, float]:
-    s = batch.obs_list
-    a = batch.act_list
-    sn = batch.next_obs_list
+def eval_loss_dynamic(dynamics: ScasDynamic, batch: Batch) -> dict[str, float]:
+    s = batch[0]
+    a = batch[1]
+    sn = batch[3]
     with torch.no_grad():
         return {"loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
 
 
-def eval_loss_agent(agent: ScasAsplAgent, batch: TorchBuffer) -> dict[str, float]:
-    batch = agent_batch(batch)
-    s, a, r, d, sn = batch
+def eval_loss_agent(agent: ScasAsplAgent, batch: Batch) -> dict[str, float]:
+    s, a, r, sn, d = batch
     with torch.no_grad():
         q_target = agent.target_td3(sn, r, d)
         loss_td = agent.loss_td_with_target(s, a, q_target)
@@ -55,8 +55,8 @@ def eval_loss_agent(agent: ScasAsplAgent, batch: TorchBuffer) -> dict[str, float
         }
 
 
-def eval_return(batch: TorchBuffer) -> dict[str, float]:
-    return {"return": float(batch.rew_list.sum().item())}
+def eval_return(batch: Batch) -> dict[str, float]:
+    return {"return": float(batch[2].sum().item())}
 
 
 def train(
@@ -162,14 +162,14 @@ def collect(
     )
 
     minari_data = minari_col.save(task_id)
-    state_data = state_col.save(task_id)
+    state_data = state_col.save(dataset_root() / task_id / "data" / "main_data.hdf5")
     minari_col.close()
 
     return minari_data, state_data
 
 
 if __name__ == "__main__":
-    dataset = HopperSimpleDataset().load()
+    dataset = HopperSimpleDataset()
     minari_data, state_data = collect(dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")

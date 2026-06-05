@@ -7,7 +7,7 @@ def ensure_dir(path: Path) -> Path:
     return path
 
 
-def minari_root() -> Path:
+def dataset_root() -> Path:
     root = os.getenv("MINARI_DATASETS_PATH")
     if root:
         return Path(root)

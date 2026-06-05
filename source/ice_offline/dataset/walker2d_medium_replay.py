@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from pathlib import Path
 
-from ice_offline.data.d4rl.loader import D4rlLoader
+from ice_offline.dataset.loader.d4rl.loader import D4rlLoader
+from ice_offline.tools.paths import dataset_root
 from ice_offline.dataset._spec import Dataset
 
 
@@ -9,10 +10,10 @@ from ice_offline.dataset._spec import Dataset
 class Walker2dMediumReplayDataset(Dataset):
     id: str = "walker2d_medium_replay"
     env_id: str = "Walker2d-v5"
-    dataset_path: str | Path = Path("tmps/datasets/d4rl/walker2d_medium_replay-v2.hdf5")
+    path: Path = dataset_root() / Path("d4rl/walker2d_medium_replay-v2/d4rl_data.hdf5")
 
-    def load(self, dataset_path: str | Path | None = None):
-        return super().load(dataset_path or self.dataset_path)
 
     def make_loader(self):
-        return D4rlLoader(self.dataset_path, device=self.device)
+        return D4rlLoader(self.path, device=self.device)
+
+

@@ -1,9 +1,9 @@
-﻿
+
 from pathlib import Path
 
 import h5py
 import numpy as np
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 class OldValueLoader:
@@ -38,7 +38,7 @@ class OldValueLoader:
     # Internal
     # ====================
     def _resolve_value_path(self, dataset_id: str) -> Path:
-        base = minari_root()
+        base = dataset_root()
         return base / dataset_id / "data" / "value_data.hdf5"
 
     def _list_episode_keys(self) -> list[str]:

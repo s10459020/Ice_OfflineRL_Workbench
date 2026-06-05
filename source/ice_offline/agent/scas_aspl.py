@@ -1,12 +1,12 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import torch
 import torch.nn.functional as F
 
-from ice_offline.agent._spec import AgentBatch
 from ice_offline.agent.aspl import AsplActor
 from ice_offline.agent.aspl import AsplCritic
 from ice_offline.agent.scas_min import ScasMinAgent
+from ice_offline.dataset._types import Batch
 
 
 @dataclass
@@ -54,9 +54,9 @@ class ScasAsplAgent(ScasMinAgent):
         q_values = self.critic.q_all(s_reshape, a_samples_reshape)
         return sum(F.mse_loss(q, q_pseudo_reshape) for q in q_values)
 
-    def loss_critic(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         # loss = L_TD3 + alpha_ASPL * L_ASPL
-        s, a, r, d, sn = batch
+        s, a, r, sn, d = batch
         q_target = self.target_td3(sn, r, d)
         loss_td = self.loss_td_with_target(s, a, q_target)
         loss_punish = self.loss_punish_with_target(s, a, q_target)

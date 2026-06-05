@@ -3,16 +3,15 @@
 import torch
 import torch.nn.functional as F
 
-from ice_offline.agent._spec import AgentBatch
-from ice_offline.agent._spec import TorchAgent
+from ice_offline.agent._spec import Agent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.sdc_cql import _DynamicsModel
 from ice_offline.agent.sdc_cql import _TransitionModel
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.dataset._types import Batch
 
 
 @dataclass
-class SDCCQLPreModel(TorchAgent):
+class SDCCQLPreModel(Agent):
     obs_size: int
     act_size: int
     state_transition_noise_size: int = 8
@@ -59,7 +58,7 @@ class SDCCQLPreModel(TorchAgent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: TorchBuffer):
+    def update(self, batch: Batch):
         self.dynamics_optimizer.zero_grad()
         self.transition_optimizer.zero_grad()
         loss = self.loss_state_models(batch)
@@ -83,20 +82,17 @@ class SDCCQLPreModel(TorchAgent):
     # ====================
     # State model loss
     # ====================
-    def loss_state_models(self, batch: TorchBuffer) -> torch.Tensor:
+    def loss_state_models(self, batch: Batch) -> torch.Tensor:
         return self.loss_dynamics(batch) + self.loss_transition(batch)
 
-    def loss_dynamics(self, batch: TorchBuffer) -> torch.Tensor:
+    def loss_dynamics(self, batch: Batch) -> torch.Tensor:
         # loss = E{s,a,s'~D}[ ||M(s,a)-s'||^2 ]
-        o = batch.obs_list
-        a = batch.act_list
-        on = batch.next_obs_list
+        o, a, _, on, _ = batch
         return F.mse_loss(self.dynamics(o, a), on)
 
-    def loss_transition(self, batch: TorchBuffer) -> torch.Tensor:
+    def loss_transition(self, batch: Batch) -> torch.Tensor:
         # loss = E{s,s'~D,z~N}[ ||U(s,z)-s'||^2 ]
-        o = batch.obs_list
-        on = batch.next_obs_list
+        o, _, _, on, _ = batch
         return F.mse_loss(self.transition(o, 1).squeeze(1), on)
 
 
@@ -147,7 +143,7 @@ class SDCCQLPreAgent(CQLAgent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor(self, batch: AgentBatch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
         # loss = -E{s~D,a~pi}[Q(s,a)] + weight * (SDC(s)-threshold)
         o, _, _, _, _ = batch
         a, _ = self.actor.sample(o)

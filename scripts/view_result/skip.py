@@ -1,20 +1,20 @@
 from pathlib import Path
 
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 SKIP = True
 
 
-def data_path(dataset_path: str) -> Path:
-    path = Path(dataset_path)
-    if path.exists() or dataset_path.startswith("tmps/"):
-        return path
-    return minari_root() / dataset_path
+def data_path(path: str) -> Path:
+    path_obj = Path(path)
+    if path_obj.exists() or path_obj.as_posix().startswith("tmps/"):
+        return path_obj
+    return dataset_root() / path_obj
 
 
-def data_exists(dataset_path: str) -> bool:
-    return data_path(dataset_path).exists()
+def data_exists(path: str) -> bool:
+    return data_path(path).exists()
 
 
 def skip_missing(label: str, path: str | Path) -> bool:
@@ -24,9 +24,9 @@ def skip_missing(label: str, path: str | Path) -> bool:
     return False
 
 
-def skip_missing_data(dataset_path: str) -> bool:
-    if SKIP and not data_exists(dataset_path):
-        print(f"skip missing: {dataset_path}")
+def skip_missing_data(path: str) -> bool:
+    if SKIP and not data_exists(path):
+        print(f"skip missing: {path}")
         return True
     return False
 

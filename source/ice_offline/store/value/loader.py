@@ -2,7 +2,7 @@ from pathlib import Path
 
 import h5py
 import numpy as np
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 
 class ValueLoader:
@@ -43,7 +43,7 @@ class ValueLoader:
     # helping
     # ====================
     def _resolve_data_path(self, dataset_id: str, data_file_name: str) -> Path:
-        return minari_root() / dataset_id / "data" / data_file_name
+        return dataset_root() / dataset_id / "data" / data_file_name
 
     def _list_episode_keys(self) -> list[str]:
         keys = [key for key in self._h5.keys() if key.startswith("episode_")]

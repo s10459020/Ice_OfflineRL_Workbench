@@ -1,30 +1,25 @@
-﻿import minari
-import gymnasium as gym
+﻿import gymnasium as gym
 
-from ice_offline.data.state.hopper import HopperState, HopperStateIO
-from ice_offline.data.state.hopper import HopperConverter
-from ice_offline.data.state.op_converter import StateConverter
-from ice_offline.data.state.op_replayer import StateInjectWrapper
-
-
-DATASET_ID = "mujoco/hopper/simple-v0"
-#DATASET_ID = "mujoco/hopper/medium-v0"
-ENV_ID = "Hopper-v5"
+from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.store.state.hopper import HopperState, HopperStateIO
+from ice_offline.store.state.hopper import HopperConverter
+from ice_offline.store.state.op_converter import StateConverter
+from ice_offline.store.state.op_replayer import StateInjectWrapper
 
 
 def main() -> None:
-    dataset = minari.load_dataset(DATASET_ID, download=True)
+    dataset = HopperSimpleDataset()
     converter = StateConverter(dataset=dataset, converter_cls=HopperConverter)
-    episodes = dataset.total_episodes
+    episodes = dataset.episode_count
 
     state_dataset = converter.convert()
     print(f"[convert] output={state_dataset.path}")
     print(f"[convert] all episodes done total={episodes}")
 
-    env = gym.make(ENV_ID, render_mode="human")
+    env = gym.make(dataset.env_id, render_mode="human")
     env = StateInjectWrapper(
         env=env,
-        dataset_id=DATASET_ID,
+        dataset=dataset,
         state_cls=HopperState,
         state_io_cls=HopperStateIO,
     )

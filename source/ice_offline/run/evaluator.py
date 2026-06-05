@@ -3,12 +3,12 @@ from typing import Callable
 
 import torch
 
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.dataset._types import Batch
 from ice_offline.tools.paths import eval_root
 
 
-OfflineEvalFn = Callable[[object, TorchBuffer], dict[str, float]]
-OnlineEvalFn = Callable[[TorchBuffer], dict[str, float]]
+OfflineEvalFn = Callable[[object, Batch], dict[str, float]]
+OnlineEvalFn = Callable[[Batch], dict[str, float]]
 
 
 class Evaluator:
@@ -88,12 +88,12 @@ class Evaluator:
                 done_list.append(torch.as_tensor(done, device=agent.device))
                 obs = next_obs
 
-            episode_batch = TorchBuffer(
-                obs_list=torch.stack(obs_list, dim=0),
-                act_list=torch.stack(act_list, dim=0),
-                rew_list=torch.stack(rew_list, dim=0),
-                next_obs_list=torch.stack(next_obs_list, dim=0),
-                done_list=torch.stack(done_list, dim=0),
+            episode_batch = (
+                torch.stack(obs_list, dim=0).float(),
+                torch.stack(act_list, dim=0).float(),
+                torch.stack(rew_list, dim=0).float().view(-1, 1),
+                torch.stack(next_obs_list, dim=0).float(),
+                torch.stack(done_list, dim=0).float().view(-1, 1),
             )
             values = eval_online_fn(episode_batch)
             for key, value in values.items():

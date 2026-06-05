@@ -6,11 +6,12 @@ from ice_offline.agent._spec import model_ref
 from ice_offline.agent.sdc_cql_pre import SDCCQLPreAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.tools.paths import dataset_root
 from ice_offline.tools.printer import print_stage
-from ice_offline.data.minari.collector import MinariCollectorWrapper
-from ice_offline.data.state.hopper import HopperState
-from ice_offline.data.state.hopper import HopperStateIO
-from ice_offline.data.state.op_collector import StateCollectWrapper
+from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.state.hopper import HopperState
+from ice_offline.store.state.hopper import HopperStateIO
+from ice_offline.store.state.op_collector import StateCollectWrapper
 
 
 MODEL_STEP = 200_000
@@ -84,14 +85,14 @@ def collect(
     )
 
     minari_data = minari_col.save(f"test/{task_id}")
-    state_data = state_col.save(f"test/{task_id}")
+    state_data = state_col.save(dataset_root() / "test" / task_id / "data" / "main_data.hdf5")
     minari_col.close()
 
     return returns, minari_data, state_data
 
 
 if __name__ == "__main__":
-    dataset = HopperSimpleDataset().load()
+    dataset = HopperSimpleDataset()
     returns, minari_data, state_data = collect(
         dataset=dataset,
         task_id=f"{dataset.id}-sdc_cql_pre-v0",

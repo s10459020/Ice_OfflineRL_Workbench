@@ -27,7 +27,7 @@ from ice_offline.dataset.walker2d_medium_replay import Walker2dMediumReplayDatas
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
 from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
 from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
-from ice_offline.tools.paths import minari_root
+from ice_offline.tools.paths import dataset_root
 
 RANDOM_DATASET_CLASS_BY_ENV_NAME = {
     "hopper": HopperRandomDataset,
@@ -68,32 +68,32 @@ def table_output_path(dataset_cls, name: str) -> Path:
     return view_root(dataset_cls) / "table" / name
 
 
-def is_d4rl_dataset_path(dataset_path: str) -> bool:
-    return dataset_path.startswith("tmps/datasets/d4rl/")
+def is_d4rl_path(path: str) -> bool:
+    return path.startswith("tmps/datasets/d4rl/")
 
 
-def source_dataset_path(dataset_cls) -> str:
+def source_path(dataset_cls) -> str:
     dataset = dataset_cls()
-    path = Path(dataset.dataset_path)
-    if is_d4rl_dataset_path(path.as_posix()):
+    path = Path(dataset.path)
+    if is_d4rl_path(path.as_posix()):
         return path.as_posix()
-    return path.relative_to(minari_root()).as_posix()
+    return path.relative_to(dataset_root()).as_posix()
 
 
-def test_dataset_path(dataset_cls, agent_id: str) -> str:
+def test_path(dataset_cls, agent_id: str) -> str:
     dataset = dataset_cls()
     return f"test/{dataset.id}-{agent_id}-v0/data/main_data.hdf5"
 
 
-def bottom_dataset_path(dataset_cls) -> str:
-    source_path = source_dataset_path(dataset_cls)
-    if is_d4rl_dataset_path(source_path):
+def bottom_path(dataset_cls) -> str:
+    path = source_path(dataset_cls)
+    if is_d4rl_path(path):
         random_dataset_cls = RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_env_name(dataset_cls)]
-        return source_dataset_path(random_dataset_cls)
-    return test_dataset_path(dataset_cls, "random")
+        return source_path(random_dataset_cls)
+    return test_path(dataset_cls, "random")
 
 
-def top_dataset_path(dataset_cls) -> str:
+def top_path(dataset_cls) -> str:
     if dataset_cls is RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_env_name(dataset_cls)]:
         return ""
-    return source_dataset_path(dataset_cls)
+    return source_path(dataset_cls)

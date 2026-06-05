@@ -5,8 +5,8 @@ from dataclasses import dataclass
 import numpy as np
 import torch
 from torch.distributions import Normal
-from ice_offline.agent._spec import TorchAgent
-from ice_offline.dataset._spec import TorchBuffer
+from ice_offline.agent._spec import Agent
+from ice_offline.dataset._types import Batch
 
 class _Pi(torch.nn.Module):
     def __init__(
@@ -119,7 +119,7 @@ class _Critic(torch.nn.Module):
                 p_targ.data.copy_(self.q_tau * p.data + (1.0 - self.q_tau) * p_targ.data)
 
 @dataclass
-class IQLAgent(TorchAgent):
+class IQLAgent(Agent):
     obs_size: int
     act_size: int
     actor_learning_rate: float = 3e-4
@@ -170,12 +170,8 @@ class IQLAgent(TorchAgent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: TorchBuffer):
-        o = batch.obs_list
-        a = batch.act_list
-        r = batch.rew_list.view(-1, 1)
-        on = batch.next_obs_list
-        d = batch.done_list.view(-1, 1)
+    def update(self, batch: Batch):
+        o, a, r, on, d = batch
 
         self.update_critic(o, a, r, on, d)
         self.update_actor(o, a)

@@ -4,37 +4,37 @@ from pathlib import Path
 from view_result.returns import returns
 from view_result.returns import returns_path
 from view_result.skip import data_exists
-from view_result.task import bottom_dataset_path
+from view_result.task import bottom_path
 from view_result.task import dataset_group_name
 from view_result.task import dataset_env_name
 from view_result.task import table_output_path
-from view_result.task import test_dataset_path
-from view_result.task import top_dataset_path
+from view_result.task import test_path
+from view_result.task import top_path
 
 
-def source_exists(dataset_path: str) -> bool:
-    if not dataset_path:
+def source_exists(path: str) -> bool:
+    if not path:
         return False
-    if returns_path(dataset_path).exists():
+    if returns_path(path).exists():
         return True
-    return data_exists(dataset_path)
+    return data_exists(path)
 
 
-def return_values(dataset_path: str) -> list[float] | None:
-    if not source_exists(dataset_path):
+def return_values(path: str) -> list[float] | None:
+    if not source_exists(path):
         return None
-    return returns(dataset_path)
+    return returns(path)
 
 
-def mean_return(dataset_path: str) -> float | None:
-    values = return_values(dataset_path)
+def mean_return(path: str) -> float | None:
+    values = return_values(path)
     if values is None:
         return None
     return sum(values) / len(values)
 
 
-def max_return(dataset_path: str) -> float | None:
-    values = return_values(dataset_path)
+def max_return(path: str) -> float | None:
+    values = return_values(path)
     if values is None:
         return None
     return max(values)
@@ -56,10 +56,10 @@ def scale(value: float | None, bottom: float | None, top: float | None) -> float
 
 def actual_row(dataset_cls, agent_list: list[str]) -> list[str]:
     group_name = dataset_group_name(dataset_cls)
-    bottom_path = bottom_dataset_path(dataset_cls)
-    top_path = top_dataset_path(dataset_cls)
+    bottom_path = bottom_path(dataset_cls)
+    top_path = top_path(dataset_cls)
     values = [mean_return(bottom_path)]
-    values.extend(mean_return(test_dataset_path(dataset_cls, agent_id)) for agent_id in agent_list)
+    values.extend(mean_return(test_path(dataset_cls, agent_id)) for agent_id in agent_list)
     values.append(mean_return(top_path))
     return [group_name, *[cell(value) for value in values]]
 
@@ -71,12 +71,12 @@ def normalized_row(
     use_max_top: bool,
 ) -> list[str]:
     group_name = dataset_group_name(dataset_cls)
-    bottom_path = bottom_dataset_path(dataset_cls)
-    top_path = top_dataset_path(dataset_cls)
+    bottom_path = bottom_path(dataset_cls)
+    top_path = top_path(dataset_cls)
     bottom = mean_return(bottom_path)
     top = max_return(top_path) if use_max_top else mean_return(top_path)
     values = [
-        scale(mean_return(test_dataset_path(dataset_cls, agent_id)), bottom, top)
+        scale(mean_return(test_path(dataset_cls, agent_id)), bottom, top)
         for agent_id in agent_list
     ]
     return [group_name, *[cell(value) for value in values]]
