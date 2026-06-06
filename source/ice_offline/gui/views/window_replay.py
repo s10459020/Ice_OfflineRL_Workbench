@@ -40,14 +40,25 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._bind_events()
-        self._apply_state(self._viewmodel.initial_state())
+        self._apply_loaded_state(self._viewmodel.initial_state())
 
-    def _apply_state(self, state) -> None:
+    def _apply_loaded_state(self, state) -> None:
         self._select.set_title(state.select_title)
         self._select.set_labels(state.select_labels)
         self._select.set_index(state.select_index)
         self._slider.set_range(0, state.slider_max, state.slider_value)
         self._setting.set_value(state.step_jump)
+        if state.frame is not None:
+            self._render.set_frame(state.frame)
+
+    def _apply_episode_state(self, state) -> None:
+        self._select.set_index(state.select_index)
+        self._slider.set_range(0, state.slider_max, state.slider_value)
+        if state.frame is not None:
+            self._render.set_frame(state.frame)
+
+    def _apply_frame_state(self, state) -> None:
+        self._slider.set_value(state.slider_value)
         if state.frame is not None:
             self._render.set_frame(state.frame)
 
@@ -99,7 +110,7 @@ class MainWindow(QMainWindow):
         if not ok:
             return
         try:
-            self._apply_state(self._viewmodel.load_dataset(entries[labels.index(label)].dataset_cls))
+            self._apply_loaded_state(self._viewmodel.load_dataset(entries[labels.index(label)].dataset_cls))
         except Exception:
             print("load failed:")
             traceback.print_exc()
@@ -110,19 +121,19 @@ class MainWindow(QMainWindow):
         if not path:
             return
         try:
-            self._apply_state(self._viewmodel.load_run_data(path))
+            self._apply_loaded_state(self._viewmodel.load_run_data(path))
         except Exception:
             print("load failed:")
             traceback.print_exc()
 
     def _on_selected(self, index: int) -> None:
-        self._apply_state(self._viewmodel.set_episode(index))
+        self._apply_episode_state(self._viewmodel.set_episode(index))
 
     def _on_slided(self, value: int) -> None:
-        self._apply_state(self._viewmodel.set_step(value))
+        self._apply_frame_state(self._viewmodel.set_step(value))
 
     def _on_setting_changed(self, value: int) -> None:
-        self._apply_state(self._viewmodel.set_step_jump(value))
+        self._viewmodel.set_step_jump(value)
 
     # ====================
     # Qt Native Events
@@ -132,13 +143,13 @@ class MainWindow(QMainWindow):
 
         if key == Qt.Key_Up:
             new_index = max(0, self._select.index() - 1)
-            self._apply_state(self._viewmodel.set_episode(new_index))
+            self._apply_episode_state(self._viewmodel.set_episode(new_index))
             event.accept()
             return
 
         if key == Qt.Key_Down:
             new_index = self._select.index() + 1
-            self._apply_state(self._viewmodel.set_episode(new_index))
+            self._apply_episode_state(self._viewmodel.set_episode(new_index))
             event.accept()
             return
 
@@ -146,13 +157,13 @@ class MainWindow(QMainWindow):
 
         if key == Qt.Key_Left:
             new_step = self._slider.value() - step_jump
-            self._apply_state(self._viewmodel.set_step(new_step))
+            self._apply_frame_state(self._viewmodel.set_step(new_step))
             event.accept()
             return
 
         if key == Qt.Key_Right:
             new_step = self._slider.value() + step_jump
-            self._apply_state(self._viewmodel.set_step(new_step))
+            self._apply_frame_state(self._viewmodel.set_step(new_step))
             event.accept()
             return
 
