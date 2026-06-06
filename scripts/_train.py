@@ -70,15 +70,6 @@ DATASET_LIST = [
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
-    HalfCheetahRandomDataset,
-    HalfCheetahReplayDataset,
-    HalfCheetahMediumReplayDataset,
-    HalfCheetahMediumD4rlDataset,
-    HalfCheetahMediumExpertDataset,
-    HalfCheetahExpertD4rlDataset,
-    HalfCheetahSimpleDataset,
-    HalfCheetahMediumDataset,
-    HalfCheetahExpertDataset,
     Walker2dRandomDataset,
     Walker2dReplayDataset,
     Walker2dMediumReplayDataset,
@@ -88,6 +79,15 @@ DATASET_LIST = [
     Walker2dSimpleDataset,
     Walker2dMediumDataset,
     Walker2dExpertDataset,
+    HalfCheetahRandomDataset,
+    HalfCheetahReplayDataset,
+    HalfCheetahMediumReplayDataset,
+    HalfCheetahMediumD4rlDataset,
+    HalfCheetahMediumExpertDataset,
+    HalfCheetahExpertD4rlDataset,
+    HalfCheetahSimpleDataset,
+    HalfCheetahMediumDataset,
+    HalfCheetahExpertDataset,
 ]
 
 AGENT_LIST = [
@@ -101,8 +101,8 @@ AGENT_LIST = [
     ("aspl", train_aspl.collect),
     ("sdc_cql", train_sdc_cql.collect),
     ("sdc_pre", train_sdc_pre.collect),
-    ("scas_mean", train_scas_mean.collect),
     ("scas_min", train_scas_min.collect),
+    ("scas_mean", train_scas_mean.collect),
     ("scas_aspl", train_scas_aspl.collect),
 ]
 

@@ -64,15 +64,6 @@ DATASET_LIST = [
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
-    HalfCheetahRandomDataset,
-    HalfCheetahReplayDataset,
-    HalfCheetahMediumReplayDataset,
-    HalfCheetahMediumD4rlDataset,
-    HalfCheetahMediumExpertDataset,
-    HalfCheetahExpertD4rlDataset,
-    HalfCheetahSimpleDataset,
-    HalfCheetahMediumDataset,
-    HalfCheetahExpertDataset,
     Walker2dRandomDataset,
     Walker2dReplayDataset,
     Walker2dMediumReplayDataset,
@@ -82,23 +73,32 @@ DATASET_LIST = [
     Walker2dSimpleDataset,
     Walker2dMediumDataset,
     Walker2dExpertDataset,
+    HalfCheetahRandomDataset,
+    HalfCheetahReplayDataset,
+    HalfCheetahMediumReplayDataset,
+    HalfCheetahMediumD4rlDataset,
+    HalfCheetahMediumExpertDataset,
+    HalfCheetahExpertD4rlDataset,
+    HalfCheetahSimpleDataset,
+    HalfCheetahMediumDataset,
+    HalfCheetahExpertDataset,
 ]
 
 AGENT_LIST = [
+    ("random", test_random.collect),
     ("bc_deterministic", test_bc_deterministic.collect),
     ("bc_stochastic", test_bc_stochastic.collect),
+    ("td3bc", test_td3bc.collect),
     ("iql", test_iql.collect),
     ("cql", test_cql.collect),
-    ("sdc_cql", test_sdc_cql.collect),
-    ("sdc_pre", test_sdc_pre.collect),
     ("cql_max_q", test_cql_max_q.collect),
     ("cql_soft_q", test_cql_soft_q.collect),
     ("aspl", test_aspl.collect),
-    ("scas_aspl", test_scas_aspl.collect),
-    ("scas_mean", test_scas_mean.collect),
+    ("sdc_cql", test_sdc_cql.collect),
+    ("sdc_pre", test_sdc_pre.collect),
     ("scas_min", test_scas_min.collect),
-    ("td3bc", test_td3bc.collect),
-    ("random", test_random.collect),
+    ("scas_mean", test_scas_mean.collect),
+    ("scas_aspl", test_scas_aspl.collect),
 ]
 
 
@@ -108,8 +108,7 @@ def collect_agent(agent_id: str, tester, dataset):
         test_kwargs.update({k: v for k, v in SCAS_KWARGS.items() if v is not None})
     elif agent_id != "random":
         test_kwargs.update({k: v for k, v in SDC_KWARGS.items() if v is not None})
-    task_id = f"{dataset.id}-{agent_id}-v0"
-    return tester(dataset=dataset, task_id=task_id, **test_kwargs)
+    return tester(dataset=dataset, **test_kwargs)
 
 
 if __name__ == "__main__":
