@@ -26,7 +26,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._viewmodel = viewmodel
 
-        self._button = QPushButton()
+        self._file_button = QPushButton("Select File")
+        self._folder_button = QPushButton("Select Folder")
         self._select = SelectWidget()
         self._slider = SliderWidget()
         self._render = RenderWidget()
@@ -41,7 +42,6 @@ class MainWindow(QMainWindow):
         self._apply_state(self._viewmodel.initial_state())
 
     def _apply_state(self, state) -> None:
-        self._button.setText(state.button_label)
         self._select.set_title(state.select_title)
         self._select.set_labels(state.select_labels)
         self._select.set_index(state.select_index)
@@ -72,7 +72,11 @@ class MainWindow(QMainWindow):
         control_layout.setContentsMargins(0, 0, 0, 0)
         content_layout.addLayout(control_layout, 2)
 
-        control_layout.addWidget(self._button)
+        button_layout = QHBoxLayout()
+        button_layout.setSpacing(8)
+        button_layout.addWidget(self._file_button)
+        button_layout.addWidget(self._folder_button)
+        control_layout.addLayout(button_layout)
         control_layout.addWidget(self._select)
         control_layout.addWidget(self._setting)
         control_layout.addStretch(1)
@@ -81,25 +85,32 @@ class MainWindow(QMainWindow):
     # Widget Events
     # ====================
     def _bind_events(self) -> None:
-        self._button.clicked.connect(self._on_button)
+        self._file_button.clicked.connect(self._on_file_selected)
+        self._folder_button.clicked.connect(self._on_folder_selected)
         self._select.selected.connect(self._on_selected)
         self._slider.changed.connect(self._on_slided)
         self._setting.changed.connect(self._on_setting_changed)
 
-    def _on_button(self):
+    def _on_file_selected(self):
         initial_dir = str(dataset_root().resolve())
-        path, _ = QFileDialog.getOpenFileName(self, "Select Dataset", initial_dir, "All Files (*.*)")
+        path, _ = QFileDialog.getOpenFileName(self, "Select Dataset File", initial_dir, "Dataset Files (main_data.hdf5 d4rl_data.hdf5);;All Files (*.*)")
         if not path:
             return
-
-        print(f"[window] load button path={path}")
         try:
-            state = self._viewmodel.load_dataset(path)
-            print("[window] viewmodel.load_dataset done")
-            self._apply_state(state)
-            print("[window] apply_state done")
+            self._apply_state(self._viewmodel.load_file(path))
         except Exception:
-            print("[window] load failed:")
+            print("load failed:")
+            traceback.print_exc()
+
+    def _on_folder_selected(self):
+        initial_dir = str(dataset_root().resolve())
+        path = QFileDialog.getExistingDirectory(self, "Select Dataset Folder", initial_dir)
+        if not path:
+            return
+        try:
+            self._apply_state(self._viewmodel.load_folder(path))
+        except Exception:
+            print("load failed:")
             traceback.print_exc()
 
     def _on_selected(self, index: int) -> None:

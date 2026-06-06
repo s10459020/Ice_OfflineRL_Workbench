@@ -22,14 +22,15 @@ class Dataset:
     # ====================
     # Loaded dataset info
     # ====================
-    loader: DatasetLoader = field(init=False)
+    loader: DatasetLoader | None = None
     _buffer: Buffer | None = field(init=False, default=None)
     _episodes: list[Episode] | None = field(init=False, default=None)
     _metadata: Metadata | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         torch.manual_seed(self.seed)
-        self.loader = self.make_loader()
+        if self.loader is None:
+            self.loader = self.make_loader()
         self._metadata = self.loader.load_metadata()
         if not self.env_id:
             self.env_id = self._metadata.env_id

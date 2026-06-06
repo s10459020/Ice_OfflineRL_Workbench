@@ -5,7 +5,10 @@ import gymnasium as gym
 import numpy as np
 
 from ice_offline.dataset._spec import Dataset
-from ice_offline.store.state._spec import State, StateIO
+from ice_offline.dataset.loader.d4rl.loader import D4rlLoader
+from ice_offline.dataset.loader.minari.loader import MinariLoader
+from ice_offline.store.state._lookup import STATE_OPS
+from ice_offline.store.state._spec import StateIO
 from ice_offline.store.state.op_converter import StateConverter
 from ice_offline.store.state.op_dataset import StateDataset
 
@@ -17,47 +20,63 @@ class EpisodeInfo:
 
 
 class ReplayModel:
-    def __init__(self, state_cls: type[State], state_io_cls: type[StateIO], state_converter_cls: type | None = None) -> None:
+    def __init__(self) -> None:
         self._env: gym.Env | None = None
         self._episodes: list[EpisodeInfo] = []
         self._state_io: StateIO | None = None
         self._state_dataset: StateDataset | None = None
-        self._state_cls: type[State] = state_cls
-        self._state_io_cls: type[StateIO] = state_io_cls
-        self._state_converter_cls: type | None = state_converter_cls
 
-    def load_dataset(self, path: str) -> None:
-        print(f"[replay] load start path={path}")
+    def load_minari(self, path: str) -> None:
         self.close()
 
-        main_data_path = Path(path)
-        print("[replay] loading minari buffer ...")
-        dataset = Dataset(id=main_data_path.parent.parent.name, path=main_data_path)
-        print("[replay] minari loaded")
+        data_path = Path(path)
+        print(f"loading dataset: {data_path}")
+        dataset = Dataset(path=data_path, loader=MinariLoader(data_path))
+        self.load_dataset(dataset)
 
-        state_data_path = main_data_path.with_name("state_data.hdf5")
+    def load_d4rl(self, path: str) -> None:
+        self.close()
+
+        data_path = Path(path)
+        print(f"loading dataset: {data_path}")
+        dataset = Dataset(path=data_path, loader=D4rlLoader(data_path))
+        self.load_dataset(dataset)
+
+    def load_dataset(self, dataset: Dataset) -> None:
+        if dataset.env_id not in STATE_OPS:
+            raise ValueError(f"unsupported replay state env: {dataset.env_id}")
+        state_cls, state_io_cls, state_converter_cls = STATE_OPS[dataset.env_id]
+        data_path = dataset.path
+        state_data_path = data_path.with_name("state_data.hdf5")
         if not state_data_path.exists():
-            print(f"[replay] missing state file -> convert: {state_data_path}")
-            converter = StateConverter(dataset=dataset, converter_cls=self._state_converter_cls)
+            print(f"converting state data: {state_data_path}")
+            converter = StateConverter(dataset=dataset, converter_cls=state_converter_cls)
             converter.convert()
-            print("[replay] state convert done")
-        else:
-            print(f"[replay] state file found: {state_data_path}")
 
         env_id = dataset.env_id
-        print(f"[replay] creating env: {env_id}")
+        print(f"creating env: {env_id}")
         self._env = gym.make(env_id, render_mode="rgb_array")
         self._env.reset()
-        self._state_io = self._state_io_cls(self._env)
+        self._state_io = state_io_cls(self._env)
 
-        print("[replay] loading state dataset ...")
-        self._state_dataset = StateDataset.load_dataset(path=state_data_path, state_cls=self._state_cls)
-        print(f"[replay] state dataset loaded episodes={self._state_dataset.episode_count}")
+        print(f"loading state dataset: {state_data_path}")
+        self._state_dataset = StateDataset.load_dataset(path=state_data_path, state_cls=state_cls)
         self._episodes = [
             EpisodeInfo(id=i, steps=self._state_dataset.step_counts[i] + 1)
             for i in range(self._state_dataset.episode_count)
         ]
-        print("[replay] load done")
+
+    def scan_file(self, path: str, name: str) -> str | None:
+        stack = [path]
+        while stack:
+            current = Path(stack.pop())
+            for child in sorted(current.iterdir(), key=lambda item: item.name, reverse=True):
+                if child.is_dir():
+                    stack.append(child)
+                elif child.name == name:
+                    return str(child)
+
+        return None
 
     def episodes(self) -> list[EpisodeInfo]:
         return self._episodes

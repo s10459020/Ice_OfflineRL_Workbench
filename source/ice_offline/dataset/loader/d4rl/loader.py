@@ -5,6 +5,7 @@ import numpy as np
 import torch
 
 from ice_offline.dataset._types import Buffer, Episode, Metadata
+from ice_offline.dataset.loader.d4rl._lookup import D4RL_ENV_IDS
 
 
 class D4rlLoader:
@@ -80,6 +81,7 @@ class D4rlLoader:
             count = int(observations.shape[0])
 
         return Metadata(
+            env_id=D4RL_ENV_IDS[self.path.parent.name],
             obs_shape=obs_shape,
             act_shape=act_shape,
             obs_dim=int(np.prod(obs_shape)) if obs_shape else 1,

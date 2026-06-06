@@ -1,4 +1,5 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -7,7 +8,6 @@ from ice_offline.gui.models.model_replay import EpisodeInfo
 
 @dataclass(frozen=True)
 class ReplayState:
-    button_label: str
     select_title: str
     select_labels: list[str]
     select_index: int
@@ -39,13 +39,38 @@ class ReplayViewModel:
     # ====================
     # Public API
     # ====================
-    def load_dataset(self, path: str) -> ReplayState:
-        self._model.load_dataset(path)
+    def load_file(self, path: str) -> ReplayState:
+        path_obj = Path(path)
+        if path_obj.name == "main_data.hdf5":
+            return self.load_minari(path)
+        if path_obj.name == "d4rl_data.hdf5":
+            return self.load_d4rl(path)
+        raise FileNotFoundError(f"unsupported dataset file: {path}")
 
+    def load_minari(self, path: str) -> ReplayState:
+        self._model.load_minari(path)
         self._episodes = self._model.episodes()
         self._labels = ["[all]"] + [f"episode_{episode.id}" for episode in self._episodes]
         self._all_mapping = self._build_all_mapping()
         return self.set_episode(0)
+
+    def load_d4rl(self, path: str) -> ReplayState:
+        self._model.load_d4rl(path)
+        self._episodes = self._model.episodes()
+        self._labels = ["[all]"] + [f"episode_{episode.id}" for episode in self._episodes]
+        self._all_mapping = self._build_all_mapping()
+        return self.set_episode(0)
+
+    def load_folder(self, path: str) -> ReplayState:
+        main_data_path = self._model.scan_file(path, "main_data.hdf5")
+        if main_data_path:
+            return self.load_minari(main_data_path)
+
+        d4rl_data_path = self._model.scan_file(path, "d4rl_data.hdf5")
+        if d4rl_data_path:
+            return self.load_d4rl(d4rl_data_path)
+
+        raise FileNotFoundError(f"missing main_data.hdf5 or d4rl_data.hdf5 under: {path}")
 
     def set_episode(self, index: int) -> ReplayState:
         if not self._episodes:
@@ -83,7 +108,6 @@ class ReplayViewModel:
     def _state(self) -> ReplayState:
         frame = self._render()
         return ReplayState(
-            button_label="Load Dataset",
             select_title="Episode",
             select_labels=self._labels,
             select_index=self._selected_episode,
