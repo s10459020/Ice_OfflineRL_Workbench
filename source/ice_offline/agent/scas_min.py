@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -35,6 +36,7 @@ class _M(torch.nn.Module):
 
 @dataclass
 class ScasDynamic(Agent):
+    agent_name: ClassVar[str] = "scas_dynamic"
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -85,6 +87,7 @@ class ScasDynamic(Agent):
 
 @dataclass
 class ScasMinAgent(TD3Agent):
+    agent_name: ClassVar[str] = "scas_min"
     dynamics: ScasDynamic | None = None
     actor_learning_rate: float = 2e-4
     critic_learning_rate: float = 3e-4
@@ -125,6 +128,7 @@ class ScasMinAgent(TD3Agent):
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         return (1.0 - self.lmbda) * self.loss_td3(batch) + self.lmbda * self.loss_correction(batch)
+
 
 
 

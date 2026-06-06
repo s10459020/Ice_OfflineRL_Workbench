@@ -2,12 +2,11 @@
 import numpy as np
 import torch
 
-from ice_offline.agent._spec import model_ref
 from ice_offline.agent.scas_aspl import ScasAsplAgent
 from ice_offline.agent.scas_min import ScasDynamic
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.config.paths import DATASETS_ROOT
+from ice_offline.config.paths import data_path_test
 from ice_offline.tools.printer import print_stage
 from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
@@ -19,12 +18,12 @@ DYNAMIC_STEP = 100_000
 EPISODES = 10
 SEED = 42
 PRINT_INTERVAL = 1
+AGENT_ID = "scas_aspl"
 
 
 def test(
     dataset: Dataset,
     *,
-    task_id: str = None,
     episodes: int = EPISODES,
     model_step: int = MODEL_STEP,
     dynamic_step: int = DYNAMIC_STEP,
@@ -34,8 +33,6 @@ def test(
 ) -> list[float]:
     np.random.seed(seed)
     torch.manual_seed(seed)
-
-    task_id = task_id or f"{dataset.id}-scas_aspl-v0"
     eval_env = eval_env or dataset.make_env()
 
     print_stage("Test SCAS ASPL")
@@ -43,14 +40,15 @@ def test(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
     )
-    dynamics.load(model_ref(f"{task_id}/dynamics", dynamic_step))
+    dynamics.agent_name = f"{AGENT_ID}_dynamics"
+    dynamics.load(dataset.id, dynamic_step)
 
     agent = ScasAsplAgent(
         obs_size=dataset.obs_dim,
         act_size=dataset.act_dim,
         dynamics=dynamics,
     )
-    agent.load(model_ref(task_id, model_step))
+    agent.load(dataset.id, model_step)
 
     returns = []
     for episode in range(1, episodes + 1):
@@ -75,21 +73,18 @@ def test(
 def collect(
     dataset: Dataset,
     *,
-    task_id: str = None,
     episodes: int = EPISODES,
     model_step: int = MODEL_STEP,
     dynamic_step: int = DYNAMIC_STEP,
     seed: int = SEED,
     print_interval: int = PRINT_INTERVAL,
 ):
-    task_id = task_id or f"{dataset.id}-scas_aspl-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
     returns = test(
         dataset=dataset,
-        task_id=task_id,
         episodes=episodes,
         model_step=model_step,
         dynamic_step=dynamic_step,
@@ -98,8 +93,9 @@ def collect(
         print_interval=print_interval,
     )
 
-    minari_data = minari_col.save(f"test/{task_id}")
-    state_data = state_col.save(DATASETS_ROOT / "test" / task_id / "data" / "main_data.hdf5")
+    data_path = data_path_test(dataset.id, AGENT_ID)
+    minari_data = minari_col.save(data_path)
+    state_data = state_col.save(data_path)
     minari_col.close()
 
     return returns, minari_data, state_data
@@ -109,8 +105,7 @@ if __name__ == "__main__":
     dataset = HopperSimpleDataset()
     returns, minari_data, state_data = collect(
         dataset=dataset,
-        task_id=f"{dataset.id}-scas_aspl-v0",
-        episodes=EPISODES,
+episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,
     )
@@ -118,5 +113,8 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
+
+
 
 

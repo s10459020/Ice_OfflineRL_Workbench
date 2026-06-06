@@ -1,6 +1,7 @@
 ﻿"""Implicit Q-Learning agent (minimal fixed structure)."""
 
 from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import torch
@@ -120,6 +121,7 @@ class _Critic(torch.nn.Module):
 
 @dataclass
 class IQLAgent(Agent):
+    agent_name: ClassVar[str] = "iql"
     obs_size: int
     act_size: int
     actor_learning_rate: float = 3e-4
@@ -248,3 +250,4 @@ class IQLAgent(Agent):
         weight = self.weight(o, a)
         log_pi = self.actor.log_prob(o, a)
         return (weight * log_pi).mean()
+

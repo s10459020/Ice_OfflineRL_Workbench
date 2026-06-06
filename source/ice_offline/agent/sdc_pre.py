@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -12,6 +13,7 @@ from ice_offline.dataset._types import Batch
 
 @dataclass
 class SDCPreModel(Agent):
+    agent_name: ClassVar[str] = "sdc_pre_model"
     obs_size: int
     act_size: int
     state_transition_noise_size: int = 8
@@ -98,6 +100,7 @@ class SDCPreModel(Agent):
 
 @dataclass
 class SDCPreAgent(CQLAgent):
+    agent_name: ClassVar[str] = "sdc_pre"
     state_models: SDCPreModel | None = None
     state_transition_noise_size: int = 8
     state_noise_beta: float = 0.1
@@ -184,3 +187,4 @@ class SDCPreAgent(CQLAgent):
     def gaussian_kernel(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         dist = torch.cdist(x, y).pow(2)
         return torch.exp(-dist / (2.0 * self.mmd_sigma**2))
+

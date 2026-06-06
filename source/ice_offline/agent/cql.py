@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 
@@ -7,6 +8,8 @@ from ice_offline.agent.cql_soft_q import CQLSoftQAgent
 
 @dataclass
 class CQLAgent(CQLSoftQAgent):
+    agent_name: ClassVar[str] = "cql"
+
     # ====================
     # Critic target
     # ====================
@@ -17,3 +20,4 @@ class CQLAgent(CQLSoftQAgent):
             an = self.actor(on)
             tq = self.critic.tq_min(on, an)
             return r + self.gamma * tq * (1.0 - d)
+

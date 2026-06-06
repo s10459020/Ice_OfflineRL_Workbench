@@ -14,7 +14,7 @@ from ice_offline.store.state.hopper import HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.store.state.op_dataset import StateDataset
 from ice_offline.run.evaluator import Evaluator
-from ice_offline.config.paths import DATASETS_ROOT
+from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
@@ -27,6 +27,7 @@ EVAL_ONLINE_N = 3
 SAVE_INTERVAL = 20_000
 SEED = 42
 DEVICE = "cuda:0"
+AGENT_ID = "sdc_pre"
 
 
 def eval_loss_model(model: SDCPreModel, batch: Batch) -> dict[str, float]:
@@ -66,7 +67,6 @@ def train(
     *,
     model_steps: int = MODEL_STEPS,
     agent_steps: int = AGENT_STEPS,
-    task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_offline_n: int = EVAL_OFFLINE_N,
@@ -78,8 +78,6 @@ def train(
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
-
-    task_id = task_id or f"{dataset.id}-sdc_pre-v0"
     eval_env = eval_env or dataset.make_env()
     dataset.set_seed(seed)
 
@@ -90,7 +88,8 @@ def train(
         device=device,
     )
     model_evaluator = Evaluator(
-        runner_id=task_id,
+        dataset_id=dataset.id,
+        agent_id=AGENT_ID,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_offline_fns=[eval_loss_model],
@@ -102,7 +101,7 @@ def train(
         model_evaluator.print(step)
         model_evaluator.recode(step)
         if step % save_interval == 0 or step == model_steps:
-            state_models.save(f"{task_id}/state_models", step)
+            state_models.save(dataset.id, step)
 
     print_stage("Train SDC Pre Agent")
     agent = SDCPreAgent(
@@ -112,7 +111,8 @@ def train(
         device=device,
     )
     agent_evaluator = Evaluator(
-        runner_id=task_id,
+        dataset_id=dataset.id,
+        agent_id=AGENT_ID,
         eval_interval=eval_interval,
         eval_offline_n=eval_offline_n,
         eval_online_n=eval_online_n,
@@ -127,7 +127,7 @@ def train(
         agent_evaluator.print(step)
         agent_evaluator.recode(step)
         if step % save_interval == 0 or step == agent_steps:
-            agent.save(task_id, step)
+            agent.save(dataset.id, step)
 
 
 def collect(
@@ -135,7 +135,6 @@ def collect(
     *,
     steps: int = AGENT_STEPS,
     steps_model: int = MODEL_STEPS,
-    task_id: str = None,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_offline_n: int = EVAL_OFFLINE_N,
@@ -143,13 +142,11 @@ def collect(
     save_interval: int = SAVE_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
-    task_id = task_id or f"{dataset.id}-sdc_pre-v0"
     env = dataset.make_env()
     state_col = StateCollectWrapper(env, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
     train(
-        task_id=task_id,
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
@@ -162,8 +159,9 @@ def collect(
         device=device,
     )
 
-    minari_data = minari_col.save(task_id)
-    state_data = state_col.save(DATASETS_ROOT / task_id / "data" / "main_data.hdf5")
+    data_path = data_path_train(dataset.id, AGENT_ID)
+    minari_data = minari_col.save(data_path)
+    state_data = state_col.save(data_path)
     minari_col.close()
 
     return minari_data, state_data
@@ -176,5 +174,7 @@ if __name__ == "__main__":
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
     print(f"state_data={state_data}")
+
+
 
 

@@ -5,7 +5,7 @@ from pathlib import Path
 from ice_offline.dataset.halfcheetah_random import HalfCheetahRandomDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
-from ice_offline.config.paths import DATASETS_ROOT
+from ice_offline.config.paths import DATASETS_ROOT, VIEW_ROOT, returns_path
 
 
 RANDOM_DATASET_CLASS_BY_ENV_NAME = {
@@ -18,15 +18,14 @@ RANDOM_DATASET_CLASS_BY_ENV_NAME = {
 def bottom_path(dataset_cls) -> Path:
     if Path(dataset_cls().path).relative_to(DATASETS_ROOT).parts[0] == "d4rl":
         random_dataset_cls = RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_cls().id.split("_", 1)[0]]
-        return Path("tmps/returns") / f"{random_dataset_cls().id}-v0.json"
-    task_id = f"{dataset_cls().id}-random-v0"
-    return Path("tmps/returns") / f"{task_id}.json"
+        return returns_path(random_dataset_cls().id)
+    return returns_path(dataset_cls().id, "random")
 
 
 def top_path(dataset_cls) -> Path | None:
     if dataset_cls is RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_cls().id.split("_", 1)[0]]:
         return None
-    return Path("tmps/returns") / f"{dataset_cls().id}-v0.json"
+    return returns_path(dataset_cls().id)
 
 
 def read_values(path: Path) -> list[float] | None:
@@ -75,8 +74,7 @@ def actual_row(dataset_cls, agent_list: list[str]) -> list[str]:
     group_name = dataset_cls().id
     values = [mean_return(bottom_path(dataset_cls))]
     for agent_id in agent_list:
-        task_id = f"{dataset_cls().id}-{agent_id}-v0"
-        values.append(mean_return(Path("tmps/returns") / f"{task_id}.json"))
+        values.append(mean_return(returns_path(dataset_cls().id, agent_id)))
     values.append(mean_return(top_path(dataset_cls)))
     return [group_name, *[cell(value) for value in values]]
 
@@ -92,13 +90,12 @@ def normalized_row(
     top = max_return(top_path(dataset_cls)) if use_max_top else mean_return(top_path(dataset_cls))
     values = []
     for agent_id in agent_list:
-        task_id = f"{dataset_cls().id}-{agent_id}-v0"
-        values.append(scale(mean_return(Path("tmps/returns") / f"{task_id}.json"), bottom, top))
+        values.append(scale(mean_return(returns_path(dataset_cls().id, agent_id)), bottom, top))
     return [group_name, *[cell(value) for value in values]]
 
 
 def save_csv(dataset_cls, name: str, header: list[str], rows: list[list[str]]) -> Path:
-    out_path = Path("tmps/view") / dataset_cls().env_id / "table" / name
+    out_path = VIEW_ROOT / "returns" / name
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)

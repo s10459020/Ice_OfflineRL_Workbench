@@ -1,4 +1,5 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -45,6 +46,7 @@ class _TransitionModel(torch.nn.Module):
 
 @dataclass
 class SDCCQLAgent(CQLAgent):
+    agent_name: ClassVar[str] = "sdc_cql"
     state_noise_beta: float = 0.1
     state_transition_noise_size: int = 8
     sdc_weight: float = 1.0
@@ -153,3 +155,4 @@ class SDCCQLAgent(CQLAgent):
     def gaussian_kernel(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         dist = torch.cdist(x, y).pow(2)
         return torch.exp(-dist / (2.0 * self.mmd_sigma**2))
+

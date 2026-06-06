@@ -2,11 +2,7 @@
 from pathlib import Path
 
 from ice_offline.dataset._spec import Dataset
-from ice_offline.config.paths import DATASETS_ROOT
-from view_result.utils import skip_missing
-
-
-RETURNS_ROOT = Path("tmps/returns")
+from ice_offline.config.paths import data_path_test, returns_path
 
 
 def returns(path: Path, episodes) -> None:
@@ -20,23 +16,23 @@ def returns(path: Path, episodes) -> None:
 
 def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
     for dataset_cls in dataset_class_list:
-        task_id = f"{dataset_cls().id}-v0"
-        path = Path(dataset_cls().path).relative_to(DATASETS_ROOT)
-        out_path = RETURNS_ROOT / f"{task_id}.json"
-        if skip_missing(path):
+        path = Path(dataset_cls().path)
+        out_path = returns_path(dataset_cls().id)
+        if not path.exists():
+            print(f"skip missing: {path}")
             continue
         print(f"returns={path}")
         returns(out_path, dataset_cls().episodes)
 
     for dataset_cls in dataset_class_list:
         for agent_id in agent_id_list:
-            task_id = f"{dataset_cls().id}-{agent_id}-v0"
-            path = Path("test") / task_id / "data" / "main_data.hdf5"
-            out_path = RETURNS_ROOT / f"{task_id}.json"
-            if skip_missing(path):
+            path = data_path_test(dataset_cls().id, agent_id)
+            out_path = returns_path(dataset_cls().id, agent_id)
+            if not path.exists():
+                print(f"skip missing: {path}")
                 continue
             print(f"returns={path}")
-            dataset = Dataset(path=DATASETS_ROOT / path)
+            dataset = Dataset(path=path)
             returns(out_path, dataset.episodes)
 
 

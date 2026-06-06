@@ -5,6 +5,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 from ice_offline.plot.plotter import plot_csv
+from ice_offline.config.paths import VIEW_ROOT, eval_dir
 
 
 SHOW = False
@@ -26,9 +27,8 @@ def plot(path: str, output_path: Path, *, show: bool = False) -> None:
 
 def plot_agent(index: int, agent_id: str, dataset_cls) -> None:
     dataset = dataset_cls()
-    task_id = f"{dataset.id}-{agent_id}-v0"
-    path = Path("tmps/eval") / task_id
-    output_path = Path("tmps/view") / dataset.env_id / "plot" / agent_id / f"{index}. {dataset.id}.png"
+    path = eval_dir(dataset.id, agent_id)
+    output_path = VIEW_ROOT / "evals" / agent_id / f"{index}. {dataset.id}.png"
     plot(str(path), output_path, show=SHOW)
 
 

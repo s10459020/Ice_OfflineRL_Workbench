@@ -4,14 +4,7 @@ from typing import Any
 import torch
 
 from ice_offline.dataset._types import Batch
-from ice_offline.config.paths import MODELS_ROOT
-
-
-# ====================
-# Path helpers
-# ====================
-def model_ref(model_id: str, step: int) -> Path:
-    return MODELS_ROOT / model_id / str(step)
+from ice_offline.config.paths import model_path
 
 
 class Agent:
@@ -36,14 +29,14 @@ class Agent:
     # ====================
     # Persistence
     # ====================
-    def save(self, model_id: str, step: int = 0) -> Path:
-        path = model_ref(model_id, step).with_suffix(".pt")
+    def save(self, dataset_id: str, step: int = 0) -> Path:
+        path = model_path(dataset_id, self.agent_name, step).with_suffix(".pt")
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self._save_dict(), path)
         return path
 
-    def load(self, model_name: str | Path) -> None:
-        path = Path(model_name).with_suffix(".pt")
+    def load(self, dataset_id: str, step: int = 0) -> None:
+        path = model_path(dataset_id, self.agent_name, step).with_suffix(".pt")
         state = torch.load(path, map_location=self.device)
         self._load_dict(state)
 

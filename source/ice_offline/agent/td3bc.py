@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 
@@ -8,6 +9,7 @@ from ice_offline.dataset._types import Batch
 
 @dataclass
 class TD3BCAgent(TD3Agent):
+    agent_name: ClassVar[str] = "td3bc"
     alpha: float = 2.5
 
     # ====================
@@ -20,3 +22,4 @@ class TD3BCAgent(TD3Agent):
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         return self.alpha * self.loss_td3(batch) + self.loss_bc(batch)
+

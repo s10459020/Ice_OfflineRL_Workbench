@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 
@@ -8,6 +9,7 @@ from ice_offline.agent.scas_min import ScasMinAgent
 
 @dataclass
 class ScasMeanAgent(ScasMinAgent):
+    agent_name: ClassVar[str] = "scas_mean"
     # ====================
     # Critic loss
     # ====================
@@ -17,4 +19,5 @@ class ScasMeanAgent(ScasMinAgent):
             an = self.actor.noise_action(self.actor.tpi(on))
             tq = self.critic.tq_mean(on, an)
             return r + self.gamma * tq * (1 - d)
+
 

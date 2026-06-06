@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 
@@ -7,6 +8,7 @@ from ice_offline.agent.cql_soft_q import CQLSoftQAgent
 
 @dataclass
 class CQLMaxQAgent(CQLSoftQAgent):
+    agent_name: ClassVar[str] = "cql_max_q"
     # ====================
     # Critic target
     # ====================
@@ -20,3 +22,4 @@ class CQLMaxQAgent(CQLSoftQAgent):
             tq = tq.view(2, batch_size, self.critic.n_action_samples)
             tq = tq.min(dim=0).values.max(dim=1, keepdim=True).values
             return r + self.gamma * tq * (1.0 - d)
+

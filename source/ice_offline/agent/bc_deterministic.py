@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import numpy as np
 import torch
@@ -30,6 +31,7 @@ class _Actor(torch.nn.Module):
 
 @dataclass
 class BCDeterministicAgent(Agent):
+    agent_name: ClassVar[str] = "bc_deterministic"
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -98,4 +100,5 @@ class BCDeterministicAgent(Agent):
         # BC: minimize imitation error on dataset actions.
         a_pred = self.actor.pi(o)
         return F.mse_loss(a_pred, a)
+
 

@@ -4,7 +4,7 @@ from typing import Callable
 import torch
 
 from ice_offline.dataset._types import Batch
-from ice_offline.config.paths import EVALS_ROOT
+from ice_offline.config.paths import eval_dir
 
 
 OfflineEvalFn = Callable[[object, Batch], dict[str, float]]
@@ -14,7 +14,8 @@ OnlineEvalFn = Callable[[Batch], dict[str, float]]
 class Evaluator:
     def __init__(
         self,
-        runner_id: str,
+        dataset_id: str,
+        agent_id: str,
         eval_interval: int = 1,
         eval_offline_n: int = 0,
         eval_online_n: int = 0,
@@ -33,7 +34,7 @@ class Evaluator:
         self.last_eval_step: int = -1
         self.eval_dir = None
         if self.recode_eval:
-            self.eval_dir = Path(EVALS_ROOT) / runner_id
+            self.eval_dir = eval_dir(dataset_id, agent_id)
             self.eval_dir.mkdir(parents=True, exist_ok=True)
             if recode_reset:
                 for p in self.eval_dir.glob("*"):

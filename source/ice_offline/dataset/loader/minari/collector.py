@@ -1,16 +1,13 @@
 ﻿import os
+from pathlib import Path
 from typing import Any
 
 import minari
 
-from ice_offline.config.paths import DATASETS_ROOT
+from ice_offline.config.paths import RUNS_ROOT
 
 
 class MinariCollectorWrapper(minari.DataCollector):
-    def __init__(self, *args, **kwargs) -> None:
-        os.environ.setdefault("MINARI_DATASETS_PATH", str(DATASETS_ROOT))
-        super().__init__(*args, **kwargs)
-
     def reset(self, *args: Any, **kwargs: Any):
         try:
             return super().reset(*args, **kwargs)
@@ -30,7 +27,7 @@ class MinariCollectorWrapper(minari.DataCollector):
 
     def save(
         self,
-        dataset_id: str,
+        path: Path,
         *,
         algorithm_name: str = "unknown",
         author: str = "ice_offline",
@@ -39,6 +36,8 @@ class MinariCollectorWrapper(minari.DataCollector):
         description: str = "",
         eval_env=None,
     ):
+        dataset_id = path.relative_to(RUNS_ROOT).parent.parent.as_posix()
+        os.environ["MINARI_DATASETS_PATH"] = str(RUNS_ROOT)
         if eval_env is None:
             eval_env = self.env
         try:

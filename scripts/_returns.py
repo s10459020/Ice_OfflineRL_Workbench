@@ -25,10 +25,10 @@ from ice_offline.dataset.walker2d_medium_replay import Walker2dMediumReplayDatas
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
 from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
 from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
-from view_result import boxplot
-from view_result import plot
-from view_result import returns
-from view_result import table
+from view_returns import boxplot
+from view_returns import plot
+from view_returns import returns
+from view_returns import table
 
 
 DATASET_CLASS_LIST = [

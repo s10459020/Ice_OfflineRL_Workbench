@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from ice_offline.dataset.halfcheetah_random import HalfCheetahRandomDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
-from ice_offline.config.paths import DATASETS_ROOT
+from ice_offline.config.paths import DATASETS_ROOT, VIEW_ROOT, returns_path
 
 
 RANDOM_DATASET_CLASS_BY_ENV_NAME = {
@@ -23,15 +23,14 @@ RANDOM_DATASET_CLASS_BY_ENV_NAME = {
 def bottom_path(dataset_cls) -> Path:
     if Path(dataset_cls().path).relative_to(DATASETS_ROOT).parts[0] == "d4rl":
         random_dataset_cls = RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_cls().id.split("_", 1)[0]]
-        return Path("tmps/returns") / f"{random_dataset_cls().id}-v0.json"
-    task_id = f"{dataset_cls().id}-random-v0"
-    return Path("tmps/returns") / f"{task_id}.json"
+        return returns_path(random_dataset_cls().id)
+    return returns_path(dataset_cls().id, "random")
 
 
 def top_path(dataset_cls) -> Path | None:
     if dataset_cls is RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_cls().id.split("_", 1)[0]]:
         return None
-    return Path("tmps/returns") / f"{dataset_cls().id}-v0.json"
+    return returns_path(dataset_cls().id)
 
 
 def add_member(labels: list[str], values: list[list[float]], label: str, path: Path | None) -> None:
@@ -55,15 +54,14 @@ def save_boxplot(index: int, dataset_cls, agent_list: list[str]) -> Path:
 
     add_member(labels, values, "random", bottom_path(dataset_cls))
     for agent_id in agent_list:
-        task_id = f"{dataset_cls().id}-{agent_id}-v0"
-        add_member(labels, values, agent_id, Path("tmps/returns") / f"{task_id}.json")
+        add_member(labels, values, agent_id, returns_path(dataset_cls().id, agent_id))
     add_member(labels, values, "dataset", top_path(dataset_cls))
 
     if len(values) == 0:
         print(f"skip empty: {group_name}")
-        return Path("tmps/view") / dataset_cls().env_id / "boxplot" / f"{index}. {dataset_cls().id}.png"
+        return VIEW_ROOT / "returns" / dataset_cls().env_id / f"{index}. {dataset_cls().id}.png"
 
-    out_path = Path("tmps/view") / dataset_cls().env_id / "boxplot" / f"{index}. {dataset_cls().id}.png"
+    out_path = VIEW_ROOT / "returns" / dataset_cls().env_id / f"{index}. {dataset_cls().id}.png"
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     fig, ax = plt.subplots(figsize=(12, 6))

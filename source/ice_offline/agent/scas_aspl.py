@@ -1,4 +1,5 @@
 ﻿from dataclasses import dataclass
+from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -11,6 +12,7 @@ from ice_offline.dataset._types import Batch
 
 @dataclass
 class ScasAsplAgent(ScasMinAgent):
+    agent_name: ClassVar[str] = "scas_aspl"
     aspl_alpha: float = 2.5
 
     def __post_init__(self) -> None:
@@ -64,3 +66,4 @@ class ScasAsplAgent(ScasMinAgent):
         loss_td = self.loss_td_with_target(s, a, q_target)
         loss_punish = self.loss_punish_with_target(s, a, q_target)
         return loss_td + self.aspl_alpha * loss_punish
+
