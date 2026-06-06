@@ -4,7 +4,7 @@ from typing import Callable
 import torch
 
 from ice_offline.dataset._types import Batch
-from ice_offline.tools.paths import eval_root
+from ice_offline.config.paths import EVALS_ROOT
 
 
 OfflineEvalFn = Callable[[object, Batch], dict[str, float]]
@@ -33,7 +33,7 @@ class Evaluator:
         self.last_eval_step: int = -1
         self.eval_dir = None
         if self.recode_eval:
-            self.eval_dir = Path(eval_root()) / runner_id
+            self.eval_dir = Path(EVALS_ROOT) / runner_id
             self.eval_dir.mkdir(parents=True, exist_ok=True)
             if recode_reset:
                 for p in self.eval_dir.glob("*"):
@@ -156,3 +156,5 @@ class Evaluator:
             values = self.last_evals[key]
             parts.append(f"{key}={sum(values) / len(values):.6g}")
         print(f"eval step={step}", *parts)
+
+

@@ -1,8 +1,8 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 import h5py
 import numpy as np
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 class ValueLoader:
@@ -43,8 +43,10 @@ class ValueLoader:
     # helping
     # ====================
     def _resolve_data_path(self, dataset_id: str, data_file_name: str) -> Path:
-        return dataset_root() / dataset_id / "data" / data_file_name
+        return DATASETS_ROOT / dataset_id / "data" / data_file_name
 
     def _list_episode_keys(self) -> list[str]:
         keys = [key for key in self._h5.keys() if key.startswith("episode_")]
         return sorted(keys, key=lambda key: int(key.split("_")[1]))
+
+

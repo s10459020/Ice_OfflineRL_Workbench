@@ -1,4 +1,4 @@
-import traceback
+﻿import traceback
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent
@@ -15,7 +15,7 @@ from ice_offline.gui.views.widget_render import RenderWidget
 from ice_offline.gui.views.widget_select import SelectWidget
 from ice_offline.gui.views.widget_setting import SettingWidget
 from ice_offline.gui.views.widget_slider import SliderWidget
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 class MainWindow(QMainWindow):
@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
         self._setting.changed.connect(self._on_setting_changed)
 
     def _on_file_selected(self):
-        initial_dir = str(dataset_root().resolve())
+        initial_dir = str(DATASETS_ROOT.resolve())
         path, _ = QFileDialog.getOpenFileName(self, "Select Dataset File", initial_dir, "Dataset Files (main_data.hdf5 d4rl_data.hdf5);;All Files (*.*)")
         if not path:
             return
@@ -103,7 +103,7 @@ class MainWindow(QMainWindow):
             traceback.print_exc()
 
     def _on_folder_selected(self):
-        initial_dir = str(dataset_root().resolve())
+        initial_dir = str(DATASETS_ROOT.resolve())
         path = QFileDialog.getExistingDirectory(self, "Select Dataset Folder", initial_dir)
         if not path:
             return
@@ -159,3 +159,5 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
         self._viewmodel.close()
         super().closeEvent(event)
+
+

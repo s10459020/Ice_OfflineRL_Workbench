@@ -1,11 +1,11 @@
-import csv
+﻿import csv
 import json
 from pathlib import Path
 
 from ice_offline.dataset.halfcheetah_random import HalfCheetahRandomDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 RANDOM_DATASET_CLASS_BY_ENV_NAME = {
@@ -16,7 +16,7 @@ RANDOM_DATASET_CLASS_BY_ENV_NAME = {
 
 
 def bottom_path(dataset_cls) -> Path:
-    if Path(dataset_cls().path).relative_to(dataset_root()).parts[0] == "d4rl":
+    if Path(dataset_cls().path).relative_to(DATASETS_ROOT).parts[0] == "d4rl":
         random_dataset_cls = RANDOM_DATASET_CLASS_BY_ENV_NAME[dataset_cls().id.split("_", 1)[0]]
         return Path("tmps/returns") / f"{random_dataset_cls().id}-v0.json"
     task_id = f"{dataset_cls().id}-random-v0"
@@ -140,3 +140,5 @@ def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
 
 if __name__ == "__main__":
     main([], [])
+
+

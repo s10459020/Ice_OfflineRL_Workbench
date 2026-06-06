@@ -1,4 +1,4 @@
-import numpy as np
+﻿import numpy as np
 import torch
 import gymnasium as gym
 
@@ -6,7 +6,7 @@ from ice_offline.agent._spec import model_ref
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 from ice_offline.tools.printer import print_stage
 from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
@@ -87,7 +87,7 @@ def collect(
     )
 
     minari_data = minari_col.save(f"test/{task_id}")
-    state_data = state_col.save(dataset_root() / "test" / task_id / "data" / "main_data.hdf5")
+    state_data = state_col.save(DATASETS_ROOT / "test" / task_id / "data" / "main_data.hdf5")
     minari_col.close()
 
     return returns, minari_data, state_data
@@ -106,3 +106,5 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
+

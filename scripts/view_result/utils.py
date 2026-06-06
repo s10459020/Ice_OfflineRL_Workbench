@@ -1,10 +1,12 @@
-from pathlib import Path
+﻿from pathlib import Path
 
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 def skip_missing(path: Path) -> bool:
-    if not (dataset_root() / path).exists():
+    if not (DATASETS_ROOT / path).exists():
         print(f"skip missing: {path}")
         return True
     return False
+
+

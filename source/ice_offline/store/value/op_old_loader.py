@@ -1,9 +1,9 @@
-
+﻿
 from pathlib import Path
 
 import h5py
 import numpy as np
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 class OldValueLoader:
@@ -38,9 +38,11 @@ class OldValueLoader:
     # Internal
     # ====================
     def _resolve_value_path(self, dataset_id: str) -> Path:
-        base = dataset_root()
+        base = DATASETS_ROOT
         return base / dataset_id / "data" / "value_data.hdf5"
 
     def _list_episode_keys(self) -> list[str]:
         keys = [k for k in self._h5.keys() if k.startswith("episode_")]
         return sorted(keys, key=lambda k: int(k.split("_")[1]))
+
+

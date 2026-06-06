@@ -1,8 +1,8 @@
-import json
+﻿import json
 from pathlib import Path
 
 from ice_offline.dataset._spec import Dataset
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 from view_result.utils import skip_missing
 
 
@@ -21,7 +21,7 @@ def returns(path: Path, episodes) -> None:
 def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
     for dataset_cls in dataset_class_list:
         task_id = f"{dataset_cls().id}-v0"
-        path = Path(dataset_cls().path).relative_to(dataset_root())
+        path = Path(dataset_cls().path).relative_to(DATASETS_ROOT)
         out_path = RETURNS_ROOT / f"{task_id}.json"
         if skip_missing(path):
             continue
@@ -36,9 +36,11 @@ def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
             if skip_missing(path):
                 continue
             print(f"returns={path}")
-            dataset = Dataset(path=dataset_root() / path)
+            dataset = Dataset(path=DATASETS_ROOT / path)
             returns(out_path, dataset.episodes)
 
 
 if __name__ == "__main__":
     main([], [])
+
+

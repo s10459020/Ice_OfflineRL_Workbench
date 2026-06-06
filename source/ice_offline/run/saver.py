@@ -1,7 +1,7 @@
 ﻿from pathlib import Path
 
 from ice_offline.agent._spec import model_ref
-from ice_offline.tools.paths import model_root
+from ice_offline.config.paths import MODELS_ROOT
 
 
 class RunnerSaver:
@@ -12,7 +12,7 @@ class RunnerSaver:
         self.save_interval = save_interval
 
     def _find_latest_checkpoint_step(self) -> int:
-        runner_dir = Path(model_root()) / self.runner_id
+        runner_dir = Path(MODELS_ROOT) / self.runner_id
         if not runner_dir.exists():
             return 0
 
@@ -40,3 +40,5 @@ class RunnerSaver:
     def save_if_needed(self, agent, step: int) -> None:
         if self.save_interval > 0 and step % self.save_interval == 0:
             agent.save(model_ref(self.runner_id, step))
+
+

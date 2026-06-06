@@ -5,7 +5,7 @@ import os
 import minari
 
 from ice_offline.dataset._spec import Dataset
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 @dataclass
@@ -13,7 +13,7 @@ class Walker2dSimpleDataset(Dataset):
     id: str = "walker2d_simple"
     env_id: str = "Walker2d-v5"
     minari_dataset_id: str = "mujoco/walker2d/simple-v0"
-    path: Path = dataset_root() / Path("mujoco/walker2d/simple-v0/data/main_data.hdf5")
+    path: Path = DATASETS_ROOT / Path("mujoco/walker2d/simple-v0/data/main_data.hdf5")
 
     def __post_init__(self) -> None:
         self.ensure_dataset()
@@ -22,6 +22,8 @@ class Walker2dSimpleDataset(Dataset):
     def ensure_dataset(self) -> None:
         if self.path.exists():
             return
-        os.environ.setdefault("MINARI_DATASETS_PATH", str(dataset_root()))
+        os.environ.setdefault("MINARI_DATASETS_PATH", str(DATASETS_ROOT))
         minari.load_dataset(self.minari_dataset_id, download=True)
+
+
 

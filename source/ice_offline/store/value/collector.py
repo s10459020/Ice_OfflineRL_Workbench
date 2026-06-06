@@ -1,11 +1,11 @@
-from collections.abc import Callable
+﻿from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
 import gymnasium as gym
 import h5py
 import numpy as np
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 
 
 SampleBatch = list[Any]
@@ -85,7 +85,7 @@ class ValueCollector(gym.Wrapper):
     # helping
     # ====================
     def _resolve_output_path(self, dataset_id: str) -> Path:
-        return dataset_root() / dataset_id / "data" / self._output_file_name
+        return DATASETS_ROOT / dataset_id / "data" / self._output_file_name
 
     def _sample_obs(self, env: gym.Env) -> SampleBatch:
         raise NotImplementedError
@@ -118,3 +118,5 @@ class ValueCollector(gym.Wrapper):
     def _end_episode(self) -> None:
         if self._current:
             self._episodes.append(self._current)
+
+

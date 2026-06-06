@@ -1,17 +1,17 @@
-from pathlib import Path
+﻿from pathlib import Path
 from typing import Any
 
 import torch
 
 from ice_offline.dataset._types import Batch
-from ice_offline.tools.paths import model_root
+from ice_offline.config.paths import MODELS_ROOT
 
 
 # ====================
 # Path helpers
 # ====================
 def model_ref(model_id: str, step: int) -> Path:
-    return model_root() / model_id / str(step)
+    return MODELS_ROOT / model_id / str(step)
 
 
 class Agent:
@@ -52,3 +52,5 @@ class Agent:
 
     def _load_dict(self, state: dict[str, Any]) -> None:
         raise NotImplementedError
+
+

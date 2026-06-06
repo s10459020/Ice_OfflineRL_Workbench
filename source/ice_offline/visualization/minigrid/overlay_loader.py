@@ -4,7 +4,7 @@ import gymnasium as gym
 
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost
 from ice_offline.data.minari.loader import MinariLoader
-from ice_offline.tools.paths import minari_root
+from ice_offline.config.paths import DATASETS_ROOT
 from .overlay_engine import OverlayEngine
 
 
@@ -50,7 +50,7 @@ class OverlayLoader:
                 raise TypeError("each unit must implement UnitLoaderInterface")
 
         self.dataset_id = dataset_id
-        dataset_path = minari_root() / dataset_id / "data" / "main_data.hdf5"
+        dataset_path = DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
         self.dataset = MinariLoader(dataset_path)
         self.total_episodes: int = int(self.dataset.total_episodes)
 
@@ -170,3 +170,5 @@ class OverlayLoader:
                     data[key] = seq[i]
             datas.append(data)
         return datas
+
+

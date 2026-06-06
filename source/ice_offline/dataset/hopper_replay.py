@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from ice_offline.dataset.loader.d4rl.loader import D4rlLoader
-from ice_offline.tools.paths import dataset_root
+from ice_offline.config.paths import DATASETS_ROOT
 from ice_offline.dataset._spec import Dataset
 
 
@@ -10,10 +10,12 @@ from ice_offline.dataset._spec import Dataset
 class HopperReplayDataset(Dataset):
     id: str = "hopper_replay"
     env_id: str = "Hopper-v5"
-    path: Path = dataset_root() / Path("d4rl/hopper_full_replay-v2/d4rl_data.hdf5")
+    path: Path = DATASETS_ROOT / Path("d4rl/hopper_full_replay-v2/d4rl_data.hdf5")
 
 
     def make_loader(self):
         return D4rlLoader(self.path, device=self.device)
+
+
 
 
