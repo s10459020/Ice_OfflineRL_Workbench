@@ -5,17 +5,18 @@ from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
+    QInputDialog,
     QMainWindow,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
+from ice_offline.config.paths import RUNS_ROOT
 from ice_offline.gui.views.widget_render import RenderWidget
 from ice_offline.gui.views.widget_select import SelectWidget
 from ice_offline.gui.views.widget_setting import SettingWidget
 from ice_offline.gui.views.widget_slider import SliderWidget
-from ice_offline.config.paths import DATASETS_ROOT
 
 
 class MainWindow(QMainWindow):
@@ -26,8 +27,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._viewmodel = viewmodel
 
-        self._file_button = QPushButton("Select File")
-        self._folder_button = QPushButton("Select Folder")
+        self._dataset_button = QPushButton("Select Dataset")
+        self._run_button = QPushButton("Select Run Data")
         self._select = SelectWidget()
         self._slider = SliderWidget()
         self._render = RenderWidget()
@@ -74,8 +75,8 @@ class MainWindow(QMainWindow):
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
-        button_layout.addWidget(self._file_button)
-        button_layout.addWidget(self._folder_button)
+        button_layout.addWidget(self._dataset_button)
+        button_layout.addWidget(self._run_button)
         control_layout.addLayout(button_layout)
         control_layout.addWidget(self._select)
         control_layout.addWidget(self._setting)
@@ -85,30 +86,31 @@ class MainWindow(QMainWindow):
     # Widget Events
     # ====================
     def _bind_events(self) -> None:
-        self._file_button.clicked.connect(self._on_file_selected)
-        self._folder_button.clicked.connect(self._on_folder_selected)
+        self._dataset_button.clicked.connect(self._on_dataset_selected)
+        self._run_button.clicked.connect(self._on_run_selected)
         self._select.selected.connect(self._on_selected)
         self._slider.changed.connect(self._on_slided)
         self._setting.changed.connect(self._on_setting_changed)
 
-    def _on_file_selected(self):
-        initial_dir = str(DATASETS_ROOT.resolve())
-        path, _ = QFileDialog.getOpenFileName(self, "Select Dataset File", initial_dir, "Dataset Files (main_data.hdf5 d4rl_data.hdf5);;All Files (*.*)")
-        if not path:
+    def _on_dataset_selected(self):
+        entries = self._viewmodel.datasets()
+        labels = [entry.id for entry in entries]
+        label, ok = QInputDialog.getItem(self, "Select Dataset", "Dataset", labels, 0, False)
+        if not ok:
             return
         try:
-            self._apply_state(self._viewmodel.load_file(path))
+            self._apply_state(self._viewmodel.load_dataset(entries[labels.index(label)].dataset_cls))
         except Exception:
             print("load failed:")
             traceback.print_exc()
 
-    def _on_folder_selected(self):
-        initial_dir = str(DATASETS_ROOT.resolve())
-        path = QFileDialog.getExistingDirectory(self, "Select Dataset Folder", initial_dir)
+    def _on_run_selected(self):
+        initial_dir = str(RUNS_ROOT.resolve())
+        path = QFileDialog.getExistingDirectory(self, "Select Run Data", initial_dir)
         if not path:
             return
         try:
-            self._apply_state(self._viewmodel.load_folder(path))
+            self._apply_state(self._viewmodel.load_run_data(path))
         except Exception:
             print("load failed:")
             traceback.print_exc()

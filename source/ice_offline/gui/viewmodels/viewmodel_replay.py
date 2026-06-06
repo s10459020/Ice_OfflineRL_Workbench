@@ -1,8 +1,13 @@
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
+from ice_offline.config.datasets import DATASET_CLASS_BY_ID
+from ice_offline.config.datasets import DatasetEntry
+from ice_offline.config.datasets import source_dataset_entries
+from ice_offline.dataset._spec import Dataset
 from ice_offline.gui.models.model_replay import EpisodeInfo
 
 
@@ -23,6 +28,7 @@ class ReplayViewModel:
     # ====================
     def __init__(self, model) -> None:
         self._model = model
+        self._datasets = source_dataset_entries()
         self._labels: list[str] = []
         self._episodes: list[EpisodeInfo] = []
         self._all_mapping: list[tuple[int, int]] = []
@@ -39,6 +45,23 @@ class ReplayViewModel:
     # ====================
     # Public API
     # ====================
+    def datasets(self) -> list[DatasetEntry]:
+        return self._datasets
+
+    def load_dataset(self, dataset_cls: type[Dataset]) -> ReplayState:
+        self._model.load_dataset(dataset_cls())
+        return self._loaded_state()
+
+    def load_run_data(self, path: str) -> ReplayState:
+        metadata_path = self._model.scan_file(path, "metadata.json")
+        if metadata_path is None:
+            raise FileNotFoundError(f"missing metadata.json under: {path}")
+        data_path = Path(metadata_path).with_name("main_data.hdf5")
+        metadata = self._read_metadata(Path(metadata_path))
+        dataset_cls = DATASET_CLASS_BY_ID[metadata.get("id", "")]
+        self._model.load_dataset(dataset_cls(path=data_path))
+        return self._loaded_state()
+
     def load_file(self, path: str) -> ReplayState:
         path_obj = Path(path)
         if path_obj.name == "main_data.hdf5":
@@ -49,17 +72,11 @@ class ReplayViewModel:
 
     def load_minari(self, path: str) -> ReplayState:
         self._model.load_minari(path)
-        self._episodes = self._model.episodes()
-        self._labels = ["[all]"] + [f"episode_{episode.id}" for episode in self._episodes]
-        self._all_mapping = self._build_all_mapping()
-        return self.set_episode(0)
+        return self._loaded_state()
 
     def load_d4rl(self, path: str) -> ReplayState:
         self._model.load_d4rl(path)
-        self._episodes = self._model.episodes()
-        self._labels = ["[all]"] + [f"episode_{episode.id}" for episode in self._episodes]
-        self._all_mapping = self._build_all_mapping()
-        return self.set_episode(0)
+        return self._loaded_state()
 
     def load_folder(self, path: str) -> ReplayState:
         main_data_path = self._model.scan_file(path, "main_data.hdf5")
@@ -135,3 +152,13 @@ class ReplayViewModel:
             for step in range(episode.steps):
                 mapping.append((episode.id, step))
         return mapping
+
+    def _loaded_state(self) -> ReplayState:
+        self._episodes = self._model.episodes()
+        self._labels = ["[all]"] + [f"episode_{episode.id}" for episode in self._episodes]
+        self._all_mapping = self._build_all_mapping()
+        return self.set_episode(0)
+
+    def _read_metadata(self, path: Path) -> dict:
+        with path.open("r", encoding="utf-8") as file:
+            return json.load(file)

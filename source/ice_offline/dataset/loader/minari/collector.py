@@ -1,4 +1,5 @@
-﻿import os
+﻿import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -29,6 +30,8 @@ class MinariCollectorWrapper(minari.DataCollector):
         self,
         path: Path,
         *,
+        id: str,
+        agent_id: str,
         algorithm_name: str = "unknown",
         author: str = "ice_offline",
         author_email: str = "ice_offline@example.com",
@@ -46,7 +49,7 @@ class MinariCollectorWrapper(minari.DataCollector):
             except Exception:
                 pass
 
-            return self.create_dataset(
+            dataset = self.create_dataset(
                 dataset_id=dataset_id,
                 algorithm_name=algorithm_name,
                 author=author,
@@ -55,8 +58,19 @@ class MinariCollectorWrapper(minari.DataCollector):
                 eval_env=eval_env,
                 description=description,
             )
+            metadata_path = path.parent / "metadata.json"
+            with metadata_path.open("r", encoding="utf-8") as file:
+                metadata = json.load(file)
+            env_spec = metadata.get("env_spec", {})
+            if isinstance(env_spec, str):
+                env_spec = json.loads(env_spec)
+            metadata["id"] = id
+            metadata["agent_id"] = agent_id
+            metadata["env_id"] = env_spec.get("id", "")
+            with metadata_path.open("w", encoding="utf-8", newline="\n") as file:
+                json.dump(metadata, file, ensure_ascii=False)
+                file.write("\n")
+            return dataset
         except Exception:
             self.close()
             raise
-
-

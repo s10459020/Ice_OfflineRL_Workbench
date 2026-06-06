@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from typing import Any
 
 import h5py
 import numpy as np
@@ -17,8 +16,8 @@ class MinariLoader:
         self.path = Path(path)
         self.device = device
         self.metadata_path = self.path.parent / "metadata.json"
-        raw_metadata = self._read_metadata(self.metadata_path)
-        self.dataset_id = raw_metadata.get("dataset_id")
+        metadata = self._read_metadata()
+        self.dataset_id = metadata.get("dataset_id", "")
 
     # ====================
     # Loading
@@ -82,7 +81,7 @@ class MinariLoader:
     # Metadata
     # ====================
     def load_metadata(self) -> Metadata:
-        raw_metadata = self._read_metadata(self.metadata_path)
+        metadata = self._read_metadata()
         with h5py.File(self.path, "r") as h5_file:
             episode_keys = self._episode_keys_from_h5(h5_file)
             episode_steps = [int(h5_file[key]["rewards"].shape[0]) for key in episode_keys]
@@ -103,46 +102,30 @@ class MinariLoader:
                 act_shape = ()
 
         return Metadata(
-            env_id=self._read_env_id(raw_metadata),
+            env_id=self._read_env_id(metadata),
             obs_shape=obs_shape,
             act_shape=act_shape,
             obs_dim=int(np.prod(obs_shape)) if obs_shape else 1,
             act_dim=int(np.prod(act_shape)) if act_shape else 1,
             count=count,
-            raw=raw_metadata,
         )
 
     # ====================
     # HDF5 helpers
     # ====================
-    def _read_metadata(self, metadata_path: Path) -> dict:
-        if not metadata_path.exists():
+    def _read_metadata(self) -> dict:
+        if not self.metadata_path.exists():
             return {}
-        with metadata_path.open("r", encoding="utf-8") as file:
-            metadata = json.load(file)
-        return self._decode_metadata(metadata)
-
-    def _decode_metadata(self, value):
-        if isinstance(value, dict):
-            return {key: self._decode_metadata(item) for key, item in value.items()}
-        if isinstance(value, list):
-            return [self._decode_metadata(item) for item in value]
-        if isinstance(value, str):
-            try:
-                parsed = json.loads(value)
-            except json.JSONDecodeError:
-                return value
-            return self._decode_metadata(parsed)
-        return value
+        with self.metadata_path.open("r", encoding="utf-8") as file:
+            return json.load(file)
 
     def _read_env_id(self, metadata: dict) -> str:
-        env_spec = metadata.get("env_spec")
-        if isinstance(env_spec, dict):
-            return env_spec.get("id", "")
+        if "env_id" in metadata:
+            return metadata["env_id"]
+        env_spec = metadata.get("env_spec", {})
         if isinstance(env_spec, str):
-            parsed = json.loads(env_spec)
-            return parsed.get("id", "")
-        return ""
+            env_spec = json.loads(env_spec)
+        return env_spec.get("id", "")
 
     def _read_node(self, node):
         if isinstance(node, h5py.Dataset):

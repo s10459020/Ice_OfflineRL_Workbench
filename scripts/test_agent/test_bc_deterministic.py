@@ -82,7 +82,7 @@ def collect(
     )
 
     data_path = data_path_test(dataset.id, AGENT_ID)
-    minari_data = minari_col.save(data_path)
+    minari_data = minari_col.save(data_path, id=dataset.id, agent_id=AGENT_ID)
     state_data = state_col.save(data_path)
     minari_col.close()
 
@@ -101,6 +101,7 @@ episodes=EPISODES,
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
 
 
 

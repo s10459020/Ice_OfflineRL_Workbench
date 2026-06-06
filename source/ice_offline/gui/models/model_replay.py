@@ -43,19 +43,19 @@ class ReplayModel:
         self.load_dataset(dataset)
 
     def load_dataset(self, dataset: Dataset) -> None:
+        self.close()
         if dataset.env_id not in STATE_OPS:
             raise ValueError(f"unsupported replay state env: {dataset.env_id}")
         state_cls, state_io_cls, state_converter_cls = STATE_OPS[dataset.env_id]
-        data_path = dataset.path
-        state_data_path = data_path.with_name("state_data.hdf5")
+        
+        state_data_path = dataset.path.with_name("state_data.hdf5")
         if not state_data_path.exists():
             print(f"converting state data: {state_data_path}")
             converter = StateConverter(dataset=dataset, converter_cls=state_converter_cls)
             converter.convert()
 
-        env_id = dataset.env_id
-        print(f"creating env: {env_id}")
-        self._env = gym.make(env_id, render_mode="rgb_array")
+        print(f"creating env: {dataset.env_id}")
+        self._env = gym.make(dataset.env_id, render_mode="rgb_array")
         self._env.reset()
         self._state_io = state_io_cls(self._env)
 
