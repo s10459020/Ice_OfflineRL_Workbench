@@ -71,12 +71,13 @@ def scale(value: float | None, bottom: float | None, top: float | None) -> float
 
 
 def actual_row(dataset_cls, agent_list: list[str]) -> list[str]:
+    env_id = dataset_cls().env_id
     group_name = dataset_cls().id
     values = [mean_return(bottom_path(dataset_cls))]
     for agent_id in agent_list:
         values.append(mean_return(returns_path(dataset_cls().id, agent_id)))
     values.append(mean_return(top_path(dataset_cls)))
-    return [group_name, *[cell(value) for value in values]]
+    return [env_id, group_name, *[cell(value) for value in values]]
 
 
 def normalized_row(
@@ -85,16 +86,17 @@ def normalized_row(
     *,
     use_max_top: bool,
 ) -> list[str]:
+    env_id = dataset_cls().env_id
     group_name = dataset_cls().id
     bottom = mean_return(bottom_path(dataset_cls))
     top = max_return(top_path(dataset_cls)) if use_max_top else mean_return(top_path(dataset_cls))
     values = []
     for agent_id in agent_list:
         values.append(scale(mean_return(returns_path(dataset_cls().id, agent_id)), bottom, top))
-    return [group_name, *[cell(value) for value in values]]
+    return [env_id, group_name, *[cell(value) for value in values]]
 
 
-def save_csv(dataset_cls, name: str, header: list[str], rows: list[list[str]]) -> Path:
+def save_csv(name: str, header: list[str], rows: list[list[str]]) -> Path:
     out_path = VIEW_ROOT / "returns" / name
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8", newline="") as file:
@@ -128,11 +130,9 @@ def dataset_classes_by_env(dataset_class_list: list) -> dict[str, list]:
 
 def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
     agent_list = [agent_id for agent_id in agent_id_list if agent_id != "random"]
-    for dataset_cls_list in dataset_classes_by_env(dataset_class_list).values():
-        table_dataset = dataset_cls_list[0]
-        save_csv(table_dataset, "actual_returns.csv", ["task", "random", *agent_list, "dataset"], actual_rows(dataset_cls_list, agent_list))
-        save_csv(table_dataset, "mean_normalized_returns.csv", ["task", *agent_list], normalized_rows(dataset_cls_list, agent_list, use_max_top=False))
-        save_csv(table_dataset, "max_normalized_returns.csv", ["task", *agent_list], normalized_rows(dataset_cls_list, agent_list, use_max_top=True))
+    save_csv("actual_returns.csv", ["env", "task", "random", *agent_list, "dataset"], actual_rows(dataset_class_list, agent_list))
+    save_csv("mean_normalized_returns.csv", ["env", "task", *agent_list], normalized_rows(dataset_class_list, agent_list, use_max_top=False))
+    save_csv("max_normalized_returns.csv", ["env", "task", *agent_list], normalized_rows(dataset_class_list, agent_list, use_max_top=True))
 
 
 if __name__ == "__main__":

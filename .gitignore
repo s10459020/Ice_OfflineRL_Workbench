@@ -3,6 +3,7 @@
 
 # Project outputs
 /tmps/
+/tmps_old/
 /d3rlpy*/
 
 # Python caches and artifacts
