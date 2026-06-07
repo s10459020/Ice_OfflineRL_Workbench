@@ -9,7 +9,7 @@ from ice_offline.dataset.loader.d4rl._lookup import D4RL_ENV_IDS
 
 
 class D4rlLoader:
-    def __init__(self, path: Path, device: str = "cpu") -> None:
+    def __init__(self, path: Path, device: str = "cuda") -> None:
         self.path = Path(path)
         self.device = device
 

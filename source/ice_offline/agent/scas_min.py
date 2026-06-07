@@ -40,7 +40,7 @@ class ScasDynamic(Agent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
-    device: str = "cpu"
+    device: str = "cuda"
 
     def __post_init__(self) -> None:
         self.model = _M(self.obs_size, self.act_size).to(self.device)

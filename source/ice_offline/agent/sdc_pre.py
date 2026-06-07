@@ -19,7 +19,7 @@ class SDCPreModel(Agent):
     state_transition_noise_size: int = 8
     dynamics_learning_rate: float = 3e-4
     transition_learning_rate: float = 3e-4
-    device: str = "cpu"
+    device: str = "cuda"
 
     # ====================
     # Init

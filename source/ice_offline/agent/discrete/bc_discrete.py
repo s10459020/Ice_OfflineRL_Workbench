@@ -27,7 +27,7 @@ class _Pi(torch.nn.Module):
 
 
 class BCDiscreteAgent(TorchAgent):
-    def __init__(self, obs_size: int, act_size: int, beta: float = 0.5, device: str = "cpu"):
+    def __init__(self, obs_size: int, act_size: int, beta: float = 0.5, device: str = "cuda"):
         self.device = device
         self.learning_rate = 1e-3
         self.beta = beta

@@ -57,7 +57,7 @@ class BCStochasticAgent(Agent):
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
-    device: str = "cpu"
+    device: str = "cuda"
 
     # ====================
     # Init

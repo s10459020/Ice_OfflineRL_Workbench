@@ -4,6 +4,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 
 DATASETS_ROOT = PROJECT_ROOT / "tmps" / "datasets"
+CUSTOM_DATASETS_ROOT = DATASETS_ROOT / "custom"
 RUNS_ROOT = PROJECT_ROOT / "tmps" / "runs"
 MODELS_ROOT = PROJECT_ROOT / "tmps" / "models"
 RETURNS_ROOT = PROJECT_ROOT / "tmps" / "returns"
@@ -19,6 +20,10 @@ def _task_id(dataset_id: str, agent_id: str | None = None) -> str:
 
 def data_path_train(dataset_id: str, agent_id: str) -> Path:
     return RUNS_ROOT / "train" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
+
+
+def custom_dataset_path(dataset_id: str) -> Path:
+    return CUSTOM_DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
 
 
 def data_path_test(dataset_id: str, agent_id: str) -> Path:

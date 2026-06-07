@@ -61,7 +61,7 @@ class IQLDiscreteAgent(TorchAgent):
         learning_rate: float = 6.25e-5,
         gamma: float = 0.99,
         v_tau: float = 0.7,
-        device: str = "cpu",
+        device: str = "cuda",
     ):
         self.device = device
         self.learning_rate = learning_rate

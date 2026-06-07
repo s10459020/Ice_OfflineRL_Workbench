@@ -14,7 +14,7 @@ def sample_transition(
     batch_size: int,
     obs_dim: int,
     act_dim: int,
-    device: str = "cpu",
+    device: str = "cuda",
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     s = torch.as_tensor(np.random.standard_normal((batch_size, obs_dim)), dtype=torch.float32, device=device)
     a = torch.as_tensor(np.random.standard_normal((batch_size, act_dim)), dtype=torch.float32, device=device)

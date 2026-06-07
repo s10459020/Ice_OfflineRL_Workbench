@@ -12,7 +12,7 @@ class MinariLoader:
     # ====================
     # Init
     # ====================
-    def __init__(self, path: Path, device: str = "cpu") -> None:
+    def __init__(self, path: Path, device: str = "cuda") -> None:
         self.path = Path(path)
         self.device = device
         self.metadata_path = self.path.parent / "metadata.json"

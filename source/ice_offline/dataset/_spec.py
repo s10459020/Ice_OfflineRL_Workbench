@@ -17,7 +17,7 @@ class Dataset:
     env_id: str = ""
     path: Path = Path()
     seed: int = 0
-    device: str = "cpu"
+    device: str = "cuda"
 
     # ====================
     # Loaded dataset info

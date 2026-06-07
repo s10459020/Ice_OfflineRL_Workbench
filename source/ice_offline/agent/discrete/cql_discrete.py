@@ -56,7 +56,7 @@ class CQLDiscreteAgent(TorchAgent):
     # ====================
     # Init
     # ====================
-    def __init__(self, obs_size: int, act_size: int, learning_rate: float = 6.25e-5, gamma: float = 0.99, alpha: float = 1.0, target_update_interval: int = 8000, device: str = "cpu"):
+    def __init__(self, obs_size: int, act_size: int, learning_rate: float = 6.25e-5, gamma: float = 0.99, alpha: float = 1.0, target_update_interval: int = 8000, device: str = "cuda"):
         self.device = device
         self.learning_rate = learning_rate
         self.gamma = gamma

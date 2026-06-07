@@ -1,5 +1,3 @@
-import torch
-
 from ice_offline.dataset.halfcheetah_expert import HalfCheetahExpertDataset
 from ice_offline.dataset.halfcheetah_expert_d4rl import HalfCheetahExpertD4rlDataset
 from ice_offline.dataset.halfcheetah_medium import HalfCheetahMediumDataset
@@ -42,7 +40,7 @@ from train_agent import train_scas_min
 from train_agent import train_td3bc
 
 
-DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
+DEVICE = "cuda"
 
 TRAIN_KWARGS = {
     "steps": 200_000,

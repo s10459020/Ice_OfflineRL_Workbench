@@ -76,7 +76,7 @@ class QVDiscreteAgent(TorchAgent):
         learning_rate: float = 6.25e-5,
         gamma: float = 0.99,
         target_update_interval: int = 1000,
-        device: str = "cpu",
+        device: str = "cuda",
     ):
         self.device = device
         self.learning_rate = learning_rate

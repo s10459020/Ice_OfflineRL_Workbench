@@ -184,7 +184,7 @@ class SACAgent(Agent):
     gamma: float = 0.99
     initial_temperature: float = 1.0
     target_entropy: float | None = None
-    device: str = "cpu"
+    device: str = "cuda"
 
     # ====================
     # Init

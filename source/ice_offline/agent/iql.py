@@ -129,7 +129,7 @@ class IQLAgent(Agent):
     gamma: float = 0.99
     beta: float = 3.0
     max_weight: float = 100.0
-    device: str = "cpu"
+    device: str = "cuda"
 
     def __post_init__(self) -> None:
         self.actor = _Actor(self.obs_size, self.act_size).to(self.device)

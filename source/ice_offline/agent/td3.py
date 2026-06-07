@@ -139,7 +139,7 @@ class TD3Agent(Agent):
     update_actor_interval: int = 2
     q_count: int = 2
     update_step: int = 0
-    device: str = "cpu"
+    device: str = "cuda"
 
     # ====================
     # Init

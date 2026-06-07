@@ -14,13 +14,16 @@ from ice_offline.dataset.halfcheetah_replay import HalfCheetahReplayDataset
 from ice_offline.dataset.halfcheetah_simple import HalfCheetahSimpleDataset
 from ice_offline.dataset.hopper_expert import HopperExpertDataset
 from ice_offline.dataset.hopper_expert_d4rl import HopperExpertD4rlDataset
+from ice_offline.dataset.hopper_expert_one import HopperExpertOneDataset
 from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_medium_d4rl import HopperMediumD4rlDataset
 from ice_offline.dataset.hopper_medium_expert import HopperMediumExpertDataset
+from ice_offline.dataset.hopper_medium_one import HopperMediumOneDataset
 from ice_offline.dataset.hopper_medium_replay import HopperMediumReplayDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
 from ice_offline.dataset.hopper_replay import HopperReplayDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.dataset.hopper_simple_one import HopperSimpleOneDataset
 from ice_offline.dataset.walker2d_expert import Walker2dExpertDataset
 from ice_offline.dataset.walker2d_expert_d4rl import Walker2dExpertD4rlDataset
 from ice_offline.dataset.walker2d_medium import Walker2dMediumDataset
@@ -50,6 +53,9 @@ SOURCE_DATASET_CLASSES = [
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
+    HopperSimpleOneDataset,
+    HopperMediumOneDataset,
+    HopperExpertOneDataset,
     HalfCheetahRandomDataset,
     HalfCheetahReplayDataset,
     HalfCheetahMediumReplayDataset,
