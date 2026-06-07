@@ -59,49 +59,49 @@ SDC_PRE_KWARGS = {
 }
 
 DATASET_LIST = [
-    HopperRandomDataset,
-    HopperReplayDataset,
+    # HopperRandomDataset,
+    # HopperReplayDataset,
     HopperMediumReplayDataset,
     HopperMediumD4rlDataset,
+    # HopperExpertD4rlDataset,
     HopperMediumExpertDataset,
-    HopperExpertD4rlDataset,
     HopperSimpleDataset,
     HopperMediumDataset,
     HopperExpertDataset,
-    Walker2dRandomDataset,
-    Walker2dReplayDataset,
-    Walker2dMediumReplayDataset,
-    Walker2dMediumD4rlDataset,
-    Walker2dMediumExpertDataset,
-    Walker2dExpertD4rlDataset,
-    Walker2dSimpleDataset,
-    Walker2dMediumDataset,
-    Walker2dExpertDataset,
-    HalfCheetahRandomDataset,
-    HalfCheetahReplayDataset,
-    HalfCheetahMediumReplayDataset,
-    HalfCheetahMediumD4rlDataset,
-    HalfCheetahMediumExpertDataset,
-    HalfCheetahExpertD4rlDataset,
-    HalfCheetahSimpleDataset,
-    HalfCheetahMediumDataset,
-    HalfCheetahExpertDataset,
+    # Walker2dRandomDataset,
+    # Walker2dReplayDataset,
+    # Walker2dMediumReplayDataset,
+    # Walker2dMediumD4rlDataset,
+    # Walker2dExpertD4rlDataset,
+    # Walker2dMediumExpertDataset,
+    # Walker2dSimpleDataset,
+    # Walker2dMediumDataset,
+    # Walker2dExpertDataset,
+    # HalfCheetahRandomDataset,
+    # HalfCheetahReplayDataset,
+    # HalfCheetahMediumReplayDataset,
+    # HalfCheetahMediumD4rlDataset,
+    # HalfCheetahExpertD4rlDataset,
+    # HalfCheetahMediumExpertDataset,
+    # HalfCheetahSimpleDataset,
+    # HalfCheetahMediumDataset,
+    # HalfCheetahExpertDataset,
 ]
 
 AGENT_LIST = [
     ("bc_deterministic", train_bc_deterministic.collect),
     ("bc_stochastic", train_bc_stochastic.collect),
-    ("td3bc", train_td3bc.collect),
+    # ("td3bc", train_td3bc.collect),
     ("iql", train_iql.collect),
-    ("cql", train_cql.collect),
-    ("cql_max_q", train_cql_max_q.collect),
-    ("cql_soft_q", train_cql_soft_q.collect),
-    ("aspl", train_aspl.collect),
-    ("sdc_cql", train_sdc_cql.collect),
-    ("sdc_pre", train_sdc_pre.collect),
-    ("scas_min", train_scas_min.collect),
-    ("scas_mean", train_scas_mean.collect),
-    ("scas_aspl", train_scas_aspl.collect),
+    # ("cql", train_cql.collect),
+    # ("cql_max_q", train_cql_max_q.collect),
+    # ("cql_soft_q", train_cql_soft_q.collect),
+    # ("aspl", train_aspl.collect),
+    # ("sdc_cql", train_sdc_cql.collect),
+    # ("sdc_pre", train_sdc_pre.collect),
+    # ("scas_min", train_scas_min.collect),
+    # ("scas_mean", train_scas_mean.collect),
+    # ("scas_aspl", train_scas_aspl.collect),
 ]
 
 
@@ -112,8 +112,7 @@ def collect_agent(agent_id: str, trainer, dataset):
     if agent_id == "sdc_pre":
         train_kwargs.update({k: v for k, v in SDC_PRE_KWARGS.items() if v is not None})
 
-    task_id = f"{dataset.id}-{agent_id}-v0"
-    return trainer(dataset=dataset, task_id=task_id, device=DEVICE, **train_kwargs)
+    return trainer(dataset=dataset, device=DEVICE, **train_kwargs)
 
 
 if __name__ == "__main__":
