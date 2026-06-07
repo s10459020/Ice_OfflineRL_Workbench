@@ -22,55 +22,31 @@ AGENT_ID = "bc_deterministic"
 PROBE_SAMPLE_COUNT = 100
 
 
-def make_eval_fn(agent: BCDeterministicAgent):
-    def eval_fn(observations: np.ndarray, actions: np.ndarray) -> np.ndarray:
-        actor_actions = agent.act_batch(observations)
-        errors = np.square(actor_actions - actions).sum(axis=1)
-        return -errors.astype(np.float32)
-
-    return eval_fn
-
-
-def test(
-    dataset: Dataset,
+def run(
+    agent: BCDeterministicAgent,
+    eval_env: gym.Env,
     *,
     episodes: int = EPISODES,
-    model_step: int = MODEL_STEP,
-    eval_env: gym.Env | None = None,
     seed: int = SEED,
     print_interval: int = PRINT_INTERVAL,
-) -> tuple[list[float], BCDeterministicAgent]:
+) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
-    eval_env = eval_env or dataset.make_env()
 
     print_stage("Probe BC Deterministic")
-    agent = BCDeterministicAgent(
-        obs_size=dataset.obs_dim,
-        act_size=dataset.act_dim,
-    )
-    agent.load(dataset.id, model_step)
-
-    returns = []
     for episode in range(1, episodes + 1):
-        rewards = []
         observation, _ = eval_env.reset(seed=seed + episode)
         while True:
             action = agent.act(observation)
-            observation, reward, terminated, truncated, _ = eval_env.step(action)
-            rewards.append(reward)
+            observation, _, terminated, truncated, _ = eval_env.step(action)
             if terminated or truncated:
                 break
 
-        total_reward = float(sum(rewards))
-        returns.append(total_reward)
         if print_interval and episode % print_interval == 0:
-            print(f"Episode {episode}/{episodes}, Return: {total_reward:.2f}")
-
-    return returns, agent
+            print(f"Episode {episode}/{episodes}")
 
 
-def collect(
+def probe(
     dataset: Dataset,
     *,
     episodes: int = EPISODES,
@@ -81,20 +57,20 @@ def collect(
     agent = BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim)
     agent.load(dataset.id, model_step)
 
+    def eval_fn(observations: np.ndarray, actions: np.ndarray) -> np.ndarray:
+        actor_actions = agent.act_batch(observations)
+        errors = np.square(actor_actions - actions).sum(axis=1)
+        return -errors.astype(np.float32)
+
     env = dataset.make_env()
-    probe_col = ProbeCollectWrapper(
-        env,
-        HopperOodActionProbe(PROBE_SAMPLE_COUNT),
-        make_eval_fn(agent),
-    )
+    probe_col = ProbeCollectWrapper(env, HopperOodActionProbe(PROBE_SAMPLE_COUNT), eval_fn)
     state_col = StateCollectWrapper(probe_col, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
-    returns, _ = test(
-        dataset=dataset,
-        episodes=episodes,
-        model_step=model_step,
+    run(
+        agent=agent,
         eval_env=minari_col,
+        episodes=episodes,
         seed=seed,
         print_interval=print_interval,
     )
@@ -105,18 +81,17 @@ def collect(
     probe_data = probe_col.save(data_path)
     minari_col.close()
 
-    return returns, minari_data, state_data, probe_data
+    return minari_data, state_data, probe_data
 
 
 if __name__ == "__main__":
     dataset = HopperSimpleDataset()
-    returns, minari_data, state_data, probe_data = collect(
+    minari_data, state_data, probe_data = probe(
         dataset=dataset,
         episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,
     )
-    print(f"avg_returns={sum(returns) / len(returns):.2f}")
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
