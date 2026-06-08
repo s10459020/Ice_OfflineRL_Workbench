@@ -6,7 +6,7 @@ import torch
 from ice_offline.agent.bc_deterministic import BCDeterministicAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset._types import Batch
-from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.dataset.hopper_simple_one import HopperSimpleOneDataset
 from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
@@ -16,11 +16,11 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-DATASET_CLASS = HopperSimpleDataset
+DATASET_CLASS = HopperSimpleOneDataset
 
-STEPS = 200_000
-SAVE_INTERVAL = 20_000
-EVAL_INTERVAL = 2_000
+STEPS = 10_000
+SAVE_INTERVAL = 1_000
+EVAL_INTERVAL = 1_000
 EVAL_OFFLINE_N = 8
 EVAL_ONLINE_N = 3
 

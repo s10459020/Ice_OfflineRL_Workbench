@@ -3,7 +3,7 @@ import numpy as np
 import torch
 
 from ice_offline.agent.bc_deterministic import BCDeterministicAgent
-from ice_offline.config.paths import data_path_test
+from ice_offline.config.paths import data_path_probe
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
@@ -14,8 +14,8 @@ from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.tools.printer import print_stage
 
 
-MODEL_STEP = 200_000
-EPISODES = 10
+MODEL_STEP = 10_000
+EPISODES = 2
 SEED = 42
 PRINT_INTERVAL = 1
 AGENT_ID = "bc_deterministic"
@@ -35,7 +35,7 @@ def run(
 
     print_stage("Probe BC Deterministic")
     for episode in range(1, episodes + 1):
-        observation, _ = eval_env.reset(seed=seed + episode)
+        observation, _ = eval_env.reset(seed=seed)
         while True:
             action = agent.act(observation)
             observation, _, terminated, truncated, _ = eval_env.step(action)
@@ -75,7 +75,7 @@ def probe(
         print_interval=print_interval,
     )
 
-    data_path = data_path_test(dataset.id, AGENT_ID)
+    data_path = data_path_probe(dataset.id, AGENT_ID)
     minari_data = minari_col.save(data_path, id=dataset.id, agent_id=AGENT_ID)
     state_data = state_col.save(data_path)
     probe_data = probe_col.save(data_path)

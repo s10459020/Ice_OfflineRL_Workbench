@@ -30,6 +30,14 @@ def data_path_test(dataset_id: str, agent_id: str) -> Path:
     return RUNS_ROOT / "test" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
 
 
+def data_path_collect(dataset_id: str, agent_id: str) -> Path:
+    return RUNS_ROOT / "collect" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
+
+
+def data_path_probe(dataset_id: str, agent_id: str) -> Path:
+    return RUNS_ROOT / "probe" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
+
+
 def model_path(dataset_id: str, agent_id: str, step: int) -> Path:
     return MODELS_ROOT / _task_id(dataset_id, agent_id) / str(step)
 

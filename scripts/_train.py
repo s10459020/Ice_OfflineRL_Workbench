@@ -40,7 +40,7 @@ from train_agent import train_scas_min
 from train_agent import train_td3bc
 
 
-DEVICE = "cuda"
+DEVICE = "cpu"
 
 TRAIN_KWARGS = {
     "steps": 200_000,
@@ -63,8 +63,8 @@ DATASET_LIST = [
     # HopperReplayDataset,
     # HopperMediumReplayDataset,
     # HopperMediumD4rlDataset,
-    # HopperMediumExpertDataset,
     # HopperExpertD4rlDataset,
+    # HopperMediumExpertDataset,
     HopperSimpleDataset,
     # HopperMediumDataset,
     # HopperExpertDataset,
@@ -72,8 +72,8 @@ DATASET_LIST = [
     # Walker2dReplayDataset,
     # Walker2dMediumReplayDataset,
     # Walker2dMediumD4rlDataset,
-    # Walker2dMediumExpertDataset,
     # Walker2dExpertD4rlDataset,
+    # Walker2dMediumExpertDataset,
     # Walker2dSimpleDataset,
     # Walker2dMediumDataset,
     # Walker2dExpertDataset,
@@ -81,8 +81,8 @@ DATASET_LIST = [
     # HalfCheetahReplayDataset,
     # HalfCheetahMediumReplayDataset,
     # HalfCheetahMediumD4rlDataset,
-    # HalfCheetahMediumExpertDataset,
     # HalfCheetahExpertD4rlDataset,
+    # HalfCheetahMediumExpertDataset,
     # HalfCheetahSimpleDataset,
     # HalfCheetahMediumDataset,
     # HalfCheetahExpertDataset,
@@ -112,8 +112,7 @@ def collect_agent(agent_id: str, trainer, dataset):
     if agent_id == "sdc_pre":
         train_kwargs.update({k: v for k, v in SDC_PRE_KWARGS.items() if v is not None})
 
-    task_id = f"{dataset.id}-{agent_id}-v0"
-    return trainer(dataset=dataset, task_id=task_id, device=DEVICE, **train_kwargs)
+    return trainer(dataset=dataset, device=DEVICE, **train_kwargs)
 
 
 if __name__ == "__main__":

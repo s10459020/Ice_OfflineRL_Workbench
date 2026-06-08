@@ -18,7 +18,7 @@ from ice_offline.tools.printer import print_stage
 
 DATASET_CLASS = HopperSimpleDataset
 
-STEPS = 200_000
+STEPS = 10_000
 SAVE_INTERVAL = 20_000
 EVAL_INTERVAL = 2_000
 EVAL_OFFLINE_N = 8
