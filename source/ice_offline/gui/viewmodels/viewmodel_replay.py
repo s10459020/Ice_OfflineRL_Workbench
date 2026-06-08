@@ -4,7 +4,6 @@ from pathlib import Path
 
 import numpy as np
 
-from ice_offline.config.datasets import DATASET_CLASS_BY_ID
 from ice_offline.config.datasets import DatasetEntry
 from ice_offline.config.datasets import source_dataset_entries
 from ice_offline.dataset._spec import Dataset
@@ -71,9 +70,7 @@ class ReplayViewModel:
         if metadata_path is None:
             raise FileNotFoundError(f"missing metadata.json under: {path}")
         data_path = Path(metadata_path).with_name("main_data.hdf5")
-        metadata = self._read_metadata(Path(metadata_path))
-        dataset_cls = DATASET_CLASS_BY_ID[metadata.get("id", "")]
-        self._model.load_dataset(dataset_cls(path=data_path))
+        self._model.load_minari(str(data_path))
         return self._loaded_state()
 
     def set_episode(self, index: int) -> ReplayEpisodeState:
