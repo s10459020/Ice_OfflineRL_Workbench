@@ -121,7 +121,7 @@ def our_update_and_collect_params(
 # Compare
 # ====================
 def build_our() -> BCStochasticAgent:
-    return BCStochasticAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
+    return BCStochasticAgent(obs_size=OBS_DIM, act_size=ACT_DIM, device=DEVICE)
 
 def build_ref():
     config = algos.BCConfig(policy_type="stochastic")

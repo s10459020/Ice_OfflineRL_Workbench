@@ -71,12 +71,11 @@ class BCDeterministicAgent(Agent):
     # Update
     # ====================
     def update(self, batch: Batch):
-        o, a, _, _, _ = batch
-        self.update_actor(o, a)
+        self.update_actor(batch)
 
-    def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:
+    def update_actor(self, batch: Batch) -> None:
         self.actor_optimizer.zero_grad()
-        loss = self.loss_actor(o, a)
+        loss = self.loss_actor(batch)
         loss.backward()
         self.actor_optimizer.step()
 
@@ -96,8 +95,8 @@ class BCDeterministicAgent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
-        # BC: minimize imitation error on dataset actions.
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
+        o, a, _, _, _ = batch
         a_pred = self.actor.pi(o)
         return F.mse_loss(a_pred, a)
 

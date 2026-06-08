@@ -4,30 +4,26 @@ import matplotlib
 
 matplotlib.use("Agg")
 
-from ice_offline.plot.plotter import plot_csv
-from ice_offline.config.paths import VIEW_ROOT, eval_dir
+from ice_offline.tools.plotter import plot_csv
+from ice_offline.config.paths import VIEW_ROOT, eval_path
 
 
 SHOW = False
 
 
 def plot(path: str, output_path: Path, *, show: bool = False) -> None:
-    eval_dir = Path(path)
-    if not eval_dir.exists():
+    eval_file = Path(path)
+    if not eval_file.exists():
         print(f"skip missing: {path}")
         return
-    csv_paths = [str(path) for path in sorted(eval_dir.glob("*.csv"))]
-    if len(csv_paths) == 0:
-        print(f"skip missing csv: {eval_dir}")
-        return
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    plot_csv(csv_paths=csv_paths, plot_name=path, show=show, output_path=str(output_path))
+    plot_csv(csv_paths=str(eval_file), plot_name=path, show=show, output_path=str(output_path))
     print(f"saved: {output_path}")
 
 
 def plot_agent(index: int, agent_id: str, dataset_cls) -> None:
     dataset = dataset_cls()
-    path = eval_dir(dataset.id, agent_id)
+    path = eval_path(dataset.id, agent_id)
     output_path = VIEW_ROOT / "evals" / agent_id / f"{index}. {dataset.id}.png"
     plot(str(path), output_path, show=SHOW)
 

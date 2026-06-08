@@ -9,6 +9,7 @@ RUNS_ROOT = PROJECT_ROOT / "tmps" / "runs"
 MODELS_ROOT = PROJECT_ROOT / "tmps" / "models"
 RETURNS_ROOT = PROJECT_ROOT / "tmps" / "returns"
 EVALS_ROOT = PROJECT_ROOT / "tmps" / "evals"
+METRICS_ROOT = PROJECT_ROOT / "tmps" / "metrics"
 VIEW_ROOT = PROJECT_ROOT / "tmps" / "view"
 
 
@@ -42,8 +43,12 @@ def model_path(dataset_id: str, agent_id: str, step: int) -> Path:
     return MODELS_ROOT / _task_id(dataset_id, agent_id) / str(step)
 
 
-def eval_dir(dataset_id: str, agent_id: str) -> Path:
-    return EVALS_ROOT / _task_id(dataset_id, agent_id)
+def eval_path(dataset_id: str, agent_id: str) -> Path:
+    return EVALS_ROOT / f"{_task_id(dataset_id, agent_id)}.csv"
+
+
+def metric_path(dataset_id: str, agent_id: str) -> Path:
+    return METRICS_ROOT / f"{_task_id(dataset_id, agent_id)}.csv"
 
 
 def returns_path(dataset_id: str, agent_id: str | None = None) -> Path:

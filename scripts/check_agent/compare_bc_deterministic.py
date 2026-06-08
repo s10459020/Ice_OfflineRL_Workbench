@@ -110,7 +110,7 @@ def our_update_and_collect_params(
 # Compare
 # ====================
 def build_our() -> BCDeterministicAgent:
-    return BCDeterministicAgent(obs_size=OBS_DIM, act_size=ACT_DIM)
+    return BCDeterministicAgent(obs_size=OBS_DIM, act_size=ACT_DIM, device=DEVICE)
 
 def build_ref():
     config = algos.BCConfig()
@@ -162,12 +162,12 @@ def compare_loss(
 ) -> None:
     print_stage("Loss Compare")
     for i in range(1, N_TEST_BATCHES + 1):
-        s, a, _, _, _ = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
+        s, a, r, sn, d = sample_transition(BATCH_SIZE, OBS_DIM, ACT_DIM, DEVICE)
 
         # loss actor
         assert_callback(
             lambda: [ref_loss_actor(ref_policy, s, a)],
-            lambda: [our.loss_actor(s, a)],
+            lambda: [our.loss_actor(torch_buffer(s, a, r, sn, d))],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
