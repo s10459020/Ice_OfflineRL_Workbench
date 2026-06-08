@@ -15,7 +15,7 @@ AGENT_ID = "bc_deterministic"
 def main() -> None:
     metrics_path = metric_path(DATASET_ID, AGENT_ID)
     returns_path = eval_path(DATASET_ID, AGENT_ID)
-    output_path = VIEW_ROOT / "check_functional" / "plot.png"
+    output_path = VIEW_ROOT / "plot" / "check_functional" / "plot.png"
 
     plot(
         metrics_path=str(metrics_path),

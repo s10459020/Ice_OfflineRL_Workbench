@@ -12,7 +12,7 @@ class CQLMaxQAgent(CQLSoftQAgent):
     # ====================
     # Critic target
     # ====================
-    def target_td(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def target_sac(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # CQL max-Q backup:
         # y = r + gamma * max_a' min Q_target(s', a') * (1-done)
         with torch.no_grad():

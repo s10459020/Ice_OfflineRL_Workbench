@@ -36,7 +36,13 @@ def read_metric_csv(csv_path: str) -> tuple[np.ndarray, np.ndarray, list[str]]:
 
     names = rows[0][1:]
 
-    data = np.array(rows[1:], dtype=np.float64)
+    data = np.array(
+        [
+            [value if value != "" else np.nan for value in row]
+            for row in rows[1:]
+        ],
+        dtype=np.float64,
+    )
     steps = data[:, 0]
     values = data[:, 1:]
     return steps, values, names
@@ -71,6 +77,7 @@ def draw_metric(
     steps: np.ndarray,
     values: np.ndarray,
 ):
-    axis.plot(steps, values, linewidth=1.5, color="tab:blue")
+    keep = np.isfinite(values)
+    axis.plot(steps[keep], values[keep], linewidth=1.5, color="tab:blue")
     axis.set_title(title)
     axis.grid(alpha=0.3)

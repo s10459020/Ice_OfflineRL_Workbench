@@ -188,7 +188,7 @@ def compare_loss(our: BCStochasticAgent, ref_policy: NormalPolicy) -> None:
         # loss actor
         assert_callback(
             lambda: [ref_loss_actor(ref_policy, s, a)],
-            lambda: [our.loss_actor(s, a)],
+            lambda: [our.loss_actor(torch_buffer(s, a, torch.zeros_like(s[:, :1]), s, torch.zeros_like(s[:, :1])))],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )

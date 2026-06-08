@@ -188,6 +188,17 @@ def our_update_and_collect_params(
     our.update(torch_buffer(s, a, r, sn, d))
     return [y for y, _ in _all_pairs(our, ref)]
 
+def our_loss_actor(our: CQLMaxQAgent, batch) -> torch.Tensor:
+    o, _, _, _, _ = batch
+    a, log_prob = our.actor.sample(o)
+    return our.loss_actor(batch, a, log_prob)
+
+def our_loss_critic(our: CQLMaxQAgent, batch) -> torch.Tensor:
+    loss_td = our.loss_td(batch)
+    loss_suppress = our.loss_suppress(batch)
+    suppress_penalty = our.suppress_penalty(loss_suppress)
+    return our.loss_critic(batch, loss_td, suppress_penalty)
+
 
 # ====================
 # Compare
@@ -278,7 +289,7 @@ def compare_loss(our: CQLMaxQAgent, ref) -> None:
         # loss actor
         assert_callback(
             lambda: [ref_loss_actor(ref, batch)],
-            lambda: [our.loss_actor(our_batch)],
+            lambda: [our_loss_actor(our, our_batch)],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
@@ -286,7 +297,7 @@ def compare_loss(our: CQLMaxQAgent, ref) -> None:
         # loss critic
         assert_callback(
             lambda: [ref_loss_critic(ref, batch)],
-            lambda: [our.loss_critic(our_batch)],
+            lambda: [our_loss_critic(our, our_batch)],
             label=f"loss_critic[{i}]",
             seed=SEED + i,
         )

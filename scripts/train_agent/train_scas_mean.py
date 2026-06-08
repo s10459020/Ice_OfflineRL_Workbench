@@ -13,7 +13,8 @@ from ice_offline.store.state.hopper import HopperState
 from ice_offline.store.state.hopper import HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.store.state.op_dataset import StateDataset
-from ice_offline.run.evaluator import Evaluator
+from ice_offline.store.eval.record import Evaluator
+from ice_offline.store.metric.record import MetricRecorder
 from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
@@ -22,38 +23,49 @@ BATCH_SIZE = 256
 DYNAMIC_STEPS = 100_000
 AGENT_STEPS = 200_000
 EVAL_INTERVAL = 2_000
-EVAL_OFFLINE_N = 8
-EVAL_ONLINE_N = 3
+EVAL_EPISODES = 3
 SAVE_INTERVAL = 20_000
+PRINT_INTERVAL = 10
 SEED = 42
 DEVICE = "cuda:0"
 AGENT_ID = "scas_mean"
 
 
-def eval_loss_dynamic(dynamics: ScasDynamic, batch: Batch) -> dict[str, float]:
-    s = batch[0]
-    a = batch[1]
-    sn = batch[3]
-    with torch.no_grad():
-        return {"1. loss_dynamic": float(dynamics.loss_dynamic(s, a, sn).item())}
+def print_latest(step: int, recorder: MetricRecorder) -> None:
+    metrics = recorder.history[-1]
+    parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+    print(f"train step={step}", *parts)
 
 
-def eval_loss_agent(agent: ScasMeanAgent, batch: Batch) -> dict[str, float]:
-    with torch.no_grad():
+def update_dynamic_with_record(recorder: MetricRecorder, dynamics: ScasDynamic, batch: Batch) -> None:
+    loss_dynamic = dynamics.loss_dynamic(batch)
+    recorder.add("loss_dynamic", loss_dynamic)
+    recorder.add_grad_norm("grad_dynamic", loss_dynamic, dynamics.model.parameters())
+    recorder.flush()
+    dynamics.update(batch)
+
+
+def update_agent_with_record(recorder: MetricRecorder, agent: ScasMeanAgent, batch: Batch) -> None:
+    actor_update = (agent.update_step + 1) % agent.update_actor_interval == 0
+    loss_critic = agent.loss_critic(batch)
+
+    recorder.add("loss_critic", loss_critic)
+    recorder.add_grad_norm("grad_critic", loss_critic, agent.critic.parameters())
+
+    if actor_update:
         loss_td3 = agent.loss_td3(batch)
         loss_correction = agent.loss_correction(batch)
-        loss_critic = agent.loss_critic(batch)
-        loss_actor = agent.loss_actor(batch)
-        return {
-            "2. loss_td3": float(loss_td3.item()),
-            "3. loss_correction": float(loss_correction.item()),
-            "4. loss_actor": float(loss_actor.item()),
-            "5. loss_critic": float(loss_critic.item()),
-        }
+        loss_actor = (1.0 - agent.lmbda) * loss_td3 + agent.lmbda * loss_correction
+        recorder.add("loss_td3", loss_td3)
+        recorder.add_grad_norm("grad_td3", loss_td3, agent.actor.parameters())
+        recorder.add("loss_correction", loss_correction)
+        recorder.add_grad_norm("grad_correction", loss_correction, agent.actor.parameters())
+        recorder.add("loss_actor", loss_actor)
+        recorder.add_grad_norm("grad_actor", loss_actor, agent.actor.parameters())
 
+    recorder.flush()
 
-def eval_return(batch: Batch) -> dict[str, float]:
-    return {"6. return": float(batch[2].sum().item())}
+    agent.update(batch)
 
 
 def train(
@@ -63,16 +75,16 @@ def train(
     agent_steps: int = AGENT_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
-    eval_offline_n: int = EVAL_OFFLINE_N,
-    eval_online_n: int = EVAL_ONLINE_N,
+    eval_episodes: int = EVAL_EPISODES,
     eval_env: gym.Env | None = None,
     save_interval: int = SAVE_INTERVAL,
+    print_interval: int = PRINT_INTERVAL,
     seed: int = SEED,
     device: str = DEVICE,
 ) -> None:
     np.random.seed(seed)
     torch.manual_seed(seed)
-    eval_env = eval_env or dataset.make_env()
+    eval_env = eval_env or dataset.make_eval_env()
     dataset.set_seed(seed)
 
     print_stage("Train SCAS Mean Dynamics")
@@ -82,21 +94,15 @@ def train(
         device=device,
     )
     dynamics.agent_name = f"{AGENT_ID}_dynamics"
-    dynamics_evaluator = Evaluator(
-        dataset_id=dataset.id,
-        agent_id=AGENT_ID,
-        eval_interval=eval_interval,
-        eval_offline_n=eval_offline_n,
-        eval_offline_fns=[eval_loss_dynamic],
-    )
+    dynamics_recorder = MetricRecorder(dataset.id, dynamics.agent_name)
     for step in range(1, dynamic_steps + 1):
         batch = dataset.sample_batch(batch_size)
-        dynamics.update(batch)
-        dynamics_evaluator.eval(step=step, agent=dynamics, batch_loader=dataset, batch_size=batch_size)
-        dynamics_evaluator.print(step)
-        dynamics_evaluator.recode(step)
+        update_dynamic_with_record(dynamics_recorder, dynamics, batch)
+        if print_interval > 0 and step % print_interval == 0:
+            print_latest(step, dynamics_recorder)
         if step % save_interval == 0 or step == dynamic_steps:
             dynamics.save(dataset.id, step)
+    dynamics_recorder.save()
 
     print_stage("Train SCAS Mean Agent")
     agent = ScasMeanAgent(
@@ -105,24 +111,19 @@ def train(
         dynamics=dynamics,
         device=device,
     )
-    agent_evaluator = Evaluator(
-        dataset_id=dataset.id,
-        agent_id=AGENT_ID,
-        eval_interval=eval_interval,
-        eval_offline_n=eval_offline_n,
-        eval_online_n=eval_online_n,
-        eval_offline_fns=[eval_loss_agent],
-        eval_online_fns=[eval_return],
-        recode_reset=False,
-    )
+    agent_recorder = MetricRecorder(dataset.id, AGENT_ID)
+    agent_evaluator = Evaluator(dataset.id, AGENT_ID, episodes=eval_episodes)
     for step in range(1, agent_steps + 1):
         batch = dataset.sample_batch(batch_size)
-        agent.update(batch)
-        agent_evaluator.eval(step=step, agent=agent, batch_loader=dataset, batch_size=batch_size, eval_env=eval_env)
-        agent_evaluator.print(step)
-        agent_evaluator.recode(step)
+        update_agent_with_record(agent_recorder, agent, batch)
+        if eval_interval > 0 and step % eval_interval == 0:
+            agent_evaluator.eval(step, agent, eval_env)
+        if print_interval > 0 and step % print_interval == 0:
+            print_latest(step, agent_recorder)
         if step % save_interval == 0 or step == agent_steps:
             agent.save(dataset.id, step)
+    agent_evaluator.save()
+    agent_recorder.save()
 
 
 def collect(
@@ -132,9 +133,9 @@ def collect(
     dynamic_step: int = DYNAMIC_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
-    eval_offline_n: int = EVAL_OFFLINE_N,
-    eval_online_n: int = EVAL_ONLINE_N,
+    eval_episodes: int = EVAL_EPISODES,
     save_interval: int = SAVE_INTERVAL,
+    print_interval: int = PRINT_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
     env = dataset.make_env()
@@ -148,9 +149,9 @@ def collect(
         dynamic_steps=dynamic_step,
         agent_steps=steps,
         eval_interval=eval_interval,
-        eval_offline_n=eval_offline_n,
-        eval_online_n=eval_online_n,
+        eval_episodes=eval_episodes,
         save_interval=save_interval,
+        print_interval=print_interval,
         device=device,
     )
 
@@ -168,6 +169,7 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
 
 
 

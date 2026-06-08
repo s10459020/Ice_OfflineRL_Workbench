@@ -173,20 +173,18 @@ class IQLAgent(Agent):
     # Update
     # ====================
     def update(self, batch: Batch):
-        o, a, r, on, d = batch
-
-        self.update_critic(o, a, r, on, d)
-        self.update_actor(o, a)
+        self.update_critic(batch)
+        self.update_actor(batch)
         self.critic.update_target_soft()
 
-    def update_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> None:
-        critic_loss = self.loss_critic(o, a, r, on, d)
+    def update_critic(self, batch: Batch) -> None:
+        critic_loss = self.loss_critic(batch)
         self.critic_optim.zero_grad()
         critic_loss.backward()
         self.critic_optim.step()
 
-    def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:
-        actor_loss = self.loss_actor(o, a)
+    def update_actor(self, batch: Batch) -> None:
+        actor_loss = self.loss_actor(batch)
         self.actor_optim.zero_grad()
         actor_loss.backward()
         self.actor_optim.step()
@@ -215,14 +213,16 @@ class IQLAgent(Agent):
         with torch.no_grad():
             return r + self.gamma * self.critic.v(on) * (1.0 - d)
 
-    def loss_q(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def loss_q(self, batch: Batch) -> torch.Tensor:
+        o, a, r, on, d = batch
         target = self.target(on, r, d)
         q1 = self.critic.q1(o, a)
         q2 = self.critic.q2(o, a)
         # loss_q = E_batch{(target - Q)^2}
         return (q1 - target).pow(2).mean() + (q2 - target).pow(2).mean()
 
-    def loss_v(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_v(self, batch: Batch) -> torch.Tensor:
+        o, a, _, _, _ = batch
         # L2_tau = |tau - 1(u<0)| * u^2
         # loss_v = E_batch{ L2_tau(Q-V) }
         q_t = self.critic.target_q_min(o, a)
@@ -231,13 +231,14 @@ class IQLAgent(Agent):
         weight = (self.critic.v.tau - (diff < 0.0).float()).abs().detach()
         return (weight * diff.pow(2)).mean()
 
-    def loss_critic(self, o: torch.Tensor, a: torch.Tensor, r: torch.Tensor, on: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        return self.loss_q(o, a, r, on, d) + self.loss_v(o, a)
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
+        return self.loss_q(batch) + self.loss_v(batch)
 
     # ====================
     # actor
     # ====================
-    def weight(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def weight(self, batch: Batch) -> torch.Tensor:
+        o, a, _, _, _ = batch
         # weight = -exp( beta * (Q - V))
         with torch.no_grad():
             q_t = self.critic.target_q_min(o, a)
@@ -245,9 +246,10 @@ class IQLAgent(Agent):
             adv = q_t - v_t
             return -(self.beta * adv).exp().clamp(max=self.max_weight)
 
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
+        o, a, _, _, _ = batch
         # loss_pi = E_batch{weight * log_pi}
-        weight = self.weight(o, a)
+        weight = self.weight(batch)
         log_pi = self.actor.log_prob(o, a)
         return (weight * log_pi).mean()
 

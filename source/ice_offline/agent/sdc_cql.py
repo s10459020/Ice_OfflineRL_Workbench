@@ -60,17 +60,11 @@ class SDCCQLAgent(CQLAgent):
         super().__post_init__()
         self.dynamics = _DynamicsModel(self.obs_size, self.act_size).to(self.device)
         self.transition = _TransitionModel(self.obs_size, self.state_transition_noise_size).to(self.device)
-        self.dynamics_optimizer = torch.optim.Adam(
-            self.dynamics.parameters(),
-            lr=self.dynamics_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
-        self.transition_optimizer = torch.optim.Adam(
-            self.transition.parameters(),
-            lr=self.transition_learning_rate,
+        self.state_models_optimizer = torch.optim.Adam(
+            [
+                {"params": self.dynamics.parameters(), "lr": self.dynamics_learning_rate},
+                {"params": self.transition.parameters(), "lr": self.transition_learning_rate},
+            ],
             betas=(0.9, 0.999),
             eps=1e-8,
             weight_decay=0.0,
@@ -84,12 +78,10 @@ class SDCCQLAgent(CQLAgent):
         self.critic.update_target_soft()
 
     def update_state_models(self, batch: Batch) -> None:
-        self.dynamics_optimizer.zero_grad()
-        self.transition_optimizer.zero_grad()
+        self.state_models_optimizer.zero_grad()
         model_loss = self.loss_state_models(batch)
         model_loss.backward()
-        self.dynamics_optimizer.step()
-        self.transition_optimizer.step()
+        self.state_models_optimizer.step()
 
     def _save_dict(self) -> dict[str, torch.Tensor]:
         state = super()._save_dict()
@@ -97,8 +89,7 @@ class SDCCQLAgent(CQLAgent):
             {
                 "dynamics": self.dynamics.state_dict(),
                 "transition": self.transition.state_dict(),
-                "dynamics_optimizer": self.dynamics_optimizer.state_dict(),
-                "transition_optimizer": self.transition_optimizer.state_dict(),
+                "state_models_optimizer": self.state_models_optimizer.state_dict(),
             }
         )
         return state
@@ -107,8 +98,7 @@ class SDCCQLAgent(CQLAgent):
         super()._load_dict(state)
         self.dynamics.load_state_dict(state["dynamics"])
         self.transition.load_state_dict(state["transition"])
-        self.dynamics_optimizer.load_state_dict(state["dynamics_optimizer"])
-        self.transition_optimizer.load_state_dict(state["transition_optimizer"])
+        self.state_models_optimizer.load_state_dict(state["state_models_optimizer"])
 
     def loss_state_models(self, batch: Batch) -> torch.Tensor:
         o, a, _, on, _ = batch
@@ -128,10 +118,11 @@ class SDCCQLAgent(CQLAgent):
         o, _, _, _, _ = batch
         a, _ = self.actor.sample(o)
         q_t = self.critic.q_min(o, a)
-        sdc = self.loss_state_deviation(o)
+        sdc = self.loss_state_deviation(batch)
         return -q_t.mean() + self.sdc_weight * (sdc - self.sdc_threshold)
 
-    def loss_state_deviation(self, o: torch.Tensor) -> torch.Tensor:
+    def loss_state_deviation(self, batch: Batch) -> torch.Tensor:
+        o, _, _, _, _ = batch
         batch = o.shape[0]
         o_noisy = o[:, None, :] + self.state_noise_beta * torch.randn(
             batch, self.sdc_samples, self.obs_size, device=o.device

@@ -59,10 +59,8 @@ class ScasDynamic(Agent):
         return self.model
     
     def update(self, batch: Batch):
-        s, a, _, sn, _ = batch
-
         self.optimizer.zero_grad()
-        loss = self.loss_dynamic(s, a, sn)
+        loss = self.loss_dynamic(batch)
         loss.backward() 
         self.optimizer.step()
 
@@ -79,7 +77,8 @@ class ScasDynamic(Agent):
     # ====================
     # mathmatics
     # ====================
-    def loss_dynamic(self, s: torch.Tensor, a: torch.Tensor, sn: torch.Tensor) -> torch.Tensor:
+    def loss_dynamic(self, batch: Batch) -> torch.Tensor:
+        s, a, _, sn, _ = batch
         # loss: E_{s,a,s'~D} [||M(s,a) - s'||^2]
         pred = self.model(s, a)
         return F.mse_loss(pred, sn)

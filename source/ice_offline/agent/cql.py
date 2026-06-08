@@ -13,7 +13,7 @@ class CQLAgent(CQLSoftQAgent):
     # ====================
     # Critic target
     # ====================
-    def target_td(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+    def target_sac(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         # CQL deterministic backup:
         # y = r + gamma * min Q_target(s', pi_mode(s')) * (1-done)
         with torch.no_grad():

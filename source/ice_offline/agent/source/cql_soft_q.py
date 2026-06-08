@@ -1,13 +1,13 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 from typing import ClassVar
 
 import math
 import torch
 
-from ice_offline.agent.sac import SACActor
-from ice_offline.agent.sac import SACAgent
-from ice_offline.agent.sac import SACCritic
 from ice_offline.dataset._types import Batch
+from ice_offline.agent.sac import SACAgent
+from ice_offline.agent.sac import SACActor
+from ice_offline.agent.sac import SACCritic
 
 
 class _CQLActor(SACActor):
@@ -51,6 +51,12 @@ class _CQLConservativeMultiplier(torch.nn.Module):
 
     def forward(self) -> torch.Tensor:
         return self.log_cql_multiplier.exp().clamp(0.0, 1e6)
+
+    def update(self, conservative_loss_detached: torch.Tensor) -> None:
+        self.optimizer.zero_grad()
+        multiplier_loss = self.loss(conservative_loss_detached)
+        multiplier_loss.backward()
+        self.optimizer.step()
 
     def loss(self, conservative_loss_detached: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * L_cql ]
@@ -125,23 +131,6 @@ class CQLSoftQAgent(SACAgent):
         )
 
     # ====================
-    # Update
-    # ====================
-    def update_critic(self, batch: Batch) -> None:
-        loss_suppress = self.loss_suppress(batch)
-        loss_multiplier = self.multiplier.loss(loss_suppress.detach())
-
-        # Keep loss functions side-effect free; update CQL multiplier explicitly here.
-        self.multiplier.optimizer.zero_grad()
-        loss_multiplier.backward()
-        self.multiplier.optimizer.step()
-
-        loss_critic = self.loss_critic_with_suppress(batch, loss_suppress)
-        self.critic_optimizer.zero_grad()
-        loss_critic.backward()
-        self.critic_optimizer.step()
-
-    # ====================
     # Save and load
     # ====================
     def _save_dict(self) -> dict[str, object]:
@@ -163,7 +152,7 @@ class CQLSoftQAgent(SACAgent):
         #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
         #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # sample approximation
-        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss
+        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss     
         #
         # E_D[s]: input o
         # E_D[s,a]: input o,a
@@ -178,24 +167,24 @@ class CQLSoftQAgent(SACAgent):
         logp = logp.view(1, batch_size, self.critic.n_action_samples)   # (1,B,N)
         logpn = logpn.view(1, batch_size, self.critic.n_action_samples) # (1,B,N)
         logpr = logpr.view(1, batch_size, self.critic.n_action_samples) # (1,B,N)
-        logp_cat = torch.cat([logp, logpn, logpr], dim=2)                # (1,B,3N)
+        logp_cat = torch.cat([logp, logpn, logpr], dim=2)   # (1,B,3N)
 
         q = self.critic.eval_q_n(o, a_s).view(2, batch_size, self.critic.n_action_samples)
         qn = self.critic.eval_q_n(o, an).view(2, batch_size, self.critic.n_action_samples)
         qr = self.critic.eval_q_n(o, ar).view(2, batch_size, self.critic.n_action_samples)
-        q_cat = torch.cat([q, qn, qr], dim=2)                            # (2,B,3N)
+        q_cat = torch.cat([q, qn, qr], dim=2)               # (2,B,3N)
 
         logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2,B,1)
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
-        loss = (logsumexp - data_q).mean(dim=[1, 2])                        # (2), double Q
-        loss = self.critic.conservative_weight * (loss - self.critic.alpha_threshold)
-        return loss
+        return (logsumexp - data_q).mean(dim=[1, 2])        # (2), double Q
 
-    def loss_critic_with_suppress(
-        self,
-        batch: Batch,
-        loss_suppress: torch.Tensor,
-    ) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         # CQL loss: loss_td + multiplier * loss_suppress
-        loss_td = self.loss_critic(batch)
+        loss_td = self.loss_td(batch)
+        loss_suppress = self.loss_suppress(batch)            # (2,)
+        loss_suppress = self.critic.conservative_weight * (
+            loss_suppress - self.critic.alpha_threshold
+        )
+        if torch.is_grad_enabled():
+            self.multiplier.update(loss_suppress.detach())
         return loss_td + (self.multiplier() * loss_suppress).sum()

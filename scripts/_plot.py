@@ -25,9 +25,7 @@ from ice_offline.dataset.walker2d_medium_replay import Walker2dMediumReplayDatas
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
 from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
 from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
-from view_returns import boxplot
-from view_returns import returns
-from view_returns import table
+from view_returns import plot
 
 
 DATASET_CLASS_LIST = [
@@ -79,9 +77,7 @@ AGENT_ID_LIST = [
 
 
 def main() -> None:
-    returns.main(DATASET_CLASS_LIST, AGENT_ID_LIST)
-    table.main(DATASET_CLASS_LIST, AGENT_ID_LIST)
-    boxplot.main(DATASET_CLASS_LIST, AGENT_ID_LIST)
+    plot.main(DATASET_CLASS_LIST, AGENT_ID_LIST)
 
 
 if __name__ == "__main__":

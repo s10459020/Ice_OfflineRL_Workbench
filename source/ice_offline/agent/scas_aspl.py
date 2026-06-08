@@ -42,11 +42,13 @@ class ScasAsplAgent(ScasMinAgent):
     # ====================
     # Critic loss
     # ====================
-    def loss_td_with_target(self, s: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
+    def loss_td_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
+        s, a, _, _, _ = batch
         # loss = E{s,a,r,s'~D}[ MSE(Q(s,a) - y) ]
         return sum(F.mse_loss(q, q_target) for q in self.critic.q_all(s, a))
 
-    def loss_punish_with_target(self, s: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
+    def loss_punish_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
+        s, a, _, _, _ = batch
         # E_{s~D,a~U}[ Q(s,a~) - Q~(s,a~) ]^2
         a_samples = self.actor.sample_actions_lhs(s.shape[0]) # (N, B, A)
         action_distance = self.actor.action_distance(a, a_samples) # (N, B, 1)
@@ -63,7 +65,7 @@ class ScasAsplAgent(ScasMinAgent):
         # loss = L_TD3 + alpha_ASPL * L_ASPL
         s, a, r, sn, d = batch
         q_target = self.target_td3(sn, r, d)
-        loss_td = self.loss_td_with_target(s, a, q_target)
-        loss_punish = self.loss_punish_with_target(s, a, q_target)
+        loss_td = self.loss_td_with_target(batch, q_target)
+        loss_punish = self.loss_punish_with_target(batch, q_target)
         return loss_td + self.aspl_alpha * loss_punish
 

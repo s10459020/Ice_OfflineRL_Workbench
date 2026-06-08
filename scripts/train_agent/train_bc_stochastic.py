@@ -11,7 +11,8 @@ from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.store.state.op_dataset import StateDataset
-from ice_offline.run.evaluator import Evaluator
+from ice_offline.store.eval.record import Evaluator
+from ice_offline.store.metric.record import MetricRecorder
 from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
@@ -20,9 +21,9 @@ DATASET_CLASS = HopperSimpleDataset
 
 STEPS = 10_000
 SAVE_INTERVAL = 20_000
+PRINT_INTERVAL = 10
 EVAL_INTERVAL = 2_000
-EVAL_OFFLINE_N = 8
-EVAL_ONLINE_N = 3
+EVAL_EPISODES = 3
 
 SEED = 42
 DEVICE = "cuda:0"
@@ -30,13 +31,22 @@ AGENT_ID = "bc_stochastic"
 BATCH_SIZE = 256
 
 
-def eval_loss_pi(agent: BCStochasticAgent, batch: Batch) -> dict[str, float]:
-    with torch.no_grad():
-        return {"1. loss_actor": float(agent.loss_actor(batch[0], batch[1]).item())}
+def print_latest(step: int, recorder: MetricRecorder) -> None:
+    metrics = recorder.history[-1]
+    parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+    print(f"train step={step}", *parts)
 
 
-def eval_return(batch: Batch) -> dict[str, float]:
-    return {"2. return": float(batch[2].sum().item())}
+def update_with_record(recorder: MetricRecorder, agent: BCStochasticAgent, batch: Batch) -> None:
+    agent.actor_optimizer.zero_grad()
+
+    loss_actor = agent.loss_actor(batch)
+    recorder.add("loss_actor", loss_actor)
+    recorder.add_grad_norm("grad_actor", loss_actor, agent.actor.parameters())
+    recorder.flush()
+
+    loss_actor.backward()
+    agent.actor_optimizer.step()
 
 
 def train(
@@ -45,10 +55,10 @@ def train(
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
-    eval_offline_n: int = EVAL_OFFLINE_N,
-    eval_online_n: int = EVAL_ONLINE_N,
+    eval_episodes: int = EVAL_EPISODES,
     eval_env: gym.Env | None = None,
     save_interval: int = SAVE_INTERVAL,
+    print_interval: int = PRINT_INTERVAL,
     seed: int = SEED,
     device: str = DEVICE,
 ) -> None:
@@ -64,24 +74,21 @@ def train(
         device=device,
     )
 
-    evaluator = Evaluator(
-        dataset_id=dataset.id,
-        agent_id=AGENT_ID,
-        eval_interval=eval_interval,
-        eval_offline_n=eval_offline_n,
-        eval_online_n=eval_online_n,
-        eval_offline_fns=[eval_loss_pi],
-        eval_online_fns=[eval_return],
-    )
+    recorder = MetricRecorder(dataset.id, AGENT_ID)
+    evaluator = Evaluator(dataset.id, AGENT_ID, episodes=eval_episodes)
 
     for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
-        agent.update(batch)
-        evaluator.eval(step=step, agent=agent, batch_loader=dataset, batch_size=batch_size, eval_env=eval_env)
-        evaluator.print(step)
-        evaluator.recode(step)
+        update_with_record(recorder, agent, batch)
+        if eval_interval > 0 and step % eval_interval == 0:
+            evaluator.eval(step, agent, eval_env)
+        if print_interval > 0 and step % print_interval == 0:
+            print_latest(step, recorder)
         if step % save_interval == 0 or step == steps:
             agent.save(dataset.id, step)
+
+    evaluator.save()
+    recorder.save()
 
 
 def collect(
@@ -90,9 +97,9 @@ def collect(
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
-    eval_online_n: int = EVAL_ONLINE_N,
-    eval_offline_n: int = EVAL_OFFLINE_N,
+    eval_episodes: int = EVAL_EPISODES,
     save_interval: int = SAVE_INTERVAL,
+    print_interval: int = PRINT_INTERVAL,
     device: str = DEVICE,
 ) -> tuple[minari.MinariDataset, StateDataset]:
     env = dataset.make_env()
@@ -105,9 +112,9 @@ def collect(
         batch_size=batch_size,
         steps=steps,
         eval_interval=eval_interval,
-        eval_offline_n=eval_offline_n,
-        eval_online_n=eval_online_n,
+        eval_episodes=eval_episodes,
         save_interval=save_interval,
+        print_interval=print_interval,
         device=device,
     )
 
@@ -125,6 +132,7 @@ if __name__ == "__main__":
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
+
 
 
 

@@ -207,7 +207,7 @@ def compare_loss(our: IQLAgent, ref) -> None:
         # loss q
         assert_callback(
             lambda: [ref_loss_pack(ref, batch, s)[0].q_loss],
-            lambda: [our.loss_q(s, a, r, sn, d)],
+            lambda: [our.loss_q(torch_buffer(s, a, r, sn, d))],
             label=f"loss_q[{i}]",
             seed=SEED + i,
         )
@@ -215,7 +215,7 @@ def compare_loss(our: IQLAgent, ref) -> None:
         # loss v
         assert_callback(
             lambda: [ref_loss_pack(ref, batch, s)[0].v_loss],
-            lambda: [our.loss_v(s, a)],
+            lambda: [our.loss_v(torch_buffer(s, a, r, sn, d))],
             label=f"loss_v[{i}]",
             seed=SEED + i,
         )
@@ -223,7 +223,7 @@ def compare_loss(our: IQLAgent, ref) -> None:
         # loss actor
         assert_callback(
             lambda: [ref_loss_pack(ref, batch, s)[1]],
-            lambda: [our.loss_actor(s, a)],
+            lambda: [our.loss_actor(torch_buffer(s, a, r, sn, d))],
             label=f"loss_actor[{i}]",
             seed=SEED + i,
         )
@@ -231,7 +231,7 @@ def compare_loss(our: IQLAgent, ref) -> None:
         # loss critic
         assert_callback(
             lambda: [ref_loss_pack(ref, batch, s)[0].critic_loss],
-            lambda: [our.loss_critic(s, a, r, sn, d)],
+            lambda: [our.loss_critic(torch_buffer(s, a, r, sn, d))],
             label=f"loss_critic[{i}]",
             seed=SEED + i,
         )

@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+﻿from dataclasses import dataclass
 
 import math
 import numpy as np
@@ -8,6 +8,30 @@ from torch.distributions import Normal
 
 from ice_offline.agent._spec import Agent
 from ice_offline.dataset._types import Batch
+
+
+class _SquashedGaussianDistribution:
+    def __init__(self, mean: torch.Tensor, logstd: torch.Tensor):
+        self.mean = mean
+        self.logstd = logstd
+        self.dist = Normal(mean, logstd.exp())
+
+    def mode(self) -> torch.Tensor:
+        return torch.tanh(self.mean)
+
+    def sample(self) -> tuple[torch.Tensor, torch.Tensor]:
+        raw_action = self.dist.rsample()
+        log_prob = self.log_prob(raw_action)
+        return torch.tanh(raw_action), log_prob
+
+    def sample_n(self, n: int) -> tuple[torch.Tensor, torch.Tensor]:
+        raw_action = self.dist.rsample((n,))
+        log_prob = self.log_prob(raw_action)
+        return torch.tanh(raw_action).transpose(0, 1), log_prob.transpose(0, 1)
+
+    def log_prob(self, raw_action: torch.Tensor) -> torch.Tensor:
+        jacobian = 2.0 * (math.log(2.0) - raw_action - F.softplus(-2.0 * raw_action))
+        return (self.dist.log_prob(raw_action) - jacobian).sum(dim=-1, keepdim=True)
 
 
 class _Pi(torch.nn.Module):
@@ -30,11 +54,11 @@ class _Pi(torch.nn.Module):
         self.min_logstd = min_logstd
         self.max_logstd = max_logstd
 
-    def forward(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    def dist(self, o: torch.Tensor) -> _SquashedGaussianDistribution:
         h = self.network(o)
         mean = self.mean_head(h)
         logstd = self.logstd_head(h).clamp(self.min_logstd, self.max_logstd)
-        return mean, logstd
+        return _SquashedGaussianDistribution(mean, logstd)
 
 
 class SACActor(torch.nn.Module):
@@ -42,29 +66,15 @@ class SACActor(torch.nn.Module):
         super().__init__()
         self.pi = pi_cls(obs_size, act_size)
 
-    def _dist(self, o: torch.Tensor) -> tuple[Normal, torch.Tensor]:
-        mean, logstd = self.pi(o)
-        return Normal(mean, logstd.exp()), mean
-
-    def _log_prob(self, dist: Normal, raw_action: torch.Tensor) -> torch.Tensor:
-        jacobian = 2.0 * (math.log(2.0) - raw_action - F.softplus(-2.0 * raw_action))
-        return (dist.log_prob(raw_action) - jacobian).sum(dim=-1, keepdim=True)
-
     def forward(self, o: torch.Tensor) -> torch.Tensor:
-        _, mean = self._dist(o)
-        return torch.tanh(mean)
+        return self.pi.dist(o).mode()
 
     def sample(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        dist, _ = self._dist(o)
-        raw_action = dist.rsample()
-        return torch.tanh(raw_action), self._log_prob(dist, raw_action)
+        return self.pi.dist(o).sample()
 
     def sample_n(self, o: torch.Tensor, n: int) -> tuple[torch.Tensor, torch.Tensor]:
-        dist, _ = self._dist(o)
-        raw_action = dist.rsample((n,))
-        action = torch.tanh(raw_action).transpose(0, 1)
-        log_prob = self._log_prob(dist, raw_action).transpose(0, 1)
-        return action.reshape(-1, action.shape[-1]), log_prob.reshape(-1, 1)
+        a, log_prob = self.pi.dist(o).sample_n(n)
+        return a.reshape(-1, a.shape[-1]), log_prob.reshape(-1, 1)
 
 
 class _Q(torch.nn.Module):
@@ -152,6 +162,12 @@ class _SACTemperature(torch.nn.Module):
     def forward(self) -> torch.Tensor:
         return self.log_alpha.exp()
 
+    def update(self, log_prob: torch.Tensor) -> None:
+        self.optimizer.zero_grad()
+        temperature_loss = self.loss(log_prob)
+        temperature_loss.backward()
+        self.optimizer.step()
+
     def loss(self, log_prob: torch.Tensor) -> torch.Tensor:
         # loss = E{s~D,a~pi}[ -temp * (log pi(a|s) + target_entropy) ]
         # d3rl SAC source uses target_entropy = -action_size.
@@ -199,7 +215,6 @@ class SACAgent(Agent):
             weight_decay=0.0,
             amsgrad=False,
         )
-
     # ====================
     # Act
     # ====================
@@ -225,24 +240,15 @@ class SACAgent(Agent):
         self.critic.update_target_soft()
 
     def update_critic(self, batch: Batch) -> None:
-        loss_critic = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
-        loss_critic.backward()
+        critic_loss = self.loss_critic(batch)
+        critic_loss.backward()
         self.critic_optimizer.step()
 
     def update_actor(self, batch: Batch) -> None:
-        o, _, _, _, _ = batch
-        a, log_prob = self.actor.sample(o)
-
-        # Keep loss functions side-effect free; update temperature explicitly here.
-        loss_temperature = self.temp.loss(log_prob)
-        self.temp.optimizer.zero_grad()
-        loss_temperature.backward()
-        self.temp.optimizer.step()
-
-        loss_actor = self.loss_actor_with_sample(batch, a, log_prob)
         self.actor_optimizer.zero_grad()
-        loss_actor.backward()
+        actor_loss = self.loss_actor(batch)
+        actor_loss.backward()
         self.actor_optimizer.step()
 
     # ====================
@@ -276,10 +282,13 @@ class SACAgent(Agent):
             tq = self.critic.tq_min(on, an)
             return r + self.gamma * (tq - self.temp() * log_prob) * (1.0 - d)
 
+    def target_td(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
+        return self.target_sac(on, r, d)
+
     def loss_td(self, batch: Batch) -> torch.Tensor:
         # loss = sum_i E{s,a,r,s'~D}[ MSE(Qi(s,a) - y) ]
         o, a, r, on, d = batch
-        target = self.target_sac(on, r, d)
+        target = self.target_td(on, r, d)
         return sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
@@ -288,13 +297,11 @@ class SACAgent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor_with_sample(
-        self,
-        batch: Batch,
-        sample_a: torch.Tensor,
-        log_prob: torch.Tensor,
-    ) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
         # loss = E{s~D,a~pi}[ temp * log pi(a|s) - min Q(s,a) ]
         o, _, _, _, _ = batch
-        q = self.critic.q_min(o, sample_a)
+        a, log_prob = self.actor.sample(o)
+        if torch.is_grad_enabled():
+            self.temp.update(log_prob)
+        q = self.critic.q_min(o, a)
         return (self.temp() * log_prob - q).mean()

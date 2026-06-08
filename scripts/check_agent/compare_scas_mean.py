@@ -313,7 +313,7 @@ def compare_loss(
         # loss dynamic
         assert_callback(
             lambda: [ref_loss_dynamic(ref_dynamics, s, a, sn)],
-            lambda: [our_dynamics.loss_dynamic(s, a, sn)],
+            lambda: [our_dynamics.loss_dynamic(torch_buffer(s, a, r, sn, d))],
             label=f"loss_dynamic[{i}]",
             seed=SEED + i,
         )

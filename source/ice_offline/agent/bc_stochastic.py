@@ -94,12 +94,11 @@ class BCStochasticAgent(Agent):
     # Update
     # ====================
     def update(self, batch: Batch):
-        o, a, _, _, _ = batch
-        self.update_actor(o, a)
+        self.update_actor(batch)
 
-    def update_actor(self, o: torch.Tensor, a: torch.Tensor) -> None:
+    def update_actor(self, batch: Batch) -> None:
         self.actor_optimizer.zero_grad()
-        loss = self.loss_actor(o, a)
+        loss = self.loss_actor(batch)
         loss.backward()
         self.actor_optimizer.step()
 
@@ -119,7 +118,8 @@ class BCStochasticAgent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
+        o, a, _, _, _ = batch
         # Stochastic BC: sample from the actor and minimize imitation error.
         a_pred = self.actor.sample(o)
         return F.mse_loss(a_pred, a)

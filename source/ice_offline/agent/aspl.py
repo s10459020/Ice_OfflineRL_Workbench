@@ -175,7 +175,8 @@ class AsplAgent(TD3Agent):
     def set_seed(self, seed: int) -> None:
         self.actor.set_seed(seed)
 
-    def loss_td_with_target(self, o: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
+    def loss_td_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
+        o, a, _, _, _ = batch
         # double Q TD
         q1 = self.critic.q_networks[0](o, a)
         q2 = self.critic.q_networks[1](o, a)
@@ -183,7 +184,8 @@ class AsplAgent(TD3Agent):
         loss_q2 = F.mse_loss(q2, q_target)
         return loss_q1 + loss_q2
     
-    def loss_punish_with_target(self, s: torch.Tensor, a: torch.Tensor, q_target: torch.Tensor) -> torch.Tensor:
+    def loss_punish_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
+        s, a, _, _, _ = batch
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
         a_samples = self.actor.sample_actions_lhs(s.shape[0])                                # (N,B,A)
         action_distance = self.actor.action_distance(a, a_samples)                            # (N,B,1)
@@ -206,8 +208,8 @@ class AsplAgent(TD3Agent):
         # source use same noise target
         s, a, r, sn, d = batch
         q_target = self.target_td3(sn, r, d)
-        loss_td = self.loss_td_with_target(s, a, q_target)
-        loss_aspl = self.loss_punish_with_target(s, a, q_target)
+        loss_td = self.loss_td_with_target(batch, q_target)
+        loss_aspl = self.loss_punish_with_target(batch, q_target)
         return loss_td + self.alpha * loss_aspl
 
 
