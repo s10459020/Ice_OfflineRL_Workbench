@@ -78,6 +78,6 @@ def draw_metric(
     values: np.ndarray,
 ):
     keep = np.isfinite(values)
-    axis.plot(steps[keep], values[keep], linewidth=1.5, color="tab:blue")
+    axis.plot(steps[keep], values[keep], linewidth=0.5, color="tab:blue")
     axis.set_title(title)
     axis.grid(alpha=0.3)

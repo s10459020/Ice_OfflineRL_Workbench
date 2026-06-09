@@ -6,12 +6,11 @@ from ice_offline.config.paths import metric_path
 
 
 class MetricRecorder:
-    def __init__(self, dataset_id: str, agent_id: str) -> None:
+    def __init__(self, dataset_id: str, agent_id: str, initialized = False) -> None:
         self.path = metric_path(dataset_id, agent_id)
         self.current: dict[str, float | None] = {}
-        self.initialized = False
+        self.initialized = initialized
         self.last = {}
-        self.step = 0
 
     def add(self, name: str, value: float | torch.Tensor | None) -> None:
         if isinstance(value, torch.Tensor):
@@ -35,8 +34,7 @@ class MetricRecorder:
 
         self.add(name, value)
         
-    def flush(self) -> None:
-        self.step += 1
+    def flush(self, step) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         mode = "a" if self.initialized else "w"
         
@@ -45,7 +43,7 @@ class MetricRecorder:
             if not self.initialized:
                 writer.writerow(["step", *self.current.keys()])
                 self.initialized = True
-            writer.writerow([self.step, *self.current.values()])
+            writer.writerow([step, *self.current.values()])
 
         self.last = self.current.copy()
         self.current.clear()

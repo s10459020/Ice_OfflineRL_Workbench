@@ -7,7 +7,6 @@ import torch
 from ice_offline.agent.aspl import AsplAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset._types import Batch
-from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState
 from ice_offline.store.state.hopper import HopperStateIO
@@ -18,8 +17,8 @@ from ice_offline.store.metric.record import MetricRecorder
 from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
-
-STEPS = 200_000
+START = 0
+STEPS = 100_000
 SAVE_INTERVAL = math.ceil(STEPS/10)
 EVAL_INTERVAL = math.ceil(STEPS/100)
 PRINT_INTERVAL = math.ceil(STEPS/1000)
@@ -67,13 +66,15 @@ def update_with_record(recorder: MetricRecorder, agent: AsplAgent, batch: Batch)
         agent.actor_optimizer.step()
         agent.critic.update_target_soft()
         agent.actor.update_target_soft()
-
-    recorder.flush()
+    else:
+        recorder.add("loss_actor", None)
+        recorder.add("grad_actor", None)
 
 
 def train(
     dataset: Dataset,
     *,
+    start: int = START,
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -100,9 +101,10 @@ def train(
     recorder = MetricRecorder(dataset.id, AGENT_ID)
     evaluator = Evaluator(dataset.id, AGENT_ID, episodes=eval_episodes)
 
-    for step in range(1, steps + 1):
+    for step in range(start + 1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_with_record(recorder, agent, batch)
+        recorder.flush(step)
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
             parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
@@ -117,6 +119,7 @@ def train(
 def collect(
     dataset: Dataset,
     *,
+    start: int = START,
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -133,6 +136,7 @@ def collect(
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
+        start=start,
         steps=steps,
         eval_interval=eval_interval,
         eval_episodes=eval_episodes,
@@ -150,8 +154,9 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = HopperSimpleDataset(device=DEVICE)
-    minari_data, state_data = collect(dataset=dataset)
+    from ice_offline.dataset.hopper_expert import HopperExpertDataset
+    dataset = HopperExpertDataset(device=DEVICE)
+    minari_data, state_data  = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")

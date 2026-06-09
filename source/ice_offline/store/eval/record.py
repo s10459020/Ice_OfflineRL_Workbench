@@ -2,10 +2,10 @@ from ice_offline.config.paths import eval_path
 
 
 class Evaluator:
-    def __init__(self, dataset_id: str, agent_id: str, episodes: int = 1) -> None:
+    def __init__(self, dataset_id: str, agent_id: str, episodes: int = 1, initialized = False) -> None:
         self.episodes = episodes
         self.path = eval_path(dataset_id, agent_id)
-        self.initialized = False
+        self.initialized = initialized
 
     def eval(self, step: int, agent, eval_env) -> float:
         returns: list[float] = []
