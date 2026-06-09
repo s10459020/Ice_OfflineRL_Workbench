@@ -39,12 +39,14 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     o, _, r, on, d = batch
     loss_td = agent.loss_td(batch)
     loss_suppress = agent.loss_suppress(batch)
-    loss_multiplier = agent.multiplier.loss(loss_suppress.detach())
 
     recorder.add("loss_td", loss_td)
     recorder.add_grad_norm("grad_td", loss_td, agent.critic.parameters())
     recorder.add("loss_suppress", loss_suppress.sum())
     recorder.add_grad_norm("grad_suppress", loss_suppress.sum(), agent.critic.parameters())
+    
+    loss_suppress = agent.critic.shift_loss(loss_suppress)
+    loss_multiplier = agent.multiplier.loss(loss_suppress.detach())
     recorder.add("loss_multiplier", loss_multiplier)
     recorder.add_grad_norm("grad_multiplier", loss_multiplier, agent.multiplier.parameters())
 

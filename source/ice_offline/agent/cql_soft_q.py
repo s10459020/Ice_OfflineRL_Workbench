@@ -63,13 +63,13 @@ class _CQLCritic(SACCritic):
         self,
         obs_size: int,
         act_size: int,
-        alpha_threshold: float = 10.0,
-        conservative_weight: float = 5.0,
+        threshold: float = 10.0,
+        weight: float = 5.0,
         n_action_samples: int = 10,
     ):
         super().__init__(obs_size, act_size)
-        self.alpha_threshold = alpha_threshold
-        self.conservative_weight = conservative_weight
+        self.threshold = threshold
+        self.weight = weight
         self.n_action_samples = n_action_samples
 
     def eval_q_n(self, o: torch.Tensor, a_sample: torch.Tensor) -> torch.Tensor:
@@ -81,6 +81,9 @@ class _CQLCritic(SACCritic):
         o = o.repeat_interleave(self.n_action_samples, dim=0)
         a = a_sample.reshape(-1, a_sample.shape[-1])
         return torch.stack([tq(o, a) for tq in self.tq_networks], dim=0)
+    
+    def shift_loss(self, loss_suppress: torch.Tensor) -> torch.Tensor:        
+        return self.weight * (loss_suppress - self.threshold)
 
 
 @dataclass
@@ -129,6 +132,7 @@ class CQLSoftQAgent(SACAgent):
     # ====================
     def update_critic(self, batch: Batch) -> None:
         loss_suppress = self.loss_suppress(batch)
+        loss_suppress = self.critic.shift_loss(loss_suppress)
         loss_multiplier = self.multiplier.loss(loss_suppress.detach())
 
         # Keep loss functions side-effect free; update CQL multiplier explicitly here.
@@ -187,9 +191,7 @@ class CQLSoftQAgent(SACAgent):
 
         logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2,B,1)
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
-        loss = (logsumexp - data_q).mean(dim=[1, 2])                        # (2), double Q
-        loss = self.critic.conservative_weight * (loss - self.critic.alpha_threshold)
-        return loss
+        return (logsumexp - data_q).mean(dim=[1, 2])   
 
     def loss_critic_with_suppress(
         self,

@@ -122,8 +122,7 @@ class ScasMinAgent(TD3Agent):
         ).exp().clamp(max = self.max_weight)
 
         ps = self.dynamics.noise_state(s)
-        pa = self.actor.pi(ps)
-        mse_M = (self.dynamics(ps, pa) - sn) ** 2
+        mse_M = (self.dynamics(ps, a) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
