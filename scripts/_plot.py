@@ -29,14 +29,14 @@ from view_returns import plot
 
 
 DATASET_CLASS_LIST = [
-    # HopperRandomDataset,
-    # HopperReplayDataset,
-    # HopperMediumReplayDataset,
-    # HopperMediumD4rlDataset,
-    # HopperMediumExpertDataset,
-    # HopperExpertD4rlDataset,
-    # HopperSimpleDataset,
-    # HopperMediumDataset,
+    HopperRandomDataset,
+    HopperReplayDataset,
+    HopperMediumReplayDataset,
+    HopperMediumD4rlDataset,
+    HopperMediumExpertDataset,
+    HopperExpertD4rlDataset,
+    HopperSimpleDataset,
+    HopperMediumDataset,
     HopperExpertDataset,
     # Walker2dRandomDataset,
     # Walker2dReplayDataset,

@@ -64,6 +64,13 @@ def update_agent_with_record(recorder: MetricRecorder, agent: ScasMinAgent, batc
         recorder.add_grad_norm("grad_correction", loss_correction, agent.actor.parameters())
         recorder.add("loss_actor", loss_actor)
         recorder.add_grad_norm("grad_actor", loss_actor, agent.actor.parameters())
+    else:
+        recorder.add("loss_td3", None)
+        recorder.add("grad_td3", None)
+        recorder.add("loss_correction", None)
+        recorder.add("grad_correction", None)
+        recorder.add("loss_actor", None)
+        recorder.add("grad_actor", None)
 
     recorder.flush()
     agent.update(batch)
