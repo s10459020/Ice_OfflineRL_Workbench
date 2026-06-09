@@ -36,7 +36,7 @@ def print_latest(step: int, recorder: MetricRecorder) -> None:
 
 
 def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Batch) -> None:
-    o, _, _, _, _ = batch
+    o, _, r, on, d = batch
     loss_td = agent.loss_td(batch)
     loss_suppress = agent.loss_suppress(batch)
     loss_multiplier = agent.multiplier.loss(loss_suppress.detach())
@@ -78,6 +78,23 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     agent.actor_optimizer.step()
     agent.critic.update_target_soft()
     recorder.flush()
+        
+    # =========== testing ===========
+    q_data = agent.critic.q_min(o, a).mean().item()
+
+    ap, _ = agent.actor.sample(o)
+    q_policy = agent.critic.q_min(o, ap).mean().item()
+
+    ar, _ = agent.actor.sample_random_n(o)
+    or_ = o.repeat_interleave(agent.critic.n_action_samples, dim=0)
+    q_random = agent.critic.q_min(or_, ar).mean().item()
+    recorder.add("multiplier", agent.multiplier().item())
+    recorder.add("temperature", agent.temp().item())
+    recorder.add("q_data", q_data)
+    recorder.add("q_policy", q_policy)
+    recorder.add("q_random", q_random)
+    recorder.add("target_q", agent.target_sac(on, r, d).mean().item())
+    # =============================
 
 
 def train(
