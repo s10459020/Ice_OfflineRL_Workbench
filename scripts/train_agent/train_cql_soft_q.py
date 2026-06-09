@@ -36,17 +36,63 @@ def print_latest(step: int, recorder: MetricRecorder) -> None:
 
 
 def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Batch) -> None:
-    o, _, r, on, d = batch
-    loss_td = agent.loss_td(batch)
-    loss_suppress = agent.loss_suppress(batch)
+    o, a, r, on, d = batch
+    batch_size = o.shape[0]
+    n = agent.critic.n_action_samples
 
+    # =========== TD ===========
+    loss_td = agent.loss_td(batch)
     recorder.add("loss_td", loss_td)
     recorder.add_grad_norm("grad_td", loss_td, agent.critic.parameters())
+
+    # =========== suppress unpack ===========
+    a_s, logp = agent.actor.sample_n(o, n)
+    an, logpn = agent.actor.sample_n(on, n)
+    ar, logpr = agent.actor.sample_random_n(o)
+
+    q = agent.critic.eval_q_n(o, a_s).view(2, batch_size, n)
+    qn = agent.critic.eval_q_n(o, an).view(2, batch_size, n)
+    qr = agent.critic.eval_q_n(o, ar).view(2, batch_size, n)
+    q_cat = torch.cat([q, qn, qr], dim=2)
+
+    logp = logp.view(1, batch_size, n)
+    logpn = logpn.view(1, batch_size, n)
+    logpr = logpr.view(1, batch_size, n)
+    logp_cat = torch.cat([logp, logpn, logpr], dim=2)
+
+    data_q = torch.stack(agent.critic.q_all(o, a), dim=0)
+
+    lse_q = torch.logsumexp(q_cat, dim=2, keepdim=True)
+    lse_q_logp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)
+
+    loss_suppress = (lse_q_logp - data_q).mean(dim=[1, 2])
+
     recorder.add("loss_suppress", loss_suppress.sum())
     recorder.add_grad_norm("grad_suppress", loss_suppress.sum(), agent.critic.parameters())
-    
-    loss_suppress = agent.critic.shift_loss(loss_suppress)
-    loss_multiplier = agent.multiplier.loss(loss_suppress.detach())
+
+    recorder.add("q_data", data_q.mean().detach())
+    recorder.add("q_sample", q_cat.mean().detach())
+    recorder.add("q_policy_sample", q.mean().detach())
+    recorder.add("q_next_sample", qn.mean().detach())
+    recorder.add("q_random_sample", qr.mean().detach())
+
+    recorder.add("lse_q", lse_q.mean().detach())
+    recorder.add("lse_q_logp", lse_q_logp.mean().detach())
+    recorder.add("gap_q_only", (lse_q - data_q).mean().detach())
+    recorder.add("gap_q_logp", (lse_q_logp - data_q).mean().detach())
+    recorder.add("logp_lift", (lse_q_logp - lse_q).mean().detach())
+
+    recorder.add("logp_policy", logp.mean().detach())
+    recorder.add("logp_next", logpn.mean().detach())
+    recorder.add("logp_random", logpr.mean().detach())
+    recorder.add("neg_logp_policy", (-logp).mean().detach())
+    recorder.add("neg_logp_next", (-logpn).mean().detach())
+    recorder.add("neg_logp_random", (-logpr).mean().detach())
+
+    # =========== multiplier update ===========
+    loss_suppress_shifted = agent.critic.shift_loss(loss_suppress)
+
+    loss_multiplier = agent.multiplier.loss(loss_suppress_shifted.detach())
     recorder.add("loss_multiplier", loss_multiplier)
     recorder.add_grad_norm("grad_multiplier", loss_multiplier, agent.multiplier.parameters())
 
@@ -54,7 +100,8 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     loss_multiplier.backward()
     agent.multiplier.optimizer.step()
 
-    loss_critic = agent.loss_critic_with_suppress(batch, loss_suppress)
+    # =========== critic update ===========
+    loss_critic = agent.loss_critic_with_suppress(batch, loss_suppress_shifted)
     recorder.add("loss_critic", loss_critic)
     recorder.add_grad_norm("grad_critic", loss_critic, agent.critic.parameters())
 
@@ -62,7 +109,9 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     loss_critic.backward()
     agent.critic_optimizer.step()
 
-    a, log_prob = agent.actor.sample(o)
+    # =========== temperature update ===========
+    a_policy, log_prob = agent.actor.sample(o)
+
     loss_temperature = agent.temp.loss(log_prob)
     recorder.add("loss_temperature", loss_temperature)
     recorder.add_grad_norm("grad_temperature", loss_temperature, agent.temp.parameters())
@@ -71,31 +120,29 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     loss_temperature.backward()
     agent.temp.optimizer.step()
 
-    loss_actor = agent.loss_actor_with_sample(batch, a, log_prob)
+    # =========== actor update ===========
+    loss_actor = agent.loss_actor_with_sample(batch, a_policy, log_prob)
     recorder.add("loss_actor", loss_actor)
     recorder.add_grad_norm("grad_actor", loss_actor, agent.actor.parameters())
 
     agent.actor_optimizer.zero_grad()
     loss_actor.backward()
     agent.actor_optimizer.step()
+
     agent.critic.update_target_soft()
-        
-    # =========== testing ===========
-    q_data = agent.critic.q_min(o, a).mean().item()
 
-    ap, _ = agent.actor.sample(o)
-    q_policy = agent.critic.q_min(o, ap).mean().item()
+    # =========== post-update metrics ===========
+    with torch.no_grad():
+        ap, _ = agent.actor.sample(o)
+        ar, _ = agent.actor.sample_random_n(o)
+        or_ = o.repeat_interleave(n, dim=0)
 
-    ar, _ = agent.actor.sample_random_n(o)
-    or_ = o.repeat_interleave(agent.critic.n_action_samples, dim=0)
-    q_random = agent.critic.q_min(or_, ar).mean().item()
-    recorder.add("multiplier", agent.multiplier().item())
-    recorder.add("temperature", agent.temp().item())
-    recorder.add("q_data", q_data)
-    recorder.add("q_policy", q_policy)
-    recorder.add("q_random", q_random)
-    recorder.add("target_q", agent.target_sac(on, r, d).mean().item())
-    # =============================
+        recorder.add("multiplier", agent.multiplier().item())
+        recorder.add("temperature", agent.temp().item())
+        recorder.add("q_policy", agent.critic.q_min(o, ap).mean().item())
+        recorder.add("q_random", agent.critic.q_min(or_, ar).mean().item())
+        recorder.add("target_q", agent.target_sac(on, r, d).mean().item())
+
     recorder.flush()
 
 
