@@ -18,12 +18,12 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-BATCH_SIZE = 256
 STEPS = 200_000
-EVAL_INTERVAL = 2_000
-EVAL_EPISODES = 3
-SAVE_INTERVAL = 20_000
-PRINT_INTERVAL = 10
+SAVE_INTERVAL = STEPS//10
+EVAL_INTERVAL = SAVE_INTERVAL//10
+PRINT_INTERVAL = EVAL_INTERVAL//10
+BATCH_SIZE = 256
+EVAL_EPISODES = 20
 SEED = 42
 DEVICE = "cuda:0"
 AGENT_ID = "aspl"

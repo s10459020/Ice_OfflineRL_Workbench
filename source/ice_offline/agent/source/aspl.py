@@ -11,9 +11,80 @@ from ice_offline.agent.td3 import TD3Critic
 from ice_offline.dataset._types import Batch
 
 
+class _Pi(torch.nn.Module):
+    # source design
+    def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0):
+        super().__init__()
+        self.max_action = max_action
+        self.network = torch.nn.Sequential(
+            torch.nn.Linear(obs_size, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, 256),
+            torch.nn.ReLU(),
+            torch.nn.Linear(256, act_size),
+        )
+
+        # hidden linear init
+        torch.nn.init.constant_(self.network[0].bias, 0.1)
+        torch.nn.init.constant_(self.network[2].bias, 0.1)
+        torch.nn.init.constant_(self.network[4].bias, 0.1)
+        torch.nn.init.kaiming_uniform_(self.network[0].weight, a=5**0.5)
+        torch.nn.init.kaiming_uniform_(self.network[2].weight, a=5**0.5)
+        torch.nn.init.kaiming_uniform_(self.network[4].weight, a=5**0.5)
+
+        # output linear init
+        torch.nn.init.uniform_(self.network[6].weight, -1e-3, 1e-3)
+        torch.nn.init.uniform_(self.network[6].bias, -1e-3, 1e-3)
+
+    def forward(self, o: torch.Tensor) -> torch.Tensor:
+        return self.max_action * torch.tanh(self.network(o))
+
+
+class _Q(torch.nn.Module):
+    # source design
+    def __init__(self, obs_size: int, act_size: int):
+        super().__init__()
+        self.network = torch.nn.Sequential(
+            torch.nn.Linear(obs_size + act_size, 256),   # 0
+            torch.nn.ReLU(),                   # 1
+            torch.nn.LayerNorm(256),           # 2
+            torch.nn.Linear(256, 256),         # 3
+            torch.nn.ReLU(),                   # 4
+            torch.nn.LayerNorm(256),           # 5
+            torch.nn.Linear(256, 256),         # 6
+            torch.nn.ReLU(),                   # 7
+            torch.nn.LayerNorm(256),           # 8
+            torch.nn.Linear(256, 256),         # 9
+            torch.nn.ReLU(),                   # 10
+            torch.nn.LayerNorm(256),           # 11
+            torch.nn.Linear(256, 1),           # 12
+        )
+
+        # hidden linear init
+        torch.nn.init.kaiming_uniform_(self.network[0].weight, a=5**0.5)
+        torch.nn.init.constant_(self.network[0].bias, 0.1)
+        torch.nn.init.kaiming_uniform_(self.network[3].weight, a=5**0.5)
+        torch.nn.init.constant_(self.network[3].bias, 0.1)
+        torch.nn.init.kaiming_uniform_(self.network[6].weight, a=5**0.5)
+        torch.nn.init.constant_(self.network[6].bias, 0.1)
+        torch.nn.init.kaiming_uniform_(self.network[9].weight, a=5**0.5)
+        torch.nn.init.constant_(self.network[9].bias, 0.1)
+
+        # output init
+        torch.nn.init.uniform_(self.network[12].weight, -3e-3, 3e-3)
+        torch.nn.init.uniform_(self.network[12].bias, -3e-3, 3e-3)
+
+
+    def forward(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        x = torch.cat([o, a], -1)
+        return self.network(x)
+
+
 class AsplActor(TD3Actor):
     def __init__(self, seed: int = 42, num_sample: int = 1, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, pi_cls=_Pi, **kwargs)
         self.num_sample = num_sample
         self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
 
@@ -53,7 +124,7 @@ class AsplActor(TD3Actor):
 
 class AsplCritic(TD3Critic):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, q_cls=_Q, **kwargs)
         self.moving_avg = 0.0
 
     def update_moving_avg(self, update_step: int, target: torch.Tensor) -> float:
@@ -140,6 +211,18 @@ class AsplAgent(TD3Agent):
         loss_td = self.loss_td_with_target(batch, q_target)
         loss_aspl = self.loss_punish_with_target(batch, q_target)
         return loss_td + self.alpha * loss_aspl
+
+
+    # ====================
+    # actor mathmatics
+    # ====================  
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        # use q1 for actor update
+        s, _, _, _, _ = batch
+        a = self.actor.noise_action(self.actor.pi(s))
+        q = self.critic.q_networks[0](s, a) 
+        return -q.mean() # mean over batch
+
 
 
 
