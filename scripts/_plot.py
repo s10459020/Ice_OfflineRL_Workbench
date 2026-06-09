@@ -66,11 +66,11 @@ AGENT_ID_LIST = [
     # "iql",
     # "cql",
     # "cql_max_q",
-    "cql_soft_q",
+    # "cql_soft_q",
     # "aspl",
     # "sdc_cql",
     # "sdc_pre",
-    # "scas_min",
+    "scas_min",
     # "scas_mean",
     # "scas_aspl",
 ]
