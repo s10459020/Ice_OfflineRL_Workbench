@@ -37,7 +37,7 @@ def print_latest(step: int, recorder: MetricRecorder) -> None:
     print(f"train step={step}", *parts)
 
 
-def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Batch) -> None:
+def update_with_record(recorder: MetricRecorder, agent: CQLAgent, batch: Batch) -> None:
     o, _, _, _, _ = batch
     loss_td = agent.loss_td(batch)
     loss_suppress = agent.loss_suppress(batch)

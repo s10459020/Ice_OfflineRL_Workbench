@@ -73,7 +73,7 @@ def train(
     dataset: Dataset,
     *,
     steps: int = STEPS,
-    model_stepss: int = MODEL_STEPS,
+    model_steps: int = MODEL_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_episodes: int = EVAL_EPISODES,
@@ -97,14 +97,14 @@ def train(
     )
     dynamics.agent_name = f"{AGENT_ID}_dynamics"
     dynamics_recorder = MetricRecorder(dataset.id, dynamics.agent_name)
-    for step in range(1, model_stepss + 1):
+    for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_dynamic_with_record(dynamics_recorder, dynamics, batch)
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
             parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
             print(f"train step={step}", *parts)
-        if step % save_interval == 0 or step == model_stepss:
+        if step % save_interval == 0 or step == model_steps:
             dynamics.save(dataset.id, step)
     dynamics_recorder.save()
 
