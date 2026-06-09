@@ -79,7 +79,6 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     loss_actor.backward()
     agent.actor_optimizer.step()
     agent.critic.update_target_soft()
-    recorder.flush()
         
     # =========== testing ===========
     q_data = agent.critic.q_min(o, a).mean().item()
@@ -97,6 +96,7 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
     recorder.add("q_random", q_random)
     recorder.add("target_q", agent.target_sac(on, r, d).mean().item())
     # =============================
+    recorder.flush()
 
 
 def train(
