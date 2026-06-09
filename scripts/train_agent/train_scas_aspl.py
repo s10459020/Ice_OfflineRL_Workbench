@@ -33,6 +33,11 @@ DEVICE = "cuda:0"
 AGENT_ID = "scas_aspl"
 
 
+def print_latest(step: int, recorder: MetricRecorder) -> None:
+    metrics = recorder.last
+    parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+    print(f"train step={step}", *parts)
+
 def update_dynamic_with_record(recorder: MetricRecorder, dynamics: ScasDynamic, batch: Batch) -> None:
     loss_dynamic = dynamics.loss_dynamic(batch)
     recorder.add("loss_dynamic", loss_dynamic)
@@ -108,17 +113,14 @@ def train(
         device=device,
     )
     dynamics.agent_name = f"{AGENT_ID}_dynamics"
-    dynamics_recorder = MetricRecorder(dataset.id, dynamics.agent_name)
+    model_recorder = MetricRecorder(dataset.id, dynamics.agent_name)
     for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
-        update_dynamic_with_record(dynamics_recorder, dynamics, batch)
+        update_dynamic_with_record(model_recorder, dynamics, batch)
         if print_interval > 0 and step % print_interval == 0:
-            metrics = recorder.last
-            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
-            print(f"train step={step}", *parts)
+            print_latest(step, model_recorder)
         if step % save_interval == 0 or step == model_steps:
             dynamics.save(dataset.id, step)
-    dynamics_recorder.save()
 
 
     print_stage("Train SCAS ASPL Agent")
@@ -137,9 +139,7 @@ def train(
         batch = dataset.sample_batch(batch_size)
         update_agent_with_record(recorder, agent, batch)
         if print_interval > 0 and step % print_interval == 0:
-            metrics = recorder.last
-            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
-            print(f"train step={step}", *parts)
+            print_latest(step, recorder)
         if eval_interval > 0 and step % eval_interval == 0:
             avg_return = evaluator.eval(step, agent, eval_env)
             print(f"eval step={step} avg_return={avg_return:.6g}")

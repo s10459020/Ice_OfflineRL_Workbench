@@ -124,7 +124,6 @@ def train(
             print_latest(step, model_recorder)
         if step % save_interval == 0 or step == model_steps:
             state_models.save(dataset.id, step)
-    model_recorder.save()
 
     print_stage("Train SDC Pre Agent")
     agent = SDCPreAgent(
@@ -145,8 +144,6 @@ def train(
             print(f"eval step={step} avg_return={avg_return:.6g}")
         if step % save_interval == 0 or step == steps:
             agent.save(dataset.id, step)
-    evaluator.save()
-    recorder.save()
 
 
 def collect(
