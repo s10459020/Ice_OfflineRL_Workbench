@@ -82,7 +82,8 @@ def train(
         batch = dataset.sample_batch(batch_size)
         update_with_record(recorder, agent, batch)
         if eval_interval > 0 and step % eval_interval == 0:
-            evaluator.eval(step, agent, eval_env)
+            avg_return = evaluator.eval(step, agent, eval_env)
+            print(f"eval step={step} avg_return={avg_return:.6g}")
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.history[-1]
             parts = [f"{name}={value:.6g}" for name, value in metrics.items()]

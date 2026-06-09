@@ -117,7 +117,8 @@ def train(
         batch = dataset.sample_batch(batch_size)
         update_agent_with_record(agent_recorder, agent, batch)
         if eval_interval > 0 and step % eval_interval == 0:
-            agent_evaluator.eval(step, agent, eval_env)
+            avg_return = agent_evaluator.eval(step, agent, eval_env)
+            print(f"eval step={step} avg_return={avg_return:.6g}")
         if print_interval > 0 and step % print_interval == 0:
             print_latest(step, agent_recorder)
         if step % save_interval == 0 or step == agent_steps:

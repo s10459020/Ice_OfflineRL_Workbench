@@ -7,7 +7,7 @@ class Evaluator:
         self.path = eval_path(dataset_id, agent_id)
         self.history: list[tuple[int, list[float]]] = []
 
-    def eval(self, step: int, agent, eval_env) -> None:
+    def eval(self, step: int, agent, eval_env) -> float:
         returns: list[float] = []
         for _ in range(self.episodes):
             obs, _ = eval_env.reset()
@@ -23,6 +23,7 @@ class Evaluator:
             returns.append(total_return)
 
         self.history.append((step, returns))
+        return sum(returns) / len(returns)
 
     def save(self) -> None:
         if not self.history:
