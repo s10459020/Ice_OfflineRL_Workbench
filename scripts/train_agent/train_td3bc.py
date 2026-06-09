@@ -2,6 +2,7 @@
 import minari
 import numpy as np
 import torch
+import math
 
 from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.dataset._spec import Dataset
@@ -18,21 +19,16 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-BATCH_SIZE = 256
 STEPS = 200_000
-EVAL_INTERVAL = 2_000
-EVAL_EPISODES = 3
-SAVE_INTERVAL = 20_000
-PRINT_INTERVAL = 10
+SAVE_INTERVAL = math.ceil(STEPS/10)
+EVAL_INTERVAL = math.ceil(STEPS/100)
+PRINT_INTERVAL = math.ceil(STEPS/1000)
+
 SEED = 42
+BATCH_SIZE = 256
+EVAL_EPISODES = 10
 DEVICE = "cuda:0"
 AGENT_ID = "td3bc"
-
-
-def print_latest(step: int, recorder: MetricRecorder) -> None:
-    metrics = recorder.history[-1]
-    parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
-    print(f"train step={step}", *parts)
 
 
 def update_with_record(recorder: MetricRecorder, agent: TD3BCAgent, batch: Batch) -> None:
@@ -98,11 +94,13 @@ def train(
     for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_with_record(recorder, agent, batch)
+        if print_interval > 0 and step % print_interval == 0:
+            metrics = recorder.last
+            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+            print(f"train step={step}", *parts)
         if eval_interval > 0 and step % eval_interval == 0:
             avg_return = evaluator.eval(step, agent, eval_env)
             print(f"eval step={step} avg_return={avg_return:.6g}")
-        if print_interval > 0 and step % print_interval == 0:
-            print_latest(step, recorder)
         if step % save_interval == 0 or step == steps:
             agent.save(dataset.id, step)
 

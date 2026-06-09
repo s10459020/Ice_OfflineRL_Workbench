@@ -9,8 +9,10 @@ class MetricRecorder:
     def __init__(self, dataset_id: str, agent_id: str) -> None:
         self.path = metric_path(dataset_id, agent_id)
         self.current: dict[str, float | None] = {}
-        self.history: list[dict[str, float | None]] = []
-    
+        self.initialized = False
+        self.last = {}
+        self.step = 0
+
     def add(self, name: str, value: float | torch.Tensor | None) -> None:
         if isinstance(value, torch.Tensor):
             value = value.item()
@@ -34,27 +36,16 @@ class MetricRecorder:
         self.add(name, value)
         
     def flush(self) -> None:
-        self.history.append(self.current.copy())
-        self.current.clear()
-
-    def save(self) -> None:
-        if not self.history:
-            return
-
-        names: list[str] = []
-        for line in self.history:
-            for name in line:
-                if name not in names:
-                    names.append(name)
-
+        self.step += 1
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("w", encoding="utf-8", newline="") as f:
+        mode = "a" if self.initialized else "w"
+        
+        with self.path.open(mode, encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["step", *names])
+            if not self.initialized:
+                writer.writerow(["step", *self.current.keys()])
+                self.initialized = True
+            writer.writerow([self.step, *self.current.values()])
 
-            for step, line in enumerate(self.history, start=1):
-                writer.writerow([
-                    step, 
-                    *("" if line.get(name) is None else line.get(name, "") for name in names),
-                ])
-
+        self.last = self.current.copy()
+        self.current.clear()

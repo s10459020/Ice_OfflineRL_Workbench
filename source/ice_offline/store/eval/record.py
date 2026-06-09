@@ -5,7 +5,7 @@ class Evaluator:
     def __init__(self, dataset_id: str, agent_id: str, episodes: int = 1) -> None:
         self.episodes = episodes
         self.path = eval_path(dataset_id, agent_id)
-        self.history: list[tuple[int, list[float]]] = []
+        self.initialized = False
 
     def eval(self, step: int, agent, eval_env) -> float:
         returns: list[float] = []
@@ -22,18 +22,17 @@ class Evaluator:
 
             returns.append(total_return)
 
-        self.history.append((step, returns))
+        self.append(step, returns)
         return sum(returns) / len(returns)
 
-    def save(self) -> None:
-        if not self.history:
-            return
-
+    def append(self, step: int, returns: list[float]) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        with self.path.open("w", encoding="utf-8", newline="") as f:
-            returns_count = len(self.history[0][1])
-            header = "step," + ",".join(str(i) for i in range(1, returns_count + 1))
-            f.write(f"{header}\n")
-            for step, returns in self.history:
-                row = ",".join(str(float(value)) for value in returns)
-                f.write(f"{step},{row}\n")
+        mode = "a" if self.initialized else "w"
+
+        with self.path.open(mode, encoding="utf-8", newline="") as f:
+            if not self.initialized:
+                header = "step," + ",".join(str(i) for i in range(1, len(returns) + 1))
+                f.write(f"{header}\n")
+                self.initialized = True
+            row = ",".join(str(float(value)) for value in returns)
+            f.write(f"{step},{row}\n")

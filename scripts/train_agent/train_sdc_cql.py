@@ -1,4 +1,5 @@
-﻿import gymnasium as gym
+﻿import math
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
@@ -18,13 +19,14 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-BATCH_SIZE = 256
 STEPS = 200_000
-EVAL_INTERVAL = 2_000
-EVAL_EPISODES = 3
-SAVE_INTERVAL = 20_000
-PRINT_INTERVAL = 10
+SAVE_INTERVAL = math.ceil(STEPS/10)
+EVAL_INTERVAL = math.ceil(STEPS/100)
+PRINT_INTERVAL = math.ceil(STEPS/1000)
+
 SEED = 42
+BATCH_SIZE = 256
+EVAL_EPISODES = 10
 DEVICE = "cuda:0"
 AGENT_ID = "sdc_cql"
 

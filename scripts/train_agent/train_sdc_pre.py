@@ -1,4 +1,5 @@
-﻿import gymnasium as gym
+﻿import math
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
@@ -19,20 +20,21 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-BATCH_SIZE = 256
-MODEL_STEPS = 100_000
-AGENT_STEPS = 200_000
-EVAL_INTERVAL = 2_000
-EVAL_EPISODES = 3
-SAVE_INTERVAL = 20_000
-PRINT_INTERVAL = 10
+STEPS = 200_000
+MODEL_STEPS = math.ceil(STEPS/2)
+SAVE_INTERVAL = math.ceil(STEPS/10)
+EVAL_INTERVAL = math.ceil(STEPS/100)
+PRINT_INTERVAL = math.ceil(STEPS/1000)
+
 SEED = 42
+BATCH_SIZE = 256
+EVAL_EPISODES = 10
 DEVICE = "cuda:0"
 AGENT_ID = "sdc_pre"
 
 
 def print_latest(step: int, recorder: MetricRecorder) -> None:
-    metrics = recorder.history[-1]
+    metrics = recorder.last
     parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
     print(f"train step={step}", *parts)
 
@@ -92,8 +94,8 @@ def update_agent_with_record(recorder: MetricRecorder, agent: SDCPreAgent, batch
 def train(
     dataset: Dataset,
     *,
+    steps: int = STEPS,
     model_steps: int = MODEL_STEPS,
-    agent_steps: int = AGENT_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_episodes: int = EVAL_EPISODES,
@@ -133,15 +135,15 @@ def train(
     )
     recorder = MetricRecorder(dataset.id, AGENT_ID)
     evaluator = Evaluator(dataset.id, AGENT_ID, episodes=eval_episodes)
-    for step in range(1, agent_steps + 1):
+    for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_agent_with_record(recorder, agent, batch)
+        if print_interval > 0 and step % print_interval == 0:
+            print_latest(step, recorder)
         if eval_interval > 0 and step % eval_interval == 0:
             avg_return = evaluator.eval(step, agent, eval_env)
             print(f"eval step={step} avg_return={avg_return:.6g}")
-        if print_interval > 0 and step % print_interval == 0:
-            print_latest(step, recorder)
-        if step % save_interval == 0 or step == agent_steps:
+        if step % save_interval == 0 or step == steps:
             agent.save(dataset.id, step)
     evaluator.save()
     recorder.save()
@@ -150,8 +152,8 @@ def train(
 def collect(
     dataset: Dataset,
     *,
-    steps: int = AGENT_STEPS,
-    steps_model: int = MODEL_STEPS,
+    steps: int = STEPS,
+    steps_models: int = MODEL_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_episodes: int = EVAL_EPISODES,
@@ -167,7 +169,7 @@ def collect(
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
-        model_steps=steps_model,
+        model_steps=steps_models,
         agent_steps=steps,
         eval_interval=eval_interval,
         eval_episodes=eval_episodes,

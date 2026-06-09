@@ -1,4 +1,5 @@
-﻿import gymnasium as gym
+﻿import math
+import gymnasium as gym
 import minari
 import numpy as np
 import torch
@@ -19,14 +20,15 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-BATCH_SIZE = 256
-DYNAMIC_STEPS = 100_000
-AGENT_STEPS = 200_000
-EVAL_INTERVAL = 2_000
-EVAL_EPISODES = 3
-SAVE_INTERVAL = 20_000
-PRINT_INTERVAL = 10
+STEPS = 200_000
+MODEL_STEPS = math.ceil(STEPS/2)
+SAVE_INTERVAL = math.ceil(STEPS/10)
+EVAL_INTERVAL = math.ceil(STEPS/100)
+PRINT_INTERVAL = math.ceil(STEPS/1000)
+
 SEED = 42
+BATCH_SIZE = 256
+EVAL_EPISODES = 10
 DEVICE = "cuda:0"
 AGENT_ID = "scas_mean"
 
@@ -71,8 +73,8 @@ def update_agent_with_record(recorder: MetricRecorder, agent: ScasMeanAgent, bat
 def train(
     dataset: Dataset,
     *,
-    dynamic_steps: int = DYNAMIC_STEPS,
-    agent_steps: int = AGENT_STEPS,
+    steps: int = STEPS,
+    model_steps: int = MODEL_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_episodes: int = EVAL_EPISODES,
@@ -87,6 +89,7 @@ def train(
     eval_env = eval_env or dataset.make_eval_env()
     dataset.set_seed(seed)
 
+
     print_stage("Train SCAS Mean Dynamics")
     dynamics = ScasDynamic(
         obs_size=dataset.obs_dim,
@@ -95,14 +98,17 @@ def train(
     )
     dynamics.agent_name = f"{AGENT_ID}_dynamics"
     dynamics_recorder = MetricRecorder(dataset.id, dynamics.agent_name)
-    for step in range(1, dynamic_steps + 1):
+    for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_dynamic_with_record(dynamics_recorder, dynamics, batch)
         if print_interval > 0 and step % print_interval == 0:
-            print_latest(step, dynamics_recorder)
-        if step % save_interval == 0 or step == dynamic_steps:
+            metrics = recorder.last
+            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+            print(f"train step={step}", *parts)
+        if step % save_interval == 0 or step == model_steps:
             dynamics.save(dataset.id, step)
     dynamics_recorder.save()
+
 
     print_stage("Train SCAS Mean Agent")
     agent = ScasMeanAgent(
@@ -111,27 +117,30 @@ def train(
         dynamics=dynamics,
         device=device,
     )
-    agent_recorder = MetricRecorder(dataset.id, AGENT_ID)
-    agent_evaluator = Evaluator(dataset.id, AGENT_ID, episodes=eval_episodes)
-    for step in range(1, agent_steps + 1):
+    agent.set_seed(seed)
+
+    recorder = MetricRecorder(dataset.id, AGENT_ID)
+    evaluator = Evaluator(dataset.id, AGENT_ID, episodes=eval_episodes)
+
+    for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
-        update_agent_with_record(agent_recorder, agent, batch)
-        if eval_interval > 0 and step % eval_interval == 0:
-            avg_return = agent_evaluator.eval(step, agent, eval_env)
-            print(f"eval step={step} avg_return={avg_return:.6g}")
+        update_agent_with_record(recorder, agent, batch)
         if print_interval > 0 and step % print_interval == 0:
-            print_latest(step, agent_recorder)
-        if step % save_interval == 0 or step == agent_steps:
+            metrics = recorder.last
+            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+            print(f"train step={step}", *parts)
+        if eval_interval > 0 and step % eval_interval == 0:
+            avg_return = evaluator.eval(step, agent, eval_env)
+            print(f"eval step={step} avg_return={avg_return:.6g}")
+        if step % save_interval == 0 or step == steps:
             agent.save(dataset.id, step)
-    agent_evaluator.save()
-    agent_recorder.save()
 
 
 def collect(
     dataset: Dataset,
     *,
-    steps: int = AGENT_STEPS,
-    dynamic_step: int = DYNAMIC_STEPS,
+    steps: int = STEPS,
+    model_steps: int = MODEL_STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
     eval_episodes: int = EVAL_EPISODES,
@@ -147,8 +156,8 @@ def collect(
         dataset=dataset,
         eval_env=minari_col,
         batch_size=batch_size,
-        dynamic_steps=dynamic_step,
-        agent_steps=steps,
+        model_steps=model_steps,
+        steps=steps,
         eval_interval=eval_interval,
         eval_episodes=eval_episodes,
         save_interval=save_interval,
