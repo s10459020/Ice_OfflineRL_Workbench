@@ -91,11 +91,11 @@ AGENT_LIST = [
     # ("iql", train_iql.collect),
     # ("cql", train_cql.collect),
     # ("cql_max_q", train_cql_max_q.collect),
-    # ("cql_soft_q", train_cql_soft_q.collect),
+    ("cql_soft_q", train_cql_soft_q.collect),
     # ("aspl", train_aspl.collect),
     # ("sdc_cql", train_sdc_cql.collect),
     # ("sdc_pre", train_sdc_pre.collect),
-    ("scas_min", train_scas_min.collect),
+    # ("scas_min", train_scas_min.collect),
     # ("scas_mean", train_scas_mean.collect),
     # ("scas_aspl", train_scas_aspl.collect),
 ]

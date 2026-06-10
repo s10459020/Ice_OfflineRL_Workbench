@@ -133,12 +133,12 @@ class CQLSoftQAgent(SACAgent):
     def update_critic(self, batch: Batch) -> None:
         loss_suppress = self.loss_suppress(batch)
         loss_suppress = self.critic.shift_loss(loss_suppress)
-        loss_multiplier = self.multiplier.loss(loss_suppress.detach())
+        # loss_multiplier = self.multiplier.loss(loss_suppress.detach())
 
         # Keep loss functions side-effect free; update CQL multiplier explicitly here.
-        self.multiplier.optimizer.zero_grad()
-        loss_multiplier.backward()
-        self.multiplier.optimizer.step()
+        # self.multiplier.optimizer.zero_grad()
+        # loss_multiplier.backward()
+        # self.multiplier.optimizer.step()
 
         loss_critic = self.loss_critic_with_suppress(batch, loss_suppress)
         self.critic_optimizer.zero_grad()
@@ -200,4 +200,5 @@ class CQLSoftQAgent(SACAgent):
     ) -> torch.Tensor:
         # CQL loss: loss_td + multiplier * loss_suppress
         loss_td = self.loss_critic(batch)
-        return loss_td + (self.multiplier() * loss_suppress).sum()
+        # return loss_td + (self.multiplier() * loss_suppress).sum()
+        return loss_td + (loss_suppress).sum()

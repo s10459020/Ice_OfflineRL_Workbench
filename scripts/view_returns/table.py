@@ -1,6 +1,7 @@
 ﻿import csv
 import json
 from pathlib import Path
+from typing import Callable
 
 from ice_offline.dataset.halfcheetah_random import HalfCheetahRandomDataset
 from ice_offline.dataset.hopper_random import HopperRandomDataset
@@ -13,6 +14,8 @@ RANDOM_DATASET_CLASS_BY_ENV_NAME = {
     "halfcheetah": HalfCheetahRandomDataset,
     "walker2d": Walker2dRandomDataset,
 }
+
+ReturnFn = Callable[[Path | None], float | None]
 
 
 def bottom_path(dataset_cls) -> Path:
@@ -28,8 +31,8 @@ def top_path(dataset_cls) -> Path | None:
     return returns_path(dataset_cls().id)
 
 
-def read_values(path: Path) -> list[float] | None:
-    if not path:
+def read_values(path: Path | None) -> list[float] | None:
+    if path is None:
         return None
     if not path.exists():
         print(f"skip missing: {path}")
@@ -40,20 +43,38 @@ def read_values(path: Path) -> list[float] | None:
 
 def mean_return(path: Path | None) -> float | None:
     values = read_values(path)
-    if values is None:
-        return None
     if not values:
         return None
     return sum(values) / len(values)
 
 
-def max_return(path: Path | None) -> float | None:
+def percentile_return(path: Path | None, percentile: float = 95.0) -> float | None:
     values = read_values(path)
-    if values is None:
-        return None
     if not values:
         return None
-    return max(values)
+
+    values.sort()
+    index = (len(values) - 1) * percentile / 100.0
+    lower = int(index)
+    upper = min(lower + 1, len(values) - 1)
+    weight = index - lower
+    return values[lower] * (1.0 - weight) + values[upper] * weight
+
+
+def highest_agent_return(dataset_cls, agent_list: list[str], return_fn: ReturnFn) -> float | None:
+    values = [
+        return_fn(returns_path(dataset_cls().id, agent_id))
+        for agent_id in agent_list
+    ]
+    values = [value for value in values if value is not None]
+    return max(values) if values else None
+
+
+def normalized_top(dataset_cls, agent_list: list[str], return_fn: ReturnFn) -> float | None:
+    top = return_fn(top_path(dataset_cls))
+    if top is not None:
+        return top
+    return highest_agent_return(dataset_cls, agent_list, return_fn)
 
 
 def cell(value: float | None) -> str:
@@ -80,19 +101,15 @@ def actual_row(dataset_cls, agent_list: list[str]) -> list[str]:
     return [env_id, group_name, *[cell(value) for value in values]]
 
 
-def normalized_row(
-    dataset_cls,
-    agent_list: list[str],
-    *,
-    use_max_top: bool,
-) -> list[str]:
+def normalized_row(dataset_cls, agent_list: list[str], return_fn: ReturnFn) -> list[str]:
     env_id = dataset_cls().env_id
     group_name = dataset_cls().id
-    bottom = mean_return(bottom_path(dataset_cls))
-    top = max_return(top_path(dataset_cls)) if use_max_top else mean_return(top_path(dataset_cls))
-    values = []
-    for agent_id in agent_list:
-        values.append(scale(mean_return(returns_path(dataset_cls().id, agent_id)), bottom, top))
+    bottom = return_fn(bottom_path(dataset_cls))
+    top = normalized_top(dataset_cls, agent_list, return_fn)
+    values = [
+        scale(return_fn(returns_path(dataset_cls().id, agent_id)), bottom, top)
+        for agent_id in agent_list
+    ]
     return [env_id, group_name, *[cell(value) for value in values]]
 
 
@@ -108,17 +125,18 @@ def save_csv(name: str, header: list[str], rows: list[list[str]]) -> Path:
 
 
 def actual_rows(dataset_cls_list: list, agent_list: list[str]) -> list[list[str]]:
-    rows = []
-    for dataset_cls in dataset_cls_list:
-        rows.append(actual_row(dataset_cls, agent_list))
-    return rows
+    return [actual_row(dataset_cls, agent_list) for dataset_cls in dataset_cls_list]
 
 
-def normalized_rows(dataset_cls_list: list, agent_list: list[str], *, use_max_top: bool) -> list[list[str]]:
-    rows = []
-    for dataset_cls in dataset_cls_list:
-        rows.append(normalized_row(dataset_cls, agent_list, use_max_top=use_max_top))
-    return rows
+def normalized_rows(
+    dataset_cls_list: list,
+    agent_list: list[str],
+    return_fn: ReturnFn,
+) -> list[list[str]]:
+    return [
+        normalized_row(dataset_cls, agent_list, return_fn)
+        for dataset_cls in dataset_cls_list
+    ]
 
 
 def dataset_classes_by_env(dataset_class_list: list) -> dict[str, list]:
@@ -130,12 +148,24 @@ def dataset_classes_by_env(dataset_class_list: list) -> dict[str, list]:
 
 def main(dataset_class_list: list, agent_id_list: list[str]) -> None:
     agent_list = [agent_id for agent_id in agent_id_list if agent_id != "random"]
-    save_csv("actual_returns.csv", ["env", "task", "random", *agent_list, "dataset"], actual_rows(dataset_class_list, agent_list))
-    save_csv("mean_normalized_returns.csv", ["env", "task", *agent_list], normalized_rows(dataset_class_list, agent_list, use_max_top=False))
-    save_csv("max_normalized_returns.csv", ["env", "task", *agent_list], normalized_rows(dataset_class_list, agent_list, use_max_top=True))
+    header = ["env", "task", *agent_list]
+
+    save_csv(
+        "true_returns.csv",
+        ["env", "task", "random", *agent_list, "dataset"],
+        actual_rows(dataset_class_list, agent_list),
+    )
+    save_csv(
+        "mean_returns.csv",
+        header,
+        normalized_rows(dataset_class_list, agent_list, mean_return),
+    )
+    save_csv(
+        "pr95_returns.csv",
+        header,
+        normalized_rows(dataset_class_list, agent_list, percentile_return),
+    )
 
 
 if __name__ == "__main__":
     main([], [])
-
-
