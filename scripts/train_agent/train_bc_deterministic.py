@@ -17,7 +17,7 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-STEPS = 1
+STEPS = 20000
 SAVE_INTERVAL = math.ceil(STEPS/10)
 EVAL_INTERVAL = math.ceil(STEPS/100)
 PRINT_INTERVAL = math.ceil(STEPS/1000)
@@ -37,7 +37,6 @@ def update_with_record(recorder: MetricRecorder, agent: BCDeterministicAgent, ba
     loss_actor = agent.loss_actor(batch)
     recorder.add("loss_actor", loss_actor)
     recorder.add_grad_norm("grad_actor", loss_actor, params_actor)
-    recorder.flush()
 
     # update
     loss_actor.backward()
@@ -79,6 +78,7 @@ def train(
     for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_with_record(recorder, agent, batch)
+        recorder.flush(step)
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
             parts = [f"{name}={value:.6g}" for name, value in metrics.items()]

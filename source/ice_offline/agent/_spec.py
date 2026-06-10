@@ -8,7 +8,7 @@ from ice_offline.config.paths import model_path
 
 
 class Agent:
-    agent_name: str
+    id: str
     device: str
 
     # ====================
@@ -30,13 +30,13 @@ class Agent:
     # Persistence
     # ====================
     def save(self, dataset_id: str, step: int = 0) -> Path:
-        path = model_path(dataset_id, self.agent_name, step).with_suffix(".pt")
+        path = model_path(dataset_id, self.id, step).with_suffix(".pt")
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self._save_dict(), path)
         return path
 
     def load(self, dataset_id: str, step: int = 0) -> None:
-        path = model_path(dataset_id, self.agent_name, step).with_suffix(".pt")
+        path = model_path(dataset_id, self.id, step).with_suffix(".pt")
         state = torch.load(path, map_location=self.device)
         self._load_dict(state)
 

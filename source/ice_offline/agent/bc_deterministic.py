@@ -31,9 +31,9 @@ class _Actor(torch.nn.Module):
 
 @dataclass
 class BCDeterministicAgent(Agent):
-    agent_name: ClassVar[str] = "bc_deterministic"
     obs_size: int
     act_size: int
+    id: str = "bc_deterministic"
     learning_rate: float = 1e-3
     device: str = "cuda"
 
@@ -71,13 +71,14 @@ class BCDeterministicAgent(Agent):
     # Update
     # ====================
     def update(self, batch: Batch):
-        self.update_actor(batch)
+        return self.update_actor(batch)
 
     def update_actor(self, batch: Batch) -> None:
         self.actor_optimizer.zero_grad()
         loss = self.loss_actor(batch)
         loss.backward()
         self.actor_optimizer.step()
+        return loss
 
     # ====================
     # Save and load

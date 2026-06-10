@@ -32,12 +32,12 @@ class MinariCollectorWrapper(minari.DataCollector):
         *,
         id: str,
         agent_id: str,
+        eval_env=None,
         algorithm_name: str = "unknown",
         author: str = "ice_offline",
         author_email: str = "ice_offline@example.com",
         code_permalink: str = "https://example.com/ice_offline",
         description: str = "",
-        eval_env=None,
     ):
         dataset_id = path.relative_to(RUNS_ROOT).parent.parent.as_posix()
         os.environ["MINARI_DATASETS_PATH"] = str(RUNS_ROOT)
