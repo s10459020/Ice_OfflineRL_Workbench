@@ -145,8 +145,6 @@ def update_with_record(recorder: MetricRecorder, agent: CQLSoftQAgent, batch: Ba
         recorder.add("q_random", agent.critic.q_min(or_, ar).mean().item())
         recorder.add("target_q", agent.target_sac(on, r, d).mean().item())
 
-    recorder.flush()
-
 
 def train(
     dataset: Dataset,
@@ -179,6 +177,7 @@ def train(
     for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_with_record(recorder, agent, batch)
+        recorder.flush(step)
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
             parts = [f"{name}={value:.6g}" for name, value in metrics.items()]

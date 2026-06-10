@@ -7,7 +7,6 @@ import math
 from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset._types import Batch
-from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState
 from ice_offline.store.state.hopper import HopperStateIO
@@ -19,7 +18,7 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-STEPS = 200_000
+STEPS = 1_000_000
 SAVE_INTERVAL = math.ceil(STEPS/10)
 EVAL_INTERVAL = math.ceil(STEPS/100)
 PRINT_INTERVAL = math.ceil(STEPS/1000)
@@ -60,8 +59,6 @@ def update_with_record(recorder: MetricRecorder, agent: TD3BCAgent, batch: Batch
         agent.critic.update_target_soft()
         agent.actor.update_target_soft()
 
-    recorder.flush()
-
 
 def train(
     dataset: Dataset,
@@ -94,6 +91,7 @@ def train(
     for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_with_record(recorder, agent, batch)
+        recorder.flush(step)
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
             parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
@@ -103,9 +101,6 @@ def train(
             print(f"eval step={step} avg_return={avg_return:.6g}")
         if step % save_interval == 0 or step == steps:
             agent.save(dataset.id, step)
-
-    evaluator.save()
-    recorder.save()
 
 
 def collect(
@@ -144,6 +139,7 @@ def collect(
 
 
 if __name__ == "__main__":
+    from ice_offline.dataset.hopper_simple import HopperSimpleDataset
     dataset = HopperSimpleDataset(device=DEVICE)
     minari_data, state_data = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")

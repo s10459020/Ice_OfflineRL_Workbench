@@ -43,7 +43,6 @@ def update_dynamic_with_record(recorder: MetricRecorder, dynamics: ScasDynamic, 
     loss_dynamic = dynamics.loss_dynamic(batch)
     recorder.add("loss_dynamic", loss_dynamic)
     recorder.add_grad_norm("grad_dynamic", loss_dynamic, dynamics.model.parameters())
-    recorder.flush()
     dynamics.update(batch)
 
 
@@ -71,8 +70,6 @@ def update_agent_with_record(recorder: MetricRecorder, agent: ScasMinAgent, batc
         recorder.add("grad_correction", None)
         recorder.add("loss_actor", None)
         recorder.add("grad_actor", None)
-
-    recorder.flush()
     agent.update(batch)
 
 
@@ -107,6 +104,7 @@ def train(
     for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_dynamic_with_record(model_recorder, dynamics, batch)
+        model_recorder.flush(step)
         if print_interval > 0 and step % print_interval == 0:
             print_latest(step, model_recorder)
         if step % save_interval == 0 or step == model_steps:
@@ -128,6 +126,7 @@ def train(
     for step in range(1, steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_agent_with_record(recorder, agent, batch)
+        recorder.flush(step)
         if print_interval > 0 and step % print_interval == 0:
             print_latest(step, recorder)
         if eval_interval > 0 and step % eval_interval == 0:
