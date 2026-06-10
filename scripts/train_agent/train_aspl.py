@@ -18,7 +18,7 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 START = 0
-STEPS = 100_000
+STEPS = 500_000
 SAVE_INTERVAL = math.ceil(STEPS/10)
 EVAL_INTERVAL = math.ceil(STEPS/100)
 PRINT_INTERVAL = math.ceil(STEPS/1000)
@@ -154,8 +154,8 @@ def collect(
 
 
 if __name__ == "__main__":
-    from ice_offline.dataset.hopper_expert import HopperExpertDataset
-    dataset = HopperExpertDataset(device=DEVICE)
+    from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+    dataset = HopperSimpleDataset(device=DEVICE)
     minari_data, state_data  = collect(dataset=dataset)
     print(f"dataset_id={minari_data.spec.dataset_id}")
     print(f"total_episodes={minari_data.total_episodes}")
