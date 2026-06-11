@@ -78,28 +78,10 @@ class AsplAgent(TD3Agent):
     learning_rate: float = 3e-4
 
     def __post_init__(self) -> None:
-        self.actor = AsplActor(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-        ).to(self.device)
-        self.critic = AsplCritic(
-            self.obs_size,
-            self.act_size,
-            q_count=self.q_count,
-        ).to(self.device)
-        self.actor_learning_rate = self.learning_rate
-        self.critic_learning_rate = self.learning_rate
-
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.pi.parameters(), 
-            lr=self.learning_rate
-        )
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.q_networks.parameters(),
-            lr=self.learning_rate,
-        )
-
-        # ignore use_lr_scheduler
+        self.actor = AsplActor(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
+        self.critic = AsplCritic(obs_size=self.obs_size, act_size=self.act_size, q_count=self.q_count).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters(), lr=self.learning_rate)
 
     def set_seed(self, seed: int) -> None:
         self.actor.set_seed(seed)
@@ -112,11 +94,14 @@ class AsplAgent(TD3Agent):
         self.update_step += 1
 
         q_target = self.target_td3(sn, r, d)
-        loss_td = self.loss_td_with_target(batch, q_target)
-        loss_punish = self.loss_punish_with_target(batch, q_target)
-        loss_critic = loss_td + self.alpha * loss_punish
+
+        loss_td = self.loss_td(batch)
         grad_td = self._grad_norm(loss_td, self.critic.parameters())
+
+        loss_punish = self.loss_punish(batch)
         grad_punish = self._grad_norm(loss_punish, self.critic.parameters())
+
+        loss_critic = loss_td + self.alpha * loss_punish
         grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
 
         self.critic_optimizer.zero_grad()
@@ -151,8 +136,14 @@ class AsplAgent(TD3Agent):
 
         return metrics
 
-    def loss_td_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
-        o, a, _, _, _ = batch
+
+    # ====================
+    # Critic loss
+    # ====================
+    def loss_td(self, batch: Batch) -> torch.Tensor:
+        o, a, r, sn, d = batch
+        q_target = self.target_td3(sn, r, d)
+
         # double Q TD
         q1 = self.critic.q_networks[0](o, a)
         q2 = self.critic.q_networks[1](o, a)
@@ -160,8 +151,10 @@ class AsplAgent(TD3Agent):
         loss_q2 = F.mse_loss(q2, q_target)
         return loss_q1 + loss_q2
     
-    def loss_punish_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
-        s, a, _, _, _ = batch
+    def loss_punish(self, batch: Batch) -> torch.Tensor:
+        s, a, r, sn, d = batch
+        q_target = self.target_td3(sn, r, d)
+
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
         a_samples = self.actor.sample_actions_lhs(s.shape[0])                                # (N,B,A)
         action_distance = self.actor.action_distance(a, a_samples)                            # (N,B,1)
@@ -181,11 +174,8 @@ class AsplAgent(TD3Agent):
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
         # loss = TD + alpha * Punish
-        # source use same noise target
-        s, a, r, sn, d = batch
-        q_target = self.target_td3(sn, r, d)
-        loss_td = self.loss_td_with_target(batch, q_target)
-        loss_aspl = self.loss_punish_with_target(batch, q_target)
+        loss_td = self.loss_td(batch)
+        loss_aspl = self.loss_punish(batch)
         return loss_td + self.alpha * loss_aspl
 
 
