@@ -1,4 +1,5 @@
 from ice_offline.config.datasets import source_dataset_entries
+from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import data_path_train
 from ice_offline.config.paths import eval_returns_path
 from ice_offline.config.paths import eval_steps_path
@@ -26,13 +27,14 @@ AGENT_ID_LIST = [
 def main() -> None:
     for dataset in source_dataset_entries():
         for agent_id in AGENT_ID_LIST:
-            input_path = data_path_train(dataset.id, agent_id)
+            task_id = _task_id(dataset.id, agent_id)
+            input_path = data_path_train(task_id)
             if not input_path.exists():
                 print(f"skip missing: {input_path}")
                 continue
 
-            returns_path = eval_returns_path(dataset.id, agent_id)
-            steps_path = eval_steps_path(dataset.id, agent_id)
+            returns_path = eval_returns_path(task_id)
+            steps_path = eval_steps_path(task_id)
             print(f"evals={input_path}")
             cal_returns(input_path, returns_path)
             cal_steps(input_path, steps_path)

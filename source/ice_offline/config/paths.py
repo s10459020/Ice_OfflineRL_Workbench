@@ -19,48 +19,48 @@ def _task_id(dataset_id: str, agent_id: str | None = None) -> str:
     return f"{dataset_id}-{agent_id}-v0"
 
 
-def data_path_train(dataset_id: str, agent_id: str) -> Path:
-    return RUNS_ROOT / "train" / _task_id(dataset_id, agent_id) / "data" / "eval_data.hdf5"
+def data_path_train(task_id: str) -> Path:
+    return RUNS_ROOT / "train" / task_id / "data" / "eval_data.hdf5"
 
 
 def custom_dataset_path(dataset_id: str) -> Path:
     return CUSTOM_DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
 
 
-def data_path_test(dataset_id: str, agent_id: str) -> Path:
-    return RUNS_ROOT / "test" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
+def data_path_test(task_id: str) -> Path:
+    return RUNS_ROOT / "test" / task_id / "data" / "main_data.hdf5"
 
 
-def data_path_collect(dataset_id: str, agent_id: str) -> Path:
-    return RUNS_ROOT / "collect" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
+def data_path_collect(task_id: str) -> Path:
+    return RUNS_ROOT / "collect" / task_id / "data" / "main_data.hdf5"
 
 
-def data_path_probe(dataset_id: str, agent_id: str) -> Path:
-    return RUNS_ROOT / "probe" / _task_id(dataset_id, agent_id) / "data" / "main_data.hdf5"
+def data_path_probe(task_id: str) -> Path:
+    return RUNS_ROOT / "probe" / task_id / "data" / "main_data.hdf5"
 
 
-def model_path(dataset_id: str, agent_id: str, step: int) -> Path:
-    return MODELS_ROOT / _task_id(dataset_id, agent_id) / str(step)
+def model_path(task_id: str, step: int) -> Path:
+    return MODELS_ROOT / task_id / str(step)
 
 
-def eval_path(dataset_id: str, agent_id: str) -> Path:
-    return EVALS_ROOT / f"{_task_id(dataset_id, agent_id)}.csv"
+def eval_path(task_id: str) -> Path:
+    return EVALS_ROOT / f"{task_id}.csv"
 
 
-def eval_returns_path(dataset_id: str, agent_id: str) -> Path:
-    return EVALS_ROOT / "returns" / f"{_task_id(dataset_id, agent_id)}.csv"
+def eval_returns_path(task_id: str) -> Path:
+    return EVALS_ROOT / "returns" / f"{task_id}.csv"
 
 
-def eval_steps_path(dataset_id: str, agent_id: str) -> Path:
-    return EVALS_ROOT / "steps" / f"{_task_id(dataset_id, agent_id)}.csv"
+def eval_steps_path(task_id: str) -> Path:
+    return EVALS_ROOT / "steps" / f"{task_id}.csv"
 
 
-def metric_path(dataset_id: str, agent_id: str) -> Path:
-    return METRICS_ROOT / f"{_task_id(dataset_id, agent_id)}.csv"
+def metric_path(task_id: str) -> Path:
+    return METRICS_ROOT / f"{task_id}.csv"
 
 
-def returns_path(dataset_id: str, agent_id: str | None = None) -> Path:
-    return RETURNS_ROOT / f"{_task_id(dataset_id, agent_id)}.json"
+def returns_path(task_id: str) -> Path:
+    return RETURNS_ROOT / f"{task_id}.json"
 
 
 def plot_path(index: int, dataset_id: str, agent_id: str) -> Path:

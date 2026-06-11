@@ -25,6 +25,7 @@ from ice_offline.dataset.walker2d_medium_replay import Walker2dMediumReplayDatas
 from ice_offline.dataset.walker2d_random import Walker2dRandomDataset
 from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
 from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
+from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import eval_returns_path
 from ice_offline.config.paths import eval_steps_path
 from ice_offline.config.paths import metric_path
@@ -84,10 +85,11 @@ def main() -> None:
     for index, dataset_cls in enumerate(DATASET_CLASS_LIST, start=1):
         dataset = dataset_cls()
         for agent_id in AGENT_ID_LIST:
-            metric_paths = [metric_path(dataset.id, agent_id)]
+            task_id = _task_id(dataset.id, agent_id)
+            metric_paths = [metric_path(task_id)]
             eval_paths = [
-                eval_returns_path(dataset.id, agent_id),
-                eval_steps_path(dataset.id, agent_id),
+                eval_returns_path(task_id),
+                eval_steps_path(task_id),
             ]
             output_path = plot_path(index, dataset.id, agent_id)
 

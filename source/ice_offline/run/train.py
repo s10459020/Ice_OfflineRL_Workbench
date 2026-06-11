@@ -14,6 +14,7 @@ from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.store.state.op_dataset import StateDataset
 from ice_offline.store.eval.record import Evaluator
 from ice_offline.store.metric.record import MetricRecorder
+from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
@@ -58,6 +59,7 @@ def train(
     agent: Agent,
     dataset: Dataset,
     *,
+    task_id: str | None = None,
     start: int = 0,
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
@@ -68,10 +70,12 @@ def train(
     print_interval: int = PRINT_INTERVAL,
     seed: int = SEED,
 ) -> None:
-    print_stage(f"Train {agent.id} in {dataset.id}")
+    task_id = task_id or _task_id(dataset.id, agent.id)
     eval_env = eval_env or dataset.make_eval_env()
+    
+    print_stage(f"Train {agent.id} in {dataset.id}")
     eval_col = EvalCollector(eval_env)
-    recorder = MetricRecorder(dataset.id, agent.id)
+    recorder = MetricRecorder(task_id)
 
     for step in range(start + 1, steps + 1):
         # seed
@@ -101,9 +105,9 @@ def train(
             print(f"eval step={step} avg_return={avg_return:.6g}")
         
         if step % save_interval == 0 or step == steps:
-            agent.save(dataset.id, step)
+            agent.save(task_id, step)
 
-    path = data_path_train(dataset.id, agent.id)
+    path = data_path_train(task_id)
     eval_col.save(path)
     eval_col.close()
     return path

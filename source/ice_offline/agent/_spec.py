@@ -51,14 +51,14 @@ class Agent:
     # ====================
     # Persistence
     # ====================
-    def save(self, dataset_id: str, step: int = 0) -> Path:
-        path = model_path(dataset_id, self.id, step).with_suffix(".pt")
+    def save(self, task_id: str, step: int = 0) -> Path:
+        path = model_path(task_id, step).with_suffix(".pt")
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self._save_dict(), path)
         return path
 
-    def load(self, dataset_id: str, step: int = 0) -> None:
-        path = model_path(dataset_id, self.id, step).with_suffix(".pt")
+    def load(self, task_id: str, step: int = 0) -> None:
+        path = model_path(task_id, step).with_suffix(".pt")
         state = torch.load(path, map_location=self.device)
         self._load_dict(state)
 
@@ -67,4 +67,3 @@ class Agent:
 
     def _load_dict(self, state: dict[str, Any]) -> None:
         raise NotImplementedError
-

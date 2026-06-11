@@ -6,8 +6,8 @@ from ice_offline.config.paths import metric_path
 
 
 class MetricRecorder:
-    def __init__(self, dataset_id: str, agent_id: str, initialized = False) -> None:
-        self.path = metric_path(dataset_id, agent_id)
+    def __init__(self, task_id: str, initialized = False) -> None:
+        self.path = metric_path(task_id)
         self.current: dict[str, float | None] = {}
         self.initialized = initialized
         self.last = {}
