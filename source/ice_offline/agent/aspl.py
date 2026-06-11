@@ -1,10 +1,10 @@
-﻿from dataclasses import dataclass
-from typing import ClassVar
+from dataclasses import dataclass
 
 import torch
 import torch.nn.functional as F
 from scipy.stats import qmc
 
+from ice_offline.agent._spec import MetricValues
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3 import TD3Critic
@@ -73,7 +73,7 @@ class AsplCritic(TD3Critic):
 
 @dataclass
 class AsplAgent(TD3Agent):
-    agent_name: ClassVar[str] = "aspl"
+    id: str = "aspl"
     alpha: float = 2.5
     learning_rate: float = 3e-4
 
@@ -103,6 +103,53 @@ class AsplAgent(TD3Agent):
 
     def set_seed(self, seed: int) -> None:
         self.actor.set_seed(seed)
+
+    # ====================
+    # Update
+    # ====================
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        _, _, r, sn, d = batch
+        self.update_step += 1
+
+        q_target = self.target_td3(sn, r, d)
+        loss_td = self.loss_td_with_target(batch, q_target)
+        loss_punish = self.loss_punish_with_target(batch, q_target)
+        loss_critic = loss_td + self.alpha * loss_punish
+        grad_td = self._grad_norm(loss_td, self.critic.parameters())
+        grad_punish = self._grad_norm(loss_punish, self.critic.parameters())
+        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
+
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        metrics = {
+            "loss_td": loss_td.detach(),
+            "grad_td": grad_td.detach(),
+            "loss_punish": loss_punish.detach(),
+            "grad_punish": grad_punish.detach(),
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+            "loss_actor": None,
+            "grad_actor": None,
+        }
+
+        if self.update_step % self.update_actor_interval == 0:
+            loss_actor = self.loss_td3(batch)
+            grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+
+            self.actor_optimizer.zero_grad()
+            loss_actor.backward()
+            self.actor_optimizer.step()
+            self.critic.update_target_soft()
+            self.actor.update_target_soft()
+
+            metrics.update({
+                "loss_actor": loss_actor.detach(),
+                "grad_actor": grad_actor.detach(),
+            })
+
+        return metrics
 
     def loss_td_with_target(self, batch: Batch, q_target: torch.Tensor) -> torch.Tensor:
         o, a, _, _, _ = batch

@@ -1,4 +1,4 @@
-﻿from enum import IntEnum
+from enum import IntEnum
 from types import MethodType
 from typing import Any
 import numpy as np

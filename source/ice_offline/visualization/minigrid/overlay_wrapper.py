@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 
 import gymnasium as gym
 from ice_offline.env.common.render_quiet_wrapper import insert_render_quiet_innermost

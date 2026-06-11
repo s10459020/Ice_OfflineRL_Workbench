@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 from ice_offline.config.paths import DATASETS_ROOT
 

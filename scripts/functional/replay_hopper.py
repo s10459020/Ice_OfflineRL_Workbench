@@ -1,4 +1,4 @@
-﻿import gymnasium as gym
+import gymnasium as gym
 
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.store.state.hopper import HopperState, HopperStateIO

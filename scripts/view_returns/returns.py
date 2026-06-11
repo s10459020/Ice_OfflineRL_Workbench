@@ -1,4 +1,4 @@
-﻿import json
+import json
 from pathlib import Path
 
 from ice_offline.dataset._spec import Dataset

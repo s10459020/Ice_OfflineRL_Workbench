@@ -1,9 +1,9 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import math
 import torch
 
+from ice_offline.agent._spec import MetricValues
 from ice_offline.agent.sac import SACActor
 from ice_offline.agent.sac import SACAgent
 from ice_offline.agent.sac import SACCritic
@@ -88,7 +88,7 @@ class _CQLCritic(SACCritic):
 
 @dataclass
 class CQLSoftQAgent(SACAgent):
-    agent_name: ClassVar[str] = "cql_soft_q"
+    id: str = "cql_soft_q"
     actor_learning_rate: float = 1e-4
     critic_learning_rate: float = 3e-4
     temp_learning_rate: float = 1e-4
@@ -144,6 +144,102 @@ class CQLSoftQAgent(SACAgent):
         self.critic_optimizer.zero_grad()
         loss_critic.backward()
         self.critic_optimizer.step()
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        o, a, r, on, d = batch
+        batch_size = o.shape[0]
+        n = self.critic.n_action_samples
+
+        loss_td = self.loss_td(batch)
+        grad_td = self._grad_norm(loss_td, self.critic.parameters())
+
+        a_s, logp = self.actor.sample_n(o, n)
+        an, logpn = self.actor.sample_n(on, n)
+        ar, logpr = self.actor.sample_random_n(o)
+
+        q = self.critic.eval_q_n(o, a_s).view(2, batch_size, n)
+        qn = self.critic.eval_q_n(o, an).view(2, batch_size, n)
+        qr = self.critic.eval_q_n(o, ar).view(2, batch_size, n)
+        q_cat = torch.cat([q, qn, qr], dim=2)
+
+        logp = logp.view(1, batch_size, n)
+        logpn = logpn.view(1, batch_size, n)
+        logpr = logpr.view(1, batch_size, n)
+        logp_cat = torch.cat([logp, logpn, logpr], dim=2)
+
+        data_q = torch.stack(self.critic.q_all(o, a), dim=0)
+        lse_q = torch.logsumexp(q_cat, dim=2, keepdim=True)
+        lse_q_logp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)
+        loss_suppress = (lse_q_logp - data_q).mean(dim=[1, 2])
+        loss_suppress_sum = loss_suppress.sum()
+        grad_suppress = self._grad_norm(loss_suppress_sum, self.critic.parameters())
+
+        loss_suppress_shifted = self.critic.shift_loss(loss_suppress)
+        loss_critic = self.loss_critic_with_suppress(batch, loss_suppress_shifted)
+        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
+
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        a_policy, log_prob = self.actor.sample(o)
+        loss_temperature = self.temp.loss(log_prob)
+        grad_temperature = self._grad_norm(loss_temperature, self.temp.parameters())
+
+        self.temp.optimizer.zero_grad()
+        loss_temperature.backward()
+        self.temp.optimizer.step()
+
+        loss_actor = self.loss_actor_with_sample(batch, a_policy, log_prob)
+        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+
+        self.actor_optimizer.zero_grad()
+        loss_actor.backward()
+        self.actor_optimizer.step()
+        self.critic.update_target_soft()
+
+        metrics = {
+            "loss_td": loss_td.detach(),
+            "grad_td": grad_td.detach(),
+            "loss_suppress": loss_suppress_sum.detach(),
+            "grad_suppress": grad_suppress.detach(),
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+            "loss_temperature": loss_temperature.detach(),
+            "grad_temperature": grad_temperature.detach(),
+            "loss_actor": loss_actor.detach(),
+            "grad_actor": grad_actor.detach(),
+            "q_data": data_q.mean().detach(),
+            "q_sample": q_cat.mean().detach(),
+            "q_policy_sample": q.mean().detach(),
+            "q_next_sample": qn.mean().detach(),
+            "q_random_sample": qr.mean().detach(),
+            "lse_q": lse_q.mean().detach(),
+            "lse_q_logp": lse_q_logp.mean().detach(),
+            "gap_q_only": (lse_q - data_q).mean().detach(),
+            "gap_q_logp": (lse_q_logp - data_q).mean().detach(),
+            "logp_lift": (lse_q_logp - lse_q).mean().detach(),
+            "logp_policy": logp.mean().detach(),
+            "logp_next": logpn.mean().detach(),
+            "logp_random": logpr.mean().detach(),
+            "neg_logp_policy": (-logp).mean().detach(),
+            "neg_logp_next": (-logpn).mean().detach(),
+            "neg_logp_random": (-logpr).mean().detach(),
+        }
+
+        with torch.no_grad():
+            ap, _ = self.actor.sample(o)
+            ar, _ = self.actor.sample_random_n(o)
+            or_ = o.repeat_interleave(n, dim=0)
+            metrics.update({
+                "multiplier": self.multiplier().item(),
+                "temperature": self.temp().item(),
+                "q_policy": self.critic.q_min(o, ap).mean().item(),
+                "q_random": self.critic.q_min(or_, ar).mean().item(),
+                "target_q": self.target_sac(on, r, d).mean().item(),
+            })
+
+        return metrics
 
     # ====================
     # Save and load

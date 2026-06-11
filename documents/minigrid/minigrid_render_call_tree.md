@@ -1,4 +1,4 @@
-﻿# MiniGrid Render Call Tree (Top-Down)
+# MiniGrid Render Call Tree (Top-Down)
 
 ## Color legend
 - `🔵` initialized / mostly stable after init-reset

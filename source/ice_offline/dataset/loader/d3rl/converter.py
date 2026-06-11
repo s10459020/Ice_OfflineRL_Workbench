@@ -1,4 +1,4 @@
-﻿from collections.abc import Iterable
+from collections.abc import Iterable
 
 import d3rlpy
 import numpy as np

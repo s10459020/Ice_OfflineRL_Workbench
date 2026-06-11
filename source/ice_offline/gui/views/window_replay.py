@@ -1,4 +1,4 @@
-﻿import traceback
+import traceback
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCloseEvent

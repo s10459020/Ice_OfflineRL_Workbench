@@ -1,4 +1,4 @@
-﻿
+
 from pathlib import Path
 from collections.abc import Callable
 from enum import IntEnum

@@ -1,4 +1,4 @@
-﻿from typing import Any
+from typing import Any
 
 import gymnasium as gym
 import minigrid  # noqa: F401

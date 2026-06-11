@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass
+from dataclasses import dataclass
 from pathlib import Path
 
 from ice_offline.dataset.loader.d4rl.loader import D4rlLoader

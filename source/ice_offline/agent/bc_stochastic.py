@@ -1,4 +1,4 @@
-﻿"""Behavior Cloning agent (stochastic)."""
+"""Behavior Cloning agent (stochastic)."""
 
 from dataclasses import dataclass
 from typing import ClassVar

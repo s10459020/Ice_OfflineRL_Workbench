@@ -1,4 +1,4 @@
-﻿import math
+import math
 import gymnasium as gym
 import minari
 import numpy as np

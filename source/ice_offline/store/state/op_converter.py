@@ -1,4 +1,4 @@
-﻿from typing import Any, Protocol, Type
+from typing import Any, Protocol, Type
 
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset._types import Episode

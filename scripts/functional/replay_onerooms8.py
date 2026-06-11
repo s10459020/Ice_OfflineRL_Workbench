@@ -1,4 +1,4 @@
-﻿import minari
+import minari
 import gymnasium as gym
 import minigrid  # noqa: F401
 

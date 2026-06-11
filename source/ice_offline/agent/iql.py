@@ -1,4 +1,4 @@
-﻿"""Implicit Q-Learning agent (minimal fixed structure)."""
+"""Implicit Q-Learning agent (minimal fixed structure)."""
 
 from dataclasses import dataclass
 from typing import ClassVar

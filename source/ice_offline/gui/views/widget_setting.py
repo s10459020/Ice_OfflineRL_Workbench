@@ -1,4 +1,4 @@
-﻿from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QGroupBox, QLabel, QHBoxLayout, QSpinBox, QVBoxLayout, QWidget
 
 

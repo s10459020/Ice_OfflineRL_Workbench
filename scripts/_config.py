@@ -1,5 +1,8 @@
 from ice_offline.agent._spec import Agent
+from ice_offline.agent.aspl import AsplAgent
 from ice_offline.agent.bc_deterministic import BCDeterministicAgent
+from ice_offline.agent.cql_soft_q import CQLSoftQAgent
+from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.halfcheetah_expert import HalfCheetahExpertDataset
 from ice_offline.dataset.halfcheetah_expert_d4rl import HalfCheetahExpertD4rlDataset
@@ -69,5 +72,8 @@ def make_dataset(id: str) -> Dataset:
 def make_agent(id: str, dataset: Dataset) -> Agent:
     agent_config: dict[str, Agent] = {
         "bc_deterministic": BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=DEVICE),
+        "td3bc": TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=DEVICE),
+        "cql_soft_q": CQLSoftQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=DEVICE),
+        "aspl": AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=DEVICE),
     }
     return agent_config[id]

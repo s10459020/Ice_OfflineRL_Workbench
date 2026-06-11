@@ -1,4 +1,4 @@
-﻿from ice_offline.agent.bc_deterministic import BCDeterministicAgent
+from ice_offline.agent.bc_deterministic import BCDeterministicAgent
 from ice_offline.agent.bc_stochastic import BCStochasticAgent
 from ice_offline.agent.discrete.bc_discrete import BCDiscreteAgent
 from ice_offline.agent.cql import CQLAgent

@@ -1,4 +1,4 @@
-﻿import numpy as np
+import numpy as np
 import torch
 from _lib import assert_callback
 from _lib import sample_transition

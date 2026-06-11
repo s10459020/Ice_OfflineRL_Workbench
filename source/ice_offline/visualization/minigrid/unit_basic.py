@@ -1,4 +1,4 @@
-﻿import math
+import math
 from typing import Any
 
 import gymnasium as gym
