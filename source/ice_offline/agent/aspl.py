@@ -12,7 +12,7 @@ from ice_offline.dataset._types import Batch
 
 
 class AsplActor(TD3Actor):
-    def __init__(self, seed: int = 42, num_sample: int = 1, *args, **kwargs):
+    def __init__(self, seed: int = 42, num_sample: int = 5, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.num_sample = num_sample
         self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
@@ -145,10 +145,11 @@ class AsplAgent(TD3Agent):
             "loss_actor": None,
             "grad_actor": None,
             "moving_avg": moving_avg.detach(),
+            "target_q": target.abs().mean(),
         }
 
         if self.update_step % self.update_actor_interval == 0:
-            loss_actor = self.loss_td3(batch)
+            loss_actor = self.loss_actor(batch)
             grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
 
             self.actor_optimizer.zero_grad()
@@ -204,5 +205,15 @@ class AsplAgent(TD3Agent):
         loss_aspl = self.loss_punish_with_target(batch, target)
         return loss_td + self.alpha * loss_aspl
 
+
+    # ====================
+    # Actor loss
+    # ====================
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        # loss = E{s~D}[ -Q(s,pi(s)) ]
+        o, _, _, _, _ = batch
+        a = self.actor.pi(o)
+        q = self.critic.q_networks[0](o, a)
+        return -q.mean()
 
 

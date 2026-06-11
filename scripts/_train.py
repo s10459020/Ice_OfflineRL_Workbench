@@ -5,6 +5,7 @@ from _config import make_dataset
 
 
 TRAIN_KWARGS = {
+    #"start": 100_000,
     "steps": 100_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
