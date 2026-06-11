@@ -61,8 +61,9 @@ def eval(
 def train(
     agent: Agent,
     dataset: Dataset,
-    update_fn,
+    update_fn = update_fn,
     *,
+    start: int = 0,
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
@@ -73,12 +74,11 @@ def train(
     seed: int = SEED,
 ) -> None:
     print_stage(f"Train {agent.id} in {dataset.id}")
-
     eval_env = eval_env or dataset.make_eval_env()
     eval_col = EvalCollector(eval_env)
     recorder = MetricRecorder(dataset.id, agent.id)
 
-    for step in range(1, steps + 1):
+    for step in range(start + 1, steps + 1):
         # seed
         now_seed = seed + step
         agent.set_seed(now_seed)
@@ -122,7 +122,7 @@ if __name__ == "__main__":
         device=DEVICE,
     )
 
-    path = train(agent, dataset, update_fn)
+    path = train(agent, dataset)
 
     loader = EvalLoader(path, device=DEVICE)
     data = Dataset(path=path, loader=loader, device=DEVICE)

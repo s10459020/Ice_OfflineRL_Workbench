@@ -11,67 +11,55 @@ class EvalLoader(MinariLoader):
         super().__init__(path, device)
 
     # ====================
-    # Loading
-    # ====================
-    def load_episodes(self) -> list[Episode]:
-        episodes: list[Episode] = []
-
-        with h5py.File(self.path, "r") as h5_file:
-            for key in self._episode_keys_from_h5(h5_file):
-                episode = h5_file[key]
-
-                episodes.append(
-                    Episode(
-                        observations=self._read_node(
-                            episode["observations"]
-                        ),
-                        actions=np.asarray(episode["actions"]),
-                        rewards=np.asarray(episode["rewards"]),
-                        terminations=np.asarray(
-                            episode["terminations"]
-                        ),
-                        truncations=np.asarray(
-                            episode["truncations"]
-                        ),
-                        infos=None,
-                    )
-                )
-
-        return episodes
-
-    # ====================
     # Public API
     # ====================
-    def load(self, episode: int, index: int = 0) -> Episode:
-        key = f"episode_{episode}_{index}"
-
+    def load_batch_episodes(self) -> list[tuple[int, list[Episode]]]:
         with h5py.File(self.path, "r") as h5_file:
-            return self._read_episode(h5_file[key])
+            batches: dict[int, list[tuple[int, Episode]]] = {}
+            for key in self._episode_keys_from_h5(h5_file):
+                step, index = self._episode_key_parts(key)
+                episode = self._read_episode(h5_file[key])
+                batches.setdefault(step, []).append((index, episode))
 
-    def load_all(self, episode: int) -> list[Episode]:
-        prefix = f"episode_{episode}_"
-
-        with h5py.File(self.path, "r") as h5_file:
-            keys = sorted(
+        return [
+            (
+                step,
                 [
-                    key
-                    for key in h5_file.keys()
-                    if key.startswith(prefix)
+                    episode
+                    for _, episode in sorted(
+                        indexed_episodes,
+                        key=lambda item: item[0],
+                    )
                 ],
-                key=lambda key: int(key.rsplit("_", 1)[1]),
             )
-
-            return [
-                self._read_episode(h5_file[key])
-                for key in keys
-            ]
+            for step, indexed_episodes in sorted(batches.items())
+        ]
 
     # ====================
     # Private Methods
     # ====================
     def _episode_keys_from_h5(self, file: h5py.File) -> list[str]:
-        return sorted(file.keys(),
+        return sorted(
+            [
+                key
+                for key in file.keys()
+                if key.startswith("episode_")
+            ],
             key=lambda key: tuple(
                 map(int, key.split("_")[1:])
             ),
+        )
+
+    def _episode_key_parts(self, key: str) -> tuple[int, int]:
+        parts = key.split("_")
+        return int(parts[1]), int(parts[2])
+
+    def _read_episode(self, episode) -> Episode:
+        return Episode(
+            observations=self._read_node(episode["observations"]),
+            actions=np.asarray(episode["actions"]),
+            rewards=np.asarray(episode["rewards"]),
+            terminations=np.asarray(episode["terminations"]),
+            truncations=np.asarray(episode["truncations"]),
+            infos=None,
         )

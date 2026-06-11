@@ -47,9 +47,21 @@ def eval_path(dataset_id: str, agent_id: str) -> Path:
     return EVALS_ROOT / f"{_task_id(dataset_id, agent_id)}.csv"
 
 
+def eval_returns_path(dataset_id: str, agent_id: str) -> Path:
+    return EVALS_ROOT / "returns" / f"{_task_id(dataset_id, agent_id)}.csv"
+
+
+def eval_steps_path(dataset_id: str, agent_id: str) -> Path:
+    return EVALS_ROOT / "steps" / f"{_task_id(dataset_id, agent_id)}.csv"
+
+
 def metric_path(dataset_id: str, agent_id: str) -> Path:
     return METRICS_ROOT / f"{_task_id(dataset_id, agent_id)}.csv"
 
 
 def returns_path(dataset_id: str, agent_id: str | None = None) -> Path:
     return RETURNS_ROOT / f"{_task_id(dataset_id, agent_id)}.json"
+
+
+def plot_path(index: int, dataset_id: str, agent_id: str) -> Path:
+    return VIEW_ROOT / "plot" / agent_id / f"{index}. {dataset_id}.png"
