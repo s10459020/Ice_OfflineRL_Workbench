@@ -52,29 +52,34 @@ class AsplActor(TD3Actor):
 
 
 class AsplCritic(TD3Critic):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, beta = 0.005, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.moving_avg = 0.0
+        self.beta = beta
+        self.moving_avg = torch.nn.Parameter(torch.tensor(0.0, dtype=torch.float32), requires_grad=False)
 
-    def update_moving_avg(self, update_step: int, target: torch.Tensor) -> float:
-        current = torch.abs(target).mean().item() # mean(B, 1) > (1)
-        self.moving_avg = ((update_step - 1) * self.moving_avg + current) / update_step
+    def update_moving_avg(self, target: torch.Tensor) -> torch.Tensor:
+        with torch.no_grad():
+            current = target.abs().mean()
+            if self.moving_avg.item() == 0.0:
+                self.moving_avg.copy_(current)
+            else:
+                self.moving_avg.mul_(1.0 - self.beta)
+                self.moving_avg.add_(self.beta * current)
         return self.moving_avg
 
-    def q_pseudo(self, update_step: int, q_target: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
+    def q_pseudo(self, q_target: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
         # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
         # c is scaling coefficent
         # q use q_target in source
         # q_target range: [-Q, Q], shape: (B, 1)
         with torch.no_grad():
-            c = self.update_moving_avg(update_step, q_target) # (1)
-            return q_target - c * action_distance  # (N, B, 1)
+            return q_target - self.moving_avg * action_distance  # (N, B, 1)
 
 
 @dataclass
 class AsplAgent(TD3Agent):
     id: str = "aspl"
-    alpha: float = 2.5
+    alpha: float = 0.5
     learning_rate: float = 3e-4
 
     def __post_init__(self) -> None:
@@ -89,16 +94,38 @@ class AsplAgent(TD3Agent):
     # ====================
     # Update
     # ====================
+    def update(self, batch: Batch) -> None:
+        _, _, r, sn, d = batch
+        target = self.target_td3(sn, r, d)
+        self.update_step += 1
+        
+        self.critic.update_moving_avg(target)
+        
+        self.critic_optimizer.zero_grad()
+        loss_critic = self.loss_critic(batch, target)
+        loss_critic.backward()
+        self.critic_optimizer.step()
+    
+        if self.update_step % self.update_actor_interval == 0:
+            self.actor_optimizer.zero_grad()
+            loss_actor = self.loss_actor(batch)
+            loss_actor.backward()
+            self.actor_optimizer.step()
+
+            self.critic.update_target_soft()
+            self.actor.update_target_soft()
+
     def update_with_metrics(self, batch: Batch) -> MetricValues:
         _, _, r, sn, d = batch
+        target = self.target_td3(sn, r, d)
         self.update_step += 1
 
-        q_target = self.target_td3(sn, r, d)
+        moving_avg = self.critic.update_moving_avg(target)
 
-        loss_td = self.loss_td(batch)
+        loss_td = self.loss_td_target(batch, target)
         grad_td = self._grad_norm(loss_td, self.critic.parameters())
 
-        loss_punish = self.loss_punish(batch)
+        loss_punish = self.loss_punish_with_target(batch, target)
         grad_punish = self._grad_norm(loss_punish, self.critic.parameters())
 
         loss_critic = loss_td + self.alpha * loss_punish
@@ -117,6 +144,7 @@ class AsplAgent(TD3Agent):
             "grad_critic": grad_critic.detach(),
             "loss_actor": None,
             "grad_actor": None,
+            "moving_avg": moving_avg.detach(),
         }
 
         if self.update_step % self.update_actor_interval == 0:
@@ -140,25 +168,23 @@ class AsplAgent(TD3Agent):
     # ====================
     # Critic loss
     # ====================
-    def loss_td(self, batch: Batch) -> torch.Tensor:
-        o, a, r, sn, d = batch
-        q_target = self.target_td3(sn, r, d)
+    def loss_td_target(self, batch: Batch, target: torch.Tensor) -> torch.Tensor:
+        o, a, _, _, _ = batch
 
         # double Q TD
         q1 = self.critic.q_networks[0](o, a)
         q2 = self.critic.q_networks[1](o, a)
-        loss_q1 = F.mse_loss(q1, q_target)
-        loss_q2 = F.mse_loss(q2, q_target)
+        loss_q1 = F.mse_loss(q1, target)
+        loss_q2 = F.mse_loss(q2, target)
         return loss_q1 + loss_q2
     
-    def loss_punish(self, batch: Batch) -> torch.Tensor:
-        s, a, r, sn, d = batch
-        q_target = self.target_td3(sn, r, d)
+    def loss_punish_with_target(self, batch: Batch, target: torch.Tensor) -> torch.Tensor:
+        s, a, _, _, _ = batch
 
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
         a_samples = self.actor.sample_actions_lhs(s.shape[0])                                # (N,B,A)
         action_distance = self.actor.action_distance(a, a_samples)                            # (N,B,1)
-        q_pseudo = self.critic.q_pseudo(self.update_step, q_target, action_distance)           # (N,B,1)
+        q_pseudo = self.critic.q_pseudo(target, action_distance)           # (N,B,1)
 
         # reshape
         s_reshape = s.unsqueeze(0).expand(self.actor.num_sample, -1, -1).reshape(-1, s.shape[1])  # (B,S) > (1,B,S) > (N,B,S) > (N*B,S)
@@ -172,10 +198,10 @@ class AsplAgent(TD3Agent):
         losses = [F.mse_loss(q_value, q_pseudo_reshape) for q_value in q_values]
         return sum(losses)
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch, target: torch.Tensor) -> torch.Tensor:
         # loss = TD + alpha * Punish
-        loss_td = self.loss_td(batch)
-        loss_aspl = self.loss_punish(batch)
+        loss_td = self.loss_td_target(batch, target)
+        loss_aspl = self.loss_punish_with_target(batch, target)
         return loss_td + self.alpha * loss_aspl
 
 

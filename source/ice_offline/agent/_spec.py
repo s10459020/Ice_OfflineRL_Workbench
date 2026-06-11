@@ -34,7 +34,7 @@ class Agent:
         return {}
 
     def _grad_norm(self, loss: torch.Tensor, params) -> torch.Tensor:
-        params = list(params)
+        params = [p for p in params if p.requires_grad]
         grads = torch.autograd.grad(
             loss,
             params,
