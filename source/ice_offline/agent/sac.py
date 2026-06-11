@@ -222,28 +222,28 @@ class SACAgent(Agent):
     def update(self, batch: Batch):
         self.update_critic(batch)
         self.update_actor(batch)
+        self.update_temperature(batch)
         self.critic.update_target_soft()
 
     def update_critic(self, batch: Batch) -> None:
-        loss_critic = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
+        loss_critic = self.loss_critic(batch)
         loss_critic.backward()
         self.critic_optimizer.step()
 
     def update_actor(self, batch: Batch) -> None:
-        o, _, _, _, _ = batch
-        a, log_prob = self.actor.sample(o)
-
-        # Keep loss functions side-effect free; update temperature explicitly here.
-        loss_temperature = self.temp.loss(log_prob)
-        self.temp.optimizer.zero_grad()
-        loss_temperature.backward()
-        self.temp.optimizer.step()
-
-        loss_actor = self.loss_actor_with_sample(batch, a, log_prob)
         self.actor_optimizer.zero_grad()
+        loss_actor = self.loss_actor(batch)
         loss_actor.backward()
         self.actor_optimizer.step()
+    
+    def update_temperature(self, batch: Batch) -> None:
+        o, _, _, _, _ = batch
+        _, log_prob = self.actor.sample(o)
+        self.temp.optimizer.zero_grad()
+        loss_temperature = self.temp.loss(log_prob)
+        loss_temperature.backward()
+        self.temp.optimizer.step()
 
     # ====================
     # Save and load
@@ -288,13 +288,9 @@ class SACAgent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor_with_sample(
-        self,
-        batch: Batch,
-        sample_a: torch.Tensor,
-        log_prob: torch.Tensor,
-    ) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
         # loss = E{s~D,a~pi}[ temp * log pi(a|s) - min Q(s,a) ]
         o, _, _, _, _ = batch
-        q = self.critic.q_min(o, sample_a)
+        a, log_prob = self.actor.sample(o)
+        q = self.critic.q_min(o, a)
         return (self.temp() * log_prob - q).mean()
