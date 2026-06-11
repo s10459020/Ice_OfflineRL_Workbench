@@ -33,7 +33,7 @@ from ice_offline.dataset.walker2d_replay import Walker2dReplayDataset
 from ice_offline.dataset.walker2d_simple import Walker2dSimpleDataset
 
 
-DEVICE = "cpu"
+DEVICE = "cuda"
 
 
 def make_dataset(id: str) -> Dataset:
