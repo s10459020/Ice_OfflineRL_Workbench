@@ -7,6 +7,9 @@ from ice_offline.dataset._types import Batch
 from ice_offline.config.paths import model_path
 
 
+MetricValues = dict[str, float | torch.Tensor | None]
+
+
 class Agent:
     id: str
     device: str
@@ -25,6 +28,25 @@ class Agent:
     # ====================
     def update(self, batch: Batch) -> None:
         raise NotImplementedError
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        self.update(batch)
+        return {}
+
+    def _grad_norm(self, loss: torch.Tensor, params) -> torch.Tensor:
+        params = list(params)
+        grads = torch.autograd.grad(
+            loss,
+            params,
+            retain_graph=True,
+            allow_unused=True,
+        )
+
+        value = torch.zeros((), device=loss.device)
+        for grad in grads:
+            if grad is not None:
+                value = value + grad.detach().square().sum()
+        return value.sqrt()
 
     # ====================
     # Persistence
@@ -45,5 +67,4 @@ class Agent:
 
     def _load_dict(self, state: dict[str, Any]) -> None:
         raise NotImplementedError
-
 

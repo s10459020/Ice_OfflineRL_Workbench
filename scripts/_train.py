@@ -40,10 +40,10 @@ from train_agent import train_scas_min
 from train_agent import train_td3bc
 
 
-DEVICE = "cpu"
+DEVICE = "cuda"
 
 TRAIN_KWARGS = {
-    # "steps": 200_000,
+    "steps": 200_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 2_00,
@@ -55,15 +55,15 @@ PRE_KWARGS = {
 }
 
 DATASET_LIST = [
-    HopperRandomDataset,
-    HopperReplayDataset,
-    HopperMediumReplayDataset,
-    HopperMediumD4rlDataset,
-    HopperExpertD4rlDataset,
-    HopperMediumExpertDataset,
-    HopperSimpleDataset,
-    HopperMediumDataset,
-    HopperExpertDataset,
+    # HopperRandomDataset,
+    # HopperReplayDataset,
+    # HopperMediumReplayDataset,
+    # HopperMediumD4rlDataset,
+    # HopperExpertD4rlDataset,
+    # HopperMediumExpertDataset,
+    # HopperSimpleDataset,
+    # HopperMediumDataset,
+    # HopperExpertDataset,
     # Walker2dRandomDataset,
     # Walker2dReplayDataset,
     # Walker2dMediumReplayDataset,
@@ -85,14 +85,14 @@ DATASET_LIST = [
 ]
 
 AGENT_LIST = [
-    # ("bc_deterministic", train_bc_deterministic.collect),
+    ("bc_deterministic", train_bc_deterministic.collect),
     # ("bc_stochastic", train_bc_stochastic.collect),
     # ("td3bc", train_td3bc.collect),
     # ("iql", train_iql.collect),
     # ("cql", train_cql.collect),
     # ("cql_max_q", train_cql_max_q.collect),
     # ("cql_soft_q", train_cql_soft_q.collect),
-    ("aspl", train_aspl.collect),
+    # ("aspl", train_aspl.collect),
     # ("sdc_cql", train_sdc_cql.collect),
     # ("sdc_pre", train_sdc_pre.collect),
     # ("scas_min", train_scas_min.collect),

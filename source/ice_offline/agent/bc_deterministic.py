@@ -1,10 +1,9 @@
 ﻿from dataclasses import dataclass
-from typing import ClassVar
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ice_offline.agent._spec import Agent
+from ice_offline.agent._spec import Agent, MetricValues
 from ice_offline.dataset._types import Batch
 
 
@@ -70,15 +69,26 @@ class BCDeterministicAgent(Agent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: Batch):
-        return self.update_actor(batch)
+    def update(self, batch: Batch) -> None:
+        self.update_actor(batch)
 
     def update_actor(self, batch: Batch) -> None:
         self.actor_optimizer.zero_grad()
         loss = self.loss_actor(batch)
         loss.backward()
         self.actor_optimizer.step()
-        return loss
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        self.actor_optimizer.zero_grad()
+        loss_actor = self.loss_actor(batch)
+        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+        loss_actor.backward()
+        self.actor_optimizer.step()
+
+        return {
+            "loss_actor": loss_actor.detach(),
+            "grad_actor": grad_actor.detach(),
+        }
 
     # ====================
     # Save and load

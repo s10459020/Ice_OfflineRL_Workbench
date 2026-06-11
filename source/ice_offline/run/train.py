@@ -29,10 +29,6 @@ EVAL_EPISODES = 10
 DEVICE = "cuda:0"
     
 
-def update_fn(recorder, agent, batch):
-    loss = agent.update(batch)
-    recorder.add("loss", loss.detach())
-
 def eval(
     agent: Agent,
     env: gym.Env,
@@ -61,7 +57,6 @@ def eval(
 def train(
     agent: Agent,
     dataset: Dataset,
-    update_fn = update_fn,
     *,
     start: int = 0,
     steps: int = STEPS,
@@ -86,7 +81,11 @@ def train(
 
         # run
         batch = dataset.sample_batch(batch_size)
-        update_fn(recorder, agent, batch)
+        metrics = agent.update_with_metrics(batch)
+
+        # record
+        for name, value in metrics.items():
+            recorder.add(name, value)
         recorder.flush(step)
         
         # functional
