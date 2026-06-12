@@ -11,33 +11,26 @@ from ice_offline.dataset._types import Batch
 
 
 class _CQLActor(SACActor):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        n_action_samples: int = 10,
-    ):
+    def __init__(self, obs_size: int, act_size: int):
         super().__init__(obs_size, act_size)
         self.act_size = act_size
-        self.n_action_samples = n_action_samples
 
     def sample_random_n(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         batch_size = o.shape[0]
-        a = torch.zeros(
-            (batch_size * self.n_action_samples, self.act_size),
-            device=o.device,
-        ).uniform_(-1.0, 1.0)
-        log_prob = torch.full(
-            (batch_size * self.n_action_samples, 1),
-            math.log(0.5**self.act_size),
-            device=o.device,
-        )
+        action_shape = (batch_size, self.n_samples, self.act_size)
+        prob_shape   = (batch_size, self.n_samples, 1)
+        a = torch.zeros(action_shape,device=o.device,).uniform_(-1.0, 1.0)
+        log_prob = torch.full(prob_shape, math.log(0.5**self.act_size), device=o.device)
         return a, log_prob
 
 
 class _CQLConservativeMultiplier(torch.nn.Module):
-    def __init__(self, learning_rate: float = 1e-4, initial_multiplier: float = 1.0):
+    def __init__(self, learning_rate: float = 1e-4, initial_multiplier: float = 1.0, threshold: float = 10.0, weight: float = 5.0):
         super().__init__()
+
+        self.threshold = threshold
+        self.weight = weight
+
         self.log_cql_multiplier = torch.nn.Parameter(torch.zeros(1, 1, dtype=torch.float32))
         self.log_cql_multiplier.data.fill_(math.log(initial_multiplier))
         self.optimizer = torch.optim.Adam(
@@ -51,40 +44,37 @@ class _CQLConservativeMultiplier(torch.nn.Module):
 
     def forward(self) -> torch.Tensor:
         return self.log_cql_multiplier.exp().clamp(0.0, 1e6)
+    
+    def shift(self, loss_suppress: torch.Tensor) -> torch.Tensor:        
+        return self.weight * (loss_suppress - self.threshold)
 
-    def loss(self, conservative_loss_detached: torch.Tensor) -> torch.Tensor:
+    def loss(self, loss_suppress: torch.Tensor) -> torch.Tensor:
         # loss = -E[ alpha * L_cql ]
         # Lagrangian dual，若L_cql項長期偏大，則加強修改力度
-        return -(self() * conservative_loss_detached).mean()
+        return -(self() * loss_suppress).mean()
 
 
 class _CQLCritic(SACCritic):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        threshold: float = 10.0,
-        weight: float = 5.0,
-        n_action_samples: int = 10,
-    ):
+    def __init__(self, obs_size: int, act_size: int):
         super().__init__(obs_size, act_size)
-        self.threshold = threshold
-        self.weight = weight
-        self.n_action_samples = n_action_samples
 
     def eval_q_n(self, o: torch.Tensor, a_sample: torch.Tensor) -> torch.Tensor:
-        o = o.repeat_interleave(self.n_action_samples, dim=0)  # (B, O) => (B*N, O)
-        a = a_sample.reshape(-1, a_sample.shape[-1])           # (B*N, A)
-        return torch.stack([q(o, a) for q in self.q_networks], dim=0)
+        batch_size = o.shape[0]
+        n = a_sample.shape[1]
+        o = o.repeat_interleave(n, dim=0)             # (B, O) -> (B*N, O)
+        a = a_sample.reshape(-1, a_sample.shape[-1])  # (B, N, A) -> (B*N, A)
+        q_values = torch.stack([q(o, a) for q in self.q_networks], dim=0)
+        # (Q, B*N, 1) -> (Q, B, N, 1)
+        return q_values.view(len(self.q_networks), batch_size, n, 1)
 
     def eval_tq_n(self, o: torch.Tensor, a_sample: torch.Tensor) -> torch.Tensor:
-        o = o.repeat_interleave(self.n_action_samples, dim=0)
+        batch_size = o.shape[0]
+        n = a_sample.shape[1]
+        o = o.repeat_interleave(n, dim=0)
         a = a_sample.reshape(-1, a_sample.shape[-1])
-        return torch.stack([tq(o, a) for tq in self.tq_networks], dim=0)
-    
-    def shift_loss(self, loss_suppress: torch.Tensor) -> torch.Tensor:        
-        return self.weight * (loss_suppress - self.threshold)
-
+        tq_values = torch.stack([tq(o, a) for tq in self.tq_networks], dim=0)
+        # (Q, B*N, 1) -> (Q, B, N, 1)
+        return tq_values.view(len(self.tq_networks), batch_size, n, 1)
 
 @dataclass
 class CQLSoftQAgent(SACAgent):
@@ -136,9 +126,13 @@ class CQLSoftQAgent(SACAgent):
         self.update_temperature(batch)
         self.critic.update_target_soft()
 
+    def _log_prob_n(self, log_prob: torch.Tensor) -> torch.Tensor:
+        # (B, N, 1) -> (1, B, N)
+        return log_prob.transpose(1, 2).transpose(0, 1)
+
     def update_critic(self, batch: Batch) -> None:
         loss_suppress = self.loss_suppress(batch)
-        loss_suppress = self.critic.shift_loss(loss_suppress)
+        loss_suppress = self.multiplier.shift(loss_suppress)
         # loss_multiplier = self.multiplier.loss(loss_suppress.detach())
 
         # Keep loss functions side-effect free; update CQL multiplier explicitly here.
@@ -153,30 +147,37 @@ class CQLSoftQAgent(SACAgent):
 
     def update_with_metrics(self, batch: Batch) -> MetricValues:
         o, a, _, on, _ = batch
-        batch_size = o.shape[0]
 
         # loss suppress
-        a_s, logp = self.actor.sample_n(o, self.critic.n_action_samples)
-        an, logpn = self.actor.sample_n(on, self.critic.n_action_samples)
+        a_s, logp = self.actor.sample_n(o)
+        an, logpn = self.actor.sample_n(on)
         ar, logpr = self.actor.sample_random_n(o)
 
-        logp = logp.view(1, batch_size, self.critic.n_action_samples)   # (1,B,N)
-        logpn = logpn.view(1, batch_size, self.critic.n_action_samples) # (1,B,N)
-        logpr = logpr.view(1, batch_size, self.critic.n_action_samples) # (1,B,N)
-        logp_cat = torch.cat([logp, logpn, logpr], dim=2)                # (1,B,3N)
+        logp = self._log_prob_n(logp)
+        logpn = self._log_prob_n(logpn)
+        logpr = self._log_prob_n(logpr)
+        logp_cat = torch.cat([logp, logpn, logpr], dim=2)  # (1, B, 3N)
 
-        q = self.critic.eval_q_n(o, a_s).view(2, batch_size, self.critic.n_action_samples)
-        qn = self.critic.eval_q_n(o, an).view(2, batch_size, self.critic.n_action_samples)
-        qr = self.critic.eval_q_n(o, ar).view(2, batch_size, self.critic.n_action_samples)
-        q_cat = torch.cat([q, qn, qr], dim=2)                            # (2,B,3N)
+        q = self.critic.eval_q_n(o, a_s).squeeze(-1)
+        qn = self.critic.eval_q_n(o, an).squeeze(-1)
+        qr = self.critic.eval_q_n(o, ar).squeeze(-1)
+        q_cat = torch.cat([q, qn, qr], dim=2)  # (2, B, 3N)
 
-        logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2,B,1)
+        logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2, B, 1)
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
         loss_suppress = (logsumexp - data_q).mean(dim=[1, 2])
         grad_suppress = self._grad_norm(loss_suppress.sum(), self.critic.parameters())
 
-        loss_suppress_shifted = self.critic.shift_loss(loss_suppress)
+        loss_suppress_shifted = self.multiplier.shift(loss_suppress)
         grad_suppress_shifted = self._grad_norm(loss_suppress_shifted.sum(), self.critic.parameters())
+
+        # loss & update multiplier
+        loss_multiplier = self.multiplier.loss(loss_suppress_shifted.detach())
+        grad_multiplier = self._grad_norm(loss_multiplier.sum(), self.multiplier.parameters())
+
+        self.multiplier.optimizer.zero_grad()
+        loss_multiplier.backward()
+        self.multiplier.optimizer.step()
 
         # loss td
         loss_td = self.loss_critic(batch)
@@ -221,6 +222,8 @@ class CQLSoftQAgent(SACAgent):
             "grad_critic": grad_critic.detach(),
             "loss_temperature": loss_temperature.detach(),
             "grad_temperature": grad_temperature.detach(),
+            "loss_multiplier": loss_multiplier.sum().detach(),
+            "grad_multiplier": grad_multiplier.detach(),
             "loss_actor": loss_actor.detach(),
             "grad_actor": grad_actor.detach(),
             "q_cat": q_cat.mean().detach(),
@@ -250,32 +253,31 @@ class CQLSoftQAgent(SACAgent):
     # ====================
     def loss_suppress(self, batch: Batch) -> torch.Tensor:
         # L_CQL(H) = E_D[s]{log *              sum_a[exp(Q)] } - E_D[s,a]{Q}
-        #          = E_D[s]{log *         sum_a[p* exp(Q)/p] } - E_D[s,a]{Q}
-        #          = E_D[s]{log *         E_a[exp(Q-log(p))] } - E_D[s,a]{Q}
-        #         ~= E_D[s]{log * 1/N * sum_N[exp(Q-log(p))] } - E_D[s,a]{Q} # sample approximation
-        #         => logsumexp(Q-log(p)) - E_(s,a)~D[Q]  # 單步loss
+        #          = E_D[s]{log *         sum_a[p * exp(Q) / p] } - E_D[s,a]{Q}
+        #          = E_D[s]{log *         E_a[exp(Q - log p)] } - E_D[s,a]{Q}
+        #         ~= E_D[s]{log * 1/N * sum_N[exp(Q - log p)] } - E_D[s,a]{Q}
+        #          = logsumexp(Q - log p) - E_(s,a)~D[Q]
         #
         # E_D[s]: input o
         # E_D[s,a]: input o,a
-        # CQL sample approximation: a ~ p(a) => Uniform/ pi(.|s)/ pi(.|s') 三種N次
+        # CQL sample approximation: a ~ p(a) => Uniform / pi(.|s) / pi(.|s')，各取 N 次
         o, a, _, on, _ = batch
-        batch_size = o.shape[0]
 
-        a_s, logp = self.actor.sample_n(o, self.critic.n_action_samples)
-        an, logpn = self.actor.sample_n(on, self.critic.n_action_samples)
+        a_s, logp = self.actor.sample_n(o)
+        an, logpn = self.actor.sample_n(on)
         ar, logpr = self.actor.sample_random_n(o)
 
-        logp = logp.view(1, batch_size, self.critic.n_action_samples)   # (1,B,N)
-        logpn = logpn.view(1, batch_size, self.critic.n_action_samples) # (1,B,N)
-        logpr = logpr.view(1, batch_size, self.critic.n_action_samples) # (1,B,N)
-        logp_cat = torch.cat([logp, logpn, logpr], dim=2)                # (1,B,3N)
+        logp = self._log_prob_n(logp)
+        logpn = self._log_prob_n(logpn)
+        logpr = self._log_prob_n(logpr)
+        logp_cat = torch.cat([logp, logpn, logpr], dim=2)  # (1, B, 3N)
 
-        q = self.critic.eval_q_n(o, a_s).view(2, batch_size, self.critic.n_action_samples)
-        qn = self.critic.eval_q_n(o, an).view(2, batch_size, self.critic.n_action_samples)
-        qr = self.critic.eval_q_n(o, ar).view(2, batch_size, self.critic.n_action_samples)
-        q_cat = torch.cat([q, qn, qr], dim=2)                            # (2,B,3N)
+        q = self.critic.eval_q_n(o, a_s).squeeze(-1)
+        qn = self.critic.eval_q_n(o, an).squeeze(-1)
+        qr = self.critic.eval_q_n(o, ar).squeeze(-1)
+        q_cat = torch.cat([q, qn, qr], dim=2)  # (2, B, 3N)
 
-        logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2,B,1)
+        logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2, B, 1)
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
         return (logsumexp - data_q).mean(dim=[1, 2])   
 
@@ -286,5 +288,5 @@ class CQLSoftQAgent(SACAgent):
     ) -> torch.Tensor:
         # CQL loss: loss_td + multiplier * loss_suppress
         loss_td = self.loss_critic(batch)
-        # return loss_td + (self.multiplier() * loss_suppress).sum()
-        return loss_td + (loss_suppress).sum()
+        return loss_td + (self.multiplier() * loss_suppress).sum()
+        # return loss_td + (loss_suppress).sum()
