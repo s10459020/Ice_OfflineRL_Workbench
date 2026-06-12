@@ -165,7 +165,6 @@ class AsplAgent(TD3Agent):
 
         return metrics
 
-
     # ====================
     # Critic loss
     # ====================
@@ -183,14 +182,14 @@ class AsplAgent(TD3Agent):
         s, a, _, _, _ = batch
 
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
-        a_samples = self.actor.sample_actions_lhs(s.shape[0])                                # (N,B,A)
-        action_distance = self.actor.action_distance(a, a_samples)                            # (N,B,1)
-        q_pseudo = self.critic.q_pseudo(target, action_distance)           # (N,B,1)
+        a_samples = self.actor.sample_actions_lhs(s.shape[0])       # (N,B,A)
+        action_distance = self.actor.action_distance(a, a_samples)  # (N,B,1)
+        q_pseudo = self.critic.q_pseudo(target, action_distance)    # (N,B,1)
 
         # reshape
-        s_reshape = s.unsqueeze(0).expand(self.actor.num_sample, -1, -1).reshape(-1, s.shape[1])  # (B,S) > (1,B,S) > (N,B,S) > (N*B,S)
-        a_samples_reshape = a_samples.view(-1, a.shape[1])                                  # (N,B,A) > (N*B,A)
-        q_pseudo_reshape = q_pseudo.view(-1, 1)                                             # (N*B,1)  
+        s_reshape = s.unsqueeze(0).expand(a_samples.shape[0], -1, -1).reshape(-1, s.shape[1])    # (B,S) > (1,B,S) > (N,B,S) > (N*B,S)
+        a_samples_reshape = a_samples.view(-1, a.shape[1])                                       # (N,B,A) > (N*B,A)
+        q_pseudo_reshape = q_pseudo.view(-1, 1)                                                  # (N*B,1)  
         
         q_values = (
             self.critic.q_networks[0](s_reshape, a_samples_reshape),

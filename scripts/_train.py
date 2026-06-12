@@ -6,7 +6,7 @@ from _config import make_dataset
 
 TRAIN_KWARGS = {
     "start": 0,
-    "steps": 100_000,
+    "steps": 500_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 200,
@@ -48,12 +48,12 @@ DATASET_ID_LIST = [
 AGENT_ID_LIST = [
     # "bc_deterministic",
     # "bc_stochastic",
-    # "td3bc",
+    "td3bc",
     # "iql",
     # "cql",
     # "cql_max_q",
     # "cql_soft_q",
-    "aspl",
+    # "aspl",
     # "sdc_cql",
     # "sdc_pre",
     # "scas_min",

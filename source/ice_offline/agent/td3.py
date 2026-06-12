@@ -233,11 +233,14 @@ class TD3Agent(Agent):
             tq = self.critic.tq_min(on, an)
             return r + self.gamma * tq * (1.0 - d)
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_td(self, batch: Batch) -> torch.Tensor:
         # loss = E{s,a,r,s'~D}[ MSE(Q(s,a) - y) ]
         o, a, r, on, d = batch
         target = self.target_td3(on, r, d)
         return sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
+
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
+        return self.loss_td(batch)
 
     # ====================
     # Actor loss
