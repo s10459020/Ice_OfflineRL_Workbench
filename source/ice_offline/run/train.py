@@ -72,10 +72,12 @@ def train(
 ) -> None:
     task_id = task_id or _task_id(dataset.id, agent.id)
     eval_env = eval_env or dataset.make_eval_env()
+    path = data_path_train(task_id)
     
     print_stage(f"Train {agent.id} in {dataset.id}")
-    eval_col = EvalCollector(eval_env)
-    recorder = MetricRecorder(task_id)
+    resume_path = path if start > 0 else None
+    eval_col = EvalCollector(eval_env, resume_path=resume_path)
+    recorder = MetricRecorder(task_id, initialized=start > 0)
 
     for step in range(start + 1, steps + 1):
         # seed
@@ -107,7 +109,6 @@ def train(
         if step % save_interval == 0 or step == steps:
             agent.save(task_id, step)
 
-    path = data_path_train(task_id)
     eval_col.save(path)
     eval_col.close()
     return path

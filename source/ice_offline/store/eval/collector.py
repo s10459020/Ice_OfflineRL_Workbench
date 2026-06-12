@@ -11,12 +11,14 @@ import numpy as np
 
 
 class EvalCollector(gym.Wrapper):
-    def __init__(self, env: gym.Env, temp_dir: Path = DATASETS_ROOT):
+    def __init__(self, env: gym.Env, temp_dir: Path = DATASETS_ROOT, resume_path: Path | None = None):
         super().__init__(env)
         
         temp_dir.mkdir(parents=True, exist_ok=True)
         self._temp_dir = tempfile.TemporaryDirectory(dir=temp_dir.parent)
         self._temp_path = Path(self._temp_dir.name) / "main_data.hdf5"
+        if resume_path is not None and resume_path.exists():
+            shutil.copy2(resume_path, self._temp_path)
 
         self._episodes: list[dict] = []
         self._current: dict | None = None
