@@ -11,13 +11,7 @@ from ice_offline.dataset._types import Batch
 
 
 class _Pi(torch.nn.Module):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        min_logstd: float = -20.0,
-        max_logstd: float = 2.0,
-    ):
+    def __init__(self, obs_size: int, act_size: int, min_logstd: float = -20.0, max_logstd: float = 2.0):
         super().__init__()
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
@@ -38,9 +32,10 @@ class _Pi(torch.nn.Module):
 
 
 class SACActor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, pi_cls: type[torch.nn.Module] = _Pi):
+    def __init__(self, obs_size: int, act_size: int, pi_cls: type[torch.nn.Module] = _Pi, n_samples: int = 10):
         super().__init__()
         self.pi = pi_cls(obs_size, act_size)
+        self.n_samples = n_samples
 
     def _dist(self, o: torch.Tensor) -> tuple[Normal, torch.Tensor]:
         mean, logstd = self.pi(o)
@@ -59,12 +54,13 @@ class SACActor(torch.nn.Module):
         raw_action = dist.rsample()
         return torch.tanh(raw_action), self._log_prob(dist, raw_action)
 
-    def sample_n(self, o: torch.Tensor, n: int) -> tuple[torch.Tensor, torch.Tensor]:
+    def sample_n(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         dist, _ = self._dist(o)
-        raw_action = dist.rsample((n,))
+        raw_action = dist.rsample((self.n_samples,))
         action = torch.tanh(raw_action).transpose(0, 1)
         log_prob = self._log_prob(dist, raw_action).transpose(0, 1)
-        return action.reshape(-1, action.shape[-1]), log_prob.reshape(-1, 1)
+        # action: (B, N, A), log_prob: (B, N, 1)
+        return action, log_prob
 
 
 class _Q(torch.nn.Module):
@@ -83,14 +79,7 @@ class _Q(torch.nn.Module):
 
 
 class SACCritic(torch.nn.Module):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        q_count: int = 2,
-        q_cls: type[torch.nn.Module] = _Q,
-        tau: float = 0.005,
-    ):
+    def __init__(self, obs_size: int, act_size: int, q_count: int = 2, q_cls: type[torch.nn.Module] = _Q, tau: float = 0.005):
         super().__init__()
         self.tau = tau
         self.q_networks = torch.nn.ModuleList(
@@ -128,13 +117,7 @@ class SACCritic(torch.nn.Module):
 
 
 class _SACTemperature(torch.nn.Module):
-    def __init__(
-        self,
-        act_size: int,
-        learning_rate: float = 3e-4,
-        initial_temperature: float = 1.0,
-        target_entropy: float | None = None,
-    ):
+    def __init__(self, act_size: int, learning_rate: float = 3e-4, initial_temperature: float = 1.0, target_entropy: float | None = None):
         super().__init__()
         self.log_alpha = torch.nn.Parameter(
             torch.full((1, 1), math.log(initial_temperature), dtype=torch.float32)

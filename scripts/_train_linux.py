@@ -5,7 +5,8 @@ from _config import make_dataset
 
 
 TRAIN_KWARGS = {
-    "steps": 200_000,
+    "start": 0,
+    "steps": 100_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 200,
@@ -20,9 +21,9 @@ DATASET_ID_LIST = [
     # "hopper_medium_d4rl",
     # "hopper_expert_d4rl",
     # "hopper_medium_expert",
-    "hopper_simple",
+    # "hopper_simple",
     # "hopper_medium",
-    # "hopper_expert",
+    "hopper_expert",
     # "walker2d_random",
     # "walker2d_replay",
     # "walker2d_medium_replay",
@@ -45,13 +46,13 @@ DATASET_ID_LIST = [
 
 
 AGENT_ID_LIST = [
-    "bc_deterministic",
+    # "bc_deterministic",
     # "bc_stochastic",
     # "td3bc",
     # "iql",
     # "cql",
     # "cql_max_q",
-    # "cql_soft_q",
+    "cql_soft_q",
     # "aspl",
     # "sdc_cql",
     # "sdc_pre",
