@@ -1,9 +1,17 @@
 from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import eval_returns_path
-from ice_offline.config.paths import eval_steps_path
-from ice_offline.config.paths import metric_path
-from ice_offline.config.paths import plot_path
-from ice_offline.run.plot import plot
+from ice_offline.run.train import train
+from _config import make_agent
+from _config import make_dataset
+
+
+TRAIN_KWARGS = {
+    # "start": 200_000,
+    "steps": 1_000_000,
+    # "save_interval": 20_000,
+    # "eval_interval": 2_000,
+    # "print_interval": 200,
+    # "eval_episodes": 20,
+}
 
 
 DATASET_ID_LIST = [
@@ -13,8 +21,8 @@ DATASET_ID_LIST = [
     # "hopper_medium_d4rl",
     # "hopper_expert_d4rl",
     # "hopper_medium_expert",
-    "hopper_simple",
-    "hopper_medium",
+    # "hopper_simple",
+    # "hopper_medium",
     "hopper_expert",
     # "walker2d_random",
     # "walker2d_replay",
@@ -55,26 +63,25 @@ AGENT_ID_LIST = [
 
 
 def main() -> None:
-    for index, dataset_id in enumerate(DATASET_ID_LIST, start=1):
+    train_kwargs = {key: value for key, value in TRAIN_KWARGS.items() if value is not None}
+    start = train_kwargs.get("start", 0)
+    for dataset_id in DATASET_ID_LIST:
+        dataset = make_dataset(dataset_id)
+
         for agent_id in AGENT_ID_LIST:
-            task_id = _task_id(dataset_id, agent_id)
-            metric_paths = [metric_path(task_id)]
-            eval_paths = [
-                eval_returns_path(task_id),
-                eval_steps_path(task_id),
-            ]
-            output_path = plot_path(index, dataset_id, agent_id)
-
-            paths = metric_paths + eval_paths
-            missing_paths = [path for path in paths if not path.exists()]
-            if missing_paths:
-                for path in missing_paths:
-                    print(f"skip missing: {path}")
-                continue
-
-            print(f"plot dataset={dataset_id}, agent={agent_id}")
-            plot(metric_paths, eval_paths, output_path)
-            print(f"saved: {output_path}")
+            agent = make_agent(agent_id, dataset)
+            
+            task_id = _task_id(dataset.id, agent.id)
+            if start > 0:
+                agent.load(task_id, start)
+            print(f"task={task_id}, dataset={dataset.id}, agent={agent.id}")
+            path = train(
+                agent=agent,
+                dataset=dataset,
+                task_id=task_id,
+                **train_kwargs,
+            )
+            print(f"saved: {path}")
 
 
 if __name__ == "__main__":

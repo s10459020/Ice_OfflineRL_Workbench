@@ -1,17 +1,9 @@
 from ice_offline.config.paths import _task_id
-from ice_offline.run.train import train
-from _config import make_agent
-from _config import make_dataset
-
-
-TRAIN_KWARGS = {
-    "start": 0,
-    "steps": 100_000,
-    # "save_interval": 20_000,
-    # "eval_interval": 2_000,
-    # "print_interval": 200,
-    # "eval_episodes": 20,
-}
+from ice_offline.config.paths import data_path_train
+from ice_offline.config.paths import eval_returns_path
+from ice_offline.config.paths import eval_steps_path
+from ice_offline.run.eval import cal_returns
+from ice_offline.run.eval import cal_steps
 
 
 DATASET_ID_LIST = [
@@ -21,8 +13,8 @@ DATASET_ID_LIST = [
     # "hopper_medium_d4rl",
     # "hopper_expert_d4rl",
     # "hopper_medium_expert",
-    # "hopper_simple",
-    # "hopper_medium",
+    "hopper_simple",
+    "hopper_medium",
     "hopper_expert",
     # "walker2d_random",
     # "walker2d_replay",
@@ -63,22 +55,21 @@ AGENT_ID_LIST = [
 
 
 def main() -> None:
-    train_kwargs = {key: value for key, value in TRAIN_KWARGS.items() if value is not None}
     for dataset_id in DATASET_ID_LIST:
-        dataset = make_dataset(dataset_id)
-
         for agent_id in AGENT_ID_LIST:
-            agent = make_agent(agent_id, dataset)
-            
-            task_id = _task_id(dataset.id, agent.id)
-            print(f"task={task_id}, dataset={dataset.id}, agent={agent.id}")
-            path = train(
-                agent=agent,
-                dataset=dataset,
-                task_id=task_id,
-                **train_kwargs,
-            )
-            print(f"saved: {path}")
+            task_id = _task_id(dataset_id, agent_id)
+            input_path = data_path_train(task_id)
+            if not input_path.exists():
+                print(f"skip missing: {input_path}")
+                continue
+
+            returns_path = eval_returns_path(task_id)
+            steps_path = eval_steps_path(task_id)
+            print(f"evals={input_path}")
+            cal_returns(input_path, returns_path)
+            cal_steps(input_path, steps_path)
+            print(f"saved: {returns_path}")
+            print(f"saved: {steps_path}")
 
 
 if __name__ == "__main__":

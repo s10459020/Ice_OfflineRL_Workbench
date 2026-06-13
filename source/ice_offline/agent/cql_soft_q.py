@@ -24,34 +24,27 @@ class _CQLActor(SACActor):
         return a, log_prob
 
 
-class _CQLConservativeMultiplier(torch.nn.Module):
-    def __init__(self, learning_rate: float = 1e-4, initial_multiplier: float = 1.0, threshold: float = 10.0, weight: float = 5.0):
+class _CQLMultiplier(torch.nn.Module):
+    def __init__(self, 
+            learning_rate: float = 1e-4, 
+            initial_multiplier: float = 10.0, 
+            threshold: float = 2, 
+        ):
         super().__init__()
-
         self.threshold = threshold
-        self.weight = weight
 
-        self.log_cql_multiplier = torch.nn.Parameter(torch.zeros(1, 1, dtype=torch.float32))
-        self.log_cql_multiplier.data.fill_(math.log(initial_multiplier))
-        self.optimizer = torch.optim.Adam(
-            self.parameters(),
-            lr=learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+        tensor = torch.full((1, 1), math.log(initial_multiplier), dtype=torch.float32)
+        self.log_alpha = torch.nn.Parameter(tensor)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
     def forward(self) -> torch.Tensor:
-        return self.log_cql_multiplier.exp().clamp(0.0, 1e6)
-    
-    def shift(self, loss_suppress: torch.Tensor) -> torch.Tensor:        
-        return self.weight * (loss_suppress - self.threshold)
+        return self.log_alpha.exp().clamp(0.0, 1e6)
 
     def loss(self, loss_suppress: torch.Tensor) -> torch.Tensor:
-        # loss = -E[ alpha * L_cql ]
-        # Lagrangian dual，若L_cql項長期偏大，則加強修改力度
-        return -(self() * loss_suppress).mean()
+        # loss = -E[ alpha * L_suppress_gap ]
+        # Lagrangian dual，若L_suppress項長期大於threshold，則加強修改力度
+        gap = loss_suppress - self.threshold
+        return -(self() * gap).mean()
 
 
 class _CQLCritic(SACCritic):
@@ -89,33 +82,11 @@ class CQLSoftQAgent(SACAgent):
     # ====================
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.actor = _CQLActor(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-        ).to(self.device)
-        self.critic = _CQLCritic(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-        ).to(self.device)
-        self.multiplier = _CQLConservativeMultiplier(
-            learning_rate=self.cql_multiplier_learning_rate,
-        ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.pi.parameters(),
-            lr=self.actor_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.q_networks.parameters(),
-            lr=self.critic_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+        self.actor = _CQLActor(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
+        self.critic = _CQLCritic(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
+        self.multiplier = _CQLMultiplier(learning_rate=self.cql_multiplier_learning_rate).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters(), lr=self.critic_learning_rate)
 
     # ====================
     # Update
@@ -126,37 +97,54 @@ class CQLSoftQAgent(SACAgent):
         self.update_temperature(batch)
         self.critic.update_target_soft()
 
-    def _log_prob_n(self, log_prob: torch.Tensor) -> torch.Tensor:
-        # (B, N, 1) -> (1, B, N)
-        return log_prob.transpose(1, 2).transpose(0, 1)
+    def update_actor_with_metrics(self, batch: Batch) -> dict:
+        loss_actor = self.loss_actor(batch)
+        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
 
-    def update_critic(self, batch: Batch) -> None:
-        loss_suppress = self.loss_suppress(batch)
-        loss_suppress = self.multiplier.shift(loss_suppress)
-        # loss_multiplier = self.multiplier.loss(loss_suppress.detach())
+        self.actor_optimizer.zero_grad()
+        loss_actor.backward()
+        self.actor_optimizer.step()
+        return {
+            "loss_actor": loss_actor.detach(),
+            "grad_actor": grad_actor.detach(),
+        }
 
-        # Keep loss functions side-effect free; update CQL multiplier explicitly here.
-        # self.multiplier.optimizer.zero_grad()
-        # loss_multiplier.backward()
-        # self.multiplier.optimizer.step()
+    def update_critic_with_metrics(self, batch: Batch) -> dict:
+        loss_td = self.loss_critic(batch)
+        grad_td = self._grad_norm(loss_td, self.critic.parameters())
+
+        loss_suppress, metrics_suppress = self.update_suppress_with_metrics(batch)
+        grad_suppress = self._grad_norm(loss_suppress, self.critic.parameters())
+
+        metrics_multiplier = self.update_multiplier_with_metrics(loss_suppress)
+
+        loss_critic = loss_td + (self.multiplier().detach() * loss_suppress)
+        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
 
         self.critic_optimizer.zero_grad()
-        loss_critic = self.loss_critic_with_suppress(batch, loss_suppress)
         loss_critic.backward()
         self.critic_optimizer.step()
+        return {
+            "loss_td": loss_td.detach(),
+            "grad_td": grad_td.detach(),
+            "loss_suppress": loss_suppress.detach(),
+            "grad_suppress": grad_suppress.detach(),
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+        } | metrics_suppress | metrics_multiplier
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
+    def update_suppress_with_metrics(self, batch: Batch) -> tuple[torch.Tensor, dict]:
         o, a, _, on, _ = batch
 
-        # loss suppress
-        a_s, logp = self.actor.sample_n(o)
-        an, logpn = self.actor.sample_n(on)
-        ar, logpr = self.actor.sample_random_n(o)
+        with torch.no_grad():
+            a_s, logp = self.actor.sample_n(o)
+            an, logpn = self.actor.sample_n(on)
+            ar, logpr = self.actor.sample_random_n(o)
 
-        logp = self._log_prob_n(logp)
-        logpn = self._log_prob_n(logpn)
-        logpr = self._log_prob_n(logpr)
-        logp_cat = torch.cat([logp, logpn, logpr], dim=2)  # (1, B, 3N)
+            logp = self._log_prob_n(logp)
+            logpn = self._log_prob_n(logpn)
+            logpr = self._log_prob_n(logpr)
+            logp_cat = torch.cat([logp, logpn, logpr], dim=2)  # (1, B, 3N)
 
         q = self.critic.eval_q_n(o, a_s).squeeze(-1)
         qn = self.critic.eval_q_n(o, an).squeeze(-1)
@@ -164,75 +152,55 @@ class CQLSoftQAgent(SACAgent):
         q_cat = torch.cat([q, qn, qr], dim=2)  # (2, B, 3N)
 
         logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2, B, 1)
+        grad_logsumexp = self._grad_norm(logsumexp.mean(), self.critic.parameters())
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
-        loss_suppress = (logsumexp - data_q).mean(dim=[1, 2])
-        grad_suppress = self._grad_norm(loss_suppress.sum(), self.critic.parameters())
+        grad_data_q = self._grad_norm(data_q.mean(), self.critic.parameters())
 
-        loss_suppress_shifted = self.multiplier.shift(loss_suppress)
-        grad_suppress_shifted = self._grad_norm(loss_suppress_shifted.sum(), self.critic.parameters())
+        loss = (logsumexp - data_q).mean()
 
-        # loss & update multiplier
-        loss_multiplier = self.multiplier.loss(loss_suppress_shifted.detach())
-        grad_multiplier = self._grad_norm(loss_multiplier.sum(), self.multiplier.parameters())
-
-        self.multiplier.optimizer.zero_grad()
-        loss_multiplier.backward()
-        self.multiplier.optimizer.step()
-
-        # loss td
-        loss_td = self.loss_critic(batch)
-        grad_td = self._grad_norm(loss_td, self.critic.parameters())
-        
-        # loss & update critic
-        loss_critic = loss_td + loss_suppress_shifted.sum()
-        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
-
-        self.critic_optimizer.zero_grad()
-        loss_critic.backward()
-        self.critic_optimizer.step()
-
-        # loss & update actor
-        loss_actor = self.loss_actor(batch)
-        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
-
-        self.actor_optimizer.zero_grad()
-        loss_actor.backward()
-        self.actor_optimizer.step()
-
-        # loss & update temperature
-        _, log_prob = self.actor.sample(o)
-        loss_temperature = self.temp.loss(log_prob)
-        grad_temperature = self._grad_norm(loss_temperature, self.temp.parameters())
-
-        self.temp.optimizer.zero_grad()
-        loss_temperature.backward()
-        self.temp.optimizer.step()
-
-        # update other
-        self.critic.update_target_soft()
-
-        metrics = {
-            "loss_td": loss_td.detach(),
-            "grad_td": grad_td.detach(),
-            "loss_suppress": loss_suppress.sum().detach(),
-            "grad_suppress": grad_suppress.detach(),
-            "loss_suppress_shifted": loss_suppress_shifted.sum().detach(),
-            "grad_suppress_shifted": grad_suppress_shifted.detach(),
-            "loss_critic": loss_critic.detach(),
-            "grad_critic": grad_critic.detach(),
-            "loss_temperature": loss_temperature.detach(),
-            "grad_temperature": grad_temperature.detach(),
-            "loss_multiplier": loss_multiplier.sum().detach(),
-            "grad_multiplier": grad_multiplier.detach(),
-            "loss_actor": loss_actor.detach(),
-            "grad_actor": grad_actor.detach(),
+        return loss, {
             "q_cat": q_cat.mean().detach(),
             "logp_cat": logp_cat.mean().detach(),
             "logsumexp": logsumexp.mean().detach(),
+            "grad_logsumexp": grad_logsumexp.detach(),
             "data_q": data_q.mean().detach(),
+            "grad_data_q": grad_data_q.detach(),
         }
 
-        return metrics
+    def update_multiplier_with_metrics(self, loss_suppress: torch.Tensor) -> dict:
+        loss = self.multiplier.loss(loss_suppress.detach())
+        grad = self._grad_norm(loss, self.multiplier.parameters())
+
+        self.multiplier.optimizer.zero_grad()
+        loss.backward()
+        self.multiplier.optimizer.step()
+        return {
+            "loss_multiplier": loss.detach(), 
+            "grad_multiplier": grad.detach(),
+            "multiplier": self.multiplier().detach(),
+        }
+    
+    def update_temp_with_metrics(self, batch: Batch) -> dict:
+        o, _, _, _, _ = batch
+        _, log_prob = self.actor.sample(o)
+        loss = self.temp.loss(log_prob)
+        grad = self._grad_norm(loss, self.temp.parameters())
+
+        self.temp.optimizer.zero_grad()
+        loss.backward()
+        self.temp.optimizer.step()
+        return {
+            "temp": self.temp().detach(),
+            "loss_temp": loss.detach(),
+            "grad_temp": grad.detach(),
+        }
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        metrics_critic = self.update_critic_with_metrics(batch)
+        metrics_actor = self.update_actor_with_metrics(batch)
+        metrics_temp = self.update_temp_with_metrics(batch)
+        self.critic.update_target_soft()
+        return metrics_actor | metrics_critic | metrics_temp
 
     # ====================
     # Save and load
@@ -251,6 +219,10 @@ class CQLSoftQAgent(SACAgent):
     # ====================
     # Critic loss
     # ====================
+    def _log_prob_n(self, log_prob: torch.Tensor) -> torch.Tensor:
+        # (B, N, 1) -> (1, B, N)
+        return log_prob.transpose(1, 2).transpose(0, 1)
+    
     def loss_suppress(self, batch: Batch) -> torch.Tensor:
         # L_CQL(H) = E_D[s]{log *              sum_a[exp(Q)] } - E_D[s,a]{Q}
         #          = E_D[s]{log *         sum_a[p * exp(Q) / p] } - E_D[s,a]{Q}
@@ -279,7 +251,7 @@ class CQLSoftQAgent(SACAgent):
 
         logsumexp = torch.logsumexp(q_cat - logp_cat, dim=2, keepdim=True)  # (2, B, 1)
         data_q = torch.stack(self.critic.q_all(o, a), dim=0)
-        return (logsumexp - data_q).mean(dim=[1, 2])   
+        return (logsumexp - data_q).mean()   
 
     def loss_critic_with_suppress(
         self,
