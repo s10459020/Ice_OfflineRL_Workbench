@@ -1,7 +1,7 @@
+from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
+from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train
-from _config import make_agent
-from _config import make_dataset
 
 
 TRAIN_KWARGS = {
@@ -65,10 +65,10 @@ AGENT_ID_LIST = [
 def main() -> None:
     train_kwargs = {key: value for key, value in TRAIN_KWARGS.items() if value is not None}
     for dataset_id in DATASET_ID_LIST:
-        dataset = make_dataset(dataset_id)
+        dataset = make_dataset(dataset_id, device="cuda")
 
         for agent_id in AGENT_ID_LIST:
-            agent = make_agent(agent_id, dataset)
+            agent = make_agent(agent_id, dataset, device="cuda")
             
             task_id = _task_id(dataset.id, agent.id)
             print(f"task={task_id}, dataset={dataset.id}, agent={agent.id}")

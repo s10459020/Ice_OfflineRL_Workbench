@@ -1,12 +1,12 @@
+from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
+from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train
-from _config import make_agent
-from _config import make_dataset
 
 
 TRAIN_KWARGS = {
-    "start": 200_000,
-    "steps": 500_000,
+    "start": 500_000,
+    "steps": 1000_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 200,
@@ -66,10 +66,10 @@ def main() -> None:
     train_kwargs = {key: value for key, value in TRAIN_KWARGS.items() if value is not None}
     start = train_kwargs.get("start", 0)
     for dataset_id in DATASET_ID_LIST:
-        dataset = make_dataset(dataset_id)
+        dataset = make_dataset(dataset_id, device="cuda")
 
         for agent_id in AGENT_ID_LIST:
-            agent = make_agent(agent_id, dataset)
+            agent = make_agent(agent_id, dataset, device="cuda")
             
             task_id = _task_id(dataset.id, agent.id)
             if start > 0:

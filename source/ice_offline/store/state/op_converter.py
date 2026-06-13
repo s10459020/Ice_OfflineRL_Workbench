@@ -1,6 +1,6 @@
 from typing import Any, Protocol, Type
 
-from ice_offline.dataset._spec import Dataset
+from ice_offline.dataset.base import Dataset
 from ice_offline.dataset._types import Episode
 from ice_offline.store.state._spec import State
 from ice_offline.store.state.op_dataset import StateDataset

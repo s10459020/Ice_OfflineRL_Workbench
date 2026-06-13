@@ -1,31 +1,10 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Protocol
 
 import gymnasium as gym
 import torch
 
 from ice_offline.dataset._types import Batch, Buffer, Episode, Metadata
-
-
-class DatasetLoader(Protocol):
-    # ====================
-    # Dataset identity
-    # ====================
-    path: Path
-    device: str
-
-    # ====================
-    # Loading
-    # ====================
-    def load_buffer(self) -> Buffer:
-        ...
-
-    def load_episodes(self) -> list[Episode]:
-        ...
-
-    def load_metadata(self) -> Metadata:
-        ...
 
 
 @dataclass
@@ -42,7 +21,7 @@ class Dataset:
     # ====================
     # Loaded dataset info
     # ====================
-    loader: DatasetLoader | None = None
+    loader: object | None = None
     _buffer: Buffer | None = field(init=False, default=None)
     _episodes: list[Episode] | None = field(init=False, default=None)
     _metadata: Metadata | None = field(init=False, default=None)

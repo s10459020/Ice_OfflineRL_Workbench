@@ -4,9 +4,8 @@ from pathlib import Path
 
 import numpy as np
 
-from ice_offline.config.datasets import DatasetEntry
-from ice_offline.config.datasets import source_dataset_entries
-from ice_offline.dataset._spec import Dataset
+from ice_offline.dataset._lookup import make_dataset
+from ice_offline.dataset._lookup import source_dataset_ids
 from ice_offline.gui.models.model_replay import EpisodeInfo
 
 
@@ -41,7 +40,7 @@ class ReplayViewModel:
     # ====================
     def __init__(self, model) -> None:
         self._model = model
-        self._datasets = source_dataset_entries()
+        self._datasets = source_dataset_ids()
         self._labels: list[str] = []
         self._episodes: list[EpisodeInfo] = []
         self._all_mapping: list[tuple[int, int]] = []
@@ -58,11 +57,11 @@ class ReplayViewModel:
     # ====================
     # Public API
     # ====================
-    def datasets(self) -> list[DatasetEntry]:
+    def datasets(self) -> list[str]:
         return self._datasets
 
-    def load_dataset(self, dataset_cls: type[Dataset]) -> ReplayLoadedState:
-        self._model.load_dataset(dataset_cls())
+    def load_dataset(self, dataset_id: str) -> ReplayLoadedState:
+        self._model.load_dataset(make_dataset(dataset_id, device="cpu"))
         return self._loaded_state()
 
     def load_run_data(self, path: str) -> ReplayLoadedState:

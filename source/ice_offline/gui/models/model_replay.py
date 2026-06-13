@@ -4,7 +4,7 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.dataset._spec import Dataset
+from ice_offline.dataset.base import Dataset
 from ice_offline.store.d4rl.loader import D4rlLoader
 from ice_offline.store.minari.loader import MinariLoader
 from ice_offline.store.state._lookup import STATE_OPS

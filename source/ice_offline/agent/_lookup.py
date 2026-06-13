@@ -1,33 +1,77 @@
+from collections.abc import Callable
+from pathlib import Path
+
+from ice_offline.agent._spec import Agent
+from ice_offline.agent.aspl import AsplAgent
 from ice_offline.agent.bc_deterministic import BCDeterministicAgent
 from ice_offline.agent.bc_stochastic import BCStochasticAgent
-from ice_offline.agent.discrete.bc_discrete import BCDiscreteAgent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.cql_max_q import CQLMaxQAgent
 from ice_offline.agent.cql_soft_q import CQLSoftQAgent
-from ice_offline.agent.discrete.cql_discrete import CQLDiscreteAgent
 from ice_offline.agent.iql import IQLAgent
-from ice_offline.agent.discrete.iql_discrete import IQLDiscreteAgent
-from ice_offline.agent.sdc_cql import SDCCQLAgent
-from ice_offline.agent.sdc_pre import SDCPreAgent
 from ice_offline.agent.scas_aspl import ScasAsplAgent
-from ice_offline.agent._spec import Agent
+from ice_offline.agent.scas_min import ScasDynamic
+from ice_offline.agent.scas_mean import ScasMeanAgent
+from ice_offline.agent.scas_min import ScasMinAgent
+from ice_offline.agent.sdc_cql import SDCCQLAgent
+from ice_offline.agent.sdc_pre import SDCPreModel
+from ice_offline.agent.sdc_pre import SDCPreAgent
+from ice_offline.agent.td3bc import TD3BCAgent
+from ice_offline.config.paths import model_path
+from ice_offline.dataset.base import Dataset
 
 
-AGENT_LOOKUP = {
-    "bc_deterministic": BCDeterministicAgent,
-    "bc_discrete": BCDiscreteAgent,
-    "bc_stochastic": BCStochasticAgent,
-    "cql": CQLAgent,
-    "cql_max_q": CQLMaxQAgent,
-    "cql_soft_q": CQLSoftQAgent,
-    "cql_discrete": CQLDiscreteAgent,
-    "iql": IQLAgent,
-    "iql_discrete": IQLDiscreteAgent,
-    "sdc_cql": SDCCQLAgent,
-    "sdc_pre": SDCPreAgent,
-    "scas_aspl": ScasAsplAgent,
+DEFAULT_MODEL_STEP = 100_000
+
+
+MODEL_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
+    "scas_dynamic": lambda dataset, device: ScasDynamic(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "sdc_pre_model": lambda dataset, device: SDCPreModel(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
 }
 
 
-def get_agent(agent_id: str, obs_size: int, act_size: int) -> Agent:
-    return AGENT_LOOKUP[agent_id](obs_size=obs_size, act_size=act_size)
+AGENT_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
+    "bc_deterministic": lambda dataset, device: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "bc_stochastic": lambda dataset, device: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "td3bc": lambda dataset, device: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "iql": lambda dataset, device: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "cql": lambda dataset, device: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "cql_max_q": lambda dataset, device: CQLMaxQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "cql_soft_q": lambda dataset, device: CQLSoftQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "aspl": lambda dataset, device: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "sdc_cql": lambda dataset, device: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+}
+
+
+def make_model(id: str, dataset: Dataset, device: str = "cuda") -> Agent:
+    model = MODEL_TABLE[id](dataset, device)
+    model.id = id
+    return model
+
+
+def _require_model(id: str, dataset: Dataset, device: str, step: int = DEFAULT_MODEL_STEP) -> Agent:
+    model = make_model(id, dataset, device)
+    path = model_path(dataset.id, step).with_suffix(".pt")
+    if not path.exists():
+        raise FileNotFoundError(f"missing model checkpoint: {path}; train {id} first")
+    model.load(dataset.id, step)
+    return model
+
+
+def make_agent(id: str, dataset: Dataset, device: str = "cuda") -> Agent:
+    if id == "sdc_pre":
+        state_models = _require_model("sdc_pre_model", dataset, device)
+        agent = SDCPreAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, state_models=state_models, device=device)
+    elif id == "scas_min":
+        dynamics = _require_model("scas_dynamic", dataset, device)
+        agent = ScasMinAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=dynamics, device=device)
+    elif id == "scas_mean":
+        dynamics = _require_model("scas_dynamic", dataset, device)
+        agent = ScasMeanAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=dynamics, device=device)
+    elif id == "scas_aspl":
+        dynamics = _require_model("scas_dynamic", dataset, device)
+        agent = ScasAsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=dynamics, device=device)
+    else:
+        agent = AGENT_TABLE[id](dataset, device)
+    agent.id = id
+    return agent

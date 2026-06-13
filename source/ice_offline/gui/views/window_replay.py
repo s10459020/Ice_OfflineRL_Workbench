@@ -104,13 +104,12 @@ class MainWindow(QMainWindow):
         self._setting.changed.connect(self._on_setting_changed)
 
     def _on_dataset_selected(self):
-        entries = self._viewmodel.datasets()
-        labels = [entry.id for entry in entries]
+        labels = self._viewmodel.datasets()
         label, ok = QInputDialog.getItem(self, "Select Dataset", "Dataset", labels, 0, False)
         if not ok:
             return
         try:
-            self._apply_loaded_state(self._viewmodel.load_dataset(entries[labels.index(label)].dataset_cls))
+            self._apply_loaded_state(self._viewmodel.load_dataset(label))
         except Exception:
             print("load failed:")
             traceback.print_exc()

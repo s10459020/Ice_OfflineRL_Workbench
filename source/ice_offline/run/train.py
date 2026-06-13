@@ -6,7 +6,7 @@ import minari
 import numpy as np
 import torch
 
-from ice_offline.dataset._spec import Dataset
+from ice_offline.dataset.base import Dataset
 from ice_offline.dataset._types import Batch
 from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
