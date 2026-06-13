@@ -53,9 +53,9 @@ class _Actor(torch.nn.Module):
 
 @dataclass
 class BCStochasticAgent(Agent):
-    agent_name: ClassVar[str] = "bc_stochastic"
     obs_size: int
     act_size: int
+    id: str = "bc_stochastic"
     learning_rate: float = 1e-3
     device: str = "cuda"
 
