@@ -5,8 +5,8 @@ from ice_offline.run.train import train
 
 
 TRAIN_KWARGS = {
-    "start": 0,
-    "steps": 100_000,
+    # "start": 200_000,
+    "steps": 1_000_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 200,
@@ -64,6 +64,7 @@ AGENT_ID_LIST = [
 
 def main() -> None:
     train_kwargs = {key: value for key, value in TRAIN_KWARGS.items() if value is not None}
+    start = train_kwargs.get("start", 0)
     for dataset_id in DATASET_ID_LIST:
         dataset = make_dataset(dataset_id, device="cuda")
 
@@ -71,6 +72,8 @@ def main() -> None:
             agent = make_agent(agent_id, dataset, device="cuda")
             
             task_id = _task_id(dataset.id, agent.id)
+            if start > 0:
+                agent.load(task_id, start)
             print(f"task={task_id}, dataset={dataset.id}, agent={agent.id}")
             path = train(
                 agent=agent,

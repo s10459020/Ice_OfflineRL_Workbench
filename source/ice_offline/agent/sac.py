@@ -117,7 +117,12 @@ class SACCritic(torch.nn.Module):
 
 
 class _SACTemperature(torch.nn.Module):
-    def __init__(self, act_size: int, learning_rate: float = 3e-4, initial_temperature: float = 1.0, target_entropy: float | None = None):
+    def __init__(self, 
+        act_size: int, 
+        learning_rate: float = 3e-4, 
+        initial_temperature: float = 1.0, 
+        target_entropy: float | None = -3
+    ):
         super().__init__()
         self.log_alpha = torch.nn.Parameter(
             torch.full((1, 1), math.log(initial_temperature), dtype=torch.float32)
@@ -166,22 +171,8 @@ class SACAgent(Agent):
             target_entropy=self.target_entropy,
         ).to(self.device)
 
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.pi.parameters(),
-            lr=self.actor_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.q_networks.parameters(),
-            lr=self.critic_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.actor_learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.critic_learning_rate)
 
     # ====================
     # Act
@@ -271,9 +262,12 @@ class SACAgent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_sac(self, batch: Batch) -> torch.Tensor:
         # loss = E{s~D,a~pi}[ temp * log pi(a|s) - min Q(s,a) ]
         o, _, _, _, _ = batch
         a, log_prob = self.actor.sample(o)
         q = self.critic.q_min(o, a)
         return (self.temp() * log_prob - q).mean()
+    
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
+        return self.loss_sac(batch)
