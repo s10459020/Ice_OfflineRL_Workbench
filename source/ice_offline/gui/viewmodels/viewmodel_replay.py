@@ -69,7 +69,12 @@ class ReplayViewModel:
         metadata_path = self._model.scan_file(path, "metadata.json")
         if metadata_path is None:
             raise FileNotFoundError(f"missing metadata.json under: {path}")
-        data_path = Path(metadata_path).with_name("main_data.hdf5")
+        data_dir = Path(metadata_path).parent
+        data_path = data_dir / "main_data.hdf5"
+        if not data_path.exists():
+            data_path = data_dir / "eval_data.hdf5"
+        if not data_path.exists():
+            raise FileNotFoundError(f"missing main_data.hdf5 or eval_data.hdf5 under: {data_dir}")
         self._model.load_minari(str(data_path))
         return self._loaded_state()
 

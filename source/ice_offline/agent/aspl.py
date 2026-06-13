@@ -79,7 +79,7 @@ class AsplCritic(TD3Critic):
 @dataclass
 class AsplAgent(TD3Agent):
     id: str = "aspl"
-    alpha: float = 0.5
+    alpha: float = 0.05
     learning_rate: float = 3e-4
 
     def __post_init__(self) -> None:
