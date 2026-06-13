@@ -5,8 +5,8 @@ from ice_offline.run.train import train
 
 
 TRAIN_KWARGS = {
-    # "start": 200_000,
-    "steps": 1_000_000,
+    "start": 1_000_000,
+    "steps": 2_000_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 200,
@@ -21,9 +21,9 @@ DATASET_ID_LIST = [
     # "hopper_medium_d4rl",
     # "hopper_expert_d4rl",
     # "hopper_medium_expert",
-    "hopper_simple",
+    # "hopper_simple",
     # "hopper_medium",
-    # "hopper_expert",
+    "hopper_expert",
     # "walker2d_random",
     # "walker2d_replay",
     # "walker2d_medium_replay",
