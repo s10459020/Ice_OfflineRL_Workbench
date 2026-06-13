@@ -6,7 +6,7 @@ from ice_offline.agent.bc_stochastic import BCStochasticAgent
 from ice_offline.config.paths import data_path_collect
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_expert import HopperExpertDataset
-from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.tools.printer import print_stage
 
 

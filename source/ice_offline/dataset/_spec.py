@@ -1,11 +1,31 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Protocol
 
 import gymnasium as gym
 import torch
 
 from ice_offline.dataset._types import Batch, Buffer, Episode, Metadata
-from ice_offline.dataset.loader._spec import DatasetLoader
+
+
+class DatasetLoader(Protocol):
+    # ====================
+    # Dataset identity
+    # ====================
+    path: Path
+    device: str
+
+    # ====================
+    # Loading
+    # ====================
+    def load_buffer(self) -> Buffer:
+        ...
+
+    def load_episodes(self) -> list[Episode]:
+        ...
+
+    def load_metadata(self) -> Metadata:
+        ...
 
 
 @dataclass
@@ -102,7 +122,7 @@ class Dataset:
     # Loader binding
     # ====================
     def make_loader(self):
-        from ice_offline.dataset.loader.minari.loader import MinariLoader
+        from ice_offline.store.minari.loader import MinariLoader
         loader = MinariLoader(self.path, device=self.device)
         return loader
 

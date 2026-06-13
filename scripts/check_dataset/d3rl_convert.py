@@ -1,6 +1,6 @@
 import d3rlpy
 
-from ice_offline.dataset.loader.d3rl.converter import to_buffer
+from ice_offline.store.d3rl.converter import to_buffer
 from ice_offline.tools.printer import print_stage
 
 

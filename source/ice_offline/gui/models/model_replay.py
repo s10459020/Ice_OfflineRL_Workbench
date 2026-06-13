@@ -5,8 +5,8 @@ import gymnasium as gym
 import numpy as np
 
 from ice_offline.dataset._spec import Dataset
-from ice_offline.dataset.loader.d4rl.loader import D4rlLoader
-from ice_offline.dataset.loader.minari.loader import MinariLoader
+from ice_offline.store.d4rl.loader import D4rlLoader
+from ice_offline.store.minari.loader import MinariLoader
 from ice_offline.store.state._lookup import STATE_OPS
 from ice_offline.store.state._spec import StateIO
 from ice_offline.store.state.op_converter import StateConverter

@@ -8,7 +8,7 @@ from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_expert import HopperExpertDataset
 from ice_offline.dataset.hopper_medium import HopperMediumDataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.tools.printer import print_stage
 
 

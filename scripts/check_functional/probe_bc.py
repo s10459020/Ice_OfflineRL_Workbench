@@ -6,7 +6,7 @@ from ice_offline.agent.bc_deterministic import BCDeterministicAgent
 from ice_offline.config.paths import data_path_probe
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.probe.hopper_ood_action import HopperOodActionProbe
 from ice_offline.store.probe.op_collector import ProbeCollectWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO

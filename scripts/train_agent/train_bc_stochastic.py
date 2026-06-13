@@ -8,7 +8,7 @@ from ice_offline.agent.bc_stochastic import BCStochasticAgent
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset._types import Batch
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-from ice_offline.dataset.loader.minari.collector import MinariCollectorWrapper
+from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.store.state.op_dataset import StateDataset

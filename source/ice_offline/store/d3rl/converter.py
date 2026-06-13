@@ -4,8 +4,8 @@ import d3rlpy
 import numpy as np
 
 from ice_offline.dataset._types import Episode
-from ice_offline.dataset.loader.minari.loader import MinariLoader
 from ice_offline.config.paths import DATASETS_ROOT
+from ice_offline.store.minari.loader import MinariLoader
 
 
 def _to_flatten(minari_episodes: Iterable[Episode]) -> list[d3rlpy.dataset.Episode]:

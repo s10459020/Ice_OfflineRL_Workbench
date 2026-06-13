@@ -3,7 +3,7 @@ import numpy as np
 from pathlib import Path
 
 from ice_offline.dataset._types import Episode
-from ice_offline.dataset.loader.minari.loader import MinariLoader
+from ice_offline.store.minari.loader import MinariLoader
 
 
 class EvalLoader(MinariLoader):

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from ice_offline.dataset.loader.d4rl.loader import D4rlLoader
+from ice_offline.store.d4rl.loader import D4rlLoader
 from ice_offline.config.paths import DATASETS_ROOT
 from ice_offline.dataset._spec import Dataset
 

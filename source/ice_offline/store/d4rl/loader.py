@@ -5,7 +5,7 @@ import numpy as np
 import torch
 
 from ice_offline.dataset._types import Buffer, Episode, Metadata
-from ice_offline.dataset.loader.d4rl._lookup import D4RL_ENV_IDS
+from ice_offline.store.d4rl._lookup import D4RL_ENV_IDS
 
 
 class D4rlLoader:
