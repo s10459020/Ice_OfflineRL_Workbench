@@ -3,8 +3,8 @@ import torch
 import gymnasium as gym
 
 from ice_offline.agent.bc_stochastic import BCStochasticAgent
-from ice_offline.dataset._spec import Dataset
-from ice_offline.dataset.hopper_simple import HopperSimpleDataset
+from ice_offline.dataset._lookup import make_dataset
+from ice_offline.dataset.base import Dataset
 from ice_offline.config.paths import data_path_test
 from ice_offline.tools.printer import print_stage
 from ice_offline.store.minari.collector import MinariCollectorWrapper
@@ -89,10 +89,10 @@ def collect(
 
 
 if __name__ == "__main__":
-    dataset = HopperSimpleDataset()
+    dataset = make_dataset("hopper_simple", device="cuda")
     returns, minari_data, state_data = collect(
         dataset=dataset,
-episodes=EPISODES,
+        episodes=EPISODES,
         seed=SEED,
         print_interval=PRINT_INTERVAL,
     )

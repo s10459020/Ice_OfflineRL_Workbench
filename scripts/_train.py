@@ -6,7 +6,7 @@ from ice_offline.run.train import train
 
 TRAIN_KWARGS = {
     "start": 500_000,
-    "steps": 1000_000,
+    "steps": 1_000_000,
     # "save_interval": 20_000,
     # "eval_interval": 2_000,
     # "print_interval": 200,
