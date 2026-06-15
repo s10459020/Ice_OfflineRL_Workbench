@@ -68,7 +68,7 @@ def main() -> None:
             if model_step > 0:
                 agent.load(task_id, model_step)
             print(f"task={task_id}, dataset={dataset.id}, agent={agent.id}")
-            returns, minari_data, state_data = test(
+            returns = test(
                 agent=agent,
                 dataset=dataset,
                 task_id=task_id,
@@ -77,9 +77,6 @@ def main() -> None:
                 print_interval=test_kwargs.get("print_interval", 1),
             )
             print(f"avg_returns={sum(returns) / len(returns):.2f}")
-            print(f"dataset_id={minari_data.spec.dataset_id}")
-            print(f"total_episodes={minari_data.total_episodes}")
-            print(f"total_steps={minari_data.total_steps}")
 
 
 if __name__ == "__main__":

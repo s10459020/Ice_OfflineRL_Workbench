@@ -4,11 +4,7 @@ import torch
 
 from ice_offline.agent._spec import Agent
 from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import data_path_test
 from ice_offline.dataset.base import Dataset
-from ice_offline.store.minari.collector import MinariCollectorWrapper
-from ice_offline.store.state._lookup import STATE_OPS
-from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.tools.printer import print_stage
 
 
@@ -17,14 +13,19 @@ PRINT_INTERVAL = 1
 SEED = 42
 
 
-def rollout(
+def test(
     agent: Agent,
-    env: gym.Env,
+    dataset: Dataset,
     *,
+    task_id: str | None = None,
     episodes: int = EPISODES,
     seed: int = SEED,
     print_interval: int = PRINT_INTERVAL,
 ) -> list[float]:
+    _ = task_id or _task_id(dataset.id, agent.id)
+    env = dataset.make_env()
+
+    print_stage(f"Test {agent.id} in {dataset.id}")
     np.random.seed(seed)
     torch.manual_seed(seed)
 
@@ -46,38 +47,5 @@ def rollout(
         if print_interval > 0 and episode % print_interval == 0:
             print(f"test episode={episode}/{episodes} return={total_reward:.2f}")
 
+    env.close()
     return returns
-
-
-def test(
-    agent: Agent,
-    dataset: Dataset,
-    *,
-    task_id: str | None = None,
-    episodes: int = EPISODES,
-    seed: int = SEED,
-    print_interval: int = PRINT_INTERVAL,
-):
-    task_id = task_id or _task_id(dataset.id, agent.id)
-    if dataset.env_id not in STATE_OPS:
-        raise ValueError(f"unsupported test state env: {dataset.env_id}")
-
-    state_cls, state_io_cls, _ = STATE_OPS[dataset.env_id]
-    env = dataset.make_env()
-    state_col = StateCollectWrapper(env, state_cls=state_cls, state_io_cls=state_io_cls)
-    minari_col = MinariCollectorWrapper(state_col)
-
-    print_stage(f"Test {agent.id} in {dataset.id}")
-    returns = rollout(
-        agent=agent,
-        env=minari_col,
-        episodes=episodes,
-        seed=seed,
-        print_interval=print_interval,
-    )
-
-    path = data_path_test(task_id)
-    minari_data = minari_col.save(path, id=dataset.id, agent_id=agent.id)
-    state_data = state_col.save(path)
-    minari_col.close()
-    return returns, minari_data, state_data

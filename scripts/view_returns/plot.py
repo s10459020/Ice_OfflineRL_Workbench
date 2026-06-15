@@ -4,10 +4,11 @@ import matplotlib
 
 matplotlib.use("Agg")
 
+from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import VIEW_ROOT
-from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import eval_returns_path
 from ice_offline.config.paths import metric_path
-from ice_offline.tools.plotter import plot as plot_metric_eval
+from ice_offline.run.plot import plot as plot_metric_eval
 
 
 SHOW = False
@@ -22,14 +23,15 @@ def plot(metrics_path: str, eval_paths: str, output_path: Path) -> None:
     if not eval_file.exists():
         print(f"skip missing: {eval_paths}")
         return
-    plot_metric_eval(str(metrics_file), str(eval_file), str(output_path))
+    plot_metric_eval([metrics_file], [eval_file], output_path)
     print(f"saved: {output_path}")
 
 
 def plot_agent(index: int, agent_id: str, dataset_cls) -> None:
     dataset = dataset_cls()
-    metrics_path = metric_path(dataset.id, agent_id)
-    returns_path = eval_path(dataset.id, agent_id)
+    task_id = _task_id(dataset.id, agent_id)
+    metrics_path = metric_path(task_id)
+    returns_path = eval_returns_path(task_id)
     output_path = VIEW_ROOT / "plot" / agent_id / f"{index}. {dataset.id}.png"
     plot(str(metrics_path), str(returns_path), output_path)
 

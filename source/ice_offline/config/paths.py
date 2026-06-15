@@ -8,6 +8,7 @@ CUSTOM_DATASETS_ROOT = DATASETS_ROOT / "custom"
 RUNS_ROOT = PROJECT_ROOT / "tmps" / "runs"
 MODELS_ROOT = PROJECT_ROOT / "tmps" / "models"
 RETURNS_ROOT = PROJECT_ROOT / "tmps" / "returns"
+STEPS_ROOT = PROJECT_ROOT / "tmps" / "steps"
 EVALS_ROOT = PROJECT_ROOT / "tmps" / "evals"
 METRICS_ROOT = PROJECT_ROOT / "tmps" / "metrics"
 VIEW_ROOT = PROJECT_ROOT / "tmps" / "view"
@@ -47,20 +48,24 @@ def eval_path(task_id: str) -> Path:
     return EVALS_ROOT / f"{task_id}.csv"
 
 
-def eval_returns_path(task_id: str) -> Path:
-    return EVALS_ROOT / "returns" / f"{task_id}.csv"
+def train_returns_path(task_id: str) -> Path:
+    return RETURNS_ROOT / "train" / f"{task_id}.csv"
 
 
-def eval_steps_path(task_id: str) -> Path:
-    return EVALS_ROOT / "steps" / f"{task_id}.csv"
+def train_steps_path(task_id: str) -> Path:
+    return STEPS_ROOT / "train" / f"{task_id}.csv"
 
 
 def metric_path(task_id: str) -> Path:
     return METRICS_ROOT / f"{task_id}.csv"
 
 
-def returns_path(task_id: str) -> Path:
-    return RETURNS_ROOT / f"{task_id}.json"
+def test_returns_path(task_id: str) -> Path:
+    return RETURNS_ROOT / "test" / f"{task_id}.json"
+
+
+def test_steps_path(task_id: str) -> Path:
+    return STEPS_ROOT / "test" / f"{task_id}.json"
 
 
 def plot_path(index: int, dataset_id: str, agent_id: str) -> Path:
