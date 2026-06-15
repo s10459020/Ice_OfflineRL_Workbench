@@ -3,8 +3,8 @@ from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.config.paths import metric_path
 from ice_offline.config.paths import plot_path
-from ice_offline.config.paths import train_returns_path
-from ice_offline.config.paths import train_steps_path
+from ice_offline.config.paths import returns_path
+from ice_offline.config.paths import steps_path
 from ice_offline.run.eval import cal_returns
 from ice_offline.run.eval import cal_steps
 from ice_offline.run.plot import plot
@@ -71,15 +71,15 @@ AGENT_ID_LIST = [
 
 def view_train(path, index: int, dataset_id: str, agent_id: str) -> None:
     task_id = _task_id(dataset_id, agent_id)
-    returns_path = train_returns_path(task_id)
-    steps_path = train_steps_path(task_id)
+    returns_output_path = returns_path("train", task_id)
+    steps_output_path = steps_path("train", task_id)
     metrics_path = metric_path(task_id)
     output_path = plot_path(index, dataset_id, agent_id)
 
     print(f"plot dataset={dataset_id}, agent={agent_id}")
-    cal_returns(path, returns_path)
-    cal_steps(path, steps_path)
-    plot([metrics_path], [returns_path, steps_path], output_path)
+    cal_returns(path, returns_output_path)
+    cal_steps(path, steps_output_path)
+    plot([metrics_path], [returns_output_path, steps_output_path], output_path)
     print(f"saved: {output_path}")
 
 

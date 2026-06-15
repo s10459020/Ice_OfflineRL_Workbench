@@ -48,24 +48,18 @@ def eval_path(task_id: str) -> Path:
     return EVALS_ROOT / f"{task_id}.csv"
 
 
-def train_returns_path(task_id: str) -> Path:
-    return RETURNS_ROOT / "train" / f"{task_id}.csv"
+def returns_path(mode: str, task_id: str) -> Path:
+    suffix = ".csv" if mode == "train" else ".json"
+    return RETURNS_ROOT / mode / f"{task_id}{suffix}"
 
 
-def train_steps_path(task_id: str) -> Path:
-    return STEPS_ROOT / "train" / f"{task_id}.csv"
+def steps_path(mode: str, task_id: str) -> Path:
+    suffix = ".csv" if mode == "train" else ".json"
+    return STEPS_ROOT / mode / f"{task_id}{suffix}"
 
 
 def metric_path(task_id: str) -> Path:
     return METRICS_ROOT / f"{task_id}.csv"
-
-
-def test_returns_path(task_id: str) -> Path:
-    return RETURNS_ROOT / "test" / f"{task_id}.json"
-
-
-def test_steps_path(task_id: str) -> Path:
-    return STEPS_ROOT / "test" / f"{task_id}.json"
 
 
 def plot_path(index: int, dataset_id: str, agent_id: str) -> Path:

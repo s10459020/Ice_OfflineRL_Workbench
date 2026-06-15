@@ -2,130 +2,79 @@ import csv
 import json
 from pathlib import Path
 
-from ice_offline.config.paths import VIEW_ROOT
 
-
-def table(
+def table_true(
     dataset_ids: list[str],
     agent_ids: list[str],
-    data_paths: dict[str, dict[str, Path]],
-    lower_paths: dict[str, Path],
-    upper_paths: dict[str, Path],
-    output_dir: Path | None = None,
-) -> list[Path]:
-    active_agent_ids = [agent_id for agent_id in agent_ids if agent_id != "random"]
-    output_dir = output_dir or VIEW_ROOT / "returns"
-    header = ["task", *active_agent_ids]
-
-    return [
-        _save_csv(
-            output_dir / "true_returns.csv",
-            ["task", "lower", *active_agent_ids, "upper"],
-            _actual_rows(dataset_ids, active_agent_ids, data_paths, lower_paths, upper_paths),
-        ),
-        _save_csv(
-            output_dir / "mean_returns.csv",
-            header,
-            _normalized_rows(dataset_ids, active_agent_ids, data_paths, lower_paths, upper_paths, _mean_return),
-        ),
-        _save_csv(
-            output_dir / "pr95_returns.csv",
-            header,
-            _normalized_rows(dataset_ids, active_agent_ids, data_paths, lower_paths, upper_paths, _percentile_return),
-        ),
-    ]
+    data_paths: list[list[Path]],
+    lower_paths: list[Path | float | None],
+    upper_paths: list[Path | float | None],
+    output_path: Path,
+) -> Path:
+    rows = []
+    for index, dataset_id in enumerate(dataset_ids):
+        values = [_mean(path) for path in data_paths[index]]
+        lower = _bound(lower_paths[index], values, min, _mean)
+        upper = _bound(upper_paths[index], values, max, _mean)
+        rows.append([dataset_id, _cell(lower), *[_cell(value) for value in values], _cell(upper)])
+    return _write(output_path, ["task", "lower", *agent_ids, "upper"], rows)
 
 
-def _read_values(path: Path) -> list[float]:
-    with path.open("r", encoding="utf-8") as file:
-        return [float(value) for value in json.load(file)]
+def table_mean(
+    dataset_ids: list[str],
+    agent_ids: list[str],
+    data_paths: list[list[Path]],
+    lower_paths: list[Path | float | None],
+    upper_paths: list[Path | float | None],
+    output_path: Path,
+) -> Path:
+    rows = []
+    for index, dataset_id in enumerate(dataset_ids):
+        values = [_mean(path) for path in data_paths[index]]
+        lower = _bound(lower_paths[index], values, min, _mean)
+        upper = _bound(upper_paths[index], values, max, _mean)
+        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) for value in values]])
+    return _write(output_path, ["task", *agent_ids], rows)
 
 
-def _mean_return(path: Path) -> float:
-    values = _read_values(path)
+def table_pr95(
+    dataset_ids: list[str],
+    agent_ids: list[str],
+    data_paths: list[list[Path]],
+    lower_paths: list[Path | float | None],
+    upper_paths: list[Path | float | None],
+    output_path: Path,
+) -> Path:
+    rows = []
+    for index, dataset_id in enumerate(dataset_ids):
+        values = [_pr95(path) for path in data_paths[index]]
+        lower = _bound(lower_paths[index], values, min, _pr95)
+        upper = _bound(upper_paths[index], values, max, _pr95)
+        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) for value in values]])
+    return _write(output_path, ["task", *agent_ids], rows)
+
+
+def _mean(path: Path) -> float:
+    values = _read(path)
     return sum(values) / len(values)
 
 
-def _percentile_return(path: Path, percentile: float = 95.0) -> float:
-    values = _read_values(path)
-
+def _pr95(path: Path) -> float:
+    values = _read(path)
     values.sort()
-    index = (len(values) - 1) * percentile / 100.0
+    index = (len(values) - 1) * 0.95
     lower = int(index)
     upper = min(lower + 1, len(values) - 1)
     weight = index - lower
     return values[lower] * (1.0 - weight) + values[upper] * weight
 
 
-def _actual_rows(
-    dataset_ids: list[str],
-    agent_ids: list[str],
-    data_paths: dict[str, dict[str, Path]],
-    lower_paths: dict[str, Path],
-    upper_paths: dict[str, Path],
-) -> list[list[str]]:
-    return [
-        _actual_row(dataset_id, agent_ids, data_paths, lower_paths, upper_paths)
-        for dataset_id in dataset_ids
-    ]
+def _read(path: Path) -> list[float]:
+    with path.open("r", encoding="utf-8") as file:
+        return [float(value) for value in json.load(file)]
 
 
-def _normalized_rows(
-    dataset_ids: list[str],
-    agent_ids: list[str],
-    data_paths: dict[str, dict[str, Path]],
-    lower_paths: dict[str, Path],
-    upper_paths: dict[str, Path],
-    return_fn,
-) -> list[list[str]]:
-    return [
-        _normalized_row(dataset_id, agent_ids, data_paths, lower_paths, upper_paths, return_fn)
-        for dataset_id in dataset_ids
-    ]
-
-
-def _actual_row(
-    dataset_id: str,
-    agent_ids: list[str],
-    data_paths: dict[str, dict[str, Path]],
-    lower_paths: dict[str, Path],
-    upper_paths: dict[str, Path],
-) -> list[str]:
-    values = [_mean_return(lower_paths[dataset_id])]
-    for agent_id in agent_ids:
-        values.append(_mean_return(data_paths[dataset_id][agent_id]))
-    values.append(_mean_return(upper_paths[dataset_id]))
-    return [dataset_id, *[_cell(value) for value in values]]
-
-
-def _normalized_row(
-    dataset_id: str,
-    agent_ids: list[str],
-    data_paths: dict[str, dict[str, Path]],
-    lower_paths: dict[str, Path],
-    upper_paths: dict[str, Path],
-    return_fn,
-) -> list[str]:
-    bottom = return_fn(lower_paths[dataset_id])
-    top = _normalized_top(dataset_id, agent_ids, data_paths, upper_paths, return_fn)
-    values = [
-        _scale(return_fn(data_paths[dataset_id][agent_id]), bottom, top)
-        for agent_id in agent_ids
-    ]
-    return [dataset_id, *[_cell(value) for value in values]]
-
-
-def _normalized_top(
-    dataset_id: str,
-    agent_ids: list[str],
-    data_paths: dict[str, dict[str, Path]],
-    upper_paths: dict[str, Path],
-    return_fn,
-) -> float:
-    return return_fn(upper_paths[dataset_id])
-
-
-def _save_csv(path: Path, header: list[str], rows: list[list[str]]) -> Path:
+def _write(path: Path, header: list[str], rows: list[list[str]]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)
@@ -139,5 +88,13 @@ def _cell(value: float) -> str:
     return str(float(value))
 
 
-def _scale(value: float, bottom: float, top: float) -> float:
-    return (value - bottom) / (top - bottom) * 100.0
+def _scale(value: float, lower: float, upper: float) -> float:
+    return (value - lower) / (upper - lower) * 100.0
+
+
+def _bound(value: Path | float | None, values: list[float], bound_fn, reduce_fn) -> float:
+    if value is None:
+        return bound_fn(values)
+    if isinstance(value, Path):
+        return reduce_fn(value)
+    return float(value)
