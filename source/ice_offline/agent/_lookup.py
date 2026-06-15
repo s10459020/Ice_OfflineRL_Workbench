@@ -31,15 +31,15 @@ MODEL_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
 
 
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
-    "bc_deterministic": lambda dataset, device, **agent_kwargs: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "bc_stochastic": lambda dataset, device, **agent_kwargs: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "td3bc": lambda dataset, device, **agent_kwargs: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "iql": lambda dataset, device, **agent_kwargs: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "bc_deterministic": lambda dataset, device, **agent_kwargs: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "bc_stochastic": lambda dataset, device, **agent_kwargs: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "td3bc": lambda dataset, device, **agent_kwargs: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "iql": lambda dataset, device, **agent_kwargs: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "cql": lambda dataset, device, **agent_kwargs: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "cql_max_q": lambda dataset, device, **agent_kwargs: CQLMaxQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "cql_soft_q": lambda dataset, device, **agent_kwargs: CQLSoftQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
-    "aspl": lambda dataset, device, **agent_kwargs: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "sdc_cql": lambda dataset, device, **agent_kwargs: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "aspl": lambda dataset, device, **agent_kwargs: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "sdc_cql": lambda dataset, device, **agent_kwargs: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
 }
 
 

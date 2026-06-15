@@ -69,6 +69,26 @@ AGENT_ID_LIST = [
 ]
 
 
+TASK_LIST = [
+    ["hopper_simple", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
+    ["hopper_medium", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
+    ["hopper_expert", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
+    # ["hopper_simple", "cql_soft_q", {"threshold": 1.5}, {"steps": 1_000_000}],
+    # ["hopper_medium", "cql_soft_q", {"threshold": 1.0}, {"steps": 500_000}],
+    # ["hopper_expert", "cql_soft_q", {"threshold": 0.5}, {"steps": 500_000}],
+]
+
+
+def normalize_tasks() -> list[list]:
+    if TASK_LIST:
+        return TASK_LIST
+    return [
+        [dataset_id, agent_id, {}, {}]
+        for dataset_id in DATASET_ID_LIST
+        for agent_id in AGENT_ID_LIST
+    ]
+
+
 def view_train(path, index: int, dataset_id: str, agent_id: str) -> None:
     task_id = _task_id(dataset_id, agent_id)
     returns_output_path = returns_path("train", task_id)
@@ -84,26 +104,28 @@ def view_train(path, index: int, dataset_id: str, agent_id: str) -> None:
 
 
 def main() -> None:
-    train_kwargs = {key: value for key, value in TRAIN_KWARGS.items() if value is not None}
-    start = train_kwargs.get("start", 0)
-    for index, dataset_id in enumerate(DATASET_ID_LIST, start=1):
+    for index, (dataset_id, agent_id, agent_config, task_train_kwargs) in enumerate(normalize_tasks(), start=1):
+        train_kwargs = TRAIN_KWARGS | task_train_kwargs
+        train_kwargs = {key: value for key, value in train_kwargs.items() if value is not None}
+        start = train_kwargs.get("start", 0)
         dataset = make_dataset(dataset_id, device="cuda")
+        agent = make_agent(agent_id, dataset, device="cuda", **agent_config)
 
-        for agent_id in AGENT_ID_LIST:
-            agent = make_agent(agent_id, dataset, device="cuda")
-            
-            task_id = _task_id(dataset.id, agent.id)
-            if start > 0:
-                agent.load(task_id, start)
-            print(f"task={task_id}, dataset={dataset.id}, agent={agent.id}")
-            path = train(
-                agent=agent,
-                dataset=dataset,
-                task_id=task_id,
-                **train_kwargs,
-            )
-            print(f"saved: {path}")
-            view_train(path, index, dataset_id, agent_id)
+        task_id = _task_id(dataset.id, agent.id)
+        if start > 0:
+            agent.load(task_id, start)
+        print(
+            f"task={task_id}, dataset={dataset.id}, agent={agent.id}, "
+            f"agent_config={agent_config}"
+        )
+        path = train(
+            agent=agent,
+            dataset=dataset,
+            task_id=task_id,
+            **train_kwargs,
+        )
+        print(f"saved: {path}")
+        view_train(path, index, dataset_id, agent_id)
 
 
 if __name__ == "__main__":
