@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-
 import math
 import torch
 
@@ -76,6 +75,9 @@ class CQLSoftQAgent(SACAgent):
     critic_learning_rate: float = 3e-4
     temp_learning_rate: float = 1e-4
     cql_multiplier_learning_rate: float = 1e-4
+    initial_multiplier: float = 10.0
+    threshold: float = 1.0
+    update_step = 0
 
     # ====================
     # Init
@@ -84,7 +86,11 @@ class CQLSoftQAgent(SACAgent):
         super().__post_init__()
         self.actor = _CQLActor(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
         self.critic = _CQLCritic(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
-        self.multiplier = _CQLMultiplier(learning_rate=self.cql_multiplier_learning_rate).to(self.device)
+        self.multiplier = _CQLMultiplier(
+            learning_rate=self.cql_multiplier_learning_rate,
+            initial_multiplier=self.initial_multiplier,
+            threshold=self.threshold,
+        ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters(), lr=self.critic_learning_rate)
 
@@ -117,7 +123,7 @@ class CQLSoftQAgent(SACAgent):
         grad_suppress = self._grad_norm(loss_suppress, self.critic.parameters())
 
         metrics_multiplier = self.update_multiplier_with_metrics(loss_suppress)
-
+        
         loss_critic = loss_td + (self.multiplier().detach() * loss_suppress)
         grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
 

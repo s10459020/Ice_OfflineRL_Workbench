@@ -30,16 +30,16 @@ MODEL_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
 }
 
 
-AGENT_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
-    "bc_deterministic": lambda dataset, device: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "bc_stochastic": lambda dataset, device: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "td3bc": lambda dataset, device: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "iql": lambda dataset, device: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "cql": lambda dataset, device: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "cql_max_q": lambda dataset, device: CQLMaxQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "cql_soft_q": lambda dataset, device: CQLSoftQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "aspl": lambda dataset, device: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
-    "sdc_cql": lambda dataset, device: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+AGENT_TABLE: dict[str, Callable[..., Agent]] = {
+    "bc_deterministic": lambda dataset, device, **agent_kwargs: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "bc_stochastic": lambda dataset, device, **agent_kwargs: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "td3bc": lambda dataset, device, **agent_kwargs: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "iql": lambda dataset, device, **agent_kwargs: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "cql": lambda dataset, device, **agent_kwargs: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "cql_max_q": lambda dataset, device, **agent_kwargs: CQLMaxQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "cql_soft_q": lambda dataset, device, **agent_kwargs: CQLSoftQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "aspl": lambda dataset, device, **agent_kwargs: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
+    "sdc_cql": lambda dataset, device, **agent_kwargs: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
 }
 
 
@@ -58,7 +58,7 @@ def _require_model(id: str, dataset: Dataset, device: str, step: int = DEFAULT_M
     return model
 
 
-def make_agent(id: str, dataset: Dataset, device: str = "cuda") -> Agent:
+def make_agent(id: str, dataset: Dataset, device: str = "cuda", **agent_kwargs) -> Agent:
     if id == "sdc_pre":
         state_models = _require_model("sdc_pre_model", dataset, device)
         agent = SDCPreAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, state_models=state_models, device=device)
@@ -72,6 +72,6 @@ def make_agent(id: str, dataset: Dataset, device: str = "cuda") -> Agent:
         dynamics = _require_model("scas_dynamic", dataset, device)
         agent = ScasAsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=dynamics, device=device)
     else:
-        agent = AGENT_TABLE[id](dataset, device)
+        agent = AGENT_TABLE[id](dataset, device, **agent_kwargs)
     agent.id = id
     return agent
