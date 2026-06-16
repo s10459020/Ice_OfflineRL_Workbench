@@ -21,9 +21,10 @@ def test(
     episodes: int = EPISODES,
     seed: int = SEED,
     print_interval: int = PRINT_INTERVAL,
+    env_kwargs: dict | None = None,
 ) -> list[float]:
     _ = task_id or _task_id(dataset.id, agent.id)
-    env = dataset.make_env()
+    env = dataset.make_env(**(env_kwargs or {}))
 
     print_stage(f"Test {agent.id} in {dataset.id}")
     np.random.seed(seed)

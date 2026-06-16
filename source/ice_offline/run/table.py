@@ -6,7 +6,7 @@ from pathlib import Path
 def table_true(
     dataset_ids: list[str],
     agent_ids: list[str],
-    data_paths: list[list[Path]],
+    data_paths: list[list[Path | None]],
     lower_paths: list[Path | float | None],
     upper_paths: list[Path | float | None],
     output_path: Path,
@@ -23,7 +23,7 @@ def table_true(
 def table_mean(
     dataset_ids: list[str],
     agent_ids: list[str],
-    data_paths: list[list[Path]],
+    data_paths: list[list[Path | None]],
     lower_paths: list[Path | float | None],
     upper_paths: list[Path | float | None],
     output_path: Path,
@@ -33,14 +33,14 @@ def table_mean(
         values = [_mean(path) for path in data_paths[index]]
         lower = _bound(lower_paths[index], values, min, _mean)
         upper = _bound(upper_paths[index], values, max, _mean)
-        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) for value in values]])
+        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) if value is not None else "" for value in values]])
     return _write(output_path, ["task", *agent_ids], rows)
 
 
 def table_pr95(
     dataset_ids: list[str],
     agent_ids: list[str],
-    data_paths: list[list[Path]],
+    data_paths: list[list[Path | None]],
     lower_paths: list[Path | float | None],
     upper_paths: list[Path | float | None],
     output_path: Path,
@@ -50,16 +50,20 @@ def table_pr95(
         values = [_pr95(path) for path in data_paths[index]]
         lower = _bound(lower_paths[index], values, min, _pr95)
         upper = _bound(upper_paths[index], values, max, _pr95)
-        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) for value in values]])
+        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) if value is not None else "" for value in values]])
     return _write(output_path, ["task", *agent_ids], rows)
 
 
-def _mean(path: Path) -> float:
+def _mean(path: Path | None) -> float | None:
+    if path is None:
+        return None
     values = _read(path)
     return sum(values) / len(values)
 
 
-def _pr95(path: Path) -> float:
+def _pr95(path: Path | None) -> float | None:
+    if path is None:
+        return None
     values = _read(path)
     values.sort()
     index = (len(values) - 1) * 0.95
@@ -84,17 +88,22 @@ def _write(path: Path, header: list[str], rows: list[list[str]]) -> Path:
     return path
 
 
-def _cell(value: float) -> str:
+def _cell(value: float | None) -> str:
+    if value is None:
+        return ""
     return str(float(value))
 
 
-def _scale(value: float, lower: float, upper: float) -> float:
+def _scale(value: float | None, lower: float, upper: float) -> float:
+    if value is None:
+        return 0.0
     return (value - lower) / (upper - lower) * 100.0
 
 
-def _bound(value: Path | float | None, values: list[float], bound_fn, reduce_fn) -> float:
+def _bound(value: Path | float | None, values: list[float | None], bound_fn, reduce_fn) -> float:
+    valid_values = [item for item in values if item is not None]
     if value is None:
-        return bound_fn(values)
+        return bound_fn(valid_values)
     if isinstance(value, Path):
         return reduce_fn(value)
     return float(value)

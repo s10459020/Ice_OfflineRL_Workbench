@@ -108,8 +108,8 @@ class Dataset:
     # ====================
     # Env factory
     # ====================
-    def make_env(self):
-        return gym.make(self.env_id)
+    def make_env(self, **kwargs):
+        return gym.make(self.env_id, **kwargs)
 
     def make_eval_env(self):
         return gym.make(self.env_id)
