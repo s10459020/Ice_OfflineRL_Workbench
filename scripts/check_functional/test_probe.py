@@ -4,7 +4,7 @@ import tempfile
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.store.probe.hopper_ood_action import HopperOodActionProbe
+from ice_offline.store.probe.action_axis_probe import ActionAxisProbe
 from ice_offline.store.probe.op_collector import ProbeCollectWrapper
 
 
@@ -20,7 +20,7 @@ def eval_fn(observations: np.ndarray, actions: np.ndarray) -> np.ndarray:
 
 def main() -> None:
     env = gym.make(ENV_ID)
-    wrapper = ProbeCollectWrapper(env, HopperOodActionProbe(SAMPLE_COUNT), eval_fn)
+    wrapper = ProbeCollectWrapper(env, ActionAxisProbe(SAMPLE_COUNT), eval_fn)
     try:
         wrapper.reset(seed=0)
         for _ in range(STEP_COUNT):

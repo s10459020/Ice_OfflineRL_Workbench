@@ -7,7 +7,7 @@ from ice_offline.config.paths import data_path_probe
 from ice_offline.dataset._spec import Dataset
 from ice_offline.dataset.hopper_simple import HopperSimpleDataset
 from ice_offline.store.minari.collector import MinariCollectorWrapper
-from ice_offline.store.probe.hopper_ood_action import HopperOodActionProbe
+from ice_offline.store.probe.action_axis_probe import ActionAxisProbe
 from ice_offline.store.probe.op_collector import ProbeCollectWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
 from ice_offline.store.state.op_collector import StateCollectWrapper
@@ -63,7 +63,7 @@ def probe(
         return -errors.astype(np.float32)
 
     env = dataset.make_env()
-    probe_col = ProbeCollectWrapper(env, HopperOodActionProbe(PROBE_SAMPLE_COUNT), eval_fn)
+    probe_col = ProbeCollectWrapper(env, ActionAxisProbe(PROBE_SAMPLE_COUNT), eval_fn)
     state_col = StateCollectWrapper(probe_col, state_cls=HopperState, state_io_cls=HopperStateIO)
     minari_col = MinariCollectorWrapper(state_col)
 
