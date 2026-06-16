@@ -70,9 +70,9 @@ AGENT_ID_LIST = [
 
 
 TASK_LIST = [
-    ["hopper_simple", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
+    # ["hopper_simple", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
     ["hopper_medium", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
-    ["hopper_expert", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
+    # ["hopper_expert", "aspl", {"alpha": 0.5}, {"steps": 200_000}],
     # ["hopper_simple", "cql_soft_q", {"threshold": 1.5}, {"steps": 1_000_000}],
     # ["hopper_medium", "cql_soft_q", {"threshold": 1.0}, {"steps": 500_000}],
     # ["hopper_expert", "cql_soft_q", {"threshold": 0.5}, {"steps": 500_000}],

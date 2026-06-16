@@ -122,10 +122,10 @@ class AsplAgent(TD3Agent):
 
         moving_avg = self.critic.update_moving_avg(target)
 
-        loss_td = self.loss_td_with_target(batch, target)
+        loss_td = self.loss_td(batch)
         grad_td = self._grad_norm(loss_td, self.critic.parameters())
 
-        loss_punish = self.loss_punish_with_target(batch, target)
+        loss_punish = self.loss_punish(batch)
         grad_punish = self._grad_norm(loss_punish, self.critic.parameters())
 
         loss_critic = loss_td + self.alpha * loss_punish
@@ -219,7 +219,7 @@ class AsplAgent(TD3Agent):
         losses = [F.mse_loss(q_value, q_pseudo_reshape) for q_value in q_values]
         return sum(losses)
 
-    def loss_critic(self, batch: Batch, target: torch.Tensor) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         # loss = TD + alpha * Punish
         loss_td = self.loss_td(batch)
         loss_aspl = self.loss_punish(batch)
@@ -229,7 +229,7 @@ class AsplAgent(TD3Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
+    def loss_td3_OLD(self, batch: Batch) -> torch.Tensor:
         # loss = E{s~D}[ -Q(s,pi(s)) ]
         o, _, _, _, _ = batch
         a = self.actor.pi(o)
