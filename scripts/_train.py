@@ -12,7 +12,7 @@ from ice_offline.run.train import train
 
 TASKS = [
     # ({"steps": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
-    ({"steps": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
+    ({"steps": 400_000}, "hopper_medium", {}, "aspl", {"alpha": 0.15}),
     # ({"steps": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
     # ({"steps": 200_000}, "hopper_simple", {}, "bc_deterministic", {}),
     # ({"steps": 200_000}, "hopper_medium", {}, "bc_deterministic", {}),

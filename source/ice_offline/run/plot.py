@@ -104,7 +104,9 @@ def _draw_metric(
     values: np.ndarray,
 ) -> None:
     keep = np.isfinite(values)
-    axis.plot(steps[keep], values[keep], linewidth=0.5, color="tab:blue")
+    smooth = _smooth_by_step(steps[keep], values[keep])
+    axis.plot(steps[keep], values[keep], linewidth=0.5, alpha=0.25, color="tab:blue")
+    axis.plot(steps[keep], smooth, linewidth=1.5, color="tab:blue")
     axis.set_title(title)
     axis.grid(alpha=0.3)
 
@@ -131,3 +133,29 @@ def _row_count(count: int) -> int:
 
 def _eval_name(path: Path) -> str:
     return path.parent.name
+
+
+def _smooth_by_step(steps: np.ndarray, values: np.ndarray) -> np.ndarray:
+    if len(steps) == 0:
+        return values
+
+    window = (steps[-1] - steps[0]) / 500.0
+    smooth = np.empty_like(values)
+    left = 0
+    total = 0.0
+    count = 0
+    for right, step in enumerate(steps):
+        value = values[right]
+        if np.isfinite(value):
+            total += value
+            count += 1
+
+        while steps[left] < step - window:
+            left_value = values[left]
+            if np.isfinite(left_value):
+                total -= left_value
+                count -= 1
+            left += 1
+
+        smooth[right] = total / count if count > 0 else np.nan
+    return smooth

@@ -44,9 +44,9 @@ TABLES = {
 }
 
 TASKS = [
-    # ({"model_step": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
-    # ({"model_step": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
-    # ({"model_step": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
+    ({"model_step": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
+    ({"model_step": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
+    ({"model_step": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
     # ({"model_step": 200_000}, "hopper_simple", {}, "bc_deterministic", {}),
     # ({"model_step": 200_000}, "hopper_medium", {}, "bc_deterministic", {}),
     # ({"model_step": 200_000}, "hopper_expert", {}, "bc_deterministic", {}),
@@ -59,8 +59,8 @@ TASKS = [
 ]
 
 TASK_KWARGS = {
-    "episodes": 100,
-    "print_interval": 1,
+    # "episodes": 100,
+    # "print_interval": 1,
 }
 
 DATASETS = [
