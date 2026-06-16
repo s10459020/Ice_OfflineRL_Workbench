@@ -29,7 +29,7 @@ def custom_dataset_path(dataset_id: str) -> Path:
 
 
 def data_path_test(task_id: str) -> Path:
-    return RUNS_ROOT / "test" / task_id / "data" / "main_data.hdf5"
+    return RUNS_ROOT / "test" / task_id / "data" / "eval_data.hdf5"
 
 
 def data_path_collect(task_id: str) -> Path:

@@ -1,18 +1,10 @@
 import math
 import gymnasium as gym
 from ice_offline.agent._spec import Agent
+from ice_offline.run.test import eval
 from ice_offline.store.eval.collector import EvalCollector
-import minari
-import numpy as np
-import torch
 
 from ice_offline.dataset.base import Dataset
-from ice_offline.dataset._types import Batch
-from ice_offline.store.minari.collector import MinariCollectorWrapper
-from ice_offline.store.state.hopper import HopperState, HopperStateIO
-from ice_offline.store.state.op_collector import StateCollectWrapper
-from ice_offline.store.state.op_dataset import StateDataset
-from ice_offline.store.eval.record import Evaluator
 from ice_offline.store.metric.record import MetricRecorder
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import data_path_train
@@ -28,32 +20,6 @@ SEED = 42
 BATCH_SIZE = 256
 EVAL_EPISODES = 10
 DEVICE = "cuda:0"
-    
-
-def eval(
-    agent: Agent,
-    env: gym.Env,
-    episodes: int = EVAL_EPISODES,
-    seed: int = SEED,
-) -> None:
-    returns = []
-    for i in range(1, episodes + 1):
-        # seed
-        now_seed = seed + i
-        agent.set_seed(now_seed)
-        o, _ = env.reset(seed=now_seed)
-        
-        # run
-        result = 0
-        trun = term = False
-        while not (trun or term):
-            a = agent.act(o)
-            o, r, trun, term, _ = env.step(a)
-            result += r
-
-        returns.append(result)
-
-    return sum(returns) / len(returns)
 
 def train(
     agent: Agent,
@@ -72,13 +38,13 @@ def train(
 ) -> None:
     task_id = task_id or _task_id(dataset.id, agent.id)
     eval_env = eval_env or dataset.make_eval_env()
+
     path = data_path_train(task_id)
-    
-    print_stage(f"Train {agent.id} in {dataset.id}")
     resume_path = path if start > 0 else None
     eval_col = EvalCollector(eval_env, resume_path=resume_path)
     recorder = MetricRecorder(task_id, initialized=start > 0)
 
+    print_stage(f"Train {agent.id} in {dataset.id}")
     for step in range(start + 1, steps + 1):
         # seed
         now_seed = seed + step
@@ -102,8 +68,9 @@ def train(
         
         if eval_interval > 0 and step % eval_interval == 0:
             eval_seed = seed + step
-            avg_return = eval(agent, eval_col, eval_episodes, eval_seed)
+            returns = eval(agent, eval_col, eval_episodes, eval_seed)
             eval_col.flush(step)
+            avg_return = sum(returns) / len(returns)
             print(f"eval step={step} avg_return={avg_return:.6g}")
         
         if step % save_interval == 0 or step == steps:

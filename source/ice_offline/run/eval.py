@@ -1,4 +1,5 @@
 import csv
+import json
 from pathlib import Path
 from typing import Callable
 
@@ -15,6 +16,14 @@ def cal_returns(input_path: Path, output_path: Path) -> Path:
 
 def cal_steps(input_path: Path, output_path: Path) -> Path:
     return _cal(input_path, output_path, _step_value)
+
+
+def cal_final_returns(input_path: Path, output_path: Path) -> Path:
+    return _cal_final(input_path, output_path, _return_value)
+
+
+def cal_final_steps(input_path: Path, output_path: Path) -> Path:
+    return _cal_final(input_path, output_path, _step_value)
 
 
 # ====================
@@ -50,6 +59,21 @@ def _write_csv(output_path: Path, rows: list[tuple[int, list[float]]]) -> None:
         for step, values in rows:
             padding = ["nan"] * (columns - len(values))
             writer.writerow([step] + values + padding)
+
+
+def _cal_final(
+    input_path: Path,
+    output_path: Path,
+    value_fn: Callable[[Episode], float],
+) -> Path:
+    loader = EvalLoader(input_path)
+    step, episodes = loader.load_batch_episodes()[-1]
+    _ = step
+    values = [value_fn(episode) for episode in episodes]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with output_path.open("w", encoding="utf-8") as file:
+        json.dump(values, file)
+    return output_path
 
 
 def _return_value(episode: Episode) -> float:
