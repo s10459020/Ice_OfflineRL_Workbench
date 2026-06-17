@@ -18,7 +18,7 @@ PRINT_INTERVAL = math.ceil(STEPS/1000)
 
 SEED = 42
 BATCH_SIZE = 256
-EVAL_EPISODES = 10
+EVAL_COUNT = 10
 DEVICE = "cuda:0"
 
 def train(
@@ -30,7 +30,7 @@ def train(
     steps: int = STEPS,
     batch_size: int = BATCH_SIZE,
     eval_interval: int = EVAL_INTERVAL,
-    eval_episodes: int = EVAL_EPISODES,
+    eval_count: int = EVAL_COUNT,
     eval_env: gym.Env | None = None,
     save_interval: int = SAVE_INTERVAL,
     print_interval: int = PRINT_INTERVAL,
@@ -68,7 +68,7 @@ def train(
         
         if eval_interval > 0 and step % eval_interval == 0:
             eval_seed = seed + step
-            returns = eval(agent, eval_col, eval_episodes, eval_seed)
+            returns = eval(agent, eval_col, eval_seed, eval_count)
             eval_col.flush(step)
             avg_return = sum(returns) / len(returns)
             print(f"eval step={step} avg_return={avg_return:.6g}")

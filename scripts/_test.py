@@ -1,13 +1,9 @@
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import VIEW_ROOT
-from ice_offline.config.paths import data_path_test
-from ice_offline.config.paths import returns_path
-from ice_offline.config.paths import steps_path
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.dataset import eval_dataset
-from ice_offline.run.eval import cal_final_returns
-from ice_offline.run.eval import cal_final_steps
+from ice_offline.run.eval import eval
+from ice_offline.run.eval import eval_dataset
 from ice_offline.run.table import table_mean
 from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
@@ -60,7 +56,6 @@ TASKS = [
 
 TASK_KWARGS = {
     # "episodes": 100,
-    # "print_interval": 1,
 }
 
 DATASETS = [
@@ -98,61 +93,56 @@ def normalize_tasks() -> list[tuple[dict[str, object], str, dict[str, object], s
 
 
 def save_test_views(tasks: list[tuple[dict[str, object], str, dict[str, object], str, dict[str, object]]]) -> None:
+    outputs: dict[str, tuple[object, object]] = {}
     for _, dataset_id, _, agent_id, _ in tasks:
         task_id = _task_id(dataset_id, agent_id)
-        input_path = data_path_test(task_id)
-        returns_output_path = returns_path("test", task_id)
-        steps_output_path = steps_path("test", task_id)
-        cal_final_returns(input_path, returns_output_path)
-        cal_final_steps(input_path, steps_output_path)
+        returns_output_path, steps_output_path = eval(task_id)
+        outputs[task_id] = (returns_output_path, steps_output_path)
         print(f"saved: {returns_output_path}")
         print(f"saved: {steps_output_path}")
+    return outputs
 
 
-def save_dataset_views(dataset_ids: list[str]) -> None:
-    for dataset_id in dataset_ids:
-        returns_output_path = returns_path("dataset", dataset_id)
-        steps_output_path = steps_path("dataset", dataset_id)
-        dataset = make_dataset(dataset_id, device="cuda")
-        eval_dataset(dataset, returns_output_path, steps_output_path)
-        for value in [TABLES[dataset_id]["lower"], TABLES[dataset_id]["upper"]]:
+def save_dataset_views() -> None:
+    outputs: dict[str, tuple[object, object]] = {}
+    for dataset_id, bounds in TABLES.items():
+        outputs[dataset_id] = eval_dataset(dataset_id)
+        for value in [bounds["lower"], bounds["upper"]]:
             if isinstance(value, str):
-                bound_returns_output_path = returns_path("dataset", value)
-                bound_steps_output_path = steps_path("dataset", value)
-                bound_dataset = make_dataset(value, device="cuda")
-                eval_dataset(bound_dataset, bound_returns_output_path, bound_steps_output_path)
+                outputs[value] = eval_dataset(value)
+    return outputs
 
 
-def _bound_path(value: str | float | None):
-    if value is None or isinstance(value, float):
-        return value
-    return returns_path("dataset", value)
-
-
-def view_test(tasks: list[tuple[dict[str, object], str, dict[str, object], str, dict[str, object]]]) -> None:
-    save_test_views(tasks)
-    dataset_ids = TABLES.keys()
+def _table_inputs(
+    tasks: list[tuple[dict[str, object], str, dict[str, object], str, dict[str, object]]],
+    test_outputs: dict[str, tuple[object, object]],
+):
+    dataset_ids = list(TABLES.keys())
     agent_ids = [agent_id for _, _, _, agent_id, _ in tasks]
-    data_path_rows: list[list[object]] = []
+    data_paths: list[list[object]] = []
     for dataset_id in dataset_ids:
         row: list[object] = [None for _ in agent_ids]
         for _, task_dataset_id, _, agent_id, _ in tasks:
             if task_dataset_id != dataset_id:
                 continue
-            agent_index = agent_ids.index(agent_id)
-            row[agent_index] = returns_path("test", _task_id(dataset_id, agent_id))
-        data_path_rows.append(row)
-    lower_paths = [_bound_path(TABLES[dataset_id]["lower"]) for dataset_id in dataset_ids]
-    upper_paths = [_bound_path(TABLES[dataset_id]["upper"]) for dataset_id in dataset_ids]
-    table_true(dataset_ids, agent_ids, data_path_rows, lower_paths, upper_paths, TABLE_OUTPUT_DIR / "true_returns.csv")
-    table_mean(dataset_ids, agent_ids, data_path_rows, lower_paths, upper_paths, TABLE_OUTPUT_DIR / "mean_returns.csv")
-    table_pr95(dataset_ids, agent_ids, data_path_rows, lower_paths, upper_paths, TABLE_OUTPUT_DIR / "pr95_returns.csv")
+            row[agent_ids.index(agent_id)] = test_outputs[_task_id(dataset_id, agent_id)][0]
+        data_paths.append(row)
+    lower_values = [TABLES[dataset_id]["lower"] for dataset_id in dataset_ids]
+    upper_values = [TABLES[dataset_id]["upper"] for dataset_id in dataset_ids]
+    return dataset_ids, agent_ids, data_paths, lower_values, upper_values
+
+
+def view_test(tasks: list[tuple[dict[str, object], str, dict[str, object], str, dict[str, object]]]) -> None:
+    test_outputs = save_test_views(tasks)
+    dataset_outputs = save_dataset_views()
+    dataset_ids, agent_ids, data_paths, lower_values, upper_values = _table_inputs(tasks, test_outputs)
+    table_true(dataset_ids, agent_ids, data_paths, lower_values, upper_values, dataset_outputs, TABLE_OUTPUT_DIR / "true_returns.csv")
+    table_mean(dataset_ids, agent_ids, data_paths, lower_values, upper_values, dataset_outputs, TABLE_OUTPUT_DIR / "mean_returns.csv")
+    table_pr95(dataset_ids, agent_ids, data_paths, lower_values, upper_values, dataset_outputs, TABLE_OUTPUT_DIR / "pr95_returns.csv")
 
 
 def main() -> None:
     tasks = normalize_tasks()
-    dataset_ids = [dataset_id for _, dataset_id, _, _, _ in tasks]
-    save_dataset_views(dataset_ids)
 
     for task_kwargs, dataset_id, env_kwargs, agent_id, agent_kwargs in tasks:
         dataset = make_dataset(dataset_id, device="cuda")
@@ -166,14 +156,14 @@ def main() -> None:
             f"task={task_id}, dataset={dataset.id}, agent={agent.id}, "
             f"agent_kwargs={agent_kwargs}"
         )
+        env = dataset.make_env(**env_kwargs)
         path = test(
-            agent=agent,
-            dataset=dataset,
-            task_id=task_id,
+            task_id,
+            agent,
+            env,
             episodes=task_kwargs.get("episodes", 100),
             seed=task_kwargs.get("seed", 42),
             print_interval=task_kwargs.get("print_interval", 1),
-            env_kwargs=env_kwargs,
         )
         print(f"saved: {path}")
 

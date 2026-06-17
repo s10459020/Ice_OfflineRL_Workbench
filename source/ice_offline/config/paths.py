@@ -19,9 +19,13 @@ def _task_id(dataset_id: str, agent_id: str | None = None) -> str:
         return f"{dataset_id}-v0"
     return f"{dataset_id}-{agent_id}-v0"
 
+def data_path(mode: str, task_id: str) -> Path:
+    if mode == "collect":
+        return RUNS_ROOT / mode / task_id / "data" / "main_data.hdf5"
+    return RUNS_ROOT / mode / task_id / "data" / "eval_data.hdf5"
 
 def data_path_train(task_id: str) -> Path:
-    return RUNS_ROOT / "train" / task_id / "data" / "eval_data.hdf5"
+    return data_path("train", task_id)
 
 
 def custom_dataset_path(dataset_id: str) -> Path:
@@ -29,15 +33,15 @@ def custom_dataset_path(dataset_id: str) -> Path:
 
 
 def data_path_test(task_id: str) -> Path:
-    return RUNS_ROOT / "test" / task_id / "data" / "eval_data.hdf5"
+    return data_path("test", task_id)
 
 
 def data_path_collect(task_id: str) -> Path:
-    return RUNS_ROOT / "collect" / task_id / "data" / "main_data.hdf5"
+    return data_path("collect", task_id)
 
 
 def data_path_probe(task_id: str) -> Path:
-    return RUNS_ROOT / "probe" / task_id / "data" / "main_data.hdf5"
+    return data_path("probe", task_id)
 
 
 def model_path(task_id: str, step: int) -> Path:
@@ -49,13 +53,11 @@ def eval_path(task_id: str) -> Path:
 
 
 def returns_path(mode: str, task_id: str) -> Path:
-    suffix = ".csv" if mode == "train" else ".json"
-    return RETURNS_ROOT / mode / f"{task_id}{suffix}"
+    return RETURNS_ROOT / mode / f"{task_id}.csv"
 
 
 def steps_path(mode: str, task_id: str) -> Path:
-    suffix = ".csv" if mode == "train" else ".json"
-    return STEPS_ROOT / mode / f"{task_id}{suffix}"
+    return STEPS_ROOT / mode / f"{task_id}.csv"
 
 
 def metric_path(task_id: str) -> Path:
