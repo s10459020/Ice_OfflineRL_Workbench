@@ -50,3 +50,19 @@ class ActionAxisProbe(ProbeInterface):
             ],
             dtype=np.float32,
         )
+
+
+if __name__ == "__main__":
+    env = gym.make("Hopper-v5")
+    try:
+        probe = ActionAxisProbe(100)
+        probe.set_env(env)
+        observation, _ = env.reset(seed=0)
+        probe.reset(None)
+        action = env.action_space.sample()
+        probe.step(None, action, 0.0, None, False)
+        observations, actions = probe.get_probes(observation)
+        print(f"observations_shape={observations.shape}")
+        print(f"actions_shape={actions.shape}")
+    finally:
+        env.close()

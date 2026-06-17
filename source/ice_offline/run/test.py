@@ -2,26 +2,21 @@ import gymnasium as gym
 
 from ice_offline.agent._spec import Agent
 from ice_offline.config.paths import data_path
-from ice_offline.store.eval.collector import EvalCollector
+from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.tools.printer import print_stage
 
-def set_seed(agent, env, seed):
+
+def run(agent: Agent, env: gym.Env, seed: int = 42) -> float:
     agent.set_seed(seed)
     o, _ = env.reset(seed=seed)
-    return o
+    result = 0.0
+    trun = term = False
+    while not (trun or term):
+        a = agent.act(o)
+        o, r, trun, term, _ = env.step(a)
+        result += float(r)
+    return result
 
-def eval(agent: Agent, env: gym.Env, seed: int = 42, count: int = 1) -> list[float]:
-    returns: list[float] = []
-    for i in range(count):
-        o = set_seed(agent, env, seed + i)
-        result = 0.0
-        trun = term = False
-        while not (trun or term):
-            a = agent.act(o)
-            o, r, trun, term, _ = env.step(a)
-            result += float(r)
-        returns.append(result)
-    return returns
 
 def test(
     task_id: str,
@@ -29,21 +24,31 @@ def test(
     env: gym.Env,
     *,
     episodes: int = 1,
-    print_interval = 1,
-    mode: str = "test",
+    print_interval: int = 1,
     seed: int = 42,
 ) -> object:
-    path = data_path(mode, task_id)
-    eval_col = EvalCollector(env)
+    path = data_path("test", task_id)
+    minari_col = MinariCollectorWrapper(env)
 
-    print_stage(f"{mode.capitalize()} {task_id}")
-    for i in range(1, episodes + 1):
-        eval_seed = seed + i - 1
-        eval(agent, eval_col, eval_seed)
-        eval_col.flush(i)
-        if i % print_interval == 0:
-            print(f"{mode} episode={i}/{episodes}")
+    print_stage(f"Test {task_id}")
+    for i in range(episodes):
+        result = run(agent, minari_col, seed + i)
+        if (i + 1) % print_interval == 0:
+            print(f"test episode={i + 1}/{episodes} return={result:.6g}")
 
-    eval_col.save(path)
-    eval_col.close()
+    minari_col.save(path, id=task_id, agent_id=agent.id)
+    minari_col.close()
     return path
+
+
+if __name__ == "__main__":
+    from ice_offline.agent._lookup import make_agent
+    from ice_offline.config.paths import _task_id
+    from ice_offline.dataset._lookup import make_dataset
+
+    device = "cuda:0"
+    dataset = make_dataset("hopper_simple", device=device)
+    agent = make_agent("bc_deterministic", dataset, device=device)
+    env = dataset.make_env()
+    path = test(_task_id(dataset.id, agent.id), agent, env)
+    print(path)

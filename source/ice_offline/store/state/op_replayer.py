@@ -125,3 +125,32 @@ def make_replayer(
         state_cls=state_cls,
         state_io_cls=state_io_cls,
     )
+
+
+if __name__ == "__main__":
+    from ice_offline.dataset._lookup import make_dataset
+    from ice_offline.store.state._lookup import STATE_OPS
+    from ice_offline.store.state.op_converter import StateConverter
+
+    dataset = make_dataset("hopper_simple", device="cuda")
+    state_cls, state_io_cls, converter_cls = STATE_OPS[dataset.env_id]
+    StateConverter(dataset=dataset, converter_cls=converter_cls).convert()
+
+    env = make_replayer(
+        dataset=dataset,
+        state_cls=state_cls,
+        state_io_cls=state_io_cls,
+        render_mode="human",
+    )
+
+    try:
+        for episode in range(dataset.episode_count):
+            env.reset(options={"episode_index": episode})
+            env.render()
+            while True:
+                _, reward, terminated, truncated, info = env.step(None)
+                env.render()
+                if terminated or truncated:
+                    break
+    finally:
+        env.close()

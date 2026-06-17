@@ -8,7 +8,6 @@ from ice_offline.store.probe.op_collector import ProbeInterface
 from ice_offline.store.state._lookup import STATE_OPS
 from ice_offline.store.state.op_replayer import make_replayer
 from ice_offline.tools.printer import print_stage
-SEED = 42
 
 
 def replay(
@@ -30,7 +29,8 @@ def replay(
         if (i + 1) % print_interval == 0:
             print(f"replay episode={i + 1}/{episodes}")
 
-def probe_replay(
+
+def probe(
     task_id: str,
     dataset: Dataset,
     probe: ProbeInterface,
@@ -55,3 +55,25 @@ def probe_replay(
     path = data_path("probe", task_id)
     probe_data = probe_col.save(path)
     return probe_data
+
+
+if __name__ == "__main__":
+    import numpy as np
+
+    from ice_offline.config.paths import _task_id
+    from ice_offline.dataset._lookup import make_dataset
+    from ice_offline.store.probe.action_axis_probe import ActionAxisProbe
+
+    device = "cuda:0"
+    dataset = make_dataset("hopper_simple", device=device)
+
+    def eval_fn(observations: np.ndarray, actions: np.ndarray) -> np.ndarray:
+        return np.zeros(actions.shape[0], dtype=np.float32)
+
+    probe_data = probe(
+        _task_id(dataset.id, "probe"),
+        dataset,
+        ActionAxisProbe(100),
+        eval_fn,
+    )
+    print(probe_data.path)

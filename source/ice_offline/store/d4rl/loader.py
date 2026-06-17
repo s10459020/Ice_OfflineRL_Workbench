@@ -88,3 +88,21 @@ class D4rlLoader:
             act_dim=int(np.prod(act_shape)) if act_shape else 1,
             count=count,
         )
+
+
+if __name__ == "__main__":
+    from ice_offline.dataset._lookup import make_dataset
+
+    dataset = make_dataset("hopper_d4rl_medium", device="cuda")
+    loader = dataset.loader
+    metadata = loader.load_metadata()
+    buffer = loader.load_buffer()
+    episodes = loader.load_episodes()
+
+    print(f"env_id={metadata.env_id}")
+    print(f"obs_shape={metadata.obs_shape}")
+    print(f"act_shape={metadata.act_shape}")
+    print(f"count={metadata.count}")
+    print(f"buffer_observations_shape={tuple(buffer.observations.shape)}")
+    print(f"buffer_actions_shape={tuple(buffer.actions.shape)}")
+    print(f"episode_count={len(episodes)}")

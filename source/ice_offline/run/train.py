@@ -1,7 +1,6 @@
 import math
 import gymnasium as gym
 from ice_offline.agent._spec import Agent
-from ice_offline.run.test import eval
 from ice_offline.store.eval.collector import EvalCollector
 
 from ice_offline.dataset.base import Dataset
@@ -11,15 +10,19 @@ from ice_offline.config.paths import data_path_train
 from ice_offline.tools.printer import print_stage
 
 
-STEPS = 200_000
-SAVE_INTERVAL = math.ceil(STEPS/10)
-EVAL_INTERVAL = math.ceil(STEPS/100)
-PRINT_INTERVAL = math.ceil(STEPS/1000)
-
-SEED = 42
-BATCH_SIZE = 256
-EVAL_COUNT = 10
-DEVICE = "cuda:0"
+def eval(agent: Agent, env: gym.Env, seed: int = 42, count: int = 10) -> list[float]:
+    returns: list[float] = []
+    for i in range(count):
+        agent.set_seed(seed + i)
+        o, _ = env.reset(seed=seed + i)
+        result = 0.0
+        trun = term = False
+        while not (trun or term):
+            a = agent.act(o)
+            o, r, trun, term, _ = env.step(a)
+            result += float(r)
+        returns.append(result)
+    return returns
 
 def train(
     agent: Agent,
@@ -27,14 +30,14 @@ def train(
     *,
     task_id: str | None = None,
     start: int = 0,
-    steps: int = STEPS,
-    batch_size: int = BATCH_SIZE,
-    eval_interval: int = EVAL_INTERVAL,
-    eval_count: int = EVAL_COUNT,
+    steps: int = 200_000,
+    batch_size: int = 256,
+    save_interval: int = 20000,
+    eval_interval: int = 2000,
+    eval_count: int = 10,
     eval_env: gym.Env | None = None,
-    save_interval: int = SAVE_INTERVAL,
-    print_interval: int = PRINT_INTERVAL,
-    seed: int = SEED,
+    print_interval: int = 200,
+    seed: int = 42,
 ) -> None:
     task_id = task_id or _task_id(dataset.id, agent.id)
     eval_env = eval_env or dataset.make_eval_env()
@@ -67,8 +70,7 @@ def train(
             print(f"train step={step}", *parts)
         
         if eval_interval > 0 and step % eval_interval == 0:
-            eval_seed = seed + step
-            returns = eval(agent, eval_col, eval_seed, eval_count)
+            returns = eval(agent, eval_col, seed + step, eval_count)
             eval_col.flush(step)
             avg_return = sum(returns) / len(returns)
             print(f"eval step={step} avg_return={avg_return:.6g}")
@@ -82,21 +84,18 @@ def train(
 
 
 if __name__ == "__main__":
-    from ice_offline.dataset.hopper_simple import HopperSimpleDataset
-    from ice_offline.agent.bc_deterministic import BCDeterministicAgent
+    from ice_offline.agent._lookup import make_agent
+    from ice_offline.dataset._lookup import make_dataset
     from ice_offline.store.eval.loader import EvalLoader
 
-    dataset = HopperSimpleDataset(device=DEVICE)
-    agent = BCDeterministicAgent(
-        obs_size=dataset.obs_dim,
-        act_size=dataset.act_dim,
-        device=DEVICE,
-    )
+    device = "cuda:0"
+    dataset = make_dataset("hopper_simple", device=device)
+    agent = make_agent("bc_deterministic", dataset, device=device)
+    task_id = _task_id(dataset.id, agent.id)
+    path = train(agent, dataset, task_id=task_id, steps=20000)
 
-    path = train(agent, dataset)
-
-    loader = EvalLoader(path, device=DEVICE)
-    data = Dataset(path=path, loader=loader, device=DEVICE)
+    loader = EvalLoader(path, device=device)
+    data = Dataset(path=path, loader=loader, device=device)
     print(f"total_episodes={data.episode_count}")
     print(f"total_steps={data.count}")
 
