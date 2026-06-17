@@ -40,7 +40,9 @@ class StateInjectWrapper(gym.Wrapper):
         state = self._states[0]
         self._state_io.set_state(state)
         self._transition_index = 0
-        return self._observations[0], self._infos[0]
+        info = dict(self._infos[0])
+        info["episode_index"] = episode_index
+        return self._observations[0], info
 
     def step(self, action: int | None = None):
         curr_index = self._transition_index
@@ -48,13 +50,15 @@ class StateInjectWrapper(gym.Wrapper):
         if curr_index >= self._transition_count:
             return self._frozen_step()
 
+        replay_action = self._actions[curr_index]
+        self.env.step(replay_action)
         state = self._states[next_index]
         self._state_io.set_state(state)
         self._transition_index = next_index
 
         obs = self._observations[next_index]
         info = dict(self._infos[next_index])
-        info["action"] = self._actions[curr_index]
+        info["action"] = replay_action
         reward = self._rewards[curr_index]
         truncated = False
         terminated = next_index >= self._transition_count

@@ -29,7 +29,6 @@ MODEL_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
     "sdc_pre_model": lambda dataset, device: SDCPreModel(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device),
 }
 
-
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "bc_deterministic": lambda dataset, device, **agent_kwargs: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "bc_stochastic": lambda dataset, device, **agent_kwargs: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
