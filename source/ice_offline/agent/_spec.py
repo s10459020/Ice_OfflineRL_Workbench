@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
 
 from ice_offline.dataset._types import Batch
@@ -22,6 +23,14 @@ class Agent:
 
     def set_seed(self, seed: int) -> None:
         pass
+
+    def eval(self, observations: Any, actions: Any, method: str) -> np.ndarray:
+        observations_np = np.asarray(observations, dtype=np.float32)
+        if observations_np.ndim == 0:
+            return np.zeros(1, dtype=np.float32)
+        if observations_np.ndim == 1:
+            return np.zeros(1, dtype=np.float32)
+        return np.zeros(observations_np.shape[0], dtype=np.float32)
 
     # ====================
     # Training

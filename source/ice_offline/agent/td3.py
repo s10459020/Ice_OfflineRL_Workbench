@@ -180,6 +180,19 @@ class TD3Agent(Agent):
             a = self.actor.pi(o)
         return a.cpu().numpy()
 
+    def eval(self, observations, actions, method: str) -> np.ndarray:
+        o = torch.as_tensor(np.asarray(observations, dtype=np.float32), dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(np.asarray(actions, dtype=np.float32), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            if method == "Pi":
+                mode = self.actor.pi(o)
+                values = -((mode - a) ** 2).sum(dim=-1)
+            elif method == "Q":
+                values = self.critic.q_min(o, a).squeeze(-1)
+            else:
+                return super().eval(observations, actions, method)
+        return values.cpu().numpy().astype(np.float32)
+
     # ====================
     # Update
     # ====================

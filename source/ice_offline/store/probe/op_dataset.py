@@ -26,6 +26,9 @@ class ProbeDataset:
     def close(self) -> None:
         self._h5.close()
 
+    def load_episodes(self) -> list[list[dict[str, np.ndarray]]]:
+        return [self.read_episode(episode_index) for episode_index in range(self.episode_count)]
+
     def read_episode(self, episode_index: int) -> list[dict[str, np.ndarray]]:
         episode = self._h5[self._indices[episode_index]]
         keys = list(episode.keys())

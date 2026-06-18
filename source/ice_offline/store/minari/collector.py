@@ -10,6 +10,11 @@ from ice_offline.config.paths import RUNS_ROOT
 
 class MinariCollectorWrapper(minari.DataCollector):
     def reset(self, *args: Any, **kwargs: Any):
+        options = kwargs.get("options")
+        if options is None:
+            kwargs["options"] = {"minari_autoseed": False}
+        else:
+            options["minari_autoseed"] = False
         try:
             return super().reset(*args, **kwargs)
         except Exception:

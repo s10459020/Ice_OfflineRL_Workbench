@@ -23,7 +23,7 @@ def test(
     agent: Agent,
     env: gym.Env,
     *,
-    episodes: int = 1,
+    episodes: int = 100,
     print_interval: int = 1,
     seed: int = 42,
 ) -> object:
@@ -43,12 +43,13 @@ def test(
 
 if __name__ == "__main__":
     from ice_offline.agent._lookup import make_agent
-    from ice_offline.config.paths import _task_id
     from ice_offline.dataset._lookup import make_dataset
 
     device = "cuda:0"
+    task_id = "check_run-v0"
     dataset = make_dataset("hopper_simple", device=device)
-    agent = make_agent("bc_deterministic", dataset, device=device)
+    agent = make_agent("bc_stochastic", dataset, device=device)
+    agent.load(task_id, 20_000)
     env = dataset.make_env()
-    path = test(_task_id(dataset.id, agent.id), agent, env)
+    path = test(task_id, agent, env, episodes=10)
     print(path)

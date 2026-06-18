@@ -89,9 +89,9 @@ if __name__ == "__main__":
     from ice_offline.store.eval.loader import EvalLoader
 
     device = "cuda:0"
+    task_id = "check_run-v0"
     dataset = make_dataset("hopper_simple", device=device)
-    agent = make_agent("bc_deterministic", dataset, device=device)
-    task_id = _task_id(dataset.id, agent.id)
+    agent = make_agent("bc_stochastic", dataset, device=device)
     path = train(agent, dataset, task_id=task_id, steps=20000)
 
     loader = EvalLoader(path, device=device)

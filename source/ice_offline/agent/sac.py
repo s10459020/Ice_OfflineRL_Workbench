@@ -62,6 +62,12 @@ class SACActor(torch.nn.Module):
         # action: (B, N, A), log_prob: (B, N, 1)
         return action, log_prob
 
+    def log_prob(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        action = a.clamp(-0.999999, 0.999999)
+        dist, _ = self._dist(o)
+        raw_action = torch.atanh(action)
+        return self._log_prob(dist, raw_action).squeeze(-1)
+
 
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
@@ -189,6 +195,18 @@ class SACAgent(Agent):
         with torch.no_grad():
             a = self.actor(o) if greedy else self.actor.sample(o)[0]
         return a.cpu().numpy()
+
+    def eval(self, observations, actions, method: str) -> np.ndarray:
+        o = torch.as_tensor(np.asarray(observations, dtype=np.float32), dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(np.asarray(actions, dtype=np.float32), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            if method == "Pi":
+                values = self.actor.log_prob(o, a)
+            elif method == "Q":
+                values = self.critic.q_min(o, a).squeeze(-1)
+            else:
+                return super().eval(observations, actions, method)
+        return values.cpu().numpy().astype(np.float32)
 
     # ====================
     # Update

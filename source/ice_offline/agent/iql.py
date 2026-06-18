@@ -169,6 +169,20 @@ class IQLAgent(Agent):
             action = self.actor(o) if greedy else self.actor.sample(o)
         return action.cpu().numpy()
 
+    def eval(self, observations, actions, method: str) -> np.ndarray:
+        o = torch.as_tensor(np.asarray(observations, dtype=np.float32), dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(np.asarray(actions, dtype=np.float32), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            if method == "Pi":
+                values = self.actor.log_prob(o, a).squeeze(-1)
+            elif method == "V":
+                values = self.critic.v(o).squeeze(-1)
+            elif method == "Q":
+                values = self.critic.q_min(o, a).squeeze(-1)
+            else:
+                return super().eval(observations, actions, method)
+        return values.cpu().numpy().astype(np.float32)
+
     # ====================
     # Update
     # ====================

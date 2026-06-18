@@ -27,6 +27,8 @@ class StateInjectWrapper(gym.Wrapper):
         self._states: list | None = None
         self._actions: list[int] | None = None
         self._rewards: list[float] | None = None
+        self._terminations: list[bool] | None = None
+        self._truncations: list[bool] | None = None
         self._observations: list | None = None
         self._transition_count: int | None = None
 
@@ -60,8 +62,8 @@ class StateInjectWrapper(gym.Wrapper):
         info = dict(self._infos[next_index])
         info["action"] = replay_action
         reward = self._rewards[curr_index]
-        truncated = False
-        terminated = next_index >= self._transition_count
+        terminated = bool(self._terminations[curr_index])
+        truncated = bool(self._truncations[curr_index])
         return obs, reward, terminated, truncated, info
 
     def close(self) -> None:
@@ -90,6 +92,8 @@ class StateInjectWrapper(gym.Wrapper):
         self._transition_count = transition_count
         self._actions = list(trajectory.actions)
         self._rewards = list(trajectory.rewards)
+        self._terminations = list(trajectory.terminations)
+        self._truncations = list(trajectory.truncations)
         self._observations = self._materialize_obs_seq(trajectory.observations, transition_count)
         self._infos = self._materialize_info_seq(trajectory.infos, transition_count)
         self._states = self._state_dataset.read_episode(episode_index)

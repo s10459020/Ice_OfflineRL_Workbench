@@ -50,6 +50,10 @@ class _Actor(torch.nn.Module):
         mean, logstd = self.pi.dist(o)
         return Normal(mean, logstd.exp()).rsample().clamp(-1.0, 1.0)
 
+    def log_prob(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        mean, logstd = self.pi.dist(o)
+        return Normal(mean, logstd.exp()).log_prob(a).sum(dim=-1)
+
 
 @dataclass
 class BCStochasticAgent(Agent):
@@ -89,6 +93,16 @@ class BCStochasticAgent(Agent):
         with torch.no_grad():
             a = self.actor(o) if greedy else self.actor.sample(o)
         return a.cpu().numpy()
+
+    def eval(self, observations, actions, method: str) -> np.ndarray:
+        o = torch.as_tensor(np.asarray(observations, dtype=np.float32), dtype=torch.float32, device=self.device)
+        a = torch.as_tensor(np.asarray(actions, dtype=np.float32), dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            if method == "Pi":
+                values = self.actor.log_prob(o, a)
+            else:
+                return super().eval(observations, actions, method)
+        return values.cpu().numpy().astype(np.float32)
 
     # ====================
     # Update
