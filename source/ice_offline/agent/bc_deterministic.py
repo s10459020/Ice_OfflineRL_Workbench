@@ -72,7 +72,9 @@ class BCDeterministicAgent(Agent):
         with torch.no_grad():
             if method == "Pi":
                 mode = self.actor.pi(o)
-                values = -((mode - a) ** 2).sum(dim=-1)
+                sigma = 0.25
+                diff = ((mode - a) ** 2).mean(dim=-1)
+                values = torch.exp(-0.5 * diff / (sigma * sigma))
             else:
                 return super().eval(observations, actions, method)
         return values.cpu().numpy().astype(np.float32)

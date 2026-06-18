@@ -69,10 +69,9 @@ def main() -> None:
             probe_kwargs["seed"] = task_kwargs["seed"]
         if env_kwargs:
             probe_kwargs["env_kwargs"] = env_kwargs
-        eval_fn = lambda selected_agent, observations, actions: selected_agent.eval(observations, actions, method)
+        eval_fn = lambda observations, actions: agent.eval(observations, actions, method)
         probe_data = probe(
             probe_task_id,
-            agent,
             dataset,
             ActionAxisProbe(task_kwargs["sample_count"]) if "sample_count" in task_kwargs else ActionAxisProbe(),
             eval_fn,

@@ -186,7 +186,9 @@ class TD3Agent(Agent):
         with torch.no_grad():
             if method == "Pi":
                 mode = self.actor.pi(o)
-                values = -((mode - a) ** 2).sum(dim=-1)
+                sigma = 0.25
+                diff = ((mode - a) ** 2).mean(dim=-1)
+                values = torch.exp(-0.5 * diff / (sigma * sigma))
             elif method == "Q":
                 values = self.critic.q_min(o, a).squeeze(-1)
             else:

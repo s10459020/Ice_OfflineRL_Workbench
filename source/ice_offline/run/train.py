@@ -90,9 +90,9 @@ if __name__ == "__main__":
 
     device = "cuda:0"
     task_id = "check_run-v0"
-    dataset = make_dataset("hopper_simple", device=device)
-    agent = make_agent("bc_stochastic", dataset, device=device)
-    path = train(agent, dataset, task_id=task_id, steps=20000)
+    dataset = make_dataset("hopper_medium", device=device)
+    agent = make_agent("td3bc", dataset, device=device)
+    path = train(agent, dataset, task_id=task_id, steps=50000)
 
     loader = EvalLoader(path, device=device)
     data = Dataset(path=path, loader=loader, device=device)

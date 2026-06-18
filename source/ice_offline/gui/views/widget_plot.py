@@ -1,9 +1,9 @@
 import numpy as np
 from PySide6.QtCore import QPointF, QRectF, Qt
 from PySide6.QtGui import QColor, QPainter, QPainterPath, QPen
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QSizePolicy, QWidget
 
-from ice_offline.gui.models.model_actor import ActorCurve
+from ice_offline.gui.models.model_action import ActionCurve
 
 
 class PlotWidget(QWidget):
@@ -11,16 +11,17 @@ class PlotWidget(QWidget):
         super().__init__(parent)
         self._x_name = ""
         self._y_name = ""
-        self._curves_1: list[ActorCurve] = []
-        self._curves_2: list[ActorCurve] = []
-        self.setMinimumSize(520, 360)
+        self._curves_1: list[ActionCurve] = []
+        self._curves_2: list[ActionCurve] = []
+        self.setMinimumHeight(220)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def set_axis_names(self, x_name: str, y_name: str) -> None:
         self._x_name = x_name
         self._y_name = y_name
         self.update()
 
-    def set_curves(self, curves_1: list[ActorCurve], curves_2: list[ActorCurve]) -> None:
+    def set_curves(self, curves_1: list[ActionCurve], curves_2: list[ActionCurve]) -> None:
         self._curves_1 = curves_1
         self._curves_2 = curves_2
         self.update()
@@ -34,7 +35,7 @@ class PlotWidget(QWidget):
         curves = self._curves_1 or self._curves_2
         if not curves:
             painter.setPen(QColor("#30343b"))
-            painter.drawText(self.rect(), Qt.AlignCenter, "No actor data")
+            painter.drawText(self.rect(), Qt.AlignCenter, "No action data")
             return
 
         left = 72
@@ -63,7 +64,7 @@ class PlotWidget(QWidget):
             curve_2 = self._curves_2[index] if index < len(self._curves_2) else None
             self._draw_panel(painter, rect, curve_1, curve_2)
 
-    def _draw_panel(self, painter: QPainter, rect: QRectF, curve_1: ActorCurve | None, curve_2: ActorCurve | None) -> None:
+    def _draw_panel(self, painter: QPainter, rect: QRectF, curve_1: ActionCurve | None, curve_2: ActionCurve | None) -> None:
         painter.setPen(QPen(QColor("#c9cdd3"), 1.0))
         painter.drawRect(rect)
 
@@ -104,7 +105,12 @@ class PlotWidget(QWidget):
             painter.drawText(QRectF(rect.right() + 10, rect.top() - 2, 38, 16), Qt.AlignLeft | Qt.AlignVCenter, f"{curve_2.source_max:.3g}")
             painter.drawText(QRectF(rect.right() + 10, rect.bottom() - 14, 38, 16), Qt.AlignLeft | Qt.AlignVCenter, f"{curve_2.source_min:.3g}")
 
-    def _draw_curve(self, painter: QPainter, rect: QRectF, curve: ActorCurve, color: QColor, x_min: float, x_max: float, y_min: float, y_max: float) -> None:
+        action_value = curve_1.action_value if curve_1 is not None else curve_2.action_value
+        action_x = self._map_x(action_value, x_min, x_max, rect)
+        painter.setPen(QPen(QColor("#dc2626"), 2.0))
+        painter.drawLine(action_x, rect.top(), action_x, rect.bottom())
+
+    def _draw_curve(self, painter: QPainter, rect: QRectF, curve: ActionCurve, color: QColor, x_min: float, x_max: float, y_min: float, y_max: float) -> None:
         xs = np.asarray(curve.xs, dtype=np.float32)
         ys = np.asarray(curve.ys, dtype=np.float32)
         if xs.size == 0 or ys.size == 0:
@@ -130,11 +136,6 @@ class PlotWidget(QWidget):
         line_color.setAlphaF(0.95)
         painter.setPen(QPen(line_color, 2.0))
         painter.drawPath(path)
-
-        action_x = self._map_x(curve.action_value, x_min, x_max, rect)
-        marker_pen = QPen(line_color, 2.0)
-        painter.setPen(marker_pen)
-        painter.drawLine(action_x, rect.top(), action_x, rect.bottom())
 
     def _map_x(self, value: float, min_value: float, max_value: float, rect: QRectF) -> float:
         ratio = (value - min_value) / (max_value - min_value)

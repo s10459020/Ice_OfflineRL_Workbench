@@ -1,7 +1,5 @@
 import gymnasium as gym
-import numpy as np
 
-from ice_offline.agent._spec import Agent
 from ice_offline.config.paths import data_path
 from ice_offline.dataset.base import Dataset
 from ice_offline.store.minari.collector import MinariCollectorWrapper
@@ -11,10 +9,6 @@ from ice_offline.store.probe.op_collector import ProbeInterface
 from ice_offline.store.state._lookup import STATE_OPS
 from ice_offline.store.state.op_replayer import make_replayer
 from ice_offline.tools.printer import print_stage
-
-
-def eval_prop(agent: Agent, observations: np.ndarray, actions: np.ndarray) -> np.ndarray:
-    return agent.eval(observations, actions, "Pi")
 
 
 def replay(
@@ -39,7 +33,6 @@ def replay(
 
 def probe(
     task_id: str,
-    agent: Agent,
     dataset: Dataset,
     probe: ProbeInterface,
     eval_fn: ProbeEvalFn,
@@ -56,13 +49,13 @@ def probe(
         eval_env=dataset.make_env(**(env_kwargs or {})),
         render_mode=None,
     )
-    probe_col = ProbeCollectWrapper(env, probe, agent, eval_fn)
+    probe_col = ProbeCollectWrapper(env, probe, eval_fn)
     minari_col = MinariCollectorWrapper(probe_col)
 
     print_stage(f"Probe Replay {task_id}")
     replay(dataset, minari_col, episodes=episodes, seed=seed, print_interval=1)
     path = data_path("probe", task_id)
-    minari_col.save(path, id=task_id, agent_id=agent.id)
+    minari_col.save(path, id=task_id, agent_id=task_id)
     probe_data = probe_col.save(path)
     minari_col.close()
     return probe_data
@@ -74,16 +67,25 @@ if __name__ == "__main__":
     from ice_offline.store.probe.action_axis_probe import ActionAxisProbe
 
     device = "cuda:0"
-    task_id = "check_run-v1"
+    model_task_id = "check_run-v0"
     dataset = make_dataset("hopper_simple", device=device)
-    agent = make_agent("bc_stochastic", dataset, device=device)
-    agent.load(task_id, 20_000)
+    agent = make_agent("td3bc", dataset, device=device)
+    agent.load(model_task_id, 20_000)
+    eval_pi = lambda observations, actions: agent.eval(observations, actions, "Pi")
+    eval_q = lambda observations, actions: agent.eval(observations, actions, "Q")
 
-    probe_data = probe(
-        task_id,
-        agent,
+    probe_data_pi = probe(
+        "check_run_Pi-v0",
         dataset,
-        ActionAxisProbe(100),
-        eval_prop,
+        ActionAxisProbe(),
+        eval_pi,
     )
-    print(probe_data.path)
+    print(probe_data_pi.path)
+
+    probe_data_q = probe(
+        "check_run_Q-v0",
+        dataset,
+        ActionAxisProbe(),
+        eval_q,
+    )
+    print(probe_data_q.path)

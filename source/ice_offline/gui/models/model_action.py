@@ -3,12 +3,13 @@ from pathlib import Path
 
 import numpy as np
 
+from ice_offline.gui.models.model_replay import ReplayModel
 from ice_offline.store.minari.loader import MinariLoader
 from ice_offline.store.probe.op_dataset import ProbeDataset
 
 
 @dataclass(frozen=True)
-class ActorCurve:
+class ActionCurve:
     label: str
     xs: np.ndarray
     ys: np.ndarray
@@ -18,17 +19,17 @@ class ActorCurve:
 
 
 @dataclass(frozen=True)
-class ActorEpisodeInfo:
+class ActionEpisodeInfo:
     id: int
     steps: int
 
 
-class ActorModel:
+class ActionModel:
     def __init__(self) -> None:
+        self._replay = ReplayModel()
+        self._actions_main: list[np.ndarray] = []
         self._episodes_1: list[list[dict[str, np.ndarray]]] = []
-        self._actions_1: list[np.ndarray] = []
         self._episodes_2: list[list[dict[str, np.ndarray]]] = []
-        self._actions_2: list[np.ndarray] = []
 
     def load_run_data(self, path: str, index: int) -> None:
         data_path = Path(path)
@@ -45,11 +46,11 @@ class ActorModel:
             dataset.close()
         actions = [episode.actions for episode in MinariLoader(Path(main_path), device="cpu").load_episodes()]
         if index == 1:
+            self._replay.load_minari(str(main_path))
+            self._actions_main = actions
             self._episodes_1 = episodes
-            self._actions_1 = actions
-        else:
-            self._episodes_2 = episodes
-            self._actions_2 = actions
+            return
+        self._episodes_2 = episodes
 
     def scan_file(self, path: str, name: str) -> str | None:
         stack = [path]
@@ -62,13 +63,11 @@ class ActorModel:
                     return str(child)
         return None
 
-    def episodes(self) -> list[ActorEpisodeInfo]:
-        episodes = self._episodes_1 or self._episodes_2
-        return [ActorEpisodeInfo(id=index, steps=len(episode)) for index, episode in enumerate(episodes)]
+    def episodes(self) -> list[ActionEpisodeInfo]:
+        return [ActionEpisodeInfo(id=index, steps=len(episode)) for index, episode in enumerate(self._episodes_1)]
 
-    def curves(self, episode: int, step: int, index: int) -> list[ActorCurve]:
+    def curves(self, episode: int, step: int, index: int) -> list[ActionCurve]:
         episodes = self._episodes_1 if index == 1 else self._episodes_2
-        actions_ref = self._actions_1 if index == 1 else self._actions_2
         if not episodes:
             return []
         payload = episodes[episode][step]
@@ -78,7 +77,7 @@ class ActorModel:
         action_dim = flat_actions.shape[1]
         sample_count = flat_actions.shape[0] // action_dim
 
-        curves: list[ActorCurve] = []
+        curves: list[ActionCurve] = []
         for dim in range(action_dim):
             start = dim * sample_count
             end = start + sample_count
@@ -90,19 +89,22 @@ class ActorModel:
             else:
                 normalized_values = ((segment_values - source_min) / (source_max - source_min)).astype(np.float32)
             curves.append(
-                ActorCurve(
+                ActionCurve(
                     label=f"a{dim}",
                     xs=flat_actions[start:end, dim].copy(),
                     ys=normalized_values,
-                    action_value=float(actions_ref[episode][step].reshape(-1)[dim]),
+                    action_value=float(self._actions_main[episode][step].reshape(-1)[dim]),
                     source_min=source_min,
                     source_max=source_max,
                 )
             )
         return curves
 
+    def render(self, episode: int, step: int) -> np.ndarray | None:
+        return self._replay.render(episode, step)
+
     def close(self) -> None:
+        self._replay.close()
+        self._actions_main = []
         self._episodes_1 = []
-        self._actions_1 = []
         self._episodes_2 = []
-        self._actions_2 = []

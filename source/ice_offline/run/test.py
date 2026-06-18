@@ -48,7 +48,7 @@ if __name__ == "__main__":
     device = "cuda:0"
     task_id = "check_run-v0"
     dataset = make_dataset("hopper_simple", device=device)
-    agent = make_agent("bc_stochastic", dataset, device=device)
+    agent = make_agent("td3bc", dataset, device=device)
     agent.load(task_id, 20_000)
     env = dataset.make_env()
     path = test(task_id, agent, env, episodes=10)

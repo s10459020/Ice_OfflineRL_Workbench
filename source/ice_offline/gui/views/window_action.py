@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
 
 from ice_offline.config.paths import RUNS_ROOT
 from ice_offline.gui.views.widget_plot import PlotWidget
+from ice_offline.gui.views.widget_render import RenderWidget
 from ice_offline.gui.views.widget_select import SelectWidget
 from ice_offline.gui.views.widget_slider import SliderWidget
 
@@ -22,14 +23,15 @@ class MainWindow(QMainWindow):
         super().__init__()
         self._viewmodel = viewmodel
 
-        self._run_button_1 = QPushButton("Select Prob 1")
-        self._run_button_2 = QPushButton("Select Prob 2")
+        self._run_button_1 = QPushButton("Select Action 1")
+        self._run_button_2 = QPushButton("Select Action 2")
         self._select = SelectWidget()
         self._slider = SliderWidget()
+        self._render = RenderWidget()
         self._plot = PlotWidget()
 
-        self.setWindowTitle("Actor Viewer")
-        self.resize(1080, 720)
+        self.setWindowTitle("Action Viewer")
+        self.resize(980, 640)
         self.setFocusPolicy(Qt.StrongFocus)
 
         self._build_ui()
@@ -43,15 +45,21 @@ class MainWindow(QMainWindow):
         self._slider.set_range(0, state.slider_max, state.slider_value)
         self._plot.set_axis_names(state.x_name, state.y_name)
         self._plot.set_curves(state.curves_1, state.curves_2)
+        if state.frame is not None:
+            self._render.set_frame(state.frame)
 
     def _apply_episode_state(self, state) -> None:
         self._select.set_index(state.select_index)
         self._slider.set_range(0, state.slider_max, state.slider_value)
         self._plot.set_curves(state.curves_1, state.curves_2)
+        if state.frame is not None:
+            self._render.set_frame(state.frame)
 
     def _apply_frame_state(self, state) -> None:
         self._slider.set_value(state.slider_value)
         self._plot.set_curves(state.curves_1, state.curves_2)
+        if state.frame is not None:
+            self._render.set_frame(state.frame)
 
     def _build_ui(self) -> None:
         root = QWidget()
@@ -65,12 +73,12 @@ class MainWindow(QMainWindow):
         root_layout.addLayout(content_layout, 1)
         root_layout.addWidget(self._slider)
 
-        content_layout.addWidget(self._plot, 3)
+        content_layout.addWidget(self._render, 3)
 
         control_layout = QVBoxLayout()
         control_layout.setSpacing(18)
         control_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.addLayout(control_layout, 1)
+        content_layout.addLayout(control_layout, 2)
 
         button_layout = QHBoxLayout()
         button_layout.setSpacing(8)
@@ -78,6 +86,7 @@ class MainWindow(QMainWindow):
         button_layout.addWidget(self._run_button_2)
         control_layout.addLayout(button_layout)
         control_layout.addWidget(self._select)
+        control_layout.addWidget(self._plot)
         control_layout.addStretch(1)
 
     def _bind_events(self) -> None:
@@ -88,7 +97,7 @@ class MainWindow(QMainWindow):
 
     def _on_run_selected_1(self):
         initial_dir = str(RUNS_ROOT.resolve())
-        path = QFileDialog.getExistingDirectory(self, "Select Probe 1", initial_dir)
+        path = QFileDialog.getExistingDirectory(self, "Select Action 1", initial_dir)
         if not path:
             return
         try:
@@ -99,7 +108,7 @@ class MainWindow(QMainWindow):
 
     def _on_run_selected_2(self):
         initial_dir = str(RUNS_ROOT.resolve())
-        path = QFileDialog.getExistingDirectory(self, "Select Probe 2", initial_dir)
+        path = QFileDialog.getExistingDirectory(self, "Select Action 2", initial_dir)
         if not path:
             return
         try:
@@ -146,12 +155,12 @@ if __name__ == "__main__":
 
     from PySide6.QtWidgets import QApplication
 
-    from ice_offline.gui.models.model_actor import ActorModel
-    from ice_offline.gui.viewmodels.viewmodel_actor import ActorViewModel
+    from ice_offline.gui.models.model_action import ActionModel
+    from ice_offline.gui.viewmodels.viewmodel_action import ActionViewModel
 
     app = QApplication(sys.argv)
-    model = ActorModel()
-    viewmodel = ActorViewModel(model)
+    model = ActionModel()
+    viewmodel = ActionViewModel(model)
     window = MainWindow(viewmodel)
     window.show()
     sys.exit(app.exec())

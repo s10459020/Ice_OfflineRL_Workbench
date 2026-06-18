@@ -51,7 +51,7 @@ class MinariCollectorWrapper(minari.DataCollector):
         try:
             try:
                 minari.delete_dataset(dataset_id)
-            except Exception:
+            except Exception as error:
                 pass
 
             dataset = self.create_dataset(

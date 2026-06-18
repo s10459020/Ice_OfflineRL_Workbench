@@ -5,11 +5,10 @@ from typing import Any, Type
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.agent._spec import Agent
 from ice_offline.store.probe.op_dataset import ProbeDataset
 
 
-ProbeEvalFn = Callable[[Agent, np.ndarray, np.ndarray], np.ndarray]
+ProbeEvalFn = Callable[[np.ndarray, np.ndarray], np.ndarray]
 
 
 class ProbeInterface:
@@ -36,13 +35,11 @@ class ProbeCollectWrapper(gym.Wrapper):
         self,
         env: gym.Env,
         probe: ProbeInterface,
-        agent: Agent,
         eval_fn: ProbeEvalFn,
     ) -> None:
         super().__init__(env)
         self._probe = probe
         self._probe.set_env(env)
-        self._agent = agent
         self._eval_fn = eval_fn
         state_io_cls = self._probe.state_io_cls
         self._state_io = state_io_cls(env) if state_io_cls is not None else None
@@ -85,7 +82,7 @@ class ProbeCollectWrapper(gym.Wrapper):
     # ====================
     def _record(self, observation: Any) -> dict[str, np.ndarray]:
         probe_observations, probe_actions = self._probe.get_probes(observation)
-        values = self._eval_fn(self._agent, probe_observations, probe_actions)
+        values = self._eval_fn(probe_observations, probe_actions)
         payload = {
             "observations": np.asarray(probe_observations),
             "actions": np.asarray(probe_actions),
