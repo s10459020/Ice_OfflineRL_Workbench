@@ -4,8 +4,12 @@ from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train
 
 TASKS = [
-    # ({"steps": 100_000, "eval_interval": 0}, "hopper_d4rl_medium", "scas_model", {}),
-    # ({"steps": 100_000, "eval_interval": 0}, "hopper_d4rl_medium", "sdc_model", {}),
+    ({"steps": 100_000}, "hopper_d4rl_medium", "scas_model", {}),
+    ({"steps": 100_000}, "hopper_d4rl_hybrid", "scas_model", {}),
+    ({"steps": 100_000}, "hopper_d4rl_expert", "scas_model", {}),
+    ({"steps": 100_000}, "hopper_d4rl_medium", "sdc_model", {}),
+    ({"steps": 100_000}, "hopper_d4rl_hybrid", "sdc_model", {}),
+    ({"steps": 100_000}, "hopper_d4rl_expert", "sdc_model", {}),
 ]
 
 TASK_KWARGS = {
