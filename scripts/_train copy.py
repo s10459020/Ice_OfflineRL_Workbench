@@ -11,21 +11,21 @@ from ice_offline.run.plot import plot
 from ice_offline.run.train import train
 
 TASKS = [
-    # ({"steps": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
-    # ({"steps": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
-    # ({"steps": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
-    # ({"steps": 200_000}, "hopper_simple", {}, "bc_deterministic", {}),
-    # ({"steps": 200_000}, "hopper_medium", {}, "bc_deterministic", {}),
-    # ({"steps": 200_000}, "hopper_expert", {}, "bc_deterministic", {}),
-    # ({"steps": 200_000}, "hopper_simple", {}, "td3bc", {}),
-    # ({"steps": 200_000}, "hopper_medium", {}, "td3bc", {}),
-    # ({"steps": 200_000}, "hopper_expert", {}, "td3bc", {}),
-    # ({"steps": 500_000}, "hopper_simple", {}, "cql_soft_q", {"threshold": 1.5}),
-    # ({"steps": 500_000}, "hopper_medium", {}, "cql_soft_q", {"threshold": 1.0}),
-    # ({"steps": 500_000}, "hopper_expert", {}, "cql_soft_q", {"threshold": 0.5}),
-    # ({"steps": 500_000}, "hopper_simple", {}, "sdc_cql", {"threshold": 3}),
-    ({"steps": 500_000}, "hopper_medium", {}, "sdc_cql", {"threshold": 5}),
-    # ({"steps": 500_000}, "hopper_expert", {}, "sdc_cql", {"threshold": 0.5}),
+    # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "aspl", {"alpha": 0.5}),
+    # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "aspl", {"alpha": 0.5}),
+    # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "aspl", {"alpha": 1}),
+    # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "bc_deterministic", {}),
+    # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "bc_deterministic", {}),
+    # ({"steps": 200_000}, "hopper_d4rl_expert", {}, "bc_deterministic", {}),
+    # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "td3bc", {}),
+    # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "td3bc", {}),
+    # ({"steps": 200_000}, "hopper_d4rl_expert", {}, "td3bc", {}),
+    ({"steps": 500_000}, "hopper_d4rl_medium", {}, "cql_soft_q", {"threshold": 1.5}),
+    ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "cql_soft_q", {"threshold": 1.5}),
+    ({"steps": 500_000}, "hopper_d4rl_expert", {}, "cql_soft_q", {"threshold": 1.0}),
+    # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 10}),
+    # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 5}),
+    # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 0.5}),
 ]
 
 TASK_KWARGS = {
@@ -93,10 +93,7 @@ def view_train(path, index: int, dataset_id: str, agent_id: str) -> None:
 
 def main() -> None:
     tasks = normalize_tasks()
-    dataset_ids: list[str] = []
-    for _, dataset_id, _, _, _ in tasks:
-        if dataset_id not in dataset_ids:
-            dataset_ids.append(dataset_id)
+    dataset_ids = [dataset_id for _, dataset_id, _, _, _ in tasks]
 
     for task_kwargs, dataset_id, dataset_kwargs, agent_id, agent_kwargs in tasks:
         dataset = make_dataset(dataset_id, device="cuda")
