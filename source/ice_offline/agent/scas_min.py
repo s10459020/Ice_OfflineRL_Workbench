@@ -4,6 +4,7 @@ from typing import ClassVar
 import torch
 import torch.nn.functional as F
 
+from ice_offline.agent._spec import MetricValues
 from ice_offline.agent._spec import Agent
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
@@ -36,7 +37,6 @@ class _M(torch.nn.Module):
 
 @dataclass
 class ScasDynamic(Agent):
-    agent_name: ClassVar[str] = "scas_dynamic"
     obs_size: int
     act_size: int
     learning_rate: float = 1e-3
@@ -63,6 +63,17 @@ class ScasDynamic(Agent):
         loss = self.loss_dynamic(batch)
         loss.backward() 
         self.optimizer.step()
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        loss_dynamic = self.loss_dynamic(batch)
+        grad_dynamic = self._grad_norm(loss_dynamic, self.model.parameters())
+        self.optimizer.zero_grad()
+        loss_dynamic.backward()
+        self.optimizer.step()
+        return {
+            "loss_dynamic": loss_dynamic.detach(),
+            "grad_dynamic": grad_dynamic.detach(),
+        }
 
     # ====================
     # extend 

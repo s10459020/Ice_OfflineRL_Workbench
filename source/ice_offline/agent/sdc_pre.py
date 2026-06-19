@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from ice_offline.agent._spec import Agent
+from ice_offline.agent._spec import MetricValues
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.sdc_cql import _DynamicsModel
 from ice_offline.agent.sdc_cql import _TransitionModel
@@ -13,7 +14,6 @@ from ice_offline.dataset._types import Batch
 
 @dataclass
 class SDCPreModel(Agent):
-    agent_name: ClassVar[str] = "sdc_pre_model"
     obs_size: int
     act_size: int
     state_transition_noise_size: int = 8
@@ -59,6 +59,26 @@ class SDCPreModel(Agent):
         loss = self.loss_state_models(batch)
         loss.backward()
         self.state_models_optimizer.step()
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        loss_dynamics = self.loss_dynamics(batch)
+        grad_dynamics = self._grad_norm(loss_dynamics, self.dynamics.parameters())
+        loss_transition = self.loss_transition(batch)
+        grad_transition = self._grad_norm(loss_transition, self.transition.parameters())
+        params = list(self.dynamics.parameters()) + list(self.transition.parameters())
+        loss_state_models = loss_dynamics + loss_transition
+        grad_state_models = self._grad_norm(loss_state_models, params)
+        self.state_models_optimizer.zero_grad()
+        loss_state_models.backward()
+        self.state_models_optimizer.step()
+        return {
+            "loss_dynamics": loss_dynamics.detach(),
+            "grad_dynamics": grad_dynamics.detach(),
+            "loss_transition": loss_transition.detach(),
+            "grad_transition": grad_transition.detach(),
+            "loss_state_models": loss_state_models.detach(),
+            "grad_state_models": grad_state_models.detach(),
+        }
 
     # ====================
     # Save and load

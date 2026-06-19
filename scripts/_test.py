@@ -41,28 +41,28 @@ TABLES = {
 }
 
 TASKS = [
-    # ({"model_step": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
-    # ({"model_step": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
-    # ({"model_step": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
-    ({"model_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_deterministic", {}),
-    ({"model_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_stochastic", {}),
-    ({"model_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "td3bc", {}),
-    ({"model_step": 50_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql", {}),
-    ({"model_step": 50_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "aspl", {"alpha": 0.5}),
-    # ({"model_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "bc_deterministic", {}),
-    # ({"model_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "bc_stochastic", {}),
-    # ({"model_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "td3bc", {}),
-    # ({"model_step": 50_000, "episodes": 20}, "hopper_one_simple", {}, "cql", {}),
-    # ({"model_step": 50_000, "episodes": 20}, "hopper_one_simple", {}, "aspl", {"alpha": 0.5}),
-    # ({"model_step": 200_000}, "hopper_simple", {}, "bc_deterministic", {}),
-    # ({"model_step": 200_000}, "hopper_medium", {}, "bc_deterministic", {}),
-    # ({"model_step": 200_000}, "hopper_expert", {}, "bc_deterministic", {}),
-    # ({"model_step": 200_000}, "hopper_simple", {}, "td3bc", {}),
-    # ({"model_step": 200_000}, "hopper_medium", {}, "td3bc", {}),
-    # ({"model_step": 200_000}, "hopper_expert", {}, "td3bc", {}),
-    # ({"model_step": 500_000}, "hopper_simple", {}, "cql_soft_q", {"threshold": 1.5}),
-    # ({"model_step": 500_000}, "hopper_medium", {}, "cql_soft_q", {"threshold": 1.0}),
-    # ({"model_step": 500_000}, "hopper_expert", {}, "cql_soft_q", {"threshold": 0.5}),
+    # ({"agent_step": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
+    # ({"agent_step": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
+    # ({"agent_step": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
+    ({"agent_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_deterministic", {}),
+    ({"agent_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_stochastic", {}),
+    ({"agent_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "td3bc", {}),
+    ({"agent_step": 50_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql", {}),
+    ({"agent_step": 50_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "aspl", {"alpha": 0.5}),
+    # ({"agent_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "bc_deterministic", {}),
+    # ({"agent_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "bc_stochastic", {}),
+    # ({"agent_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "td3bc", {}),
+    # ({"agent_step": 50_000, "episodes": 20}, "hopper_one_simple", {}, "cql", {}),
+    # ({"agent_step": 50_000, "episodes": 20}, "hopper_one_simple", {}, "aspl", {"alpha": 0.5}),
+    # ({"agent_step": 200_000}, "hopper_simple", {}, "bc_deterministic", {}),
+    # ({"agent_step": 200_000}, "hopper_medium", {}, "bc_deterministic", {}),
+    # ({"agent_step": 200_000}, "hopper_expert", {}, "bc_deterministic", {}),
+    # ({"agent_step": 200_000}, "hopper_simple", {}, "td3bc", {}),
+    # ({"agent_step": 200_000}, "hopper_medium", {}, "td3bc", {}),
+    # ({"agent_step": 200_000}, "hopper_expert", {}, "td3bc", {}),
+    # ({"agent_step": 500_000}, "hopper_simple", {}, "cql_soft_q", {"threshold": 1.5}),
+    # ({"agent_step": 500_000}, "hopper_medium", {}, "cql_soft_q", {"threshold": 1.0}),
+    # ({"agent_step": 500_000}, "hopper_expert", {}, "cql_soft_q", {"threshold": 0.5}),
 ]
 
 TASK_KWARGS = {
@@ -162,9 +162,9 @@ def main() -> None:
         agent = make_agent(agent_id, dataset, device="cuda", **agent_kwargs)
 
         task_id = _task_id(dataset.id, agent.id)
-        model_step = task_kwargs.get("model_step", 0)
-        if model_step > 0:
-            agent.load(task_id, model_step)
+        agent_step = task_kwargs.get("agent_step", 0)
+        if agent_step > 0:
+            agent.load(task_id, agent_step)
         print(
             f"task={task_id}, dataset={dataset.id}, agent={agent.id}, "
             f"agent_kwargs={agent_kwargs}"

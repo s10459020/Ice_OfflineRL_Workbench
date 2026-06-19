@@ -104,7 +104,8 @@ def main() -> None:
 
     for task_kwargs, dataset_id, dataset_kwargs, agent_id, agent_kwargs in tasks:
         dataset = make_dataset(dataset_id, device="cuda")
-        agent = make_agent(agent_id, dataset, device="cuda", **agent_kwargs)
+        model_step = task_kwargs.get("model_step")
+        agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step, **agent_kwargs)
 
         task_id = _task_id(dataset.id, agent.id)
         start = task_kwargs.get("start", 0)
@@ -114,12 +115,13 @@ def main() -> None:
             f"task={task_id}, dataset={dataset.id}, agent={agent.id}, "
             f"agent_kwargs={agent_kwargs}"
         )
+        train_kwargs = {key: value for key, value in task_kwargs.items() if key != "model_step"}
         path = train(
             agent=agent,
             dataset=dataset,
             task_id=task_id,
             eval_env=dataset.make_eval_env(**dataset_kwargs),
-            **task_kwargs,
+            **train_kwargs,
         )
         print(f"saved: {path}")
         view_train(dataset_ids.index(dataset_id) + 1, dataset_id, agent_id)
