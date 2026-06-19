@@ -14,7 +14,7 @@ DATASET_TABLE: dict[str, Callable[[str], Dataset]] = {
     "hopper_simple": lambda device: MinariDataset(env_id="Hopper-v5", path=DATASETS_ROOT / Path("mujoco/hopper/simple-v0/data/main_data.hdf5"), minari_dataset_id="mujoco/hopper/simple-v0", device=device),
     "hopper_medium": lambda device: MinariDataset(env_id="Hopper-v5", path=DATASETS_ROOT / Path("mujoco/hopper/medium-v0/data/main_data.hdf5"), minari_dataset_id="mujoco/hopper/medium-v0", device=device),
     "hopper_expert": lambda device: MinariDataset(env_id="Hopper-v5", path=DATASETS_ROOT / Path("mujoco/hopper/expert-v0/data/main_data.hdf5"), minari_dataset_id="mujoco/hopper/expert-v0", device=device),
-    "hopper_one_simple": lambda device: Dataset(env_id="Hopper-v5", path=custom_dataset_path("hopper_simple_one"), device=device),
+    "hopper_one_simple": lambda device: Dataset(env_id="Hopper-v5", path=custom_dataset_path("hopper_one_simple"), device=device),
     "hopper_one_medium": lambda device: Dataset(env_id="Hopper-v5", path=custom_dataset_path("hopper_medium_one"), device=device),
     "hopper_one_expert": lambda device: Dataset(env_id="Hopper-v5", path=custom_dataset_path("hopper_expert_one"), device=device),
     "hopper_random": lambda device: D4rlDataset(env_id="Hopper-v5", path=DATASETS_ROOT / Path("d4rl/hopper_random-v2/d4rl_data.hdf5"), device=device),

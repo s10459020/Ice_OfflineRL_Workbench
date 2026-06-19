@@ -111,8 +111,8 @@ class Dataset:
     def make_env(self, **kwargs):
         return gym.make(self.env_id, **kwargs)
 
-    def make_eval_env(self):
-        return gym.make(self.env_id)
+    def make_eval_env(self, **kwargs):
+        return gym.make(self.env_id, **kwargs)
 
     def make_render_env(self):
         return gym.make(self.env_id, render_mode="human")

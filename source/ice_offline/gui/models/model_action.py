@@ -71,6 +71,7 @@ class ActionModel:
         if not episodes:
             return []
         payload = episodes[episode][step]
+        action_step = min(step, len(self._actions_main[episode]) - 1)
         actions = np.asarray(payload["actions"], dtype=np.float32)
         values = np.asarray(payload["values"], dtype=np.float32)
         flat_actions = actions.reshape(actions.shape[0], -1)
@@ -93,7 +94,7 @@ class ActionModel:
                     label=f"a{dim}",
                     xs=flat_actions[start:end, dim].copy(),
                     ys=normalized_values,
-                    action_value=float(self._actions_main[episode][step].reshape(-1)[dim]),
+                    action_value=float(self._actions_main[episode][action_step].reshape(-1)[dim]),
                     source_min=source_min,
                     source_max=source_max,
                 )

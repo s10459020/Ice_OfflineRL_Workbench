@@ -2,8 +2,8 @@ from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import VIEW_ROOT
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.eval import eval
-from ice_offline.run.eval import eval_dataset
+from ice_offline.run.eval import cal_dataset
+from ice_offline.run.eval import cal_main
 from ice_offline.run.table import table_mean
 from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
@@ -16,6 +16,7 @@ TABLES = {
     # "hopper_d4rl_medium": {"lower": "hopper_random", "upper": "hopper_d4rl_medium"},
     # "hopper_d4rl_hybrid": {"lower": "hopper_random", "upper": "hopper_d4rl_hybrid"},
     # "hopper_d4rl_expert": {"lower": "hopper_random", "upper": "hopper_d4rl_expert"},
+    "hopper_one_simple": {"lower": "hopper_random", "upper": "hopper_one_simple"},
     "hopper_simple": {"lower": "hopper_random", "upper": "hopper_simple"},
     "hopper_medium": {"lower": "hopper_random", "upper": "hopper_medium"},
     "hopper_expert": {"lower": "hopper_random", "upper": "hopper_expert"},
@@ -40,9 +41,19 @@ TABLES = {
 }
 
 TASKS = [
-    ({"model_step": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
-    ({"model_step": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
-    ({"model_step": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
+    # ({"model_step": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
+    # ({"model_step": 200_000}, "hopper_medium", {}, "aspl", {"alpha": 0.5}),
+    # ({"model_step": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
+    ({"model_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_deterministic", {}),
+    ({"model_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_stochastic", {}),
+    ({"model_step": 20_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "td3bc", {}),
+    ({"model_step": 50_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql", {}),
+    ({"model_step": 50_000, "episodes": 5}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "aspl", {"alpha": 0.5}),
+    # ({"model_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "bc_deterministic", {}),
+    # ({"model_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "bc_stochastic", {}),
+    # ({"model_step": 20_000, "episodes": 20}, "hopper_one_simple", {}, "td3bc", {}),
+    # ({"model_step": 50_000, "episodes": 20}, "hopper_one_simple", {}, "cql", {}),
+    # ({"model_step": 50_000, "episodes": 20}, "hopper_one_simple", {}, "aspl", {"alpha": 0.5}),
     # ({"model_step": 200_000}, "hopper_simple", {}, "bc_deterministic", {}),
     # ({"model_step": 200_000}, "hopper_medium", {}, "bc_deterministic", {}),
     # ({"model_step": 200_000}, "hopper_expert", {}, "bc_deterministic", {}),
@@ -59,6 +70,7 @@ TASK_KWARGS = {
 }
 
 DATASETS = [
+    # ("hopper_one_simple", {}),
     # ("hopper_simple", {}),
     # ("hopper_medium", {}),
     # ("hopper_expert", {}),
@@ -66,10 +78,11 @@ DATASETS = [
 
 
 AGENTS = [
+    # ("bc_stochastic", {}),
     # ("aspl", {"alpha": 0.5}),
     # ("bc_deterministic", {}),
     # ("td3bc", {}),
-    # ("cql_soft_q", {"threshold": 1.5}),
+    # ("cql", {}),
 ]
 
 
@@ -96,7 +109,7 @@ def save_test_views(tasks: list[tuple[dict[str, object], str, dict[str, object],
     outputs: dict[str, tuple[object, object]] = {}
     for _, dataset_id, _, agent_id, _ in tasks:
         task_id = _task_id(dataset_id, agent_id)
-        returns_output_path, steps_output_path = eval(task_id)
+        returns_output_path, steps_output_path = cal_main(task_id)
         outputs[task_id] = (returns_output_path, steps_output_path)
         print(f"saved: {returns_output_path}")
         print(f"saved: {steps_output_path}")
@@ -106,10 +119,10 @@ def save_test_views(tasks: list[tuple[dict[str, object], str, dict[str, object],
 def save_dataset_views() -> None:
     outputs: dict[str, tuple[object, object]] = {}
     for dataset_id, bounds in TABLES.items():
-        outputs[dataset_id] = eval_dataset(dataset_id)
+        outputs[dataset_id] = cal_dataset(dataset_id)
         for value in [bounds["lower"], bounds["upper"]]:
             if isinstance(value, str):
-                outputs[value] = eval_dataset(value)
+                outputs[value] = cal_dataset(value)
     return outputs
 
 

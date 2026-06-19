@@ -4,7 +4,8 @@ import gymnasium as gym
 
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.dataset.base import Dataset
-from ice_offline.config.paths import data_path_test
+from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import main_data_path
 from ice_offline.tools.printer import print_stage
 from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state.hopper import HopperState, HopperStateIO
@@ -68,7 +69,7 @@ def collect(
         print_interval=print_interval,
     )
 
-    data_path = data_path_test(dataset.id, AGENT_ID)
+    data_path = main_data_path("test", _task_id(dataset.id, AGENT_ID))
     minari_data = minari_col.save(data_path, id=dataset.id, agent_id=AGENT_ID)
     state_data = state_col.save(data_path)
     minari_col.close()

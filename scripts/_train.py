@@ -5,11 +5,16 @@ from ice_offline.config.paths import plot_path
 from ice_offline.config.paths import returns_path
 from ice_offline.config.paths import steps_path
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.eval import eval
+from ice_offline.run.eval import cal_eval
 from ice_offline.run.plot import plot
 from ice_offline.run.train import train
 
 TASKS = [
+    ({"steps": 20_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_deterministic", {}),
+    ({"steps": 20_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_stochastic", {}),
+    ({"steps": 20_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "td3bc", {}),
+    ({"steps": 50_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql", {"threshold": 1.5}),
+    ({"steps": 50_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "aspl", {"alpha": 0.5}),
     # ({"steps": 200_000}, "hopper_simple", {}, "aspl", {"alpha": 0.5}),
     # ({"steps": 400_000}, "hopper_medium", {}, "aspl", {"alpha": 0.15}),
     # ({"steps": 200_000}, "hopper_expert", {}, "aspl", {"alpha": 0.5}),
@@ -23,7 +28,7 @@ TASKS = [
     # ({"steps": 200_000}, "hopper_simple", {}, "td3bc", {}),
     # ({"steps": 200_000}, "hopper_medium", {}, "td3bc", {}),
     # ({"steps": 200_000}, "hopper_expert", {}, "td3bc", {}),
-    ({"steps": 500_000}, "hopper_simple", {}, "cql_soft_q", {"threshold": 1.5}),
+    # ({"steps": 500_000}, "hopper_simple", {}, "cql_soft_q", {"threshold": 1.5}),
     # ({"steps": 500_000}, "hopper_medium", {}, "cql_soft_q", {"threshold": 1.0}),
     # ({"steps": 500_000}, "hopper_expert", {}, "cql_soft_q", {"threshold": 0.5}),
     # ({"steps": 500_000}, "hopper_simple", {}, "sdc_cql", {"threshold": 3}),
@@ -41,6 +46,7 @@ TASK_KWARGS = {
 }
 
 DATASETS = [
+    # ("hopper_one_simple", {}),
     # ("hopper_simple", {}),
     # ("hopper_medium", {}),
     # ("hopper_expert", {}),
@@ -51,7 +57,6 @@ AGENTS = [
     # ("bc_deterministic", {}),
     # ("bc_stochastic", {}),
     # ("td3bc", {}),
-    # ("iql", {}),
     # ("cql", {}),
     # ("cql_max_q", {}),
     # ("cql_soft_q", {"threshold": 1.5}),
@@ -82,7 +87,7 @@ def normalize_tasks() -> list[tuple[dict[str, object], str, dict[str, object], s
 
 def view_train(index: int, dataset_id: str, agent_id: str) -> None:
     task_id = _task_id(dataset_id, agent_id)
-    returns_output_path, steps_output_path = eval(task_id, "train")
+    returns_output_path, steps_output_path = cal_eval(task_id, "train")
     metrics_output_path = metric_path(task_id)
     output_path = plot_path(index, dataset_id, agent_id)
 
@@ -111,6 +116,7 @@ def main() -> None:
             agent=agent,
             dataset=dataset,
             task_id=task_id,
+            eval_env=dataset.make_eval_env(**dataset_kwargs),
             **task_kwargs,
         )
         print(f"saved: {path}")

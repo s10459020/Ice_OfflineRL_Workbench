@@ -16,7 +16,8 @@ from ice_offline.store.state.op_collector import StateCollectWrapper
 from ice_offline.store.state.op_dataset import StateDataset
 from ice_offline.store.eval.record import Evaluator
 from ice_offline.store.metric.record import MetricRecorder
-from ice_offline.config.paths import data_path_train
+from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import eval_data_path
 from ice_offline.tools.printer import print_stage
 
 
@@ -175,7 +176,7 @@ def collect(
         device=device,
     )
 
-    data_path = data_path_train(dataset.id, AGENT_ID)
+    data_path = eval_data_path("train", _task_id(dataset.id, AGENT_ID))
     minari_data = minari_col.save(data_path, id=dataset.id, agent_id=AGENT_ID)
     state_data = state_col.save(data_path)
     minari_col.close()
@@ -190,7 +191,6 @@ if __name__ == "__main__":
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
     print(f"state_data={state_data}")
-
 
 
 

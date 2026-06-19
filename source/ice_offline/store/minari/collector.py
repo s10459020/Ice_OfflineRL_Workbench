@@ -49,10 +49,8 @@ class MinariCollectorWrapper(minari.DataCollector):
         if eval_env is None:
             eval_env = self.env
         try:
-            try:
+            if (RUNS_ROOT / dataset_id).exists():
                 minari.delete_dataset(dataset_id)
-            except Exception as error:
-                pass
 
             dataset = self.create_dataset(
                 dataset_id=dataset_id,

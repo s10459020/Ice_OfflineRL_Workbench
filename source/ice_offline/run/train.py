@@ -6,7 +6,7 @@ from ice_offline.store.eval.collector import EvalCollector
 from ice_offline.dataset.base import Dataset
 from ice_offline.store.metric.record import MetricRecorder
 from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import data_path_train
+from ice_offline.config.paths import eval_data_path
 from ice_offline.tools.printer import print_stage
 
 
@@ -42,7 +42,7 @@ def train(
     task_id = task_id or _task_id(dataset.id, agent.id)
     eval_env = eval_env or dataset.make_eval_env()
 
-    path = data_path_train(task_id)
+    path = eval_data_path("train", task_id)
     resume_path = path if start > 0 else None
     eval_col = EvalCollector(eval_env, resume_path=resume_path)
     recorder = MetricRecorder(task_id, initialized=start > 0)

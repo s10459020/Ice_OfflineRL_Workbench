@@ -7,7 +7,7 @@ from ice_offline.store.probe.op_collector import ProbeInterface
 
 
 class ActionAxisProbe(ProbeInterface):
-    def __init__(self, sample_count: int = 300) -> None:
+    def __init__(self, sample_count: int = 3000) -> None:
         self._sample_count = sample_count
         self._env: gym.Env | None = None
 

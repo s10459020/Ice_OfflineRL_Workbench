@@ -2,19 +2,21 @@ import csv
 from pathlib import Path
 from typing import Callable
 
-from ice_offline.config.paths import data_path
+from ice_offline.config.paths import eval_data_path
+from ice_offline.config.paths import main_data_path
 from ice_offline.config.paths import returns_path
 from ice_offline.config.paths import steps_path
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.dataset._types import Episode
 from ice_offline.store.eval.loader import EvalLoader
+from ice_offline.store.minari.loader import MinariLoader
 
 
 # ====================
 # Public API
 # ====================
-def eval(task_id: str, mode: str = "test") -> tuple[Path, Path]:
-    input_path = data_path(mode, task_id)
+def cal_eval(task_id: str, mode: str = "train") -> tuple[Path, Path]:
+    input_path = eval_data_path(mode, task_id)
     returns_output_path = returns_path(mode, task_id)
     steps_output_path = steps_path(mode, task_id)
     loader = EvalLoader(input_path)
@@ -24,7 +26,18 @@ def eval(task_id: str, mode: str = "test") -> tuple[Path, Path]:
     return returns_output_path, steps_output_path
 
 
-def eval_dataset(dataset_id: str, mode: str = "dataset", device: str = "cuda") -> tuple[Path, Path]:
+def cal_main(task_id: str, mode: str = "test") -> tuple[Path, Path]:
+    input_path = main_data_path(mode, task_id)
+    returns_output_path = returns_path(mode, task_id)
+    steps_output_path = steps_path(mode, task_id)
+    loader = MinariLoader(input_path, device="cpu")
+    batches = [(1, loader.load_episodes())]
+    _write_csv(returns_output_path, "episode", _rows(batches, _return_value))
+    _write_csv(steps_output_path, "episode", _rows(batches, _step_value))
+    return returns_output_path, steps_output_path
+
+
+def cal_dataset(dataset_id: str, mode: str = "dataset", device: str = "cuda") -> tuple[Path, Path]:
     dataset = make_dataset(dataset_id, device=device)
     returns_output_path = returns_path(mode, dataset_id)
     steps_output_path = steps_path(mode, dataset_id)

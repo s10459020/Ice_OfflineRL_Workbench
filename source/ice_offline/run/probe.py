@@ -1,7 +1,7 @@
 import gymnasium as gym
 
-from ice_offline.config.paths import data_path
 from ice_offline.dataset.base import Dataset
+from ice_offline.config.paths import main_data_path
 from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.probe.op_collector import ProbeCollectWrapper
 from ice_offline.store.probe.op_collector import ProbeEvalFn
@@ -54,7 +54,7 @@ def probe(
 
     print_stage(f"Probe Replay {task_id}")
     replay(dataset, minari_col, episodes=episodes, seed=seed, print_interval=1)
-    path = data_path("probe", task_id)
+    path = main_data_path("probe", task_id)
     minari_col.save(path, id=task_id, agent_id=task_id)
     probe_data = probe_col.save(path)
     minari_col.close()

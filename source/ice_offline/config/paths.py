@@ -19,29 +19,16 @@ def _task_id(dataset_id: str, agent_id: str | None = None) -> str:
         return f"{dataset_id}-v0"
     return f"{dataset_id}-{agent_id}-v0"
 
-def data_path(mode: str, task_id: str) -> Path:
-    if mode == "collect":
-        return RUNS_ROOT / mode / task_id / "data" / "main_data.hdf5"
+def eval_data_path(mode: str, task_id: str) -> Path:
     return RUNS_ROOT / mode / task_id / "data" / "eval_data.hdf5"
-
-def data_path_train(task_id: str) -> Path:
-    return data_path("train", task_id)
 
 
 def custom_dataset_path(dataset_id: str) -> Path:
     return CUSTOM_DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
 
 
-def data_path_test(task_id: str) -> Path:
-    return data_path("test", task_id)
-
-
-def data_path_collect(task_id: str) -> Path:
-    return data_path("collect", task_id)
-
-
-def data_path_probe(task_id: str) -> Path:
-    return data_path("probe", task_id)
+def main_data_path(mode: str, task_id: str) -> Path:
+    return RUNS_ROOT / mode / task_id / "data" / "main_data.hdf5"
 
 
 def model_path(task_id: str, step: int) -> Path:

@@ -1,7 +1,7 @@
 import gymnasium as gym
 
 from ice_offline.agent._spec import Agent
-from ice_offline.config.paths import data_path
+from ice_offline.config.paths import main_data_path
 from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.tools.printer import print_stage
 
@@ -27,7 +27,7 @@ def test(
     print_interval: int = 1,
     seed: int = 42,
 ) -> object:
-    path = data_path("test", task_id)
+    path = main_data_path("test", task_id)
     minari_col = MinariCollectorWrapper(env)
 
     print_stage(f"Test {task_id}")
