@@ -24,7 +24,7 @@ TASKS = [
     # ({"steps": 500_000}, "hopper_medium", {}, "cql_soft_q", {"threshold": 1.0}),
     # ({"steps": 500_000}, "hopper_expert", {}, "cql_soft_q", {"threshold": 0.5}),
     # ({"steps": 500_000}, "hopper_simple", {}, "sdc_cql", {"threshold": 3}),
-    ({"steps": 500_000}, "hopper_medium", {}, "sdc_cql", {"threshold": 3}),
+    ({"steps": 500_000}, "hopper_medium", {}, "sdc_cql", {"threshold": 5}),
     # ({"steps": 500_000}, "hopper_expert", {}, "sdc_cql", {"threshold": 0.5}),
 ]
 
