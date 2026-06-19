@@ -16,6 +16,7 @@ from ice_offline.agent.scas_min import ScasMinAgent
 from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.agent.sdc_pre import SDCPreModel
 from ice_offline.agent.sdc_pre import SDCPreAgent
+from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.config.paths import model_path
 from ice_offline.dataset.base import Dataset
@@ -32,6 +33,7 @@ MODEL_TABLE: dict[str, Callable[[Dataset, str], Agent]] = {
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "bc_deterministic": lambda dataset, device, **agent_kwargs: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "bc_stochastic": lambda dataset, device, **agent_kwargs: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
+    "td3": lambda dataset, device, **agent_kwargs: TD3Agent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "td3bc": lambda dataset, device, **agent_kwargs: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "iql": lambda dataset, device, **agent_kwargs: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
     "cql": lambda dataset, device, **agent_kwargs: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **agent_kwargs),
