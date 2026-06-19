@@ -89,6 +89,14 @@ AGENTS = [
 TABLE_OUTPUT_DIR = VIEW_ROOT / "table"
 
 
+def unique_items(values: list[str]) -> list[str]:
+    result: list[str] = []
+    for value in values:
+        if value not in result:
+            result.append(value)
+    return result
+
+
 def normalize_tasks() -> list[tuple[dict[str, object], str, dict[str, object], str, dict[str, object]]]:
     if TASKS:
         return TASKS
@@ -131,7 +139,7 @@ def _table_inputs(
     test_outputs: dict[str, tuple[object, object]],
 ):
     dataset_ids = list(TABLES.keys())
-    agent_ids = [agent_id for _, _, _, agent_id, _ in tasks]
+    agent_ids = unique_items([agent_id for _, _, _, agent_id, _ in tasks])
     data_paths: list[list[object]] = []
     for dataset_id in dataset_ids:
         row: list[object] = [None for _ in agent_ids]
