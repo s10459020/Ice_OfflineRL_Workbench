@@ -1,5 +1,6 @@
 import math
 import gymnasium as gym
+from pathlib import Path
 from ice_offline.agent._spec import Agent
 from ice_offline.store.eval.collector import EvalCollector
 
@@ -23,6 +24,49 @@ def eval(agent: Agent, env: gym.Env, seed: int = 42, count: int = 10) -> list[fl
             result += float(r)
         returns.append(result)
     return returns
+
+
+def train_model(
+    agent: Agent,
+    dataset: Dataset,
+    *,
+    task_id: str | None = None,
+    start: int = 0,
+    steps: int = 200_000,
+    batch_size: int = 256,
+    save_interval: int = 20_000,
+    print_interval: int = 200,
+    seed: int = 42,
+) -> Path:
+    task_id = task_id or _task_id(dataset.id, agent.id)
+    recorder = MetricRecorder(task_id, initialized=start > 0)
+
+    print_stage(f"Train {agent.id} in {dataset.id}")
+    path: Path | None = None
+
+    for step in range(start + 1, steps + 1):
+        now_seed = seed + step
+        agent.set_seed(now_seed)
+        dataset.set_seed(now_seed)
+
+        batch = dataset.sample_batch(batch_size)
+        metrics = agent.update_with_metrics(batch)
+
+        for name, value in metrics.items():
+            recorder.add(name, value)
+        recorder.flush(step)
+
+        if print_interval > 0 and step % print_interval == 0:
+            metrics = recorder.last
+            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+            print(f"train step={step}", *parts)
+
+        if step % save_interval == 0 or step == steps:
+            path = agent.save(task_id, step)
+
+    if path is None:
+        return agent.save(task_id, start)
+    return path
 
 def train(
     agent: Agent,
@@ -98,7 +142,6 @@ if __name__ == "__main__":
     data = Dataset(path=path, loader=loader, device=device)
     print(f"total_episodes={data.episode_count}")
     print(f"total_steps={data.count}")
-
 
 
 

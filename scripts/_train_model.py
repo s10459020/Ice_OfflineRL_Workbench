@@ -1,7 +1,7 @@
 from ice_offline.agent._lookup import make_model
 from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.train import train
+from ice_offline.run.train import train_model
 
 TASKS = [
     ({"steps": 100_000}, "hopper_d4rl_medium", "scas_model", {}),
@@ -14,19 +14,19 @@ TASKS = [
 
 TASK_KWARGS = {
     # "start": 0,
-    "steps": 100_000,
-    "save_interval": 20_000,
-    "print_interval": 200,
+    # "steps": 100_000,
+    # "save_interval": 20_000,
+    # "print_interval": 200,
 }
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    "hopper_d4rl_hybrid",
-    "hopper_d4rl_expert",
+    # "hopper_d4rl_medium",
+    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_expert",
 ]
 
 MODELS = [
-    ("scas_model", {}),
+    # ("scas_model", {}),
     # ("sdc_model", {}),
 ]
 
@@ -61,13 +61,11 @@ def main() -> None:
             f"task={task_id}, dataset={dataset.id}, model={model.id}, "
             f"model_kwargs={model_kwargs}"
         )
-        train_kwargs = dict(task_kwargs)
-        train_kwargs.setdefault("eval_interval", 0)
-        path = train(
+        path = train_model(
             agent=model,
             dataset=dataset,
             task_id=task_id,
-            **train_kwargs,
+            **task_kwargs,
         )
         print(f"saved: {path}")
 
