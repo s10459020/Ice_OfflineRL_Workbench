@@ -1,3 +1,4 @@
+from ice_offline.agent._lookup import MODEL_AGENT_MODEL_TABLE
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import metric_path
@@ -15,27 +16,28 @@ TASKS = [
     # ({"steps": 50_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "td3bc", {}),
     # ({"steps": 100_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql_soft_q", {"threshold": 1.5}),
     # ({"steps": 100_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "aspl", {"alpha": 0.5}),
-    # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "bc_deterministic", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "bc_deterministic", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_expert", {}, "bc_deterministic", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "bc_stochastic", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "bc_stochastic", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_expert", {}, "bc_stochastic", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "td3bc", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "td3bc", {}),
-    # ({"steps": 200_000}, "hopper_d4rl_expert", {}, "td3bc", {}),
-    # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "cql_soft_q", {"threshold": 1.5}),
-    # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "cql_soft_q", {"threshold": 1.5}),
-    # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "cql_soft_q", {"threshold": 1.0}),
-    # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "aspl", {"alpha": 0.5}),
-    # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "aspl", {"alpha": 0.5}),
-    # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "aspl", {"alpha": 1}),
+    ({"steps": 200_000}, "hopper_d4rl_medium", {}, "bc_deterministic", {}),
+    ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "bc_deterministic", {}),
+    ({"steps": 200_000}, "hopper_d4rl_expert", {}, "bc_deterministic", {}),
+    ({"steps": 200_000}, "hopper_d4rl_medium", {}, "bc_stochastic", {}),
+    ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "bc_stochastic", {}),
+    ({"steps": 200_000}, "hopper_d4rl_expert", {}, "bc_stochastic", {}),
+    ({"steps": 200_000}, "hopper_d4rl_medium", {}, "td3bc", {}),
+    ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "td3bc", {}),
+    ({"steps": 200_000}, "hopper_d4rl_expert", {}, "td3bc", {}),
+    ({"steps": 500_000}, "hopper_d4rl_medium", {}, "cql_soft_q", {"threshold": 1.5}),
+    ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "cql_soft_q", {"threshold": 1.5}),
+    ({"steps": 500_000}, "hopper_d4rl_expert", {}, "cql_soft_q", {"threshold": 1.0}),
+    ({"steps": 500_000}, "hopper_d4rl_medium", {}, "aspl", {"alpha": 0.5}),
+    ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "aspl", {"alpha": 0.5}),
+    ({"steps": 500_000}, "hopper_d4rl_expert", {}, "aspl", {"alpha": 1}),
     ({"steps": 500_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 10}),
     ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "sdc_cql", {"threshold": 5}),
     ({"steps": 500_000}, "hopper_d4rl_expert", {}, "sdc_cql", {"threshold": 0.5}),
-    # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "scas", {}),
-    # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "scas", {}),
-    # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "scas", {}),
+    ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas_min", {}),
+    ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas_min", {}),
+    ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas_min", {}),
+
 ]
 
 TASK_KWARGS = {
@@ -105,6 +107,8 @@ def main() -> None:
     for task_kwargs, dataset_id, dataset_kwargs, agent_id, agent_kwargs in tasks:
         dataset = make_dataset(dataset_id, device="cuda")
         model_step = task_kwargs.get("model_step")
+        if model_step is None and agent_id in MODEL_AGENT_MODEL_TABLE:
+            model_step = DEFAULT_MODEL_STEP
         agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step, **agent_kwargs)
 
         task_id = _task_id(dataset.id, agent.id)
