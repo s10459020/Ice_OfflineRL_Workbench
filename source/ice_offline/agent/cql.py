@@ -26,22 +26,20 @@ class _CQLActor(SACActor):
 class _CQLMultiplier(torch.nn.Module):
     def __init__(self, 
             learning_rate: float = 1e-4, 
-            initial_multiplier: float = 10.0, 
+            scale_init: float = 10.0, 
             threshold: float = 2, 
         ):
         super().__init__()
         self.threshold = threshold
 
-        tensor = torch.full((1, 1), math.log(initial_multiplier), dtype=torch.float32)
-        self.log_alpha = torch.nn.Parameter(tensor)
+        tensor = torch.full((1, 1), math.log(scale_init), dtype=torch.float32)
+        self.log_scale = torch.nn.Parameter(tensor)
         self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
 
     def forward(self) -> torch.Tensor:
-        return self.log_alpha.exp().clamp(0.0, 1e6)
+        return self.log_scale.exp().clamp(0.0, 1e6)
 
     def loss(self, loss_suppress: torch.Tensor) -> torch.Tensor:
-        # loss = -E[ alpha * L_suppress_gap ]
-        # Lagrangian dual，若L_suppress項長期大於threshold，則加強修改力度
         gap = loss_suppress - self.threshold
         return -(self() * gap).mean()
 
@@ -74,8 +72,8 @@ class CQLAgent(SACAgent):
     actor_learning_rate: float = 1e-4
     critic_learning_rate: float = 3e-4
     temp_learning_rate: float = 1e-4
-    cql_multiplier_learning_rate: float = 1e-4
-    initial_multiplier: float = 10.0
+    multiplier_learning_rate: float = 1e-4
+    scale_init: float = 10.0
     threshold: float = 1.0
     update_step = 0
 
@@ -87,8 +85,8 @@ class CQLAgent(SACAgent):
         self.actor = _CQLActor(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
         self.critic = _CQLCritic(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
         self.multiplier = _CQLMultiplier(
-            learning_rate=self.cql_multiplier_learning_rate,
-            initial_multiplier=self.initial_multiplier,
+            learning_rate=self.multiplier_learning_rate,
+            scale_init=self.scale_init,
             threshold=self.threshold,
         ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.actor_learning_rate)

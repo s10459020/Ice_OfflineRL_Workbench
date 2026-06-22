@@ -209,10 +209,10 @@ class SDCModel(Agent):
 @dataclass
 class SDCAgent(SACAgent):
     model: SDCModel | None = None
-    state_noise_beta: float = 0.1
-    sdc_weight: float = 1.0
-    sdc_threshold: float = 0.05
-    sdc_samples: int = 4
+    scale_noise: float = 0.1
+    weight_penalty: float = 1.0
+    threshold_penalty: float = 0.05
+    count_sample: int = 4
     mmd_sigma: float = 10.0
 
     def __post_init__(self) -> None:
@@ -233,24 +233,26 @@ class SDCAgent(SACAgent):
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         loss_sdc = self.loss_state_deviation(batch)
-        return self.loss_sac(batch) + self.sdc_weight * (loss_sdc - self.sdc_threshold)
+        return self.loss_sac(batch) + self.weight_penalty * (
+            loss_sdc - self.threshold_penalty
+        )
 
     def loss_state_deviation(self, batch: Batch) -> torch.Tensor:
         o, _, _, _, _ = batch
         batch_size = o.shape[0]
-        o_noisy = o[:, None, :] + self.state_noise_beta * torch.randn(
+        o_noisy = o[:, None, :] + self.scale_noise * torch.randn(
             batch_size,
-            self.sdc_samples,
+            self.count_sample,
             self.obs_size,
             device=o.device,
         )
-        o_flat = o_noisy.reshape(batch_size * self.sdc_samples, self.obs_size)
+        o_flat = o_noisy.reshape(batch_size * self.count_sample, self.obs_size)
         a_flat, _ = self.actor.sample(o_flat)
         dynamics_next = self.model.dynamics.sample(o_flat, a_flat)
 
         with torch.no_grad():
-            transition_next = self.model.transition.sample(o, self.sdc_samples).reshape(
-                batch_size * self.sdc_samples,
+            transition_next = self.model.transition.sample(o, self.count_sample).reshape(
+                batch_size * self.count_sample,
                 self.obs_size,
             )
         return self.mmd(dynamics_next, transition_next)

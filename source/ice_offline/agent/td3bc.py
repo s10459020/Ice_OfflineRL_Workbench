@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import torch
 
 from ice_offline.agent._spec import MetricValues
@@ -7,10 +5,28 @@ from ice_offline.agent.td3 import TD3Agent
 from ice_offline.dataset._types import Batch
 
 
-@dataclass
 class TD3BCAgent(TD3Agent):
     id: str = "td3bc"
-    alpha: float = 2.5
+    weight_td3: float = 2.5
+
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        config: dict[str, object] = {},
+        device: str = "cuda",
+    ) -> None:
+        self.id = self.config_id(config, "td3bc")
+        self.weight_td3 = config.get("weight_td3", 2.5)
+        super().__init__(
+            obs_size=obs_size,
+            act_size=act_size,
+            config=config,
+            device=device,
+        )
+
+    def config_id(self, config: dict[str, object], default: str) -> str:
+        return str(config.get("id", default))
 
     # ====================
     # Update
@@ -38,7 +54,7 @@ class TD3BCAgent(TD3Agent):
         if self.update_step % self.update_actor_interval == 0:
             loss_td3 = self.loss_td3(batch)
             loss_bc = self.loss_bc(batch)
-            loss_actor = self.alpha * loss_td3 + loss_bc
+            loss_actor = self.weight_td3 * loss_td3 + loss_bc
             grad_td3 = self._grad_norm(loss_td3, self.actor.parameters())
             grad_bc = self._grad_norm(loss_bc, self.actor.parameters())
             grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
@@ -69,5 +85,5 @@ class TD3BCAgent(TD3Agent):
         return ((a - a_pred) ** 2).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        return self.alpha * self.loss_td3(batch) + self.loss_bc(batch)
+        return self.weight_td3 * self.loss_td3(batch) + self.loss_bc(batch)
 

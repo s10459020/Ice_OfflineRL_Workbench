@@ -32,5 +32,7 @@ class SDCCQLAgent(SDCAgent, CQLAgent):
     def loss_critic(self, batch: Batch) -> torch.Tensor:
         loss_td = self.loss_td(batch)
         loss_suppress = CQLAgent.loss_suppress(self, batch)
-        return loss_td + self.multiplier() * (loss_suppress - self.threshold)
+        return loss_td + self.multiplier() * (
+            loss_suppress - self.threshold
+        )
 

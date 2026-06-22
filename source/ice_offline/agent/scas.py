@@ -5,6 +5,8 @@ import torch.nn.functional as F
 
 from ice_offline.agent._spec import MetricValues
 from ice_offline.agent._spec import Agent
+from ice_offline.agent.td3 import _Pi
+from ice_offline.agent.td3 import _Q
 from ice_offline.agent.td3 import TD3Actor
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3 import TD3Critic
@@ -94,19 +96,50 @@ class ScasDynamic(Agent):
         return F.mse_loss(pred, sn)
         
 
-@dataclass
 class ScasAgent(TD3Agent):
     dynamics: ScasDynamic | None = None
     actor_learning_rate: float = 2e-4
     critic_learning_rate: float = 3e-4
-    alpha: float = 5.0
-    lmbda: float = 0.25
+    scale_gap: float = 5.0
+    weight_correction: float = 0.25
     q_count: int = 4
-    max_weight: float = 50.0
+    cap_weight: float = 50.0
 
-    def __post_init__(self) -> None:
-        self.actor = TD3Actor(self.obs_size, self.act_size).to(self.device)
-        self.critic = TD3Critic(self.obs_size, self.act_size, q_count=self.q_count).to(self.device)
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        dynamics: ScasDynamic | None = None,
+        config: dict[str, object] = {},
+        device: str = "cuda",
+    ) -> None:
+        cfg = config
+        self.dynamics = dynamics
+        self.scale_gap = cfg.get("scale_gap", 5.0)
+        self.weight_correction = cfg.get("weight_correction", 0.25)
+        self.cap_weight = cfg.get("cap_weight", 50.0)
+        super().__init__(
+            obs_size=obs_size,
+            act_size=act_size,
+            config=cfg,
+            device=device,
+        )
+        self.actor = TD3Actor(
+            self.obs_size,
+            self.act_size,
+            tau=cfg.get("actor_tau", 0.005),
+            noise_scale=cfg.get("actor_noise_scale", 0.2),
+            noise_clip=cfg.get("actor_noise_clip", 0.5),
+            max_action=cfg.get("actor_max_action", 1.0),
+            pi_cls=cfg.get("actor_pi_cls", _Pi),
+        ).to(self.device)
+        self.critic = TD3Critic(
+            self.obs_size,
+            self.act_size,
+            q_count=self.q_count,
+            q_cls=cfg.get("critic_q_cls", _Q),
+            tau=cfg.get("critic_tau", 0.005),
+        ).to(self.device)
         self.dynamics.prepare()
         self.dynamics.model = self.dynamics.model.to(self.device)
 
@@ -119,8 +152,8 @@ class ScasAgent(TD3Agent):
     # ====================
     # Actor loss
     # ====================    
-    def loss_correction(self, batch: Batch) -> torch.Tensor:
-        # loss = E_{s,s'~D, ps~perturbed(s)} [exp( alpha* ( V' - V ) ) * ||M(ps,a) - s'||^2]
+    def loss_state_correction(self, batch: Batch) -> torch.Tensor:
+        # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps,a) - s'||^2]
         s, _, _, sn, _ = batch
         a = self.actor.pi(s)
         v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))
@@ -128,8 +161,8 @@ class ScasAgent(TD3Agent):
         vn = self.critic.q_mean(sn, an) # scas V(s') = Q(s', pi(s'))
 
         weight = (
-            self.alpha * (vn.detach() - v.detach())
-        ).exp().clamp(max = self.max_weight)
+            self.scale_gap * (vn.detach() - v.detach())
+        ).exp().clamp(max=self.cap_weight)
 
         ps = self.dynamics.noise_state(s)
         pa = self.actor.pi(ps)
@@ -137,4 +170,7 @@ class ScasAgent(TD3Agent):
         return (weight * mse_M).mean() # mean over batch
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        return (1.0 - self.lmbda) * self.loss_td3(batch) + self.lmbda * self.loss_correction(batch)
+        return (
+            (1.0 - self.weight_correction) * self.loss_td3(batch)
+            + self.weight_correction * self.loss_state_correction(batch)
+        )

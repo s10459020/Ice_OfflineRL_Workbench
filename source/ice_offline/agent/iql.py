@@ -125,8 +125,8 @@ class IQLAgent(Agent):
     actor_learning_rate: float = 3e-4
     critic_learning_rate: float = 3e-4
     gamma: float = 0.99
-    beta: float = 3.0
-    max_weight: float = 100.0
+    advantage_scale: float = 3.0
+    cap_weight: float = 100.0
     device: str = "cuda"
 
     def __post_init__(self) -> None:
@@ -251,12 +251,12 @@ class IQLAgent(Agent):
     # ====================
     def weight(self, batch: Batch) -> torch.Tensor:
         o, a, _, _, _ = batch
-        # weight = -exp( beta * (Q - V))
+        # weight = -exp( scale * (Q - V))
         with torch.no_grad():
             q_t = self.critic.target_q_min(o, a)
             v_t = self.critic.v(o)
             adv = q_t - v_t
-            return -(self.beta * adv).exp().clamp(max=self.max_weight)
+            return -(self.advantage_scale * adv).exp().clamp(max=self.cap_weight)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         o, a, _, _, _ = batch
