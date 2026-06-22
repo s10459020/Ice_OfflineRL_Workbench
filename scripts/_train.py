@@ -35,9 +35,9 @@ TASKS = [
     # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 10}),
     # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "sdc_cql", {"threshold": 5}),
     # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "sdc_cql", {"threshold": 0.5}),
-    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas_pre", {}),
-    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas_pre", {}),
-    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas_pre", {}),
+    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas", {}),
+    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas", {}),
+    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas", {}),
 
 ]
 
@@ -66,9 +66,8 @@ AGENTS = [
     # ("cql", {"threshold": 1.5}),
     # ("aspl", {"alpha": 0.5}),
     # ("sdc_cql", {"threshold": 2}),
-    # ("sdc_pre", {}),
+    # ("sdc", {}),
     # ("scas", {}),
-    # ("scas_pre", {}),
     # ("scas_aspl", {}),
 ]
 
