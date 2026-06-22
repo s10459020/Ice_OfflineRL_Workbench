@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -46,7 +45,6 @@ class _TransitionModel(torch.nn.Module):
 
 @dataclass
 class SDCCQLAgent(CQLAgent):
-    agent_name: ClassVar[str] = "sdc_cql"
     state_noise_beta: float = 0.1
     state_transition_noise_size: int = 8
     sdc_weight: float = 1.0

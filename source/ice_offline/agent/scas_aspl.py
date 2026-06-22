@@ -1,18 +1,16 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
 
 from ice_offline.agent.aspl import AsplActor
 from ice_offline.agent.aspl import AsplCritic
-from ice_offline.agent.scas_min import ScasMinAgent
+from ice_offline.agent.scas_pre import ScasPreAgent
 from ice_offline.dataset._types import Batch
 
 
 @dataclass
-class ScasAsplAgent(ScasMinAgent):
-    agent_name: ClassVar[str] = "scas_aspl"
+class ScasAsplAgent(ScasPreAgent):
     aspl_alpha: float = 2.5
 
     def __post_init__(self) -> None:

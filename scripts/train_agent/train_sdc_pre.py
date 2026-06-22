@@ -32,6 +32,7 @@ BATCH_SIZE = 256
 EVAL_EPISODES = 10
 DEVICE = "cuda:0"
 AGENT_ID = "sdc_pre"
+MODEL_ID = "sdc_model"
 
 
 def print_latest(step: int, recorder: MetricRecorder) -> None:
@@ -117,7 +118,7 @@ def train(
         act_size=dataset.act_dim,
         device=device,
     )
-    model_recorder = MetricRecorder(dataset.id, state_models.agent_name)
+    model_recorder = MetricRecorder(dataset.id, MODEL_ID)
     for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_model_with_record(model_recorder, state_models, batch)
@@ -191,7 +192,6 @@ if __name__ == "__main__":
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
     print(f"state_data={state_data}")
-
 
 
 

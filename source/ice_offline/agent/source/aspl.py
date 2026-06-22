@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -144,7 +143,6 @@ class AsplCritic(TD3Critic):
 
 @dataclass
 class AsplAgent(TD3Agent):
-    agent_name: ClassVar[str] = "aspl"
     alpha: float = 2.5
     learning_rate: float = 3e-4
 

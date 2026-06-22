@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -114,7 +113,6 @@ class SDCPreModel(Agent):
 
 @dataclass
 class SDCPreAgent(CQLAgent):
-    agent_name: ClassVar[str] = "sdc_pre"
     state_models: SDCPreModel | None = None
     state_transition_noise_size: int = 8
     state_noise_beta: float = 0.1

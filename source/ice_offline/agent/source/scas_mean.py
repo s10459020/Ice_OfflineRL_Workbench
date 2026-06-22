@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 
@@ -9,7 +8,6 @@ from ice_offline.agent.scas_min import ScasMinAgent
 
 @dataclass
 class ScasMeanAgent(ScasMinAgent):
-    agent_name: ClassVar[str] = "scas_mean"
     # ====================
     # Critic loss
     # ====================

@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 
@@ -8,7 +7,6 @@ from ice_offline.agent.cql_soft_q import CQLSoftQAgent
 
 @dataclass
 class CQLMaxQAgent(CQLSoftQAgent):
-    agent_name: ClassVar[str] = "cql_max_q"
     # ====================
     # Critic target
     # ====================

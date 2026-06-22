@@ -32,6 +32,7 @@ BATCH_SIZE = 256
 EVAL_EPISODES = 10
 DEVICE = "cuda:0"
 AGENT_ID = "scas_aspl"
+MODEL_ID = f"{AGENT_ID}_dynamics"
 
 
 def print_latest(step: int, recorder: MetricRecorder) -> None:
@@ -113,8 +114,7 @@ def train(
         act_size=dataset.act_dim,
         device=device,
     )
-    dynamics.agent_name = f"{AGENT_ID}_dynamics"
-    model_recorder = MetricRecorder(dataset.id, dynamics.agent_name)
+    model_recorder = MetricRecorder(dataset.id, MODEL_ID)
     for step in range(1, model_steps + 1):
         batch = dataset.sample_batch(batch_size)
         update_dynamic_with_record(model_recorder, dynamics, batch)
@@ -192,7 +192,6 @@ if __name__ == "__main__":
     print(f"total_episodes={minari_data.total_episodes}")
     print(f"total_steps={minari_data.total_steps}")
     print(f"state_data={state_data}")
-
 
 
 

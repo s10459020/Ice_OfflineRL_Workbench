@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import torch
 import torch.nn.functional as F
@@ -96,8 +95,7 @@ class ScasDynamic(Agent):
         
 
 @dataclass
-class ScasMinAgent(TD3Agent):
-    agent_name: ClassVar[str] = "scas_min"
+class ScasPreAgent(TD3Agent):
     dynamics: ScasDynamic | None = None
     actor_learning_rate: float = 2e-4
     critic_learning_rate: float = 3e-4
@@ -109,7 +107,8 @@ class ScasMinAgent(TD3Agent):
     def __post_init__(self) -> None:
         self.actor = TD3Actor(self.obs_size, self.act_size).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, q_count=self.q_count).to(self.device)
-        self.dynamics = self.dynamics.prepare().to(self.device)
+        self.dynamics.prepare()
+        self.dynamics.model = self.dynamics.model.to(self.device)
 
         self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.actor_learning_rate)
         self.critic_optimizer = torch.optim.Adam(
@@ -134,13 +133,8 @@ class ScasMinAgent(TD3Agent):
 
         ps = self.dynamics.noise_state(s)
         pa = self.actor.pi(ps)
-        mse_M = (self.dynamics(ps, pa) - sn) ** 2
+        mse_M = (self.dynamics.model(ps, pa) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         return (1.0 - self.lmbda) * self.loss_td3(batch) + self.lmbda * self.loss_correction(batch)
-
-
-
-
-

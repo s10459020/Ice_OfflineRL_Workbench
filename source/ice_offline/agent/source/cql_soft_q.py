@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 import math
 import torch
@@ -91,7 +90,6 @@ class _CQLCritic(SACCritic):
 
 @dataclass
 class CQLSoftQAgent(SACAgent):
-    agent_name: ClassVar[str] = "cql_soft_q"
     actor_learning_rate: float = 1e-4
     critic_learning_rate: float = 3e-4
     temp_learning_rate: float = 1e-4

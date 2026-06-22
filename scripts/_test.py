@@ -37,18 +37,18 @@ TASKS = [
     ({"agent_step": 200_000}, "hopper_d4rl_medium", {}, "td3bc", {}),
     ({"agent_step": 200_000}, "hopper_d4rl_hybrid", {}, "td3bc", {}),
     ({"agent_step": 200_000}, "hopper_d4rl_expert", {}, "td3bc", {}),
-    ({"agent_step": 200_000}, "hopper_d4rl_medium", {}, "cql_soft_q", {"threshold": 1.5}),
-    ({"agent_step": 200_000}, "hopper_d4rl_hybrid", {}, "cql_soft_q", {"threshold": 1.5}),
-    ({"agent_step": 200_000}, "hopper_d4rl_expert", {}, "cql_soft_q", {"threshold": 1.0}),
+    ({"agent_step": 200_000}, "hopper_d4rl_medium", {}, "cql", {"threshold": 1.5}),
+    ({"agent_step": 200_000}, "hopper_d4rl_hybrid", {}, "cql", {"threshold": 1.5}),
+    ({"agent_step": 200_000}, "hopper_d4rl_expert", {}, "cql", {"threshold": 1.0}),
     # ({"agent_step": 500_000}, "hopper_d4rl_medium", {}, "aspl", {"alpha": 0.5}),
     # ({"agent_step": 500_000}, "hopper_d4rl_hybrid", {}, "aspl", {"alpha": 0.5}),
     # ({"agent_step": 500_000}, "hopper_d4rl_expert", {}, "aspl", {"alpha": 1}),
     # ({"agent_step": 500_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 10}),
     # ({"agent_step": 500_000}, "hopper_d4rl_hybrid", {}, "sdc_cql", {"threshold": 5}),
     # ({"agent_step": 500_000}, "hopper_d4rl_expert", {}, "sdc_cql", {"threshold": 0.5}),
-    # ({"agent_step": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas_min", {}),
-    # ({"agent_step": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas_min", {}),
-    # ({"agent_step": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas_min", {}),
+    # ({"agent_step": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas_pre", {}),
+    # ({"agent_step": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas_pre", {}),
+    # ({"agent_step": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas_pre", {}),
 ]
 
 TASK_KWARGS = {
@@ -153,7 +153,13 @@ def main() -> None:
 
     for task_kwargs, dataset_id, env_kwargs, agent_id, agent_kwargs in tasks:
         dataset = make_dataset(dataset_id, device="cuda")
-        agent = make_agent(agent_id, dataset, device="cuda", **agent_kwargs)
+        agent = make_agent(
+            agent_id,
+            dataset,
+            device="cuda",
+            model_step=task_kwargs.get("model_step"),
+            **agent_kwargs,
+        )
 
         task_id = _task_id(dataset.id, agent.id)
         agent_step = task_kwargs.get("agent_step", 0)

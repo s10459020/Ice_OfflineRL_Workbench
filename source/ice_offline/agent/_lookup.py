@@ -5,13 +5,11 @@ from ice_offline.agent.aspl import AsplAgent
 from ice_offline.agent.bc_deterministic import BCDeterministicAgent
 from ice_offline.agent.bc_stochastic import BCStochasticAgent
 from ice_offline.agent.cql import CQLAgent
-from ice_offline.agent.cql_max_q import CQLMaxQAgent
-from ice_offline.agent.cql_soft_q import CQLSoftQAgent
+from ice_offline.agent.scas import ScasAgent
+from ice_offline.agent.scas_pre import ScasDynamic
+from ice_offline.agent.scas_pre import ScasPreAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scas_aspl import ScasAsplAgent
-from ice_offline.agent.scas_min import ScasDynamic
-from ice_offline.agent.scas_mean import ScasMeanAgent
-from ice_offline.agent.scas_min import ScasMinAgent
 from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.agent.sdc_pre import SDCPreModel
 from ice_offline.agent.sdc_pre import SDCPreAgent
@@ -37,22 +35,19 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "td3bc": lambda dataset, device, **kwargs: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
     "iql": lambda dataset, device, **kwargs: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
     "cql": lambda dataset, device, **kwargs: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "cql_max_q": lambda dataset, device, **kwargs: CQLMaxQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "cql_soft_q": lambda dataset, device, **kwargs: CQLSoftQAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
     "aspl": lambda dataset, device, **kwargs: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
+    "scas": lambda dataset, device, **kwargs: ScasAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
     "sdc_cql": lambda dataset, device, **kwargs: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
 }
 
 MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
-    "scas_min": lambda dataset, device, model, **kwargs: ScasMinAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, device=device, **kwargs),
-    "scas_mean": lambda dataset, device, model, **kwargs: ScasMeanAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, device=device, **kwargs),
+    "scas_pre": lambda dataset, device, model, **kwargs: ScasPreAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, device=device, **kwargs),
     "scas_aspl": lambda dataset, device, model, **kwargs: ScasAsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, device=device, **kwargs),
     "sdc_pre": lambda dataset, device, model, **kwargs: SDCPreAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, state_models=model, device=device, **kwargs),
 }
 
 MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
-    "scas_min": "scas_model",
-    "scas_mean": "scas_model",
+    "scas_pre": "scas_model",
     "scas_aspl": "scas_model",
     "sdc_pre": "sdc_model",
 }

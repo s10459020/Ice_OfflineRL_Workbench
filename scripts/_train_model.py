@@ -1,6 +1,9 @@
 from ice_offline.agent._lookup import make_model
 from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import metric_path
+from ice_offline.config.paths import plot_path
 from ice_offline.dataset._lookup import make_dataset
+from ice_offline.run.plot import plot
 from ice_offline.run.train import train_model
 
 TASKS = [
@@ -52,8 +55,19 @@ def normalize_tasks() -> list[tuple[dict[str, object], str, str, dict[str, objec
     ]
 
 
+def view_model(index: int, dataset_id: str, model_id: str) -> None:
+    task_id = _task_id(dataset_id, model_id)
+    metrics_output_path = metric_path(task_id)
+    output_path = plot_path(index, dataset_id, model_id)
+
+    print(f"plot dataset={dataset_id}, model={model_id}")
+    plot([metrics_output_path], [], output_path)
+    print(f"saved: {output_path}")
+
+
 def main() -> None:
     tasks = normalize_tasks()
+    dataset_ids = [dataset_id for _, dataset_id, _, _ in tasks]
 
     for task_kwargs, dataset_id, model_id, model_kwargs in tasks:
         dataset = make_dataset(dataset_id, device="cuda")
@@ -74,6 +88,7 @@ def main() -> None:
             **task_kwargs,
         )
         print(f"saved: {path}")
+        view_model(dataset_ids.index(dataset_id) + 1, dataset_id, model_id)
 
 
 if __name__ == "__main__":

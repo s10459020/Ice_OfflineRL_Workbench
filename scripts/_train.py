@@ -1,3 +1,4 @@
+from ice_offline.agent._lookup import DEFAULT_MODEL_STEP
 from ice_offline.agent._lookup import MODEL_AGENT_MODEL_TABLE
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
@@ -14,7 +15,7 @@ TASKS = [
     # ({"steps": 50_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_deterministic", {}),
     # ({"steps": 50_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "bc_stochastic", {}),
     # ({"steps": 50_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "td3bc", {}),
-    # ({"steps": 100_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql_soft_q", {"threshold": 1.5}),
+    # ({"steps": 100_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "cql", {"threshold": 1.5}),
     # ({"steps": 100_000}, "hopper_one_simple", {"reset_noise_scale": 0.0}, "aspl", {"alpha": 0.5}),
     # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "bc_deterministic", {}),
     # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "bc_deterministic", {}),
@@ -25,18 +26,18 @@ TASKS = [
     # ({"steps": 200_000}, "hopper_d4rl_medium", {}, "td3bc", {}),
     # ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "td3bc", {}),
     # ({"steps": 200_000}, "hopper_d4rl_expert", {}, "td3bc", {}),
-    ({"steps": 200_000}, "hopper_d4rl_medium", {}, "cql_soft_q", {"threshold": 1.5}),
-    ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "cql_soft_q", {"threshold": 1.5}),
-    ({"steps": 200_000}, "hopper_d4rl_expert", {}, "cql_soft_q", {"threshold": 1.0}),
+    ({"steps": 200_000}, "hopper_d4rl_medium", {}, "cql", {"threshold": 1.5}),
+    ({"steps": 200_000}, "hopper_d4rl_hybrid", {}, "cql", {"threshold": 1.5}),
+    ({"steps": 200_000}, "hopper_d4rl_expert", {}, "cql", {"threshold": 1.0}),
     # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "aspl", {"alpha": 0.5}),
     # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "aspl", {"alpha": 0.5}),
     # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "aspl", {"alpha": 1}),
     # ({"steps": 500_000}, "hopper_d4rl_medium", {}, "sdc_cql", {"threshold": 10}),
     # ({"steps": 500_000}, "hopper_d4rl_hybrid", {}, "sdc_cql", {"threshold": 5}),
     # ({"steps": 500_000}, "hopper_d4rl_expert", {}, "sdc_cql", {"threshold": 0.5}),
-    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas_min", {}),
-    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas_min", {}),
-    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas_min", {}),
+    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_medium", {}, "scas_pre", {}),
+    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_hybrid", {}, "scas_pre", {}),
+    # ({"steps": 500_000, "model_step": 100_000}, "hopper_d4rl_expert", {}, "scas_pre", {}),
 
 ]
 
@@ -62,13 +63,12 @@ AGENTS = [
     # ("bc_stochastic", {}),
     # ("td3bc", {}),
     # ("cql", {}),
-    # ("cql_max_q", {}),
-    # ("cql_soft_q", {"threshold": 1.5}),
+    # ("cql", {"threshold": 1.5}),
     # ("aspl", {"alpha": 0.5}),
     # ("sdc_cql", {"threshold": 2}),
     # ("sdc_pre", {}),
-    # ("scas_min", {}),
-    # ("scas_mean", {}),
+    # ("scas", {}),
+    # ("scas_pre", {}),
     # ("scas_aspl", {}),
 ]
 

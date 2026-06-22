@@ -23,7 +23,7 @@ DATASETS = [
 AGENTS = [
     # ("bc_stochastic", {}, ["Pi"]),
     # ("td3bc", {}, ["Pi", "Q"]),
-    # ("cql_soft_q", {"threshold": 1.5}, ["Pi", "Q"]),
+    # ("cql", {"threshold": 1.5}, ["Pi", "Q"]),
     # ("iql", {}, ["Pi", "Q", "V"]),
 ]
 
