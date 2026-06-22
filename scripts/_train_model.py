@@ -7,9 +7,15 @@ TASKS = [
     ({"steps": 100_000}, "hopper_d4rl_medium", "scas_model", {}),
     ({"steps": 100_000}, "hopper_d4rl_hybrid", "scas_model", {}),
     ({"steps": 100_000}, "hopper_d4rl_expert", "scas_model", {}),
+    ({"steps": 100_000}, "hopper_random", "scas_model", {}),
+    ({"steps": 100_000}, "hopper_replay_medium", "scas_model", {}),
+    ({"steps": 100_000}, "hopper_replay_expert", "scas_model", {}),
     ({"steps": 100_000}, "hopper_d4rl_medium", "sdc_model", {}),
     ({"steps": 100_000}, "hopper_d4rl_hybrid", "sdc_model", {}),
     ({"steps": 100_000}, "hopper_d4rl_expert", "sdc_model", {}),
+    ({"steps": 100_000}, "hopper_random", "sdc_model", {}),
+    ({"steps": 100_000}, "hopper_replay_medium", "sdc_model", {}),
+    ({"steps": 100_000}, "hopper_replay_expert", "sdc_model", {}),
 ]
 
 TASK_KWARGS = {
