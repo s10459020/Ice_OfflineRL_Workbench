@@ -1,7 +1,5 @@
 """Implicit Q-Learning agent (minimal fixed structure)."""
 
-from dataclasses import dataclass
-
 import numpy as np
 import torch
 from torch.distributions import Normal
@@ -9,13 +7,7 @@ from ice_offline.agent._spec import Agent
 from ice_offline.dataset._types import Batch
 
 class _Pi(torch.nn.Module):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        min_logstd: float = -5.0,
-        max_logstd: float = 2.0,
-    ):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.hidden = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
@@ -25,8 +17,8 @@ class _Pi(torch.nn.Module):
         )
         self.mean_head = torch.nn.Linear(256, act_size)
         self.logstd = torch.nn.Parameter(torch.zeros(1, act_size, dtype=torch.float32))
-        self.min_logstd = min_logstd
-        self.max_logstd = max_logstd
+        self.min_logstd = config.get("min_logstd", -5.0)
+        self.max_logstd = config.get("max_logstd", 2.0)
 
     def dist(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         h = self.hidden(o)
@@ -38,9 +30,9 @@ class _Pi(torch.nn.Module):
         return squashed_mean, logstd
 
 class _Actor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.pi = _Pi(obs_size, act_size)
+        self.pi = _Pi(obs_size, act_size, config)
 
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         mean, _ = self.pi.dist(o)
@@ -69,9 +61,9 @@ class _Q(torch.nn.Module):
         return self.network(torch.cat([o, a], dim=1))
 
 class _V(torch.nn.Module):
-    def __init__(self, obs_size: int, tau: float):
+    def __init__(self, obs_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.tau = tau
+        self.expectile = config.get("expectile", 0.7)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
@@ -84,14 +76,14 @@ class _V(torch.nn.Module):
         return self.network(o)
 
 class _Critic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, q_tau: float = 0.005, v_tau: float = 0.7):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.q_tau = q_tau
+        self.target_update_rate = config.get("target_update_rate", 0.005)
         self.q1 = _Q(obs_size, act_size)
         self.q2 = _Q(obs_size, act_size)
         self.targ_q1 = _Q(obs_size, act_size)
         self.targ_q2 = _Q(obs_size, act_size)
-        self.v = _V(obs_size, tau=v_tau)
+        self.v = _V(obs_size, config)
         self.sync_target_hard()
 
     # ====================
@@ -114,41 +106,31 @@ class _Critic(torch.nn.Module):
     def update_target_soft(self) -> None:
         with torch.no_grad():
             for p, p_targ in zip(self.q1.parameters(), self.targ_q1.parameters()):
-                p_targ.data.copy_(self.q_tau * p.data + (1.0 - self.q_tau) * p_targ.data)
+                p_targ.data.copy_(
+                    self.target_update_rate * p.data
+                    + (1.0 - self.target_update_rate) * p_targ.data
+                )
             for p, p_targ in zip(self.q2.parameters(), self.targ_q2.parameters()):
-                p_targ.data.copy_(self.q_tau * p.data + (1.0 - self.q_tau) * p_targ.data)
+                p_targ.data.copy_(
+                    self.target_update_rate * p.data
+                    + (1.0 - self.target_update_rate) * p_targ.data
+                )
 
-@dataclass
 class IQLAgent(Agent):
-    obs_size: int
-    act_size: int
-    actor_learning_rate: float = 3e-4
-    critic_learning_rate: float = 3e-4
-    gamma: float = 0.99
-    advantage_scale: float = 3.0
-    cap_weight: float = 100.0
-    device: str = "cuda"
-
-    def __post_init__(self) -> None:
-        self.actor = _Actor(self.obs_size, self.act_size).to(self.device)
-        self.critic = _Critic(self.obs_size, self.act_size).to(self.device)
-        self.actor_optim = torch.optim.Adam(
-            self.actor.parameters(),
-            lr=self.actor_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
-        self.critic_optim = torch.optim.Adam(
-              list(self.critic.q1.parameters())
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.obs_size = obs_size
+        self.act_size = act_size
+        self.device = device
+        self.discount_factor = config.get("discount_factor", 0.99)
+        self.advantage_scale = config.get("advantage_scale", 3.0)
+        self.cap_weight = config.get("cap_weight", 100.0)
+        self.actor = _Actor(self.obs_size, self.act_size, config).to(self.device)
+        self.critic = _Critic(self.obs_size, self.act_size, config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
+        self.critic_optimizer = torch.optim.Adam(
+            list(self.critic.q1.parameters())
             + list(self.critic.q2.parameters())
-            + list(self.critic.v.parameters()),
-            lr=self.critic_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
+            + list(self.critic.v.parameters())
         )
 
     # ====================
@@ -191,15 +173,15 @@ class IQLAgent(Agent):
 
     def update_critic(self, batch: Batch) -> None:
         critic_loss = self.loss_critic(batch)
-        self.critic_optim.zero_grad()
+        self.critic_optimizer.zero_grad()
         critic_loss.backward()
-        self.critic_optim.step()
+        self.critic_optimizer.step()
 
     def update_actor(self, batch: Batch) -> None:
         actor_loss = self.loss_actor(batch)
-        self.actor_optim.zero_grad()
+        self.actor_optimizer.zero_grad()
         actor_loss.backward()
-        self.actor_optim.step()
+        self.actor_optimizer.step()
 
     # ====================
     # Save and load
@@ -208,22 +190,22 @@ class IQLAgent(Agent):
         return {
             "actor": self.actor.state_dict(),
             "critic": self.critic.state_dict(),
-            "actor_optimizer": self.actor_optim.state_dict(),
-            "critic_optimizer": self.critic_optim.state_dict(),
+            "actor_optimizer": self.actor_optimizer.state_dict(),
+            "critic_optimizer": self.critic_optimizer.state_dict(),
         }
 
     def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.actor.load_state_dict(state["actor"])
         self.critic.load_state_dict(state["critic"])
-        self.actor_optim.load_state_dict(state["actor_optimizer"])
-        self.critic_optim.load_state_dict(state["critic_optimizer"])
+        self.actor_optimizer.load_state_dict(state["actor_optimizer"])
+        self.critic_optimizer.load_state_dict(state["critic_optimizer"])
 
     # ====================
     # critic
     # ====================
     def target(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            return r + self.gamma * self.critic.v(on) * (1.0 - d)
+            return r + self.discount_factor * self.critic.v(on) * (1.0 - d)
 
     def loss_q(self, batch: Batch) -> torch.Tensor:
         o, a, r, on, d = batch
@@ -240,7 +222,7 @@ class IQLAgent(Agent):
         q_t = self.critic.target_q_min(o, a)
         v_t = self.critic.v(o)
         diff = q_t.detach() - v_t
-        weight = (self.critic.v.tau - (diff < 0.0).float()).abs().detach()
+        weight = (self.critic.v.expectile - (diff < 0.0).float()).abs().detach()
         return (weight * diff.pow(2)).mean()
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:

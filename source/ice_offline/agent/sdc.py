@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import torch
 import torch.nn.functional as F
 
@@ -31,10 +29,10 @@ class _DynamicsMember(torch.nn.Module):
 
 
 class _DynamicsModel(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, ensemble_size: int):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.members = torch.nn.ModuleList(
-            [_DynamicsMember(obs_size, act_size) for _ in range(ensemble_size)]
+            [_DynamicsMember(obs_size, act_size) for _ in range(config.get("dynamics_ensemble_size", 5))]
         )
 
     def loss(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
@@ -57,8 +55,9 @@ class _DynamicsModel(torch.nn.Module):
 
 
 class _TransitionEncoder(torch.nn.Module):
-    def __init__(self, obs_size: int, latent_size: int):
+    def __init__(self, obs_size: int, config: dict[str, object] = {}):
         super().__init__()
+        latent_size = config.get("latent_size", 8)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size * 2, 256),
             torch.nn.ReLU(),
@@ -76,8 +75,9 @@ class _TransitionEncoder(torch.nn.Module):
 
 
 class _TransitionDecoder(torch.nn.Module):
-    def __init__(self, obs_size: int, latent_size: int):
+    def __init__(self, obs_size: int, config: dict[str, object] = {}):
         super().__init__()
+        latent_size = config.get("latent_size", 8)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size + latent_size, 256),
             torch.nn.ReLU(),
@@ -91,12 +91,12 @@ class _TransitionDecoder(torch.nn.Module):
 
 
 class _TransitionModel(torch.nn.Module):
-    def __init__(self, obs_size: int, latent_size: int):
+    def __init__(self, obs_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.obs_size = obs_size
-        self.latent_size = latent_size
-        self.encoder = _TransitionEncoder(obs_size, latent_size)
-        self.decoder = _TransitionDecoder(obs_size, latent_size)
+        self.latent_size = config.get("latent_size", 8)
+        self.encoder = _TransitionEncoder(obs_size, config)
+        self.decoder = _TransitionDecoder(obs_size, config)
 
     def loss(self, o: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
         mean, logvar = self.encoder(o, on)
@@ -115,34 +115,15 @@ class _TransitionModel(torch.nn.Module):
         return on.view(batch_size, n_samples, self.obs_size)
 
 
-@dataclass
 class SDCModel(Agent):
-    obs_size: int
-    act_size: int
-    state_transition_latent_size: int = 8
-    dynamics_ensemble_size: int = 5
-    dynamics_learning_rate: float = 3e-4
-    transition_learning_rate: float = 3e-4
-    device: str = "cuda"
-
-    def __post_init__(self) -> None:
-        self.dynamics = _DynamicsModel(
-            self.obs_size,
-            self.act_size,
-            self.dynamics_ensemble_size,
-        ).to(self.device)
-        self.transition = _TransitionModel(
-            self.obs_size,
-            self.state_transition_latent_size,
-        ).to(self.device)
-        self.dynamics_optimizer = torch.optim.Adam(
-            self.dynamics.parameters(),
-            lr=self.dynamics_learning_rate,
-        )
-        self.transition_optimizer = torch.optim.Adam(
-            self.transition.parameters(),
-            lr=self.transition_learning_rate,
-        )
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.obs_size = obs_size
+        self.act_size = act_size
+        self.device = device
+        self.dynamics = _DynamicsModel(self.obs_size, self.act_size, config).to(self.device)
+        self.transition = _TransitionModel(self.obs_size, config).to(self.device)
+        self.dynamics_optimizer = torch.optim.Adam(self.dynamics.parameters())
+        self.transition_optimizer = torch.optim.Adam(self.transition.parameters())
 
     def prepare(self) -> "SDCModel":
         self.dynamics.eval()
@@ -206,19 +187,15 @@ class SDCModel(Agent):
         return self.transition.loss(o, on)
 
 
-@dataclass
 class SDCAgent(SACAgent):
-    model: SDCModel | None = None
-    scale_noise: float = 0.1
-    weight_penalty: float = 1.0
-    threshold_penalty: float = 0.05
-    count_sample: int = 4
-    mmd_sigma: float = 10.0
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        if self.model is None:
-            raise ValueError("SDCAgent requires a pretrained SDCModel.")
+    def __init__(self, obs_size: int, act_size: int, model: SDCModel | None = None, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
+        self.model = model
+        self.scale_noise = config.get("scale_noise", 0.1)
+        self.weight_penalty = config.get("weight_penalty", 1.0)
+        self.threshold_penalty = config.get("threshold_penalty", 0.05)
+        self.count_sample = config.get("count_sample", 4)
+        self.mmd_sigma = config.get("mmd_sigma", 10.0)
         self.model = self.model.prepare()
 
     def _save_dict(self) -> dict[str, object]:

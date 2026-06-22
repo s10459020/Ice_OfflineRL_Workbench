@@ -7,9 +7,9 @@ from ice_offline.dataset._types import Batch
 
 
 class _Pi(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.max_action = max_action
+        self.max_action = config.get("max_action", 1.0)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
@@ -38,25 +38,16 @@ class _Q(torch.nn.Module):
 
 
 class TD3Actor(torch.nn.Module):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        tau: float = 0.005,
-        noise_scale: float = 0.2,
-        noise_clip: float = 0.5,
-        max_action: float = 1.0,
-        pi_cls: type[torch.nn.Module] = _Pi,
-    ):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, pi_cls: type[torch.nn.Module] = _Pi):
         super().__init__()
         self.obs_size = obs_size
         self.act_size = act_size
-        self.tau = tau
-        self.noise_scale = noise_scale * max_action
-        self.noise_clip = noise_clip
-        self.max_action = max_action
-        self.pi = pi_cls(obs_size, act_size, max_action)
-        self.tpi = pi_cls(obs_size, act_size, max_action)
+        self.max_action = config.get("max_action", 1.0)
+        self.target_update_rate = config.get("target_update_rate", 0.005)
+        self.noise_scale = config.get("noise_scale", 0.2) * self.max_action
+        self.noise_clip = config.get("noise_clip", 0.5)
+        self.pi = pi_cls(obs_size, act_size, config)
+        self.tpi = pi_cls(obs_size, act_size, config)
         self.sync_target_hard()
 
     def noise_action(self, a: torch.Tensor) -> torch.Tensor:
@@ -73,20 +64,16 @@ class TD3Actor(torch.nn.Module):
     def update_target_soft(self) -> None:
         with torch.no_grad():
             for p, tp in zip(self.pi.parameters(), self.tpi.parameters()):
-                tp.data.copy_(self.tau * p.data + (1.0 - self.tau) * tp.data)
+                tp.data.copy_(
+                    self.target_update_rate * p.data
+                    + (1.0 - self.target_update_rate) * tp.data
+                )
 
 
 class TD3Critic(torch.nn.Module):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        q_count: int = 2,
-        q_cls: type[torch.nn.Module] = _Q,
-        tau: float = 0.005,
-    ):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, q_count: int = 2, q_cls: type[torch.nn.Module] = _Q):
         super().__init__()
-        self.tau = tau
+        self.target_update_rate = config.get("target_update_rate", 0.005)
         self.q_networks = torch.nn.ModuleList(
             [q_cls(obs_size, act_size) for _ in range(q_count)]
         )
@@ -124,59 +111,24 @@ class TD3Critic(torch.nn.Module):
         with torch.no_grad():
             for q, tq in zip(self.q_networks, self.tq_networks):
                 for p, tp in zip(q.parameters(), tq.parameters()):
-                    tp.data.copy_(self.tau * p.data + (1.0 - self.tau) * tp.data)
+                    tp.data.copy_(
+                        self.target_update_rate * p.data
+                        + (1.0 - self.target_update_rate) * tp.data
+                    )
 
 
 class TD3Agent(Agent):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        config: dict[str, object] = {},
-        device: str = "cuda",
-    ) -> None:
-        cfg = config
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.actor_learning_rate = cfg.get("actor_learning_rate", 3e-4)
-        self.critic_learning_rate = cfg.get("critic_learning_rate", 3e-4)
-        self.gamma = cfg.get("gamma", 0.99)
-        self.update_actor_interval = cfg.get("update_actor_interval", 2)
-        self.q_count = cfg.get("q_count", 2)
-        self.update_step = cfg.get("update_step", 0)
-        self.actor = TD3Actor(
-            self.obs_size,
-            self.act_size,
-            tau=cfg.get("actor_tau", 0.005),
-            noise_scale=cfg.get("actor_noise_scale", 0.2),
-            noise_clip=cfg.get("actor_noise_clip", 0.5),
-            max_action=cfg.get("actor_max_action", 1.0),
-            pi_cls=cfg.get("actor_pi_cls", _Pi),
-        ).to(self.device)
-        self.critic = TD3Critic(
-            self.obs_size,
-            self.act_size,
-            q_count=self.q_count,
-            q_cls=cfg.get("critic_q_cls", _Q),
-            tau=cfg.get("critic_tau", 0.005),
-        ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.pi.parameters(),
-            lr=self.actor_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.q_networks.parameters(),
-            lr=self.critic_learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+        self.discount_factor = config.get("discount_factor", 0.99)
+        self.update_actor_interval = config.get("update_actor_interval", 2)
+        self.update_step = 0
+        self.actor = TD3Actor(self.obs_size, self.act_size, config=config).to(self.device)
+        self.critic = TD3Critic(self.obs_size, self.act_size, config=config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
     # ====================
     # Act
@@ -255,12 +207,12 @@ class TD3Agent(Agent):
     # Critic loss
     # ====================
     def target_td3(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        # y = r + gamma * Q(s',pi(s'))
+        # y = r + discount_factor * Q(s',pi(s'))
         with torch.no_grad():
             an = self.actor.tpi(on)
             an = self.actor.noise_action(an)
             tq = self.critic.tq_min(on, an)
-            return r + self.gamma * tq * (1.0 - d)
+            return r + self.discount_factor * tq * (1.0 - d)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
         # loss = E{s,a,r,s'~D}[ MSE(Q(s,a) - y) ]

@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import math
 import numpy as np
 import torch
@@ -11,7 +9,7 @@ from ice_offline.dataset._types import Batch
 
 
 class _Pi(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, min_logstd: float = -20.0, max_logstd: float = 2.0):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
@@ -21,8 +19,8 @@ class _Pi(torch.nn.Module):
         )
         self.mean_head = torch.nn.Linear(256, act_size)
         self.logstd_head = torch.nn.Linear(256, act_size)
-        self.min_logstd = min_logstd
-        self.max_logstd = max_logstd
+        self.min_logstd = config.get("min_logstd", -20.0)
+        self.max_logstd = config.get("max_logstd", 2.0)
 
     def forward(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         h = self.network(o)
@@ -32,10 +30,10 @@ class _Pi(torch.nn.Module):
 
 
 class SACActor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, pi_cls: type[torch.nn.Module] = _Pi, n_samples: int = 10):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, pi_cls: type[torch.nn.Module] = _Pi):
         super().__init__()
-        self.pi = pi_cls(obs_size, act_size)
-        self.n_samples = n_samples
+        self.pi = pi_cls(obs_size, act_size, config)
+        self.n_samples = config.get("n_samples", 10)
 
     def _dist(self, o: torch.Tensor) -> tuple[Normal, torch.Tensor]:
         mean, logstd = self.pi(o)
@@ -85,9 +83,9 @@ class _Q(torch.nn.Module):
 
 
 class SACCritic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, q_count: int = 2, q_cls: type[torch.nn.Module] = _Q, tau: float = 0.005):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, q_count: int = 2, q_cls: type[torch.nn.Module] = _Q):
         super().__init__()
-        self.tau = tau
+        self.target_update_rate = config.get("target_update_rate", 0.005)
         self.q_networks = torch.nn.ModuleList(
             [q_cls(obs_size, act_size) for _ in range(q_count)]
         )
@@ -119,29 +117,21 @@ class SACCritic(torch.nn.Module):
         with torch.no_grad():
             for q, tq in zip(self.q_networks, self.tq_networks):
                 for p, tp in zip(q.parameters(), tq.parameters()):
-                    tp.data.copy_(self.tau * p.data + (1.0 - self.tau) * tp.data)
+                    tp.data.copy_(
+                        self.target_update_rate * p.data
+                        + (1.0 - self.target_update_rate) * tp.data
+                    )
 
 
 class _SACTemperature(torch.nn.Module):
-    def __init__(self, 
-        act_size: int, 
-        learning_rate: float = 3e-4, 
-        initial_temperature: float = 1.0, 
-        target_entropy: float | None = -3
-    ):
+    def __init__(self, act_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.log_alpha = torch.nn.Parameter(
-            torch.full((1, 1), math.log(initial_temperature), dtype=torch.float32)
+            torch.full((1, 1), math.log(config.get("initial_temperature", 1.0)), dtype=torch.float32)
         )
+        target_entropy = config.get("target_entropy")
         self.target_entropy = target_entropy if target_entropy is not None else -float(act_size)
-        self.optimizer = torch.optim.Adam(
-            self.parameters(),
-            lr=learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+        self.optimizer = torch.optim.Adam(self.parameters())
 
     def forward(self) -> torch.Tensor:
         return self.log_alpha.exp()
@@ -152,33 +142,17 @@ class _SACTemperature(torch.nn.Module):
         return -(self() * (log_prob + self.target_entropy).detach()).mean()
 
 
-@dataclass
 class SACAgent(Agent):
-    obs_size: int
-    act_size: int
-    actor_learning_rate: float = 3e-4
-    critic_learning_rate: float = 3e-4
-    temp_learning_rate: float = 3e-4
-    gamma: float = 0.99
-    initial_temperature: float = 1.0
-    target_entropy: float | None = None
-    device: str = "cuda"
-
-    # ====================
-    # Init
-    # ====================
-    def __post_init__(self) -> None:
-        self.actor = SACActor(self.obs_size, self.act_size).to(self.device)
-        self.critic = SACCritic(self.obs_size, self.act_size).to(self.device)
-        self.temp = _SACTemperature(
-            self.act_size,
-            learning_rate=self.temp_learning_rate,
-            initial_temperature=self.initial_temperature,
-            target_entropy=self.target_entropy,
-        ).to(self.device)
-
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters(), lr=self.critic_learning_rate)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.obs_size = obs_size
+        self.act_size = act_size
+        self.device = device
+        self.discount_factor = config.get("discount_factor", 0.99)
+        self.actor = SACActor(self.obs_size, self.act_size, config).to(self.device)
+        self.critic = SACCritic(self.obs_size, self.act_size, config).to(self.device)
+        self.temp = _SACTemperature(self.act_size, config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.parameters())
 
     # ====================
     # Act
@@ -262,11 +236,11 @@ class SACAgent(Agent):
     # Critic loss
     # ====================
     def target_sac(self, on: torch.Tensor, r: torch.Tensor, d: torch.Tensor) -> torch.Tensor:
-        # y = r + gamma * (min Q(s',a') - temp * log pi(a'|s'))
+        # y = r + discount_factor * (min Q(s',a') - temp * log pi(a'|s'))
         with torch.no_grad():
             an, log_prob = self.actor.sample(on)
             tq = self.critic.tq_min(on, an)
-            return r + self.gamma * (tq - self.temp() * log_prob) * (1.0 - d)
+            return r + self.discount_factor * (tq - self.temp() * log_prob) * (1.0 - d)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
         # loss = sum_i E{s,a,r,s'~D}[ MSE(Qi(s,a) - y) ]

@@ -1,8 +1,5 @@
 """Behavior Cloning agent (stochastic)."""
 
-from dataclasses import dataclass
-from typing import ClassVar
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -11,13 +8,7 @@ from ice_offline.agent._spec import Agent
 from ice_offline.dataset._types import Batch
 
 class _Pi(torch.nn.Module):
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        min_logstd: float = -4.0,
-        max_logstd: float = 15.0,
-    ):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
@@ -27,8 +18,8 @@ class _Pi(torch.nn.Module):
         )
         self.mean_head = torch.nn.Linear(256, act_size)
         self.logstd_head = torch.nn.Linear(256, act_size)
-        self.min_logstd = min_logstd
-        self.max_logstd = max_logstd
+        self.min_logstd = config.get("min_logstd", -4.0)
+        self.max_logstd = config.get("max_logstd", 15.0)
 
     def dist(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         h = self.network(o)
@@ -38,9 +29,9 @@ class _Pi(torch.nn.Module):
 
 
 class _Actor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.pi = _Pi(obs_size, act_size)
+        self.pi = _Pi(obs_size, act_size, config)
 
     def forward(self, o: torch.Tensor) -> torch.Tensor:
         mean, _ = self.pi.dist(o)
@@ -55,27 +46,13 @@ class _Actor(torch.nn.Module):
         return Normal(mean, logstd.exp()).log_prob(a).sum(dim=-1)
 
 
-@dataclass
 class BCStochasticAgent(Agent):
-    obs_size: int
-    act_size: int
-    id: str = "bc_stochastic"
-    learning_rate: float = 1e-3
-    device: str = "cuda"
-
-    # ====================
-    # Init
-    # ====================
-    def __post_init__(self):
-        self.actor = _Actor(self.obs_size, self.act_size).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(),
-            lr=self.learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda"):
+        self.obs_size = obs_size
+        self.act_size = act_size
+        self.device = device
+        self.actor = _Actor(self.obs_size, self.act_size, config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
 
     # ====================
     # Act

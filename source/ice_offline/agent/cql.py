@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 import math
 import torch
 
@@ -10,8 +9,8 @@ from ice_offline.dataset._types import Batch
 
 
 class _CQLActor(SACActor):
-    def __init__(self, obs_size: int, act_size: int):
-        super().__init__(obs_size, act_size)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
+        super().__init__(obs_size, act_size, config)
         self.act_size = act_size
 
     def sample_random_n(self, o: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
@@ -24,17 +23,12 @@ class _CQLActor(SACActor):
 
 
 class _CQLMultiplier(torch.nn.Module):
-    def __init__(self, 
-            learning_rate: float = 1e-4, 
-            scale_init: float = 10.0, 
-            threshold: float = 2, 
-        ):
+    def __init__(self, config: dict[str, object] = {}):
         super().__init__()
-        self.threshold = threshold
-
-        tensor = torch.full((1, 1), math.log(scale_init), dtype=torch.float32)
+        self.threshold = config.get("threshold", 1.0)
+        tensor = torch.full((1, 1), math.log(config.get("scale_init", 10.0)), dtype=torch.float32)
         self.log_scale = torch.nn.Parameter(tensor)
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.parameters())
 
     def forward(self) -> torch.Tensor:
         return self.log_scale.exp().clamp(0.0, 1e6)
@@ -45,8 +39,8 @@ class _CQLMultiplier(torch.nn.Module):
 
 
 class _CQLCritic(SACCritic):
-    def __init__(self, obs_size: int, act_size: int):
-        super().__init__(obs_size, act_size)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
+        super().__init__(obs_size, act_size, config)
 
     def eval_q_n(self, o: torch.Tensor, a_sample: torch.Tensor) -> torch.Tensor:
         batch_size = o.shape[0]
@@ -66,31 +60,14 @@ class _CQLCritic(SACCritic):
         # (Q, B*N, 1) -> (Q, B, N, 1)
         return tq_values.view(len(self.tq_networks), batch_size, n, 1)
 
-@dataclass
 class CQLAgent(SACAgent):
-    id: str = "cql"
-    actor_learning_rate: float = 1e-4
-    critic_learning_rate: float = 3e-4
-    temp_learning_rate: float = 1e-4
-    multiplier_learning_rate: float = 1e-4
-    scale_init: float = 10.0
-    threshold: float = 1.0
-    update_step = 0
-
-    # ====================
-    # Init
-    # ====================
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self.actor = _CQLActor(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
-        self.critic = _CQLCritic(obs_size=self.obs_size, act_size=self.act_size).to(self.device)
-        self.multiplier = _CQLMultiplier(
-            learning_rate=self.multiplier_learning_rate,
-            scale_init=self.scale_init,
-            threshold=self.threshold,
-        ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters(), lr=self.critic_learning_rate)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
+        self.actor = _CQLActor(self.obs_size, self.act_size, config).to(self.device)
+        self.critic = _CQLCritic(self.obs_size, self.act_size, config).to(self.device)
+        self.multiplier = _CQLMultiplier(config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
     # ====================
     # Update

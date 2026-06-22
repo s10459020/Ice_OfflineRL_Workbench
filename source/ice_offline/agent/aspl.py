@@ -10,10 +10,10 @@ from ice_offline.dataset._types import Batch
 
 
 class AsplActor(TD3Actor):
-    def __init__(self, seed: int = 42, num_sample: int = 5, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.num_sample = num_sample
-        self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
+        super().__init__(obs_size, act_size, config)
+        self.num_sample = config.get("actor_num_sample", 5)
+        self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=config.get("actor_seed", 42))
 
     def set_seed(self, seed: int) -> None:
         self._lhs_sampler = qmc.LatinHypercube(d=self.act_size, seed=seed)
@@ -50,20 +50,20 @@ class AsplActor(TD3Actor):
 
 
 class AsplCritic(TD3Critic):
-    def __init__(self, rate_decay: float = 0.005, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.rate_decay = rate_decay
-        self.scale_punish = torch.nn.Parameter(torch.tensor(0.0, dtype=torch.float32), requires_grad=False)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
+        super().__init__(obs_size, act_size, config)
+        self.rate_decay = config.get("critic_rate_decay", 0.005)
+        self.q_avg = torch.nn.Parameter(torch.tensor(0.0, dtype=torch.float32), requires_grad=False)
 
-    def update_scale_punish(self, target: torch.Tensor) -> torch.Tensor:
+    def update_q_avg(self, target: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
             current = target.abs().mean()
-            if self.scale_punish.item() == 0.0:
-                self.scale_punish.copy_(current)
+            if self.q_avg.item() == 0.0:
+                self.q_avg.copy_(current)
             else:
-                self.scale_punish.mul_(1.0 - self.rate_decay)
-                self.scale_punish.add_(self.rate_decay * current)
-        return self.scale_punish
+                self.q_avg.mul_(1.0 - self.rate_decay)
+                self.q_avg.add_(self.rate_decay * current)
+        return self.q_avg
 
     def q_pseudo(self, q_target: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
         # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
@@ -71,45 +71,17 @@ class AsplCritic(TD3Critic):
         # q use q_target in source
         # q_target range: [-Q, Q], shape: (B, 1)
         with torch.no_grad():
-            return q_target - self.scale_punish * action_distance  # (N, B, 1)
+            return q_target - self.q_avg * action_distance  # (N, B, 1)
 
 
 class AsplAgent(TD3Agent):
-    id: str = "aspl"
-    weight_punish: float = 0.5
-    learning_rate: float = 3e-4
-
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        config: dict[str, object] = {},
-        device: str = "cuda",
-    ) -> None:
-        cfg = config
-        self.id = str(cfg.get("id", "aspl"))
-        self.weight_punish = cfg.get("weight_punish", 0.5)
-        self.learning_rate = cfg.get("learning_rate", 3e-4)
-        super().__init__(
-            obs_size=obs_size,
-            act_size=act_size,
-            config=cfg,
-            device=device,
-        )
-        self.actor = AsplActor(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-            seed=cfg.get("actor_seed", 42),
-            num_sample=cfg.get("actor_num_sample", 5),
-        ).to(self.device)
-        self.critic = AsplCritic(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-            q_count=self.q_count,
-            rate_decay=cfg.get("critic_rate_decay", 0.005),
-        ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.learning_rate)
-        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters(), lr=self.learning_rate)
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.weight_punish = config.get("weight_punish", 0.5)
+        super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
+        self.actor = AsplActor(self.obs_size, self.act_size, config).to(self.device)
+        self.critic = AsplCritic(self.obs_size, self.act_size, config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
     def set_seed(self, seed: int) -> None:
         self.actor.set_seed(seed)
@@ -122,7 +94,7 @@ class AsplAgent(TD3Agent):
         target = self.target_td3(sn, r, d)
         self.update_step += 1
         
-        self.critic.update_scale_punish(target)
+        self.critic.update_q_avg(target)
         
         self.critic_optimizer.zero_grad()
         loss_critic = self.loss_critic(batch, target)
@@ -143,7 +115,7 @@ class AsplAgent(TD3Agent):
         target = self.target_td3(sn, r, d)
         self.update_step += 1
 
-        scale_punish = self.critic.update_scale_punish(target)
+        q_avg = self.critic.update_q_avg(target)
 
         loss_td = self.loss_td(batch)
         grad_td = self._grad_norm(loss_td, self.critic.parameters())
@@ -167,7 +139,7 @@ class AsplAgent(TD3Agent):
             "grad_critic": grad_critic.detach(),
             "loss_actor": None,
             "grad_actor": None,
-            "scale_punish": scale_punish.detach(),
+            "q_avg": q_avg.detach(),
             "target_q": target.abs().mean(),
         }
 

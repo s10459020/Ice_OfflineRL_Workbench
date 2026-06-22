@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import torch
 import torch.nn.functional as F
 
@@ -13,15 +11,11 @@ from ice_offline.agent.td3 import TD3Critic
 from ice_offline.dataset._types import Batch
 
 class _M(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, noise_scale: float = 3e-3):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.noise_scale = noise_scale
+        self.noise_scale = config.get("noise_scale", 3e-3)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size + act_size, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
-            torch.nn.ReLU(),
-            torch.nn.Linear(256, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, 256),
             torch.nn.ReLU(),
@@ -32,32 +26,29 @@ class _M(torch.nn.Module):
         x = torch.cat([o, a], -1)
         return self.network(x)
 
-    def noise_state(self, o: torch.Tensor) -> torch.Tensor:
-        noise = torch.randn(o.shape, device=o.device) * self.noise_scale
-        return o + noise
-
-@dataclass
 class ScasDynamic(Agent):
-    obs_size: int
-    act_size: int
-    learning_rate: float = 1e-3
-    device: str = "cuda"
-
-    def __post_init__(self) -> None:
-        self.model = _M(self.obs_size, self.act_size).to(self.device)
-        self.optimizer = torch.optim.Adam(
-            self.model.parameters(),
-            lr=self.learning_rate,
-        )
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.obs_size = obs_size
+        self.act_size = act_size
+        self.device = device
+        self.model = _M(self.obs_size, self.act_size, config).to(self.device)
+        self.optimizer = torch.optim.Adam(self.model.parameters())
 
     # ====================
     # extend 
     # ====================
-    def prepare(self) -> torch.nn.Module:
+    def prepare(self) -> "ScasDynamic":
         self.model.eval()
         for p in self.model.parameters():
             p.requires_grad = False
-        return self.model
+        return self
+
+    def forward(self, o: torch.Tensor, a: torch.Tensor) -> torch.Tensor:
+        return self.model(o, a)
+
+    def noise_state(self, o: torch.Tensor) -> torch.Tensor:
+        noise = torch.randn(o.shape, device=o.device) * self.noise_scale
+        return o + noise
     
     def update(self, batch: Batch):
         self.optimizer.zero_grad()
@@ -97,62 +88,22 @@ class ScasDynamic(Agent):
         
 
 class ScasAgent(TD3Agent):
-    dynamics: ScasDynamic | None = None
-    actor_learning_rate: float = 2e-4
-    critic_learning_rate: float = 3e-4
-    scale_gap: float = 5.0
-    weight_correction: float = 0.25
-    q_count: int = 4
-    cap_weight: float = 50.0
-
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        dynamics: ScasDynamic | None = None,
-        config: dict[str, object] = {},
-        device: str = "cuda",
-    ) -> None:
-        cfg = config
+    def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic | None = None, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.dynamics = dynamics
-        self.scale_gap = cfg.get("scale_gap", 5.0)
-        self.weight_correction = cfg.get("weight_correction", 0.25)
-        self.cap_weight = cfg.get("cap_weight", 50.0)
-        super().__init__(
-            obs_size=obs_size,
-            act_size=act_size,
-            config=cfg,
-            device=device,
-        )
-        self.actor = TD3Actor(
-            self.obs_size,
-            self.act_size,
-            tau=cfg.get("actor_tau", 0.005),
-            noise_scale=cfg.get("actor_noise_scale", 0.2),
-            noise_clip=cfg.get("actor_noise_clip", 0.5),
-            max_action=cfg.get("actor_max_action", 1.0),
-            pi_cls=cfg.get("actor_pi_cls", _Pi),
-        ).to(self.device)
-        self.critic = TD3Critic(
-            self.obs_size,
-            self.act_size,
-            q_count=self.q_count,
-            q_cls=cfg.get("critic_q_cls", _Q),
-            tau=cfg.get("critic_tau", 0.005),
-        ).to(self.device)
-        self.dynamics.prepare()
-        self.dynamics.model = self.dynamics.model.to(self.device)
-
-        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.actor_learning_rate)
-        self.critic_optimizer = torch.optim.Adam(
-            self.critic.q_networks.parameters(),
-            lr=self.critic_learning_rate,
-        )
+        self.weight_correction = config.get("weight_correction", 0.25)
+        self.scale_gap = config.get("scale_gap", 5.0)
+        self.max_gap = config.get("max_gap", 50.0)
+        super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
+        self.actor = TD3Actor(self.obs_size, self.act_size, config=config, pi_cls=_Pi).to(self.device)
+        self.critic = TD3Critic(self.obs_size, self.act_size, config=config, q_cls=_Q).to(self.device)
+        self.dynamics = self.dynamics.prepare()
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
     # ====================
     # Actor loss
     # ====================    
-    def loss_state_correction(self, batch: Batch) -> torch.Tensor:
+    def loss_correction(self, batch: Batch) -> torch.Tensor:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps,a) - s'||^2]
         s, _, _, sn, _ = batch
         a = self.actor.pi(s)
@@ -162,15 +113,15 @@ class ScasAgent(TD3Agent):
 
         weight = (
             self.scale_gap * (vn.detach() - v.detach())
-        ).exp().clamp(max=self.cap_weight)
+        ).exp().clamp(max=self.max_gap)
 
         ps = self.dynamics.noise_state(s)
         pa = self.actor.pi(ps)
-        mse_M = (self.dynamics.model(ps, pa) - sn) ** 2
+        mse_M = (self.dynamics(ps, pa) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         return (
             (1.0 - self.weight_correction) * self.loss_td3(batch)
-            + self.weight_correction * self.loss_state_correction(batch)
+            + self.weight_correction * self.loss_correction(batch)
         )

@@ -1,5 +1,3 @@
-from dataclasses import dataclass
-
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -28,27 +26,13 @@ class _Actor(torch.nn.Module):
         self.pi = _Pi(obs_size, act_size)
 
 
-@dataclass
 class BCDeterministicAgent(Agent):
-    obs_size: int
-    act_size: int
-    id: str = "bc_deterministic"
-    learning_rate: float = 1e-3
-    device: str = "cuda"
-
-    # ====================
-    # Init
-    # ====================
-    def __post_init__(self):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda"):
+        self.obs_size = obs_size
+        self.act_size = act_size
+        self.device = device
         self.actor = _Actor(self.obs_size, self.act_size).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(
-            self.actor.parameters(),
-            lr=self.learning_rate,
-            betas=(0.9, 0.999),
-            eps=1e-8,
-            weight_decay=0.0,
-            amsgrad=False,
-        )
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
 
     # ====================
     # Act

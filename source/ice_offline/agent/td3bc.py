@@ -6,27 +6,9 @@ from ice_offline.dataset._types import Batch
 
 
 class TD3BCAgent(TD3Agent):
-    id: str = "td3bc"
-    weight_td3: float = 2.5
-
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        config: dict[str, object] = {},
-        device: str = "cuda",
-    ) -> None:
-        self.id = self.config_id(config, "td3bc")
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.weight_td3 = config.get("weight_td3", 2.5)
-        super().__init__(
-            obs_size=obs_size,
-            act_size=act_size,
-            config=config,
-            device=device,
-        )
-
-    def config_id(self, config: dict[str, object], default: str) -> str:
-        return str(config.get("id", default))
+        super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
 
     # ====================
     # Update

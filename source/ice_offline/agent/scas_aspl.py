@@ -12,39 +12,13 @@ from ice_offline.dataset._types import Batch
 class ScasAsplAgent(ScasAgent, AsplAgent):
     weight_punish: float = 2.5
 
-    def __init__(
-        self,
-        obs_size: int,
-        act_size: int,
-        dynamics,
-        config: dict[str, object] = {},
-        device: str = "cuda",
-    ) -> None:
-        cfg = config
-        self.weight_punish = cfg.get("weight_punish", 2.5)
-        self.id = str(cfg.get("id", "aspl"))
-        self.learning_rate = cfg.get("learning_rate", 3e-4)
-        super().__init__(
-            obs_size=obs_size,
-            act_size=act_size,
-            dynamics=dynamics,
-            config=cfg,
-            device=device,
-        )
-        self.actor = AsplActor(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-            seed=cfg.get("actor_seed", 42),
-            num_sample=cfg.get("actor_num_sample", 5),
-        ).to(self.device)
-        self.critic = AsplCritic(
-            obs_size=self.obs_size,
-            act_size=self.act_size,
-            q_count=self.q_count,
-            rate_decay=cfg.get("critic_rate_decay", 0.005),
-        ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters(), lr=self.learning_rate)
-        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters(), lr=self.learning_rate)
+    def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.weight_punish = config.get("weight_punish", 2.5)
+        super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
+        self.actor = AsplActor(self.obs_size, self.act_size, config).to(self.device)
+        self.critic = AsplCritic(self.obs_size, self.act_size, config).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
         self.dynamics = self.dynamics.prepare()
 
     # ====================
@@ -55,7 +29,7 @@ class ScasAsplAgent(ScasAgent, AsplAgent):
         target = self.target_td3(sn, r, d)
         self.update_step += 1
 
-        self.critic.update_scale_punish(target)
+        self.critic.update_q_avg(target)
 
         self.critic_optimizer.zero_grad()
         loss_critic = self.loss_critic(batch, target)
@@ -76,7 +50,7 @@ class ScasAsplAgent(ScasAgent, AsplAgent):
         target = self.target_td3(sn, r, d)
         self.update_step += 1
 
-        scale_punish = self.critic.update_scale_punish(target)
+        q_avg = self.critic.update_q_avg(target)
 
         loss_td = self.loss_td(batch)
         grad_td = self._grad_norm(loss_td, self.critic.parameters())
@@ -100,7 +74,7 @@ class ScasAsplAgent(ScasAgent, AsplAgent):
             "grad_critic": grad_critic.detach(),
             "loss_actor": None,
             "grad_actor": None,
-            "scale_punish": scale_punish.detach(),
+            "q_avg": q_avg.detach(),
             "target_q": target.abs().mean(),
         }
 
