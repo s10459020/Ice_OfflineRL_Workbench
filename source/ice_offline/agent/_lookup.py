@@ -19,29 +19,26 @@ from ice_offline.config.paths import model_path
 from ice_offline.dataset.base import Dataset
 
 
-DEFAULT_MODEL_STEP = 100_000
-
-
 MODEL_TABLE: dict[str, Callable[..., Agent]] = {
-    "scas_model": lambda dataset, device, **kwargs: ScasDynamic(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "sdc_model": lambda dataset, device, **kwargs: SDCModel(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
+    "scas_model": lambda dataset, device, config: ScasDynamic(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "sdc_model": lambda dataset, device, config: SDCModel(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
 }
 
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
-    "bc_deterministic": lambda dataset, device, **kwargs: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "bc_stochastic": lambda dataset, device, **kwargs: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "td3": lambda dataset, device, **kwargs: TD3Agent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "td3bc": lambda dataset, device, **kwargs: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "iql": lambda dataset, device, **kwargs: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "cql": lambda dataset, device, **kwargs: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
-    "aspl": lambda dataset, device, **kwargs: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, device=device, **kwargs),
+    "bc_deterministic": lambda dataset, device, config: BCDeterministicAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "bc_stochastic": lambda dataset, device, config: BCStochasticAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "td3": lambda dataset, device, config: TD3Agent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "td3bc": lambda dataset, device, config: TD3BCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "iql": lambda dataset, device, config: IQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "cql": lambda dataset, device, config: CQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "aspl": lambda dataset, device, config: AsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
 }
 
 MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
-    "scas": lambda dataset, device, model, **kwargs: ScasAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, device=device, **kwargs),
-    "scas_aspl": lambda dataset, device, model, **kwargs: ScasAsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, device=device, **kwargs),
-    "sdc": lambda dataset, device, model, **kwargs: SDCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, device=device, **kwargs),
-    "sdc_cql": lambda dataset, device, model, **kwargs: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, device=device, **kwargs),
+    "scas": lambda dataset, device, model, config: ScasAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, config=config, device=device),
+    "scas_aspl": lambda dataset, device, model, config: ScasAsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, config=config, device=device),
+    "sdc": lambda dataset, device, model, config: SDCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, config=config, device=device),
+    "sdc_cql": lambda dataset, device, model, config: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, config=config, device=device),
 }
 
 MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
@@ -53,12 +50,13 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
 
 
 def make_model(id: str, dataset: Dataset, device: str = "cuda", **kwargs) -> Agent:
-    model = MODEL_TABLE[id](dataset, device, **kwargs)
+    config = dict(kwargs)
+    model = MODEL_TABLE[id](dataset, device, config)
     model.id = id
     return model
 
 
-def _require_model(id: str, dataset: Dataset, device: str, step: int = DEFAULT_MODEL_STEP) -> Agent:
+def _require_model(id: str, dataset: Dataset, device: str, step: int) -> Agent:
     model = make_model(id, dataset, device)
     task_id = _task_id(dataset.id, id)
     path = model_path(task_id, step).with_suffix(".pt")
@@ -75,12 +73,12 @@ def make_agent(
     model_step: int | None = None,
     **kwargs,
 ) -> Agent:
+    config = dict(kwargs)
     if id in MODEL_AGENT_TABLE:
         model_id = MODEL_AGENT_MODEL_TABLE[id]
-        step = DEFAULT_MODEL_STEP if model_step is None else model_step
-        model = _require_model(model_id, dataset, device, step=step)
-        agent = MODEL_AGENT_TABLE[id](dataset, device, model, **kwargs)
+        model = _require_model(model_id, dataset, device, step=model_step)
+        agent = MODEL_AGENT_TABLE[id](dataset, device, model, config)
     else:
-        agent = AGENT_TABLE[id](dataset, device, **kwargs)
+        agent = AGENT_TABLE[id](dataset, device, config)
     agent.id = id
     return agent
