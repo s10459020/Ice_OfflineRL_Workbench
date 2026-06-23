@@ -5,6 +5,7 @@ from ice_offline.run.train import train
 from plot import plot_agent
 
 TASKS = [
+<<<<<<< HEAD
     ([None, 0, 500_000], "hopper_d4rl_medium", "bc_deterministic", {}),
     ([None, 0, 500_000], "hopper_d4rl_hybrid", "bc_deterministic", {}),
     ([None, 0, 500_000], "hopper_d4rl_expert", "bc_deterministic", {}),
