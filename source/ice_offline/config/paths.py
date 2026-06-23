@@ -61,3 +61,7 @@ def metric_path(task_id: str) -> Path:
 
 def plot_path(index: int, dataset_id: str, agent_id: str) -> Path:
     return VIEW_ROOT / "plot" / agent_id / f"{index}. {dataset_id}.png"
+
+
+def table_path(group: str, name: str) -> Path:
+    return VIEW_ROOT / "table" / group / name

@@ -26,8 +26,11 @@ def cal_eval(task_id: str, mode: str = "train") -> tuple[Path, Path]:
     return returns_output_path, steps_output_path
 
 
-def cal_main(task_id: str, mode: str = "test") -> tuple[Path, Path]:
+def cal_main(task_id: str, mode: str = "test") -> tuple[Path, Path] | None:
     input_path = main_data_path(mode, task_id)
+    if not input_path.exists():
+        return None
+    
     returns_output_path = returns_path(mode, task_id)
     steps_output_path = steps_path(mode, task_id)
     loader = MinariLoader(input_path, device="cpu")
