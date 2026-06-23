@@ -14,7 +14,7 @@ class Dataset:
     # ====================
     id: str = ""
     env_id: str = ""
-    path: Path = Path()
+    path: Path | None = None
     seed: int = 0
     device: str = "cuda"
 

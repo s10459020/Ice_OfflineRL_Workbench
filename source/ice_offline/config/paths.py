@@ -27,6 +27,14 @@ def custom_dataset_path(dataset_id: str) -> Path:
     return CUSTOM_DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
 
 
+def minari_dataset_path(dataset_id: str) -> Path:
+    return DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
+
+
+def d4rl_dataset_path(dataset_id: str) -> Path:
+    return DATASETS_ROOT / "d4rl" / dataset_id / "d4rl_data.hdf5"
+
+
 def main_data_path(mode: str, task_id: str) -> Path:
     return RUNS_ROOT / mode / task_id / "data" / "main_data.hdf5"
 
