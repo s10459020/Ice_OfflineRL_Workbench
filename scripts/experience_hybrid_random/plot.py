@@ -3,9 +3,31 @@ from ice_offline.config.paths import metric_path
 from ice_offline.config.paths import plot_path
 from ice_offline.run.eval import cal_eval
 from ice_offline.run.plot import plot
-from config import AGENT_TASKS
-from config import DATASETS
-from config import MODEL_TASKS
+
+DATASETS = [
+    "hopper_random_expert_3",
+    "hopper_random_expert_5",
+    "hopper_random_expert_7",
+    "hopper_random_expert_9",
+]
+
+AGENTS = [
+    "bc_deterministic",
+    "bc_stochastic",
+    "td3bc",
+    "iql",
+    "cql",
+    "aspl",
+    "sdc",
+    "sdc_cql",
+    "scas",
+    "scas_aspl",
+]
+
+MODELS = [
+    "scas_model",
+    "sdc_model",
+]
 
 
 def plot_item(index: int, dataset_id: str, id: str, eval_output_paths: list[str]) -> None:
@@ -29,7 +51,8 @@ def plot_model(index: int, dataset_id: str, model_id: str) -> None:
 
 
 if __name__ == "__main__":
-    for _, dataset_id, agent_id, _ in AGENT_TASKS:
-        plot_agent(DATASETS.index(dataset_id) + 1, dataset_id, agent_id)
-    for _, dataset_id, model_id, _ in MODEL_TASKS:
-        plot_model(DATASETS.index(dataset_id) + 1, dataset_id, model_id)
+    for index, dataset_id in enumerate(DATASETS, start=1):
+        for agent_id in AGENTS:
+            plot_agent(index, dataset_id, agent_id)
+        for model_id in MODELS:
+            plot_model(index, dataset_id, model_id)

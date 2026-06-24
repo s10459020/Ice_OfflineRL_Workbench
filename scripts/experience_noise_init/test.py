@@ -56,7 +56,7 @@ def test_agent(
     print(f"task: {task_id}")
     print(f"reset_noise_scale: {env_kwargs['reset_noise_scale']:g}")
     print("====================================")
-    
+
     path = test(task_id, agent, env)
     print(f"saved: {path}")
 

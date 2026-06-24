@@ -4,73 +4,30 @@ from ice_offline.config.paths import plot_path
 from ice_offline.run.eval import cal_eval
 from ice_offline.run.plot import plot
 
-
-AGENT_TASKS = [
-    ("hopper_d4rl_medium", "bc_deterministic"),
-    ("hopper_d4rl_hybrid", "bc_deterministic"),
-    ("hopper_d4rl_expert", "bc_deterministic"),
-    ("hopper_replay_medium", "bc_deterministic"),
-    ("hopper_replay_expert", "bc_deterministic"),
-    ("hopper_d4rl_medium", "bc_stochastic"),
-    ("hopper_d4rl_hybrid", "bc_stochastic"),
-    ("hopper_d4rl_expert", "bc_stochastic"),
-    ("hopper_replay_medium", "bc_stochastic"),
-    ("hopper_replay_expert", "bc_stochastic"),
-    ("hopper_d4rl_medium", "td3bc"),
-    ("hopper_d4rl_hybrid", "td3bc"),
-    ("hopper_d4rl_expert", "td3bc"),
-    ("hopper_replay_medium", "td3bc"),
-    ("hopper_replay_expert", "td3bc"),
-    ("hopper_d4rl_medium", "iql"),
-    ("hopper_d4rl_hybrid", "iql"),
-    ("hopper_d4rl_expert", "iql"),
-    ("hopper_replay_medium", "iql"),
-    ("hopper_replay_expert", "iql"),
-    ("hopper_d4rl_medium", "cql"),
-    ("hopper_d4rl_hybrid", "cql"),
-    ("hopper_d4rl_expert", "cql"),
-    ("hopper_replay_medium", "cql"),
-    ("hopper_replay_expert", "cql"),
-    ("hopper_d4rl_medium", "aspl"),
-    ("hopper_d4rl_hybrid", "aspl"),
-    ("hopper_d4rl_expert", "aspl"),
-    ("hopper_replay_medium", "aspl"),
-    ("hopper_replay_expert", "aspl"),
-    ("hopper_d4rl_medium", "sdc"),
-    ("hopper_d4rl_hybrid", "sdc"),
-    ("hopper_d4rl_expert", "sdc"),
-    ("hopper_replay_medium", "sdc"),
-    ("hopper_replay_expert", "sdc"),
-    ("hopper_d4rl_medium", "sdc_cql"),
-    ("hopper_d4rl_hybrid", "sdc_cql"),
-    ("hopper_d4rl_expert", "sdc_cql"),
-    ("hopper_replay_medium", "sdc_cql"),
-    ("hopper_replay_expert", "sdc_cql"),
-    ("hopper_d4rl_medium", "scas"),
-    ("hopper_d4rl_hybrid", "scas"),
-    ("hopper_d4rl_expert", "scas"),
-    ("hopper_replay_medium", "scas"),
-    ("hopper_replay_expert", "scas"),
-    ("hopper_d4rl_medium", "scas_aspl"),
-    ("hopper_d4rl_hybrid", "scas_aspl"),
-    ("hopper_d4rl_expert", "scas_aspl"),
-    ("hopper_replay_medium", "scas_aspl"),
-    ("hopper_replay_expert", "scas_aspl"),
+DATASETS = [
+    "hopper_d4rl_medium",
+    "hopper_d4rl_hybrid",
+    "hopper_d4rl_expert",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
 ]
 
-MODEL_TASKS = [
-    ("hopper_d4rl_medium", "scas_model"),
-    ("hopper_d4rl_hybrid", "scas_model"),
-    ("hopper_d4rl_expert", "scas_model"),
-    ("hopper_random", "scas_model"),
-    ("hopper_replay_medium", "scas_model"),
-    ("hopper_replay_expert", "scas_model"),
-    ("hopper_d4rl_medium", "sdc_model"),
-    ("hopper_d4rl_hybrid", "sdc_model"),
-    ("hopper_d4rl_expert", "sdc_model"),
-    ("hopper_random", "sdc_model"),
-    ("hopper_replay_medium", "sdc_model"),
-    ("hopper_replay_expert", "sdc_model"),
+AGENTS = [
+    "bc_deterministic",
+    "bc_stochastic",
+    "td3bc",
+    "iql",
+    "cql",
+    "aspl",
+    "sdc",
+    "sdc_cql",
+    "scas",
+    "scas_aspl",
+]
+
+MODELS = [
+    "scas_model",
+    "sdc_model",
 ]
 
 def plot_item(index: int, dataset_id: str, id: str, eval_output_paths: list[str]) -> None:
@@ -94,8 +51,8 @@ def plot_model(index: int, dataset_id: str, model_id: str) -> None:
 
 
 if __name__ == "__main__":
-    dataset_ids = list(dict.fromkeys(dataset_id for dataset_id, _ in AGENT_TASKS + MODEL_TASKS))
-    for dataset_id, agent_id in AGENT_TASKS:
-        plot_agent(dataset_ids.index(dataset_id) + 1, dataset_id, agent_id)
-    for dataset_id, model_id in MODEL_TASKS:
-        plot_model(dataset_ids.index(dataset_id) + 1, dataset_id, model_id)
+    for index, dataset_id in enumerate(DATASETS, start=1):
+        for agent_id in AGENTS:
+            plot_agent(index, dataset_id, agent_id)
+        for model_id in MODELS:
+            plot_model(index, dataset_id, model_id)

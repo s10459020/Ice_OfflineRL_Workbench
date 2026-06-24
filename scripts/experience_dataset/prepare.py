@@ -5,10 +5,12 @@ from ice_offline.run.train import train_model as run_train_model
 from plot import plot_model
 
 DATASETS = [
-    "hopper_random_expert_3",
-    "hopper_random_expert_5",
-    "hopper_random_expert_7",
-    "hopper_random_expert_9",
+    "hopper_d4rl_medium",
+    "hopper_d4rl_hybrid",
+    "hopper_d4rl_expert",
+    "hopper_random",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
 ]
 
 MODELS = [
