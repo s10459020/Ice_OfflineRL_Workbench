@@ -226,7 +226,7 @@ class TD3Agent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
+    def loss_td3_normal(self, batch: Batch) -> torch.Tensor:
         # loss = E{s~D}[ -Q(s,pi(s)) ]
         # with normalization trick
         o, _, _, _, _ = batch
@@ -234,6 +234,14 @@ class TD3Agent(Agent):
         q = self.critic.q_min(o, a)
         normalization_scale = 1.0 / q.abs().mean().detach()
         return -normalization_scale * q.mean()
+    
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        # loss = E{s~D}[ -Q(s,pi(s)) ]
+        # with normalization trick
+        o, _, _, _, _ = batch
+        a = self.actor.pi(o)
+        q = self.critic.q_networks[0](o, a)
+        return -q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         return self.loss_td3(batch)
