@@ -5,21 +5,20 @@ from pathlib import Path
 
 import torch
 
-from ice_offline.dataset._types import Buffer, Episode, Metadata
+from ice_offline.dataset._types import Buffer, Metadata
 from ice_offline.dataset.base import Dataset
-from ice_offline.store.minari.loader import MinariLoader
+from ice_offline.store.d4rl.loader import D4rlLoader
 
 
 @dataclass(kw_only=True)
 class HybridDataset(Dataset):
-    count: int
+    sample_count: int
     dataset_a: Dataset
     dataset_b: Dataset
     random_ratio: float = 0.5
 
     def __post_init__(self) -> None:
         torch.manual_seed(self.seed)
-        self.loader = MinariLoader(path=self.path, device=self.device)
         self.env_id = self.dataset_a.env_id
         self._episodes = []
         self._buffer = self.hybridBuffer()
@@ -29,12 +28,12 @@ class HybridDataset(Dataset):
             act_shape=self.dataset_a.act_shape,
             obs_dim=self.dataset_a.obs_dim,
             act_dim=self.dataset_a.act_dim,
-            count=self.count,
+            count=self.sample_count,
         )
 
     def hybridBuffer(self) -> Buffer:
-        count_a = int(self.count * self.random_ratio)
-        count_b = self.count - count_a
+        count_a = int(self.sample_count * self.random_ratio)
+        count_b = self.sample_count - count_a
 
         source_a = self._sampleBuffer(self.dataset_a.buffer, count_a)
         source_b = self._sampleBuffer(self.dataset_b.buffer, count_b)
@@ -60,7 +59,7 @@ class HybridDataset(Dataset):
         )
 
     def save(self, path: Path, dataset_id: str) -> None:
-        self.loader.write_episodes(path, self.episodes)
+        D4rlLoader(path, device=self.device).write_buffer(path, self.buffer)
 
         metadata_path = path.with_name("metadata.json")
         metadata = asdict(self._metadata)

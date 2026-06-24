@@ -10,8 +10,8 @@ DATASETS = [
     ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
     ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
-    ("hopper_replay_expert", "hopper_random", "hopper_replay_expert"),
+    ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
+    ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
 ]
 
 AGENTS = [
