@@ -1,7 +1,6 @@
 from collections.abc import Callable
 
 import gymnasium as gym
-import h5py
 
 from ice_offline.config.paths import custom_dataset_path
 from ice_offline.config.paths import d4rl_dataset_path
@@ -37,21 +36,6 @@ def _custom_dataset(env_id: str, dataset_id: str) -> Callable[[str], Dataset]:
     )
 
 
-def _is_d4rl_buffer(path) -> bool:
-    if not path.exists():
-        return False
-    with h5py.File(path, "r") as h5_file:
-        keys = set(h5_file.keys())
-    return {
-        "observations",
-        "next_observations",
-        "actions",
-        "rewards",
-        "terminals",
-        "timeouts",
-    }.issubset(keys)
-
-
 def _hybrid_dataset(
     dataset_id: str,
     env_id: str,
@@ -62,10 +46,8 @@ def _hybrid_dataset(
 ) -> Callable[[str], Dataset]:
     def make_hybrid_dataset(device: str) -> Dataset:
         path = custom_dataset_path(dataset_id)
-        if _is_d4rl_buffer(path):
-            return D4rlDataset(env_id=env_id, path=path, device=device)
         if path.exists():
-            path.unlink()
+            return Dataset(env_id=env_id, path=path, device=device)
 
         dataset_a = make_dataset(dataset_a_id, device="cpu")
         dataset_b = make_dataset(dataset_b_id, device="cpu")
@@ -78,7 +60,8 @@ def _hybrid_dataset(
             env_id=env_id,
         )
         hybrid_dataset.save(path=path, dataset_id=dataset_id)
-        return D4rlDataset(env_id=env_id, path=path, device=device)
+        hybrid_dataset.path = path
+        return hybrid_dataset
 
     return make_hybrid_dataset
 
