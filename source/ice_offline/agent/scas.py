@@ -31,6 +31,7 @@ class ScasDynamic(Agent):
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
+        self.noise_scale = config.get("noise_scale", 3e-3)
         self.model = _M(self.obs_size, self.act_size, config).to(self.device)
         self.optimizer = torch.optim.Adam(self.model.parameters())
 
