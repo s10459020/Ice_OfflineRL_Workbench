@@ -6,14 +6,16 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from ice_offline.dataset._types import Buffer, Episode, Metadata
+from ice_offline.dataset._types import Buffer
+from ice_offline.dataset._types import Episode
+from ice_offline.dataset._types import Metadata
 from ice_offline.dataset.base import Dataset
 from ice_offline.store.minari.loader import MinariLoader
 
 
 @dataclass(kw_only=True)
 class HybridDataset(Dataset):
-    count: int
+    sample_count: int
     dataset_a: Dataset
     dataset_b: Dataset
     random_ratio: float = 0.5
@@ -30,13 +32,13 @@ class HybridDataset(Dataset):
             act_shape=self.dataset_a.act_shape,
             obs_dim=self.dataset_a.obs_dim,
             act_dim=self.dataset_a.act_dim,
-            count=self.count,
+            count=self.sample_count,
         )
 
     def hybridEpisodes(self) -> list[Episode]:
         rng = np.random.default_rng(self.seed)
-        count_a = int(self.count * self.random_ratio)
-        count_b = self.count - count_a
+        count_a = int(self.sample_count * self.random_ratio)
+        count_b = self.sample_count - count_a
         episodes_a = self._sampleEpisodes(self.dataset_a.episodes, count_a, rng)
         episodes_b = self._sampleEpisodes(self.dataset_b.episodes, count_b, rng)
         return episodes_a + episodes_b
@@ -44,7 +46,12 @@ class HybridDataset(Dataset):
     def hybridBuffer(self) -> Buffer:
         return self.loader.buffer_from_episodes(self.episodes, device=self.device)
 
-    def _sampleEpisodes(self, source: list[Episode], count: int, rng: np.random.Generator) -> list[Episode]:
+    def _sampleEpisodes(
+        self,
+        source: list[Episode],
+        count: int,
+        rng: np.random.Generator,
+    ) -> list[Episode]:
         total = 0
         episodes: list[Episode] = []
         while total < count:

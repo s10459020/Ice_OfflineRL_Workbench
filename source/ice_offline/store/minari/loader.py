@@ -23,6 +23,8 @@ class MinariLoader:
     # Loading
     # ====================
     def load_buffer(self) -> Buffer:
+        if self._has_flat_buffer():
+            return self._load_flat_buffer()
         return self.buffer_from_episodes(self.load_episodes(), device=self.device)
 
     def load_episodes(self) -> list[Episode]:
@@ -48,9 +50,16 @@ class MinariLoader:
     # Metadata
     # ====================
     def load_metadata(self) -> Metadata:
+        metadata = self._read_metadata()
+        env_id = self._read_env_id(metadata)
+        if self._has_flat_buffer():
+            return self.metadata_from_buffer(
+                buffer=self.load_buffer(),
+                env_id=env_id,
+            )
         return self.metadata_from_episodes(
             episodes=self.load_episodes(),
-            env_id=self._read_env_id(self._read_metadata()),
+            env_id=env_id,
         )
 
     # ====================
@@ -103,6 +112,18 @@ class MinariLoader:
             count=count,
         )
 
+    def metadata_from_buffer(self, buffer: Buffer, env_id: str) -> Metadata:
+        obs_shape = tuple(int(x) for x in buffer.observations.shape[1:])
+        act_shape = tuple(int(x) for x in buffer.actions.shape[1:])
+        return Metadata(
+            env_id=env_id,
+            obs_shape=obs_shape,
+            act_shape=act_shape,
+            obs_dim=int(np.prod(obs_shape)) if obs_shape else 1,
+            act_dim=int(np.prod(act_shape)) if act_shape else 1,
+            count=int(buffer.actions.shape[0]),
+        )
+
     def write_episodes(self, path: Path, episodes: list[Episode]) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         with h5py.File(path, "w") as h5_file:
@@ -114,6 +135,15 @@ class MinariLoader:
                 self.write_node(episode_group, "terminations", np.asarray(episode.terminations, dtype=np.bool_))
                 self.write_node(episode_group, "truncations", np.asarray(episode.truncations, dtype=np.bool_))
                 self.write_node(episode_group, "infos", episode.infos or {})
+
+    def write_buffer(self, path: Path, buffer: Buffer) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with h5py.File(path, "w") as h5_file:
+            self.write_node(h5_file, "observations", buffer.observations.detach().cpu().numpy())
+            self.write_node(h5_file, "next_observations", buffer.next_observations.detach().cpu().numpy())
+            self.write_node(h5_file, "actions", buffer.actions.detach().cpu().numpy())
+            self.write_node(h5_file, "rewards", buffer.rewards.detach().cpu().numpy())
+            self.write_node(h5_file, "dones", buffer.dones.detach().cpu().numpy())
 
     # ====================
     # HDF5 helpers
@@ -164,3 +194,26 @@ class MinariLoader:
             [key for key in h5_file.keys() if key.startswith("episode_")],
             key=lambda key: int(key.split("_")[1]),
         )
+
+    def _has_flat_buffer(self) -> bool:
+        if self.path is None or not self.path.exists():
+            return False
+        with h5py.File(self.path, "r") as h5_file:
+            keys = set(h5_file.keys())
+        return {
+            "observations",
+            "next_observations",
+            "actions",
+            "rewards",
+            "dones",
+        }.issubset(keys)
+
+    def _load_flat_buffer(self) -> Buffer:
+        with h5py.File(self.path, "r") as h5_file:
+            return Buffer(
+                observations=torch.as_tensor(np.asarray(h5_file["observations"]), dtype=torch.float32, device=self.device),
+                next_observations=torch.as_tensor(np.asarray(h5_file["next_observations"]), dtype=torch.float32, device=self.device),
+                actions=torch.as_tensor(np.asarray(h5_file["actions"]), dtype=torch.float32, device=self.device),
+                rewards=torch.as_tensor(np.asarray(h5_file["rewards"]), dtype=torch.float32, device=self.device),
+                dones=torch.as_tensor(np.asarray(h5_file["dones"]), dtype=torch.float32, device=self.device),
+            )

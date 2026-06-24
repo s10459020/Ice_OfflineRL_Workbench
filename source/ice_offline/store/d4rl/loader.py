@@ -3,6 +3,7 @@ from pathlib import Path
 import h5py
 import numpy as np
 import torch
+import json
 
 from ice_offline.dataset._types import Buffer, Episode, Metadata
 from ice_offline.store.d4rl._lookup import D4RL_ENV_IDS
@@ -80,14 +81,35 @@ class D4rlLoader:
             act_shape = tuple(int(x) for x in actions.shape[1:])
             count = int(observations.shape[0])
 
+        env_id = D4RL_ENV_IDS.get(self.path.parent.name, "")
+        metadata_path = self.path.parent / "metadata.json"
+        if not env_id and metadata_path.exists():
+            with metadata_path.open("r", encoding="utf-8") as file:
+                metadata = json.load(file)
+            env_id = metadata.get("env_id", "")
+
         return Metadata(
-            env_id=D4RL_ENV_IDS[self.path.parent.name],
+            env_id=env_id,
             obs_shape=obs_shape,
             act_shape=act_shape,
             obs_dim=int(np.prod(obs_shape)) if obs_shape else 1,
             act_dim=int(np.prod(act_shape)) if act_shape else 1,
             count=count,
         )
+
+    def write_buffer(self, path: Path, buffer: Buffer) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        rewards = buffer.rewards.detach().cpu().numpy().reshape(-1)
+        dones = buffer.dones.detach().cpu().numpy().reshape(-1).astype(np.bool_)
+        terminals = dones
+        timeouts = np.zeros_like(terminals, dtype=np.bool_)
+        with h5py.File(path, "w") as h5_file:
+            h5_file.create_dataset("observations", data=buffer.observations.detach().cpu().numpy(), compression="gzip")
+            h5_file.create_dataset("next_observations", data=buffer.next_observations.detach().cpu().numpy(), compression="gzip")
+            h5_file.create_dataset("actions", data=buffer.actions.detach().cpu().numpy(), compression="gzip")
+            h5_file.create_dataset("rewards", data=rewards, compression="gzip")
+            h5_file.create_dataset("terminals", data=terminals, compression="gzip")
+            h5_file.create_dataset("timeouts", data=timeouts, compression="gzip")
 
 
 if __name__ == "__main__":
