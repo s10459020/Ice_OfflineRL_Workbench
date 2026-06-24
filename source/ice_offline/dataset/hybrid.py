@@ -3,6 +3,7 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import torch
 
 from ice_offline.dataset._types import Buffer, Episode, Metadata
@@ -21,8 +22,8 @@ class HybridDataset(Dataset):
         torch.manual_seed(self.seed)
         self.loader = MinariLoader(path=self.path, device=self.device)
         self.env_id = self.dataset_a.env_id
-        self._episodes = []
-        self._buffer = self.hybridBuffer()
+        self._episodes = self.hybridEpisodes()
+        self._buffer = self.loader.buffer_from_episodes(self._episodes, device=self.device)
         self._metadata = Metadata(
             env_id=self.env_id,
             obs_shape=self.dataset_a.obs_shape,
@@ -32,32 +33,66 @@ class HybridDataset(Dataset):
             count=self.count,
         )
 
-    def hybridBuffer(self) -> Buffer:
+    def hybridEpisodes(self) -> list[Episode]:
+        rng = np.random.default_rng(self.seed)
         count_a = int(self.count * self.random_ratio)
         count_b = self.count - count_a
+        episodes_a = self._sampleEpisodes(self.dataset_a.episodes, count_a, rng)
+        episodes_b = self._sampleEpisodes(self.dataset_b.episodes, count_b, rng)
+        return episodes_a + episodes_b
 
-        source_a = self._sampleBuffer(self.dataset_a.buffer, count_a)
-        source_b = self._sampleBuffer(self.dataset_b.buffer, count_b)
-        return self._concatBuffer(source_a, source_b)
+    def hybridBuffer(self) -> Buffer:
+        return self.loader.buffer_from_episodes(self.episodes, device=self.device)
 
-    def _sampleBuffer(self, source: Buffer, count: int) -> Buffer:
-        indices = torch.randint(source.actions.shape[0], (count,), device=source.actions.device)
-        return Buffer(
-            observations=source.observations[indices].to(self.device),
-            next_observations=source.next_observations[indices].to(self.device),
-            actions=source.actions[indices].to(self.device),
-            rewards=source.rewards[indices].to(self.device),
-            dones=source.dones[indices].to(self.device),
+    def _sampleEpisodes(self, source: list[Episode], count: int, rng: np.random.Generator) -> list[Episode]:
+        total = 0
+        episodes: list[Episode] = []
+        while total < count:
+            episode = source[int(rng.integers(len(source)))]
+            episode_steps = int(len(episode.rewards))
+            remain = count - total
+            if episode_steps <= remain:
+                episodes.append(self._copyEpisode(episode))
+                total += episode_steps
+            else:
+                episodes.append(self._truncateEpisode(episode, remain))
+                total += remain
+        return episodes
+
+    def _truncateEpisode(self, episode: Episode, count: int) -> Episode:
+        terminations = np.asarray(episode.terminations[:count], dtype=np.bool_).copy()
+        truncations = np.asarray(episode.truncations[:count], dtype=np.bool_).copy()
+        terminations[-1] = False
+        truncations[-1] = True
+        return Episode(
+            observations=self._sliceNode(episode.observations, count + 1),
+            actions=np.asarray(episode.actions[:count]).copy(),
+            rewards=np.asarray(episode.rewards[:count]).copy(),
+            terminations=terminations,
+            truncations=truncations,
+            infos=self._sliceInfos(episode.infos, count),
         )
 
-    def _concatBuffer(self, buffer_a: Buffer, buffer_b: Buffer) -> Buffer:
-        return Buffer(
-            observations=torch.cat([buffer_a.observations, buffer_b.observations], dim=0),
-            next_observations=torch.cat([buffer_a.next_observations, buffer_b.next_observations], dim=0),
-            actions=torch.cat([buffer_a.actions, buffer_b.actions], dim=0),
-            rewards=torch.cat([buffer_a.rewards, buffer_b.rewards], dim=0),
-            dones=torch.cat([buffer_a.dones, buffer_b.dones], dim=0),
+    def _copyEpisode(self, episode: Episode) -> Episode:
+        count = int(len(episode.rewards))
+        return Episode(
+            observations=self._sliceNode(episode.observations, count + 1),
+            actions=np.asarray(episode.actions).copy(),
+            rewards=np.asarray(episode.rewards).copy(),
+            terminations=np.asarray(episode.terminations, dtype=np.bool_).copy(),
+            truncations=np.asarray(episode.truncations, dtype=np.bool_).copy(),
+            infos=self._sliceInfos(episode.infos, count),
         )
+
+    def _sliceNode(self, value, count: int):
+        if isinstance(value, dict):
+            return {key: self._sliceNode(item, count) for key, item in value.items()}
+        return np.asarray(value[:count]).copy()
+
+    def _sliceInfos(self, infos, count: int):
+        if infos is None:
+            return None
+        return self._sliceNode(infos, count)
 
     def save(self, path: Path, dataset_id: str) -> None:
         self.loader.write_episodes(path, self.episodes)
