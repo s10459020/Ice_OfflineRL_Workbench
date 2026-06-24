@@ -105,7 +105,7 @@ class ScasAgent(TD3Agent):
     # Actor loss
     # ====================    
     def loss_correction(self, batch: Batch) -> torch.Tensor:
-        # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps,a) - s'||^2]
+        # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch
         a = self.actor.pi(s)
         v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))

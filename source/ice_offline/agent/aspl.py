@@ -163,12 +163,6 @@ class AsplAgent(TD3Agent):
     # ====================
     # Critic loss
     # ====================    
-    def loss_td_huber(self, batch: Batch) -> torch.Tensor:
-        # loss = E{s,a,r,s'~D}[ MSE(Q(s,a) - y) ]
-        o, a, r, on, d = batch
-        target = self.target_td3(on, r, d)
-        return sum(F.huber_loss(q, target, delta=1.0) for q in self.critic.q_all(o, a))
-
     def loss_punish(self, batch: Batch) -> torch.Tensor:
         s, a, r, sn, d = batch
         target = self.target_td3(sn, r, d)
@@ -195,16 +189,5 @@ class AsplAgent(TD3Agent):
         loss_td = self.loss_td(batch)
         loss_aspl = self.loss_punish(batch)
         return loss_td + self.weight_punish * loss_aspl
-
-
-    # ====================
-    # Actor loss
-    # ====================
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # loss = E{s~D}[ -Q(s,pi(s)) ]
-        o, _, _, _, _ = batch
-        a = self.actor.pi(o)
-        q = self.critic.q_networks[0](o, a)
-        return -q.mean()
 
 
