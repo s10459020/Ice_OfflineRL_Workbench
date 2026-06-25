@@ -13,7 +13,6 @@ from ice_offline.dataset._types import Batch
 class _M(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.noise_scale = config.get("noise_scale", 3e-3)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size + act_size, 256),
             torch.nn.ReLU(),
@@ -89,15 +88,14 @@ class ScasDynamic(Agent):
         
 
 class ScasAgent(TD3Agent):
-    def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic | None = None, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        self.dynamics = dynamics
+    def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.weight_correction = config.get("weight_correction", 0.25)
         self.scale_gap = config.get("scale_gap", 5.0)
         self.max_gap = config.get("max_gap", 50.0)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
         self.actor = TD3Actor(self.obs_size, self.act_size, config=config, pi_cls=_Pi).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, config=config, q_cls=_Q).to(self.device)
-        self.dynamics = self.dynamics.prepare()
+        self.dynamics = dynamics.prepare()
         self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
         self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
@@ -118,7 +116,7 @@ class ScasAgent(TD3Agent):
 
         ps = self.dynamics.noise_state(s)
         pa = self.actor.pi(ps)
-        mse_M = (self.dynamics(ps, pa) - sn) ** 2
+        mse_M = (self.dynamics.forward(ps, pa) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
