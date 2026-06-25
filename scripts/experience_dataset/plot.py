@@ -22,6 +22,11 @@ AGENTS = [
     "sdc",
     "sdc_cql",
     "scas",
+    "scas_lambda_0",
+    "scas_lambda_25",
+    "scas_lambda_50",
+    "scas_lambda_75",
+    "scas_lambda_100",
     "scaspl",
 ]
 
