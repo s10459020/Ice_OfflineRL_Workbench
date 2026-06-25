@@ -7,7 +7,7 @@ from ice_offline.agent.sac import SACAgent
 from ice_offline.dataset._types import Batch
 
 
-class _DynamicsMember(torch.nn.Module):
+class GaussianMember(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
         self.network = torch.nn.Sequential(
@@ -28,11 +28,11 @@ class _DynamicsMember(torch.nn.Module):
         return mean, logvar
 
 
-class _DynamicsModel(torch.nn.Module):
+class EnsembleDynamics(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
         self.members = torch.nn.ModuleList(
-            [_DynamicsMember(obs_size, act_size) for _ in range(config.get("dynamics_ensemble_size", 5))]
+            [GaussianMember(obs_size, act_size) for _ in range(config.get("dynamics_ensemble_size", 5))]
         )
 
     def loss(self, o: torch.Tensor, a: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
@@ -54,55 +54,41 @@ class _DynamicsModel(torch.nn.Module):
         return stacked.mean(dim=1)
 
 
-class _TransitionEncoder(torch.nn.Module):
+class CvaeTransition(torch.nn.Module):
     def __init__(self, obs_size: int, config: dict[str, object] = {}):
         super().__init__()
-        latent_size = config.get("latent_size", 8)
-        self.network = torch.nn.Sequential(
+        self.obs_size = obs_size
+        self.latent_size = config.get("latent_size", 8)
+        self.encoder = torch.nn.Sequential(
             torch.nn.Linear(obs_size * 2, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, 256),
             torch.nn.ReLU(),
         )
-        self.mean_head = torch.nn.Linear(256, latent_size)
-        self.logvar_head = torch.nn.Linear(256, latent_size)
-
-    def forward(self, o: torch.Tensor, on: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        hidden = self.network(torch.cat([o, on], dim=1))
-        mean = self.mean_head(hidden)
-        logvar = self.logvar_head(hidden).clamp(-10.0, 10.0)
-        return mean, logvar
-
-
-class _TransitionDecoder(torch.nn.Module):
-    def __init__(self, obs_size: int, config: dict[str, object] = {}):
-        super().__init__()
-        latent_size = config.get("latent_size", 8)
-        self.network = torch.nn.Sequential(
-            torch.nn.Linear(obs_size + latent_size, 256),
+        self.encoder_mean = torch.nn.Linear(256, self.latent_size)
+        self.encoder_logvar = torch.nn.Linear(256, self.latent_size)
+        self.decoder = torch.nn.Sequential(
+            torch.nn.Linear(obs_size + self.latent_size, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, obs_size),
         )
 
-    def forward(self, o: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
-        return self.network(torch.cat([o, z], dim=1))
+    def encode(self, o: torch.Tensor, on: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        hidden = self.encoder(torch.cat([o, on], dim=1))
+        mean = self.encoder_mean(hidden)
+        logvar = self.encoder_logvar(hidden).clamp(-10.0, 10.0)
+        return mean, logvar
 
-
-class _TransitionModel(torch.nn.Module):
-    def __init__(self, obs_size: int, config: dict[str, object] = {}):
-        super().__init__()
-        self.obs_size = obs_size
-        self.latent_size = config.get("latent_size", 8)
-        self.encoder = _TransitionEncoder(obs_size, config)
-        self.decoder = _TransitionDecoder(obs_size, config)
+    def decode(self, o: torch.Tensor, z: torch.Tensor) -> torch.Tensor:
+        return self.decoder(torch.cat([o, z], dim=1))
 
     def loss(self, o: torch.Tensor, on: torch.Tensor) -> torch.Tensor:
-        mean, logvar = self.encoder(o, on)
+        mean, logvar = self.encode(o, on)
         std = torch.exp(0.5 * logvar)
         z = mean + std * torch.randn_like(std)
-        reconstruction = self.decoder(o, z)
+        reconstruction = self.decode(o, z)
         loss_reconstruction = F.mse_loss(reconstruction, on)
         loss_kl = -0.5 * (1.0 + logvar - mean.pow(2) - logvar.exp()).mean()
         return loss_reconstruction + loss_kl
@@ -111,7 +97,7 @@ class _TransitionModel(torch.nn.Module):
         batch_size = o.shape[0]
         o_repeated = o.repeat_interleave(n_samples, dim=0)
         z = torch.randn(batch_size * n_samples, self.latent_size, device=o.device)
-        on = self.decoder(o_repeated, z)
+        on = self.decode(o_repeated, z)
         return on.view(batch_size, n_samples, self.obs_size)
 
 
@@ -120,8 +106,8 @@ class SDCModel(Agent):
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.dynamics = _DynamicsModel(self.obs_size, self.act_size, config).to(self.device)
-        self.transition = _TransitionModel(self.obs_size, config).to(self.device)
+        self.dynamics = EnsembleDynamics(self.obs_size, self.act_size, config).to(self.device)
+        self.transition = CvaeTransition(self.obs_size, config).to(self.device)
         self.dynamics_optimizer = torch.optim.Adam(self.dynamics.parameters())
         self.transition_optimizer = torch.optim.Adam(self.transition.parameters())
 
