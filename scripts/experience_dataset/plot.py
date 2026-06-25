@@ -22,7 +22,7 @@ AGENTS = [
     "sdc",
     "sdc_cql",
     "scas",
-    "scas_aspl",
+    "scaspl",
 ]
 
 MODELS = [

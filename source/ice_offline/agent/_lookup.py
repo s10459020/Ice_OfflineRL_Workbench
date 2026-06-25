@@ -8,7 +8,7 @@ from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.agent.iql import IQLAgent
-from ice_offline.agent.scas_aspl import ScasAsplAgent
+from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.agent.sdc import SDCAgent
 from ice_offline.agent.sdc import SDCModel
 from ice_offline.agent.sdc_cql import SDCCQLAgent
@@ -36,14 +36,14 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
 
 MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas": lambda dataset, device, model, config: ScasAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, config=config, device=device),
-    "scas_aspl": lambda dataset, device, model, config: ScasAsplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, config=config, device=device),
+    "scaspl": lambda dataset, device, model, config: ScasplAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, dynamics=model, config=config, device=device),
     "sdc": lambda dataset, device, model, config: SDCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, config=config, device=device),
     "sdc_cql": lambda dataset, device, model, config: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, config=config, device=device),
 }
 
 MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas": "scas_model",
-    "scas_aspl": "scas_model",
+    "scaspl": "scas_model",
     "sdc": "sdc_model",
     "sdc_cql": "sdc_model",
 }

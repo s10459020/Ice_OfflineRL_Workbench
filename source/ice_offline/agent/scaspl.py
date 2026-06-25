@@ -9,7 +9,7 @@ from ice_offline.agent.scas import ScasAgent
 from ice_offline.dataset._types import Batch
 
 
-class ScasAsplAgent(ScasAgent, AsplAgent):
+class ScasplAgent(ScasAgent, AsplAgent):
     weight_punish: float = 2.5
 
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:

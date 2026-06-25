@@ -41,10 +41,10 @@ TASKS = [
     # ([100_000, 0, 500_000], "hopper_random_expert_5", "scas", {}),
     # ([100_000, 0, 500_000], "hopper_random_expert_7", "scas", {}),
     # ([100_000, 0, 500_000], "hopper_random_expert_9", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_3", "scas_aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_5", "scas_aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_7", "scas_aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_9", "scas_aspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_3", "scaspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_5", "scaspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_7", "scaspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_9", "scaspl", {"weight_punish": 1.0}),
 ]
 
 DATASETS = [

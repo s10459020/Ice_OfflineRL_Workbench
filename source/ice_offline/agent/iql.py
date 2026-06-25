@@ -171,6 +171,53 @@ class IQLAgent(Agent):
         self.update_actor(batch)
         self.critic.update_target_soft()
 
+    def update_with_metrics(self, batch: Batch):
+        loss_q = self.loss_q(batch)
+        grad_q = self._grad_norm(
+            loss_q,
+            list(self.critic.q1.parameters()) + list(self.critic.q2.parameters()),
+        )
+
+        loss_v = self.loss_v(batch)
+        grad_v = self._grad_norm(loss_v, self.critic.v.parameters())
+
+        loss_critic = loss_q + loss_v
+        grad_critic = self._grad_norm(
+            loss_critic,
+            list(self.critic.q1.parameters())
+            + list(self.critic.q2.parameters())
+            + list(self.critic.v.parameters()),
+        )
+
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        loss_actor = self.loss_actor(batch)
+        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+
+        self.actor_optimizer.zero_grad()
+        loss_actor.backward()
+        self.actor_optimizer.step()
+
+        self.critic.update_target_soft()
+
+        o, a, _, _, _ = batch
+        with torch.no_grad():
+            target_q = self.critic.target_q_min(o, a).mean()
+
+        return {
+            "loss_q": loss_q.detach(),
+            "grad_q": grad_q.detach(),
+            "loss_v": loss_v.detach(),
+            "grad_v": grad_v.detach(),
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+            "loss_actor": loss_actor.detach(),
+            "grad_actor": grad_actor.detach(),
+            "target_q": target_q.detach(),
+        }
+
     def update_critic(self, batch: Batch) -> None:
         critic_loss = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()

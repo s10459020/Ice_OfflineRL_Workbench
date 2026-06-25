@@ -50,11 +50,11 @@ TASKS = [
     # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scas", {}),
     # ([100_000, 0, 500_000], "hopper_replay_medium", "scas", {}),
     # ([100_000, 0, 500_000], "hopper_replay_expert", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_d4rl_medium", "scas_aspl", {"weight_punish": 0.5}),
-    # ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scas_aspl", {"weight_punish": 0.5}),
-    # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scas_aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_replay_medium", "scas_aspl", {"weight_punish": 0.5}),
-    # ([100_000, 0, 500_000], "hopper_replay_expert", "scas_aspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_d4rl_medium", "scaspl", {"weight_punish": 0.5}),
+    # ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scaspl", {"weight_punish": 0.5}),
+    # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scaspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl", {"weight_punish": 0.5}),
+    # ([100_000, 0, 500_000], "hopper_replay_expert", "scaspl", {"weight_punish": 1.0}),
 ]
 
 

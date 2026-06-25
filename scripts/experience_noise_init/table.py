@@ -35,7 +35,7 @@ AGENTS = [
     "sdc",
     "sdc_cql",
     "scas",
-    "scas_aspl",
+    "scaspl",
 ]
 
 def save_test_view(dataset_id: str, agent_id: str):
