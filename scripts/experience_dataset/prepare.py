@@ -15,7 +15,7 @@ DATASETS = [
 
 MODELS = [
     (100_000, "scas_model"),
-    (100_000, "sdc_model"),
+    # (100_000, "sdc_model"),
 ]
 
 

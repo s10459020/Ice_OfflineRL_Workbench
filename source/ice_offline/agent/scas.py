@@ -100,8 +100,74 @@ class ScasAgent(TD3Agent):
         self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
     # ====================
+    # Update
+    # ====================    
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        _, _, r, sn, d = batch
+        target = self.target_td3(sn, r, d)
+
+        self.update_step += 1
+
+        loss_td = self.loss_td(batch)
+        grad_td = self._grad_norm(loss_td, self.critic.parameters())
+
+        loss_critic = self.loss_critic(batch)
+        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
+
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        metrics = {
+            "loss_td": loss_td.detach(),
+            "grad_td": grad_td.detach(),
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+            "loss_td3": None,
+            "grad_td3": None,
+            "loss_correction": None,
+            "grad_correction": None,
+            "loss_actor": None,
+            "grad_actor": None,
+            "target_q": target.abs().mean(),
+        }
+
+        if self.update_step % self.update_actor_interval == 0:
+            loss_td3 = self.loss_td3(batch)
+            grad_td3 = self._grad_norm(loss_td3, self.actor.parameters())
+
+            loss_correction = self.loss_correction(batch)
+            grad_correction = self._grad_norm(loss_correction, self.actor.parameters())
+
+            loss_actor = (
+                (1.0 - self.weight_correction) * loss_td3
+                + self.weight_correction * loss_correction
+            )
+            grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+
+            self.actor_optimizer.zero_grad()
+            loss_actor.backward()
+            self.actor_optimizer.step()
+            self.critic.update_target_soft()
+            self.actor.update_target_soft()
+
+            metrics.update({
+                "loss_td3": loss_td3.detach(),
+                "grad_td3": grad_td3.detach(),
+                "loss_correction": loss_correction.detach(),
+                "grad_correction": grad_correction.detach(),
+                "loss_actor": loss_actor.detach(),
+                "grad_actor": grad_actor.detach(),
+            })
+
+        return metrics
+
+    # ====================
     # Actor loss
     # ====================    
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        return self.loss_td3_normal(batch)
+
     def loss_correction(self, batch: Batch) -> torch.Tensor:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch

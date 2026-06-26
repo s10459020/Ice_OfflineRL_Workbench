@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 
 from ice_offline.agent._spec import Agent
+from ice_offline.agent._spec import MetricValues
 from ice_offline.dataset._types import Batch
 
 
@@ -183,6 +184,44 @@ class TD3Agent(Agent):
         actor_loss = self.loss_actor(batch)
         actor_loss.backward()
         self.actor_optimizer.step()
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        _, _, r, on, d = batch
+        target = self.target_td3(on, r, d)
+
+        self.update_step += 1
+
+        loss_critic = self.loss_critic(batch)
+        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
+
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        metrics = {
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+            "loss_actor": None,
+            "grad_actor": None,
+            "target_q": target.abs().mean(),
+        }
+
+        if self.update_step % self.update_actor_interval == 0:
+            loss_actor = self.loss_actor(batch)
+            grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+
+            self.actor_optimizer.zero_grad()
+            loss_actor.backward()
+            self.actor_optimizer.step()
+            self.critic.update_target_soft()
+            self.actor.update_target_soft()
+
+            metrics.update({
+                "loss_actor": loss_actor.detach(),
+                "grad_actor": grad_actor.detach(),
+            })
+
+        return metrics
 
     # ====================
     # Save and load

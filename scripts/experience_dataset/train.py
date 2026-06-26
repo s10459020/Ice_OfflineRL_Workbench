@@ -5,6 +5,8 @@ from ice_offline.run.train import train
 from plot import plot_agent
 
 TASKS = [
+    # ([None, 0, 100_000], "hopper_d4rl_medium", "td3", {}),
+    # ([100_000, 0, 100_000], "hopper_d4rl_medium", "scas_lambda_0", {}),
     # ([None, 0, 500_000], "hopper_d4rl_medium", "bc_deterministic", {}),
     # ([None, 0, 500_000], "hopper_d4rl_hybrid", "bc_deterministic", {}),
     # ([None, 0, 500_000], "hopper_d4rl_expert", "bc_deterministic", {}),
