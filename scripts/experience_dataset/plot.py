@@ -18,8 +18,7 @@ DATASETS = [
 ]
 
 AGENTS = [
-    "bc_deterministic",
-    "bc_stochastic",
+    "bc",
     "td3bc",
     "iql",
     "cql",

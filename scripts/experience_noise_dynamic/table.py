@@ -7,16 +7,10 @@ from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
 
 DATASETS = [
-    ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
-    ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
-    ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
-    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
-    ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
-    ("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
-    ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
+    ("hopper_d4rl_medium_noise_dynamic", "hopper_random", "hopper_d4rl_medium"),
+    ("hopper_d4rl_expert_noise_dynamic", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_replay_medium_noise_dynamic", "hopper_random", "hopper_replay_medium"),
+    ("hopper_replay_expert_noise_dynamic", "hopper_random", "hopper_replay_expert"),
 ]
 
 AGENTS = [
@@ -25,17 +19,7 @@ AGENTS = [
     "iql",
     "cql",
     "aspl",
-    "td3_q2",
-    "td3_q4",
-    "td3_q8",
-    # "sdc",
-    # "sdc_cql",
     "scas",
-    # "scas_lambda_0",
-    # "scas_lambda_25",
-    # "scas_lambda_50",
-    # "scas_lambda_75",
-    # "scas_lambda_100",
     "scaspl",
 ]
 
@@ -45,7 +29,7 @@ def save_test_view(dataset_id: str, agent_id: str):
     result = cal_main(task_id)
     if result is None:
         return None
-     
+
     returns_output_path, _ = result
     print(f"saved: {returns_output_path}")
     return returns_output_path
@@ -70,9 +54,9 @@ def build_tables() -> None:
         lowers.append(bounds[lower_id])
         uppers.append(bounds[upper_id])
 
-    table_true(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_dataset", "true_returns.csv"))
-    table_mean(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_dataset", "mean_returns.csv"))
-    table_pr95(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_dataset", "pr95_returns.csv"))
+    table_true(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_dynamic", "true_returns.csv"))
+    table_mean(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_dynamic", "mean_returns.csv"))
+    table_pr95(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_dynamic", "pr95_returns.csv"))
 
 
 if __name__ == "__main__":

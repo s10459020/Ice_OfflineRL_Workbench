@@ -5,14 +5,10 @@ from ice_offline.run.train import train
 from plot import plot_agent
 
 TASKS = [
-    # ([None, 0, 500_000], "hopper_random_expert_3", "bc_deterministic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "bc_deterministic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "bc_deterministic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "bc_deterministic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_3", "bc_stochastic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "bc_stochastic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "bc_stochastic", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "bc_stochastic", {}),
+    # ([None, 0, 500_000], "hopper_random_expert_3", "bc", {}),
+    # ([None, 0, 500_000], "hopper_random_expert_5", "bc", {}),
+    # ([None, 0, 500_000], "hopper_random_expert_7", "bc", {}),
+    # ([None, 0, 500_000], "hopper_random_expert_9", "bc", {}),
     # ([None, 0, 500_000], "hopper_random_expert_3", "td3bc", {}),
     # ([None, 0, 500_000], "hopper_random_expert_5", "td3bc", {}),
     # ([None, 0, 500_000], "hopper_random_expert_7", "td3bc", {}),
