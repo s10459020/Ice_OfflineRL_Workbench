@@ -127,7 +127,12 @@ class TD3Agent(Agent):
         self.update_actor_interval = config.get("update_actor_interval", 2)
         self.update_step = 0
         self.actor = TD3Actor(self.obs_size, self.act_size, config=config).to(self.device)
-        self.critic = TD3Critic(self.obs_size, self.act_size, config=config).to(self.device)
+        self.critic = TD3Critic(
+            self.obs_size,
+            self.act_size,
+            config=config,
+            q_count=int(config.get("q_count", 2)),
+        ).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
         self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
@@ -283,4 +288,4 @@ class TD3Agent(Agent):
         return -q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        return self.loss_td3(batch)
+        return self.loss_td3_normal(batch)

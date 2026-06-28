@@ -72,6 +72,10 @@ class ScasplAgent(ScasAgent, AsplAgent):
             "grad_punish": grad_punish.detach(),
             "loss_critic": loss_critic.detach(),
             "grad_critic": grad_critic.detach(),
+            "loss_td3": None,
+            "grad_td3": None,
+            "loss_correction": None,
+            "grad_correction": None,
             "loss_actor": None,
             "grad_actor": None,
             "q_avg": q_avg.detach(),
@@ -79,6 +83,12 @@ class ScasplAgent(ScasAgent, AsplAgent):
         }
 
         if self.update_step % self.update_actor_interval == 0:
+            loss_td3 = self.loss_td3(batch)
+            grad_td3 = self._grad_norm(loss_td3, self.actor.parameters())
+
+            loss_correction = self.loss_correction(batch)
+            grad_correction = self._grad_norm(loss_correction, self.actor.parameters())
+
             loss_actor = self.loss_actor(batch)
             grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
 
@@ -89,6 +99,10 @@ class ScasplAgent(ScasAgent, AsplAgent):
             self.actor.update_target_soft()
 
             metrics.update({
+                "loss_td3": loss_td3.detach(),
+                "grad_td3": grad_td3.detach(),
+                "loss_correction": loss_correction.detach(),
+                "grad_correction": grad_correction.detach(),
                 "loss_actor": loss_actor.detach(),
                 "grad_actor": grad_actor.detach(),
             })
@@ -110,4 +124,3 @@ class ScasplAgent(ScasAgent, AsplAgent):
         loss_td = sum(F.mse_loss(q, q_target) for q in self.critic.q_all(s, a))
         loss_punish = AsplAgent.loss_punish(self, batch)
         return loss_td + self.weight_punish * loss_punish
-

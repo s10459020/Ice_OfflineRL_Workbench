@@ -37,14 +37,14 @@ TASKS = [
     # ([100_000, 0, 500_000], "hopper_random_expert_5", "sdc_cql", {}),
     # ([100_000, 0, 500_000], "hopper_random_expert_7", "sdc_cql", {}),
     # ([100_000, 0, 500_000], "hopper_random_expert_9", "sdc_cql", {}),
-    ([100_000, 0, 500_000], "hopper_random_expert_3", "scas", {}),
-    ([100_000, 0, 500_000], "hopper_random_expert_5", "scas", {}),
-    ([100_000, 0, 500_000], "hopper_random_expert_7", "scas", {}),
-    ([100_000, 0, 500_000], "hopper_random_expert_9", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_3", "scaspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_5", "scaspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_7", "scaspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_9", "scaspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_3", "scas", {}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_5", "scas", {}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_7", "scas", {}),
+    # ([100_000, 0, 500_000], "hopper_random_expert_9", "scas", {}),
+    ([100_000, 0, 500_000], "hopper_random_expert_3", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
+    ([100_000, 0, 500_000], "hopper_random_expert_5", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
+    ([100_000, 0, 500_000], "hopper_random_expert_7", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
+    ([100_000, 0, 500_000], "hopper_random_expert_9", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
 ]
 
 DATASETS = [

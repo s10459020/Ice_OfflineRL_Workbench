@@ -89,7 +89,7 @@ class ScasDynamic(Agent):
 
 class ScasAgent(TD3Agent):
     def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        self.weight_correction = config.get("weight_correction", 0.25)
+        self.weight_correction = config.get("weight_correction", 0.5)
         self.scale_gap = config.get("scale_gap", 5.0)
         self.max_gap = config.get("max_gap", 50.0)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)

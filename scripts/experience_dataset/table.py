@@ -12,6 +12,11 @@ DATASETS = [
     ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
     ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
     ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
+    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
+    ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
+    ("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
+    ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
 ]
 
 AGENTS = [
@@ -21,14 +26,17 @@ AGENTS = [
     "iql",
     "cql",
     "aspl",
-    "sdc",
-    "sdc_cql",
+    "td3_q2",
+    "td3_q4",
+    "td3_q8",
+    # "sdc",
+    # "sdc_cql",
     "scas",
-    "scas_lambda_0",
-    "scas_lambda_25",
-    "scas_lambda_50",
-    "scas_lambda_75",
-    "scas_lambda_100",
+    # "scas_lambda_0",
+    # "scas_lambda_25",
+    # "scas_lambda_50",
+    # "scas_lambda_75",
+    # "scas_lambda_100",
     "scaspl",
 ]
 
@@ -44,7 +52,7 @@ def save_test_view(dataset_id: str, agent_id: str):
     return returns_output_path
 
 
-if __name__ == "__main__":
+def build_tables() -> None:
     dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
     datas: list[list[object]] = []
     lowers: list[object] = []
@@ -66,3 +74,7 @@ if __name__ == "__main__":
     table_true(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_dataset", "true_returns.csv"))
     table_mean(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_dataset", "mean_returns.csv"))
     table_pr95(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_dataset", "pr95_returns.csv"))
+
+
+if __name__ == "__main__":
+    build_tables()
