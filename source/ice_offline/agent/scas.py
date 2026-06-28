@@ -13,7 +13,6 @@ from ice_offline.dataset._types import Batch
 class _M(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
         super().__init__()
-        self.noise_scale = config.get("noise_scale", 3e-3)
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size + act_size, 256),
             torch.nn.ReLU(),
@@ -89,21 +88,86 @@ class ScasDynamic(Agent):
         
 
 class ScasAgent(TD3Agent):
-    def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic | None = None, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        self.dynamics = dynamics
-        self.weight_correction = config.get("weight_correction", 0.25)
+    def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        self.weight_correction = config.get("weight_correction", 0.5)
         self.scale_gap = config.get("scale_gap", 5.0)
         self.max_gap = config.get("max_gap", 50.0)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
         self.actor = TD3Actor(self.obs_size, self.act_size, config=config, pi_cls=_Pi).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, config=config, q_cls=_Q).to(self.device)
-        self.dynamics = self.dynamics.prepare()
+        self.dynamics = dynamics.prepare()
         self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
         self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
 
     # ====================
+    # Update
+    # ====================    
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        _, _, r, sn, d = batch
+        target = self.target_td3(sn, r, d)
+
+        self.update_step += 1
+
+        loss_td = self.loss_td(batch)
+        grad_td = self._grad_norm(loss_td, self.critic.parameters())
+
+        loss_critic = self.loss_critic(batch)
+        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
+
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        metrics = {
+            "loss_td": loss_td.detach(),
+            "grad_td": grad_td.detach(),
+            "loss_critic": loss_critic.detach(),
+            "grad_critic": grad_critic.detach(),
+            "loss_td3": None,
+            "grad_td3": None,
+            "loss_correction": None,
+            "grad_correction": None,
+            "loss_actor": None,
+            "grad_actor": None,
+            "target_q": target.abs().mean(),
+        }
+
+        if self.update_step % self.update_actor_interval == 0:
+            loss_td3 = self.loss_td3(batch)
+            grad_td3 = self._grad_norm(loss_td3, self.actor.parameters())
+
+            loss_correction = self.loss_correction(batch)
+            grad_correction = self._grad_norm(loss_correction, self.actor.parameters())
+
+            loss_actor = (
+                (1.0 - self.weight_correction) * loss_td3
+                + self.weight_correction * loss_correction
+            )
+            grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+
+            self.actor_optimizer.zero_grad()
+            loss_actor.backward()
+            self.actor_optimizer.step()
+            self.critic.update_target_soft()
+            self.actor.update_target_soft()
+
+            metrics.update({
+                "loss_td3": loss_td3.detach(),
+                "grad_td3": grad_td3.detach(),
+                "loss_correction": loss_correction.detach(),
+                "grad_correction": grad_correction.detach(),
+                "loss_actor": loss_actor.detach(),
+                "grad_actor": grad_actor.detach(),
+            })
+
+        return metrics
+
+    # ====================
     # Actor loss
     # ====================    
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        return self.loss_td3_normal(batch)
+
     def loss_correction(self, batch: Batch) -> torch.Tensor:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch
@@ -118,7 +182,7 @@ class ScasAgent(TD3Agent):
 
         ps = self.dynamics.noise_state(s)
         pa = self.actor.pi(ps)
-        mse_M = (self.dynamics(ps, pa) - sn) ** 2
+        mse_M = (self.dynamics.forward(ps, pa) - sn) ** 2
         return (weight * mse_M).mean() # mean over batch
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:

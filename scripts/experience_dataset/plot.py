@@ -10,6 +10,11 @@ DATASETS = [
     "hopper_d4rl_expert",
     "hopper_replay_medium",
     "hopper_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
@@ -28,6 +33,12 @@ AGENTS = [
     "scas_lambda_75",
     "scas_lambda_100",
     "scaspl",
+]
+
+EXPERT_TASKS = [
+    ("hopper_d4rl_expert", "td3_q2"),
+    ("hopper_d4rl_expert", "td3_q4"),
+    ("hopper_d4rl_expert", "td3_q8"),
 ]
 
 MODELS = [
@@ -61,3 +72,5 @@ if __name__ == "__main__":
             plot_agent(index, dataset_id, agent_id)
         for model_id in MODELS:
             plot_model(index, dataset_id, model_id)
+    for dataset_id, agent_id in EXPERT_TASKS:
+        plot_agent(DATASETS.index(dataset_id) + 1, dataset_id, agent_id)

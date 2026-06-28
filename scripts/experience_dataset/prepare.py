@@ -5,17 +5,23 @@ from ice_offline.run.train import train_model as run_train_model
 from plot import plot_model
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    "hopper_d4rl_hybrid",
-    "hopper_d4rl_expert",
-    "hopper_random",
-    "hopper_replay_medium",
-    "hopper_replay_expert",
+    # "hopper_d4rl_medium",
+    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_expert",
+    # "hopper_random",
+    # "hopper_replay_medium",
+    # "hopper_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_random",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 MODELS = [
     (100_000, "scas_model"),
-    (100_000, "sdc_model"),
+    # (100_000, "sdc_model"),
 ]
 
 

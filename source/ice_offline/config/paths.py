@@ -14,10 +14,16 @@ METRICS_ROOT = PROJECT_ROOT / "tmps" / "metrics"
 VIEW_ROOT = PROJECT_ROOT / "tmps" / "view"
 
 
+def _canonical_agent_id(agent_id: str) -> str:
+    if agent_id == "scas_aspl":
+        return "scaspl"
+    return agent_id
+
+
 def _task_id(dataset_id: str, agent_id: str | None = None) -> str:
     if agent_id is None:
         return f"{dataset_id}-v0"
-    return f"{dataset_id}-{agent_id}-v0"
+    return f"{dataset_id}-{_canonical_agent_id(agent_id)}-v0"
 
 def eval_data_path(mode: str, task_id: str) -> Path:
     return RUNS_ROOT / mode / task_id / "data" / "eval_data.hdf5"
@@ -60,7 +66,7 @@ def metric_path(task_id: str) -> Path:
 
 
 def plot_path(index: int, dataset_id: str, agent_id: str) -> Path:
-    return VIEW_ROOT / "plot" / agent_id / f"{index}. {dataset_id}.png"
+    return VIEW_ROOT / "plot" / _canonical_agent_id(agent_id) / f"{index}. {dataset_id}.png"
 
 
 def table_path(group: str, name: str) -> Path:

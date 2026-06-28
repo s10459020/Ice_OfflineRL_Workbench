@@ -2,6 +2,7 @@ from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.test import test
+from table import build_tables
 
 DATASETS = [
     ("hopper_d4rl_medium_noise_1", "hopper_d4rl_medium", {"reset_noise_scale": 5e-4}),
@@ -29,8 +30,6 @@ AGENTS = [
     (500_000, 0, "iql"),
     (500_000, 0, "cql"),
     (500_000, 0, "aspl"),
-    (500_000, 100_000, "sdc"),
-    (500_000, 100_000, "sdc_cql"),
     (500_000, 100_000, "scas"),
     (500_000, 100_000, "scaspl"),
 ]
@@ -70,3 +69,4 @@ if __name__ == "__main__":
 
     for test_dataset_id, train_dataset_id, env_kwargs, agent_id, agent_step, model_step in tasks:
         test_agent(test_dataset_id, train_dataset_id, env_kwargs, agent_id, agent_step, model_step)
+    build_tables()

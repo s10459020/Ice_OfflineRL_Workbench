@@ -32,8 +32,8 @@ AGENTS = [
     "iql",
     "cql",
     "aspl",
-    "sdc",
-    "sdc_cql",
+    # "sdc",
+    # "sdc_cql",
     "scas",
     "scaspl",
 ]
@@ -49,7 +49,7 @@ def save_test_view(dataset_id: str, agent_id: str):
     return returns_output_path
 
 
-if __name__ == "__main__":
+def build_tables() -> None:
     dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
     datas: list[list[object]] = []
     lowers: list[object] = []
@@ -71,3 +71,7 @@ if __name__ == "__main__":
     table_true(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_init_random", "true_returns.csv"))
     table_mean(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_init_random", "mean_returns.csv"))
     table_pr95(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_init_random", "pr95_returns.csv"))
+
+
+if __name__ == "__main__":
+    build_tables()
