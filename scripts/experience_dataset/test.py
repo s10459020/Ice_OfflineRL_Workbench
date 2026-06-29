@@ -12,11 +12,11 @@ DATASETS = [
     "hopper_d4rl_expert",
     "hopper_replay_medium",
     "hopper_replay_expert",
-    "halfcheetah_d4rl_medium",
-    "halfcheetah_d4rl_hybrid",
-    "halfcheetah_d4rl_expert",
-    "halfcheetah_replay_medium",
-    "halfcheetah_replay_expert",
+    # "halfcheetah_d4rl_medium",
+    # "halfcheetah_d4rl_hybrid",
+    # "halfcheetah_d4rl_expert",
+    # "halfcheetah_replay_medium",
+    # "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
@@ -27,12 +27,6 @@ AGENTS = [
     (500_000, None, "aspl"),
     (500_000, 100_000, "scas"),
     (500_000, 100_000, "scaspl"),
-]
-
-EXPERT_TASKS = [
-    ("hopper_d4rl_expert", 500_000, None, "td3_q2"),
-    ("hopper_d4rl_expert", 500_000, None, "td3_q4"),
-    ("hopper_d4rl_expert", 500_000, None, "td3_q8"),
 ]
 
 
@@ -70,16 +64,12 @@ def build_eval_results() -> None:
     for agent_id in {agent_id for _, _, agent_id in AGENTS}:
         for dataset_id in DATASETS:
             eval_agent_result(dataset_id, agent_id)
-    for dataset_id, _, _, agent_id in EXPERT_TASKS:
-        eval_agent_result(dataset_id, agent_id)
 
 
 if __name__ == "__main__":
     for agent_step, model_step, agent_id in AGENTS:
         for dataset_id in DATASETS:
             test_agent(dataset_id, agent_step, model_step, agent_id)
-    for dataset_id, agent_step, model_step, agent_id in EXPERT_TASKS:
-        test_agent(dataset_id, agent_step, model_step, agent_id)
     build_eval_results()
     build_tables()
     build_boxplots()
