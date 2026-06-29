@@ -1,19 +1,24 @@
 import numpy as np
 
 from ice_offline.agent._lookup import make_agent
+from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import main_data_path
 from ice_offline.dataset._lookup import make_dataset
+from ice_offline.run.eval import cal_main
 from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.state._lookup import STATE_OPS
 from ice_offline.tools.printer import print_stage
-from table import build_tables
+from view import save_boxplots
+from view import save_tables
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    "hopper_d4rl_expert",
-    "hopper_replay_medium",
-    "hopper_replay_expert",
+    ("noise_dynamic@hopper_d4rl_medium", "hopper_d4rl_medium"),
+    ("noise_dynamic@hopper_d4rl_expert", "hopper_d4rl_expert"),
+    ("noise_dynamic@hopper_replay_medium", "hopper_replay_medium"),
+    ("noise_dynamic@hopper_replay_expert", "hopper_replay_expert"),
 ]
+
+SCALE_NOISE = 5e-3
 
 AGENTS = [
     (500_000, 0, "bc"),
@@ -24,11 +29,6 @@ AGENTS = [
     (500_000, 100_000, "scas"),
     (500_000, 100_000, "scaspl"),
 ]
-
-
-def _task_id(dataset_id: str, agent_id: str, scale_noise: float) -> str:
-    noise_name = f"{scale_noise:.0e}".replace("-", "m")
-    return f"{dataset_id}-noise_dynamic_{noise_name}-{agent_id}-v0"
 
 
 def _state_io(env):
@@ -91,37 +91,43 @@ def collect(
 
 
 def test_agent(
-    dataset_id: str,
+    test_dataset_id: str,
+    train_dataset_id: str,
     agent_id: str,
     agent_step: int,
     model_step: int,
 ) -> None:
-    scale_noise = 5e-3
-    dataset = make_dataset(dataset_id, device="cuda")
+    dataset = make_dataset(train_dataset_id, device="cuda")
     agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step)
 
-    train_id = f"{dataset_id}-{agent.id}-v0"
+    train_id = _task_id(train_dataset_id, agent.id)
     agent.load(train_id, agent_step)
 
-    task_id = _task_id(dataset_id, agent.id, scale_noise)
+    task_id = _task_id(test_dataset_id, agent.id)
     env = dataset.make_env()
     print("====================================")
     print(f"task: {task_id}")
-    print(f"dataset: {dataset_id}")
-    print(f"dynamic_noise_scale: {scale_noise:g}")
+    print(f"dataset: {train_dataset_id}")
+    print(f"dynamic_noise_scale: {SCALE_NOISE:g}")
     print("====================================")
 
-    path = collect(task_id, agent, env, scale_noise=scale_noise)
+    path = collect(task_id, agent, env, scale_noise=SCALE_NOISE)
     print(f"saved: {path}")
 
 
 if __name__ == "__main__":
+    agent_ids = [agent_id for _, _, agent_id in AGENTS]
     tasks = [
-        (dataset_id, agent_id, agent_step, model_step)
+        (test_dataset_id, train_dataset_id, agent_id, agent_step, model_step)
         for agent_step, model_step, agent_id in AGENTS
-        for dataset_id in DATASETS
+        for test_dataset_id, train_dataset_id in DATASETS
     ]
 
-    for dataset_id, agent_id, agent_step, model_step in tasks:
-        test_agent(dataset_id, agent_id, agent_step, model_step)
-    build_tables()
+    for test_dataset_id, train_dataset_id, agent_id, agent_step, model_step in tasks:
+        test_agent(test_dataset_id, train_dataset_id, agent_id, agent_step, model_step)
+        returns_output_path, _ = cal_main(_task_id(test_dataset_id, agent_id))
+        print(f"saved: {returns_output_path}")
+
+    dataset_ids = [dataset_id for dataset_id, _ in DATASETS]
+    save_tables(dataset_ids, agent_ids)
+    save_boxplots(dataset_ids, agent_ids)

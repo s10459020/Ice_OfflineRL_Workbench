@@ -1,26 +1,28 @@
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
+from ice_offline.run.eval import cal_main
 from ice_offline.run.test import test
-from table import build_tables
+from view import save_boxplots
+from view import save_tables
 
 DATASETS = [
-    ("hopper_d4rl_medium_noise_1", "hopper_d4rl_medium", {"reset_noise_scale": 5e-4}),
-    ("hopper_d4rl_medium_noise_2", "hopper_d4rl_medium", {"reset_noise_scale": 5e-3}),
-    ("hopper_d4rl_medium_noise_3", "hopper_d4rl_medium", {"reset_noise_scale": 5e-2}),
-    ("hopper_d4rl_medium_noise_4", "hopper_d4rl_medium", {"reset_noise_scale": 5e-1}),
-    ("hopper_d4rl_expert_noise_1", "hopper_d4rl_expert", {"reset_noise_scale": 5e-4}),
-    ("hopper_d4rl_expert_noise_2", "hopper_d4rl_expert", {"reset_noise_scale": 5e-3}),
-    ("hopper_d4rl_expert_noise_3", "hopper_d4rl_expert", {"reset_noise_scale": 5e-2}),
-    ("hopper_d4rl_expert_noise_4", "hopper_d4rl_expert", {"reset_noise_scale": 5e-1}),
-    # ("hopper_replay_medium_noise_1", "hopper_replay_medium", {"reset_noise_scale": 5e-4}),
-    # ("hopper_replay_medium_noise_2", "hopper_replay_medium", {"reset_noise_scale": 5e-3}),
-    # ("hopper_replay_medium_noise_3", "hopper_replay_medium", {"reset_noise_scale": 5e-2}),
-    # ("hopper_replay_medium_noise_4", "hopper_replay_medium", {"reset_noise_scale": 5e-1}),
-    # ("hopper_replay_expert_noise_1", "hopper_replay_expert", {"reset_noise_scale": 5e-4}),
-    # ("hopper_replay_expert_noise_2", "hopper_replay_expert", {"reset_noise_scale": 5e-3}),
-    # ("hopper_replay_expert_noise_3", "hopper_replay_expert", {"reset_noise_scale": 5e-2}),
-    # ("hopper_replay_expert_noise_4", "hopper_replay_expert", {"reset_noise_scale": 5e-1}),
+    ("noise_init_5e-4@hopper_d4rl_medium", "hopper_d4rl_medium", {"reset_noise_scale": 5e-4}),
+    ("noise_init_5e-3@hopper_d4rl_medium", "hopper_d4rl_medium", {"reset_noise_scale": 5e-3}),
+    ("noise_init_5e-2@hopper_d4rl_medium", "hopper_d4rl_medium", {"reset_noise_scale": 5e-2}),
+    ("noise_init_5e-1@hopper_d4rl_medium", "hopper_d4rl_medium", {"reset_noise_scale": 5e-1}),
+    ("noise_init_5e-4@hopper_d4rl_expert", "hopper_d4rl_expert", {"reset_noise_scale": 5e-4}),
+    ("noise_init_5e-3@hopper_d4rl_expert", "hopper_d4rl_expert", {"reset_noise_scale": 5e-3}),
+    ("noise_init_5e-2@hopper_d4rl_expert", "hopper_d4rl_expert", {"reset_noise_scale": 5e-2}),
+    ("noise_init_5e-1@hopper_d4rl_expert", "hopper_d4rl_expert", {"reset_noise_scale": 5e-1}),
+    # ("noise_init_5e-4@hopper_replay_medium", "hopper_replay_medium", {"reset_noise_scale": 5e-4}),
+    # ("noise_init_5e-3@hopper_replay_medium", "hopper_replay_medium", {"reset_noise_scale": 5e-3}),
+    # ("noise_init_5e-2@hopper_replay_medium", "hopper_replay_medium", {"reset_noise_scale": 5e-2}),
+    # ("noise_init_5e-1@hopper_replay_medium", "hopper_replay_medium", {"reset_noise_scale": 5e-1}),
+    # ("noise_init_5e-4@hopper_replay_expert", "hopper_replay_expert", {"reset_noise_scale": 5e-4}),
+    # ("noise_init_5e-3@hopper_replay_expert", "hopper_replay_expert", {"reset_noise_scale": 5e-3}),
+    # ("noise_init_5e-2@hopper_replay_expert", "hopper_replay_expert", {"reset_noise_scale": 5e-2}),
+    # ("noise_init_5e-1@hopper_replay_expert", "hopper_replay_expert", {"reset_noise_scale": 5e-1}),
 ]
 
 AGENTS = [
@@ -60,6 +62,7 @@ def test_agent(
 
 
 if __name__ == "__main__":
+    agent_ids = [agent_id for _, _, agent_id in AGENTS]
     tasks = [
         (test_dataset_id, train_dataset_id, env_kwargs, agent_id, agent_step, model_step)
         for agent_step, model_step, agent_id in AGENTS
@@ -68,4 +71,9 @@ if __name__ == "__main__":
 
     for test_dataset_id, train_dataset_id, env_kwargs, agent_id, agent_step, model_step in tasks:
         test_agent(test_dataset_id, train_dataset_id, env_kwargs, agent_id, agent_step, model_step)
-    build_tables()
+        returns_output_path, _ = cal_main(_task_id(test_dataset_id, agent_id))
+        print(f"saved: {returns_output_path}")
+
+    dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
+    save_tables(dataset_ids, agent_ids)
+    save_boxplots(dataset_ids, agent_ids)

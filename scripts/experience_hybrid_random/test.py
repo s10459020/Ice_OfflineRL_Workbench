@@ -7,26 +7,14 @@ from view import save_boxplots
 from view import save_tables
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
-    # "hopper_d4rl_expert",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
-    # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
-    # "halfcheetah_d4rl_expert",
-    # "halfcheetah_replay_medium",
-    # "halfcheetah_replay_expert",
+    "hopper_random_expert_3",
+    "hopper_random_expert_5",
+    "hopper_random_expert_7",
+    "hopper_random_expert_9",
 ]
 
 AGENTS = [
-    # (500_000, None, "bc"),
-    # (500_000, None, "td3bc"),
-    # (500_000, None, "iql"),
-    # (500_000, None, "cql"),
-    (500_000, None, "aspl"),
-    # (500_000, 100_000, "scas"),
-    # (500_000, 100_000, "scaspl"),
+    (500_000, 100_000, "scaspl"),
 ]
 
 
@@ -37,11 +25,17 @@ def test_agent(
     agent_id: str,
 ) -> None:
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step)
+    agent = make_agent(
+        agent_id,
+        dataset,
+        device="cuda",
+        model_step=model_step,
+    )
 
     task_id = _task_id(dataset.id, agent.id)
     if agent_step > 0:
         agent.load(task_id, agent_step)
+
     print(
         f"task={task_id}, dataset={dataset.id}, agent={agent.id}, "
         f"agent_step={agent_step}, model_step={model_step}"
@@ -58,6 +52,7 @@ if __name__ == "__main__":
         for agent_step, model_step, agent_id in AGENTS
         for dataset_id in DATASETS
     ]
+
     for dataset_id, agent_step, model_step, agent_id in tasks:
         test_agent(dataset_id, agent_step, model_step, agent_id)
         returns_output_path, _ = cal_main(_task_id(dataset_id, agent_id))
