@@ -25,8 +25,8 @@ class TD3BCAgent(TD3Agent):
         metrics = {
             "loss_critic": loss_critic.detach(),
             "grad_critic": grad_critic.detach(),
-            "loss_td3": None,
-            "grad_td3": None,
+            "loss_normal": None,
+            "grad_normal": None,
             "loss_bc": None,
             "grad_bc": None,
             "loss_actor": None,
@@ -34,10 +34,10 @@ class TD3BCAgent(TD3Agent):
         }
 
         if self.update_step % self.update_actor_interval == 0:
-            loss_td3 = self.loss_td3(batch)
+            loss_normal = self.loss_normal(batch)
             loss_bc = self.loss_bc(batch)
-            loss_actor = self.weight_td3 * loss_td3 + loss_bc
-            grad_td3 = self._grad_norm(loss_td3, self.actor.parameters())
+            loss_actor = self.weight_td3 * loss_normal + loss_bc
+            grad_normal = self._grad_norm(loss_normal, self.actor.parameters())
             grad_bc = self._grad_norm(loss_bc, self.actor.parameters())
             grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
 
@@ -48,8 +48,8 @@ class TD3BCAgent(TD3Agent):
             self.actor.update_target_soft()
 
             metrics.update({
-                "loss_td3": loss_td3.detach(),
-                "grad_td3": grad_td3.detach(),
+                "loss_normal": loss_normal.detach(),
+                "grad_normal": grad_normal.detach(),
                 "loss_bc": loss_bc.detach(),
                 "grad_bc": grad_bc.detach(),
                 "loss_actor": loss_actor.detach(),
@@ -61,11 +61,17 @@ class TD3BCAgent(TD3Agent):
     # ====================
     # Actor loss
     # ====================
+    def loss_normal(self, batch: Batch) -> torch.Tensor:
+        o, _, _, _, _ = batch
+        a = self.actor.pi(o)
+        q = self.critic.q_min(o, a)
+        return - q.mean() / q.abs().mean().detach()
+
     def loss_bc(self, batch: Batch) -> torch.Tensor:
         o, a, _, _, _ = batch
         a_pred = self.actor.pi(o)
         return ((a - a_pred) ** 2).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        return self.weight_td3 * self.loss_td3(batch) + self.loss_bc(batch)
+        return self.weight_td3 * self.loss_normal(batch) + self.loss_bc(batch)
 
