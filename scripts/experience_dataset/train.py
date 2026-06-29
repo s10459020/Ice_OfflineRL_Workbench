@@ -4,22 +4,30 @@ from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train
 from plot import plot_agent
 
+DATASETS = [
+    "hopper_d4rl_medium",
+    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_expert",
+    "hopper_replay_medium",
+    # "hopper_replay_expert",
+    # "halfcheetah_d4rl_medium",
+    # "halfcheetah_d4rl_hybrid",
+    # "halfcheetah_d4rl_expert",
+    # "halfcheetah_replay_medium",
+    # "halfcheetah_replay_expert",
+]
+
+AGENTS = [
+    # ([None, 0, 50_000], "bc"),
+    ([None, 0, 100_000], "td3"),
+    ([None, 0, 100_000], "td3_gp"),
+    ([None, 0, 100_000], "td3bc_gp"),
+    ([None, 0, 100_000], "td3bc"),
+    # ([None, 0, 200_000], "iql"),
+    # ([100_000, 0, 500_000], "scas"),
+]
+
 TASKS = [
-    # ([None, 0, 50_000], "hopper_d4rl_medium", "bc", {}),
-    # ([None, 0, 50_000], "hopper_d4rl_hybrid", "bc", {}),
-    # ([None, 0, 50_000], "hopper_d4rl_expert", "bc", {}),
-    # ([None, 0, 50_000], "hopper_replay_medium", "bc", {}),
-    # ([None, 0, 50_000], "hopper_replay_expert", "bc", {}),
-    # ([None, 0, 100_000], "hopper_d4rl_medium", "td3bc", {}),
-    # ([None, 0, 100_000], "hopper_d4rl_hybrid", "td3bc", {}),
-    # ([None, 0, 100_000], "hopper_d4rl_expert", "td3bc", {}),
-    # ([None, 0, 100_000], "hopper_replay_medium", "td3bc", {}),
-    # ([None, 0, 100_000], "hopper_replay_expert", "td3bc", {}),
-    # ([None, 0, 200_000], "hopper_d4rl_medium", "iql", {}),
-    # ([None, 0, 200_000], "hopper_d4rl_hybrid", "iql", {}),
-    # ([None, 0, 200_000], "hopper_d4rl_expert", "iql", {}),
-    # ([None, 0, 200_000], "hopper_replay_medium", "iql", {}),
-    # ([None, 0, 200_000], "hopper_replay_expert", "iql", {}),
     # ([None, 0, 500_000], "hopper_d4rl_medium", "cql", {"threshold": 1.5}),
     # ([None, 0, 500_000], "hopper_d4rl_hybrid", "cql", {"threshold": 1.5}),
     # ([None, 0, 500_000], "hopper_d4rl_expert", "cql", {"threshold": 1.0}),
@@ -30,31 +38,11 @@ TASKS = [
     # ([None, 0, 500_000], "hopper_d4rl_expert", "aspl", {"weight_punish": 1.0}),
     # ([None, 0, 500_000], "hopper_replay_medium", "aspl", {"weight_punish": 0.5}),
     # ([None, 0, 500_000], "hopper_replay_expert", "aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_d4rl_medium", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_replay_medium", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_replay_expert", "scas", {}),
     # ([100_000, 0, 500_000], "hopper_d4rl_medium", "scaspl", {"weight_punish": 1.0}),
     # ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scaspl", {"weight_punish": 1.0}),
     # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scaspl", {"weight_punish": 1.0}),
-    ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl", {"weight_punish": 2.5}),
+    # ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl", {"weight_punish": 2.5}),
     # ([100_000, 0, 500_000], "hopper_replay_expert", "scaspl", {"weight_punish": 1.0}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_medium", "bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_hybrid", "bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_expert", "bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_replay_medium", "bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_replay_expert", "bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_medium", "td3bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_hybrid", "td3bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_expert", "td3bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_replay_medium", "td3bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_replay_expert", "td3bc", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_medium", "iql", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_hybrid", "iql", {}),
-    # ([None, 0, 500_000], "halfcheetah_d4rl_expert", "iql", {}),
-    # ([None, 0, 500_000], "halfcheetah_replay_medium", "iql", {}),
-    # ([None, 0, 500_000], "halfcheetah_replay_expert", "iql", {}),
     # ([None, 0, 500_000], "halfcheetah_d4rl_medium", "cql", {"threshold": 1.5}),
     # ([None, 0, 500_000], "halfcheetah_d4rl_hybrid", "cql", {"threshold": 1.5}),
     # ([None, 0, 500_000], "halfcheetah_d4rl_expert", "cql", {"threshold": 1.0}),
@@ -65,11 +53,6 @@ TASKS = [
     # ([None, 0, 500_000], "halfcheetah_d4rl_expert", "aspl", {"weight_punish": 1.0}),
     # ([None, 0, 500_000], "halfcheetah_replay_medium", "aspl", {"weight_punish": 0.5}),
     # ([None, 0, 500_000], "halfcheetah_replay_expert", "aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scas", {}),
-    # ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scas", {}),
-    # ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scas", {}),
-    # ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scas", {}),
-    # ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scas", {}),
     # ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scaspl", {"weight_punish": 0.5, "weight_correction": 0.25}),
     # ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scaspl", {"weight_punish": 0.5, "weight_correction": 0.25}),
     # ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
@@ -104,7 +87,13 @@ def train_agent(
 
 
 if __name__ == "__main__":
-    dataset_ids = list(dict.fromkeys(dataset_id for _, dataset_id, _, _ in TASKS))
-    for task_steps, dataset_id, agent_id, agent_kwargs in TASKS:
+    tasks = [
+        (task_steps, dataset_id, agent_id, {})
+        for task_steps, agent_id in AGENTS
+        for dataset_id in DATASETS
+    ] + TASKS
+
+    dataset_ids = list(dict.fromkeys(dataset_id for _, dataset_id, _, _ in tasks))
+    for task_steps, dataset_id, agent_id, agent_kwargs in tasks:
         train_agent(task_steps, dataset_id, agent_id, agent_kwargs)
         plot_agent(dataset_ids.index(dataset_id) + 1, dataset_id, agent_id)

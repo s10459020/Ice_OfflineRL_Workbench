@@ -12,7 +12,9 @@ from ice_offline.agent.sdc import SDCAgent
 from ice_offline.agent.sdc import SDCModel
 from ice_offline.agent.sdc_cql import SDCCQLAgent
 from ice_offline.agent.td3 import TD3Agent
+from ice_offline.agent.td3_gp import TD3GPAgent
 from ice_offline.agent.td3bc import TD3BCAgent
+from ice_offline.agent.td3bc_gp import TD3BCGPAgent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import model_path
 from ice_offline.dataset.base import Dataset
@@ -45,7 +47,9 @@ MODEL_TABLE: dict[str, Callable[..., Agent]] = {
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "bc": _agent(BCAgent),
     "td3": _agent(TD3Agent),
+    "td3_gp": _agent(TD3GPAgent),
     "td3bc": _agent(TD3BCAgent),
+    "td3bc_gp": _agent(TD3BCGPAgent),
     "iql": _agent(IQLAgent),
     "cql": _agent(CQLAgent),
     "aspl": _agent(AsplAgent),

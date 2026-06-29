@@ -56,6 +56,14 @@ class TD3Actor(torch.nn.Module):
         noise = noise.clamp(-self.noise_clip, self.noise_clip)
         return (a + noise).clamp(-self.max_action, self.max_action)
 
+    def sample_random_n(self, o: torch.Tensor, count: int) -> torch.Tensor:
+        batch_size = o.shape[0]
+        return torch.empty(
+            (batch_size, count, self.act_size),
+            device=o.device,
+            dtype=o.dtype,
+        ).uniform_(-self.max_action, self.max_action)
+
     # ====================
     # TD3 target sync
     # ====================
