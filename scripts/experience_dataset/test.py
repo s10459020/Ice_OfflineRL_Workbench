@@ -6,10 +6,10 @@ from table import build_tables
 
 DATASETS = [
     "hopper_d4rl_medium",
-    "hopper_d4rl_hybrid",
-    "hopper_d4rl_expert",
-    "hopper_replay_medium",
-    "hopper_replay_expert",
+    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_expert",
+    # "hopper_replay_medium",
+    # "hopper_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -18,13 +18,13 @@ DATASETS = [
 ]
 
 AGENTS = [
-    (500_000, None, "bc"),
-    (500_000, None, "td3bc"),
-    (500_000, None, "iql"),
-    (500_000, None, "cql"),
+    # (500_000, None, "bc"),
+    # (500_000, None, "td3bc"),
+    # (500_000, None, "iql"),
+    # (500_000, None, "cql"),
     (500_000, None, "aspl"),
-    (500_000, 100_000, "scas"),
-    (500_000, 100_000, "scaspl"),
+    # (500_000, 100_000, "scas"),
+    # (500_000, 100_000, "scaspl"),
 ]
 
 
