@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from torch.distributions import Normal
 
 from ice_offline.agent._spec import Agent
+from ice_offline.agent._spec import MetricValues
 from ice_offline.dataset._types import Batch
 
 
@@ -66,7 +67,6 @@ class SACActor(torch.nn.Module):
         raw_action = torch.atanh(action)
         return self._log_prob(dist, raw_action).squeeze(-1)
 
-
 class _Q(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int):
         super().__init__()
@@ -122,6 +122,12 @@ class SACCritic(torch.nn.Module):
                         + (1.0 - self.target_update_rate) * tp.data
                     )
 
+    # ====================
+    # Params
+    # ====================
+    def param_critic(self):
+        return self.q_networks.parameters()
+
 
 class _SACTemperature(torch.nn.Module):
     def __init__(self, act_size: int, config: dict[str, object] = {}):
@@ -136,10 +142,15 @@ class _SACTemperature(torch.nn.Module):
     def forward(self) -> torch.Tensor:
         return self.log_alpha.exp()
 
-    def loss(self, log_prob: torch.Tensor) -> torch.Tensor:
+    def loss(self, log_prob: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = E{s~D,a~pi}[ -temp * (log pi(a|s) + target_entropy) ]
         # d3rl SAC source uses target_entropy = -action_size.
-        return -(self() * (log_prob + self.target_entropy).detach()).mean()
+        loss = -(self() * (log_prob + self.target_entropy).detach()).mean()
+        return loss, {
+            "temp": self().detach(),
+            "loss_temp": loss.detach(),
+            "grad_temp": Agent._grad_norm(loss, self.parameters()),
+        }
 
 
 class SACAgent(Agent):
@@ -152,7 +163,7 @@ class SACAgent(Agent):
         self.critic = SACCritic(self.obs_size, self.act_size, config).to(self.device)
         self.temp = _SACTemperature(self.act_size, config).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
     # ====================
     # Act
@@ -185,31 +196,50 @@ class SACAgent(Agent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: Batch):
-        self.update_critic(batch)
-        self.update_actor(batch)
-        self.update_temperature(batch)
-        self.critic.update_target_soft()
+    def metric_keys(self) -> list[str]:
+        return [
+            "loss_td",
+            "grad_td",
+            "loss_sac",
+            "grad_sac",
+            "loss_temp",
+            "grad_temp",
+            "temp",
+            "target_q",
+        ]
 
-    def update_critic(self, batch: Batch) -> None:
+    def update(self, batch: Batch) -> MetricValues:
+        metrics = self.update_critic(batch)
+        metrics |= self.update_actor(batch)
+        metrics |= self.update_temperature(batch)
+        self.critic.update_target_soft()
+        return metrics
+
+    def update_critic(self, batch: Batch) -> MetricValues:
+        loss_critic, metrics = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
-        loss_critic = self.loss_critic(batch)
         loss_critic.backward()
         self.critic_optimizer.step()
+        return metrics
 
-    def update_actor(self, batch: Batch) -> None:
+    def update_actor(self, batch: Batch) -> MetricValues:
+        loss_actor, metrics = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
-        loss_actor = self.loss_actor(batch)
         loss_actor.backward()
         self.actor_optimizer.step()
+        return metrics
     
-    def update_temperature(self, batch: Batch) -> None:
+    def update_temperature(self, batch: Batch) -> MetricValues:
         o, _, _, _, _ = batch
         _, log_prob = self.actor.sample(o)
+        loss_temperature, metrics = self.temp.loss(log_prob)
         self.temp.optimizer.zero_grad()
-        loss_temperature = self.temp.loss(log_prob)
         loss_temperature.backward()
         self.temp.optimizer.step()
+        return metrics
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        return self.update(batch)
 
     # ====================
     # Save and load
@@ -242,24 +272,33 @@ class SACAgent(Agent):
             tq = self.critic.tq_min(on, an)
             return r + self.discount_factor * (tq - self.temp() * log_prob) * (1.0 - d)
 
-    def loss_td(self, batch: Batch) -> torch.Tensor:
+    def loss_td(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = sum_i E{s,a,r,s'~D}[ MSE(Qi(s,a) - y) ]
         o, a, r, on, d = batch
         target = self.target_sac(on, r, d)
-        return sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
+        loss = sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
+        return loss, {
+            "loss_td": loss.detach(),
+            "grad_td": self._grad_norm(loss, self.critic.param_critic()),
+            "target_q": target.mean().detach(),
+        }
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         return self.loss_td(batch)
 
     # ====================
     # Actor loss
     # ====================
-    def loss_sac(self, batch: Batch) -> torch.Tensor:
+    def loss_sac(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = E{s~D,a~pi}[ temp * log pi(a|s) - min Q(s,a) ]
         o, _, _, _, _ = batch
         a, log_prob = self.actor.sample(o)
         q = self.critic.q_min(o, a)
-        return (self.temp() * log_prob - q).mean()
+        loss = (self.temp() * log_prob - q).mean()
+        return loss, {
+            "loss_sac": loss.detach(),
+            "grad_sac": self._grad_norm(loss, self.actor.parameters()),
+        }
     
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         return self.loss_sac(batch)

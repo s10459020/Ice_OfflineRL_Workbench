@@ -57,15 +57,3 @@ class ScasplAgent(ScasAgent, AsplAgent):
 
     def update_with_metrics(self, batch: Batch) -> MetricValues:
         return self.update(batch)
-
-    # ====================
-    # Critic loss
-    # ====================
-    def loss_critic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        loss_td, metrics_td = self.loss_td(batch)
-        loss_punish, metrics_punish = AsplAgent.loss_punish(self, batch)
-        loss = loss_td + self.weight_punish * loss_punish
-        return loss, metrics_td | metrics_punish | {
-            "loss_critic": loss.detach(),
-            "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
-        }
