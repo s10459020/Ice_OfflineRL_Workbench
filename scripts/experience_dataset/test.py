@@ -1,10 +1,10 @@
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
+from ice_offline.run.eval import cal_main
 from ice_offline.run.test import test
-from boxplot import build_boxplots
-from prepare import eval_agent_result
-from table import build_tables
+from view import save_boxplots
+from view import save_tables
 
 DATASETS = [
     "hopper_d4rl_medium",
@@ -60,16 +60,17 @@ def test_agent(
     print(f"saved: {path}")
 
 
-def build_eval_results() -> None:
-    for agent_id in {agent_id for _, _, agent_id in AGENTS}:
-        for dataset_id in DATASETS:
-            eval_agent_result(dataset_id, agent_id)
-
-
 if __name__ == "__main__":
-    for agent_step, model_step, agent_id in AGENTS:
-        for dataset_id in DATASETS:
-            test_agent(dataset_id, agent_step, model_step, agent_id)
-    build_eval_results()
-    build_tables()
-    build_boxplots()
+    agent_ids = [agent_id for _, _, agent_id in AGENTS]
+    tasks = [
+        (dataset_id, agent_step, model_step, agent_id)
+        for agent_step, model_step, agent_id in AGENTS
+        for dataset_id in DATASETS
+    ]
+    for dataset_id, agent_step, model_step, agent_id in tasks:
+        test_agent(dataset_id, agent_step, model_step, agent_id)
+        returns_output_path, _ = cal_main(_task_id(dataset_id, agent_id))
+        print(f"saved: {returns_output_path}")
+
+    save_tables(DATASETS, agent_ids)
+    save_boxplots(DATASETS, agent_ids)
