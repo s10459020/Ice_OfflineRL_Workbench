@@ -1,7 +1,9 @@
 import numpy as np
 import torch
 import torch.nn.functional as F
-from ice_offline.agent._spec import Agent, MetricValues
+
+from ice_offline.agent._spec import Agent
+from ice_offline.agent._spec import MetricValues
 from ice_offline.dataset._types import Batch
 
 
@@ -26,7 +28,7 @@ class _Actor(torch.nn.Module):
         self.pi = _Pi(obs_size, act_size)
 
 
-class BCDeterministicAgent(Agent):
+class BCAgent(Agent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda"):
         self.obs_size = obs_size
         self.act_size = act_size
@@ -66,26 +68,24 @@ class BCDeterministicAgent(Agent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: Batch) -> None:
-        self.update_actor(batch)
+    def metric_keys(self) -> list[str]:
+        return [
+            "loss_actor",
+            "grad_actor",
+        ]
 
-    def update_actor(self, batch: Batch) -> None:
-        self.actor_optimizer.zero_grad()
-        loss = self.loss_actor(batch)
-        loss.backward()
-        self.actor_optimizer.step()
+    def update(self, batch: Batch) -> MetricValues:
+        return self.update_actor(batch)
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
+    def update_actor(self, batch: Batch) -> MetricValues:
+        loss_actor, metrics = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
-        loss_actor = self.loss_actor(batch)
-        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
         loss_actor.backward()
         self.actor_optimizer.step()
+        return metrics
 
-        return {
-            "loss_actor": loss_actor.detach(),
-            "grad_actor": grad_actor.detach(),
-        }
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        return self.update(batch)
 
     # ====================
     # Save and load
@@ -103,9 +103,11 @@ class BCDeterministicAgent(Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         o, a, _, _, _ = batch
         a_pred = self.actor.pi(o)
-        return F.mse_loss(a_pred, a)
-
-
+        loss = F.mse_loss(a_pred, a)
+        return loss, {
+            "loss_actor": loss.detach(),
+            "grad_actor": self._grad_norm(loss, self.actor.parameters()),
+        }

@@ -70,6 +70,12 @@ class TD3Actor(torch.nn.Module):
                     + (1.0 - self.target_update_rate) * tp.data
                 )
 
+    # ====================
+    # Params
+    # ====================
+    def param_actor(self):
+        return self.pi.parameters()
+
 
 class TD3Critic(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, q_count: int = 2, q_cls: type[torch.nn.Module] = _Q):
@@ -83,6 +89,9 @@ class TD3Critic(torch.nn.Module):
         )
         self.sync_target_hard()
 
+    # ====================
+    # Public API
+    # ====================
     def q_all(self, o: torch.Tensor, a: torch.Tensor) -> tuple[torch.Tensor, ...]:
         return tuple(q(o, a) for q in self.q_networks)
 
@@ -117,6 +126,12 @@ class TD3Critic(torch.nn.Module):
                         + (1.0 - self.target_update_rate) * tp.data
                     )
 
+    # ====================
+    # Params
+    # ====================
+    def param_critic(self):
+        return self.q_networks.parameters()
+
 
 class TD3Agent(Agent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
@@ -133,8 +148,8 @@ class TD3Agent(Agent):
             config=config,
             q_count=int(config.get("q_count", 2)),
         ).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
-        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
+        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
     # ====================
     # Act
@@ -170,63 +185,44 @@ class TD3Agent(Agent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: Batch):
+    def metric_keys(self) -> list[str]:
+        return [
+            "loss_td",
+            "grad_td",
+            "loss_td3",
+            "grad_td3",
+            "target_q",
+        ]
+
+    def update(self, batch: Batch) -> MetricValues:
         self.update_step += 1
-        self.update_critic(batch)
+        metrics = self.update_critic(batch)
         if self.update_step % self.update_actor_interval == 0:
-            self.update_actor(batch)
+            metrics |= self.update_actor(batch)
             self.critic.update_target_soft()
             self.actor.update_target_soft()
+        return metrics
 
-    def update_critic(self, batch: Batch) -> None:
-        self.critic_optimizer.zero_grad()
-        critic_loss = self.loss_critic(batch)
-        critic_loss.backward()
-        self.critic_optimizer.step()
-
-    def update_actor(self, batch: Batch) -> None:
-        self.actor_optimizer.zero_grad()
-        actor_loss = self.loss_actor(batch)
-        actor_loss.backward()
-        self.actor_optimizer.step()
-
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        _, _, r, on, d = batch
-        target = self.target_td3(on, r, d)
-
-        self.update_step += 1
-
-        loss_critic = self.loss_critic(batch)
-        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
+    def update_critic(self, batch: Batch) -> MetricValues:
+        loss_critic, metrics = self.loss_critic(batch)
 
         self.critic_optimizer.zero_grad()
         loss_critic.backward()
         self.critic_optimizer.step()
 
-        metrics = {
-            "loss_critic": loss_critic.detach(),
-            "grad_critic": grad_critic.detach(),
-            "loss_actor": None,
-            "grad_actor": None,
-            "target_q": target.abs().mean(),
-        }
+        return metrics
 
-        if self.update_step % self.update_actor_interval == 0:
-            loss_actor = self.loss_actor(batch)
-            grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
+    def update_actor(self, batch: Batch) -> MetricValues:
+        loss_actor, metrics = self.loss_actor(batch)
 
-            self.actor_optimizer.zero_grad()
-            loss_actor.backward()
-            self.actor_optimizer.step()
-            self.critic.update_target_soft()
-            self.actor.update_target_soft()
-
-            metrics.update({
-                "loss_actor": loss_actor.detach(),
-                "grad_actor": grad_actor.detach(),
-            })
+        self.actor_optimizer.zero_grad()
+        loss_actor.backward()
+        self.actor_optimizer.step()
 
         return metrics
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        return self.update(batch)
 
     # ====================
     # Save and load
@@ -258,24 +254,33 @@ class TD3Agent(Agent):
             tq = self.critic.tq_min(on, an)
             return r + self.discount_factor * tq * (1.0 - d)
 
-    def loss_td(self, batch: Batch) -> torch.Tensor:
+    def loss_td(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = E{s,a,r,s'~D}[ MSE(Q(s,a) - y) ]
         o, a, r, on, d = batch
         target = self.target_td3(on, r, d)
-        return sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
+        loss = sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
+        return loss, {
+            "loss_td": loss.detach(),
+            "grad_td": self._grad_norm(loss, self.critic.param_critic()),
+            "target_q": target.mean().detach(),
+        }
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_critic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         return self.loss_td(batch)
 
     # ====================
     # Actor loss
     # ====================
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
+    def loss_td3(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = E{s~D}[ -Q(s,pi(s)) ]
         o, _, _, _, _ = batch
         a = self.actor.pi(o)
         q = self.critic.q_min(o, a)
-        return -q.mean()
+        loss = -q.mean()
+        return loss, {
+            "loss_td3": loss.detach(),
+            "grad_td3": self._grad_norm(loss, self.actor.param_actor()),
+        }
 
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         return self.loss_td3(batch)

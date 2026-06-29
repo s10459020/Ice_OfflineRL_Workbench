@@ -3,8 +3,11 @@
 import numpy as np
 import torch
 from torch.distributions import Normal
+
 from ice_offline.agent._spec import Agent
+from ice_offline.agent._spec import MetricValues
 from ice_offline.dataset._types import Batch
+
 
 class _Pi(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}):
@@ -116,6 +119,18 @@ class _Critic(torch.nn.Module):
                     + (1.0 - self.target_update_rate) * p_targ.data
                 )
 
+    # ====================
+    # Params
+    # ====================
+    def param_q(self):
+        return list(self.q1.parameters()) + list(self.q2.parameters())
+
+    def param_v(self):
+        return self.v.parameters()
+
+    def param_critic(self):
+        return self.param_q() + list(self.param_v())
+
 class IQLAgent(Agent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.obs_size = obs_size
@@ -127,11 +142,7 @@ class IQLAgent(Agent):
         self.actor = _Actor(self.obs_size, self.act_size, config).to(self.device)
         self.critic = _Critic(self.obs_size, self.act_size, config).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
-        self.critic_optimizer = torch.optim.Adam(
-            list(self.critic.q1.parameters())
-            + list(self.critic.q2.parameters())
-            + list(self.critic.v.parameters())
-        )
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
     # ====================
     # Act
@@ -166,69 +177,41 @@ class IQLAgent(Agent):
     # ====================
     # Update
     # ====================
-    def update(self, batch: Batch):
-        self.update_critic(batch)
-        self.update_actor(batch)
+    def metric_keys(self) -> list[str]:
+        return [
+            "loss_q",
+            "grad_q",
+            "loss_v",
+            "grad_v",
+            "loss_critic",
+            "grad_critic",
+            "loss_actor",
+            "grad_actor",
+            "target_q",
+        ]
+
+    def update(self, batch: Batch) -> MetricValues:
+        metrics = self.update_critic(batch)
+        metrics |= self.update_actor(batch)
         self.critic.update_target_soft()
+        return metrics
 
-    def update_with_metrics(self, batch: Batch):
-        loss_q = self.loss_q(batch)
-        grad_q = self._grad_norm(
-            loss_q,
-            list(self.critic.q1.parameters()) + list(self.critic.q2.parameters()),
-        )
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        return self.update(batch)
 
-        loss_v = self.loss_v(batch)
-        grad_v = self._grad_norm(loss_v, self.critic.v.parameters())
-
-        loss_critic = loss_q + loss_v
-        grad_critic = self._grad_norm(
-            loss_critic,
-            list(self.critic.q1.parameters())
-            + list(self.critic.q2.parameters())
-            + list(self.critic.v.parameters()),
-        )
-
+    def update_critic(self, batch: Batch) -> MetricValues:
+        loss_critic, metrics = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
         loss_critic.backward()
         self.critic_optimizer.step()
+        return metrics
 
-        loss_actor = self.loss_actor(batch)
-        grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
-
+    def update_actor(self, batch: Batch) -> MetricValues:
+        loss_actor, metrics = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
         loss_actor.backward()
         self.actor_optimizer.step()
-
-        self.critic.update_target_soft()
-
-        o, a, _, _, _ = batch
-        with torch.no_grad():
-            target_q = self.critic.target_q_min(o, a).mean()
-
-        return {
-            "loss_q": loss_q.detach(),
-            "grad_q": grad_q.detach(),
-            "loss_v": loss_v.detach(),
-            "grad_v": grad_v.detach(),
-            "loss_critic": loss_critic.detach(),
-            "grad_critic": grad_critic.detach(),
-            "loss_actor": loss_actor.detach(),
-            "grad_actor": grad_actor.detach(),
-            "target_q": target_q.detach(),
-        }
-
-    def update_critic(self, batch: Batch) -> None:
-        critic_loss = self.loss_critic(batch)
-        self.critic_optimizer.zero_grad()
-        critic_loss.backward()
-        self.critic_optimizer.step()
-
-    def update_actor(self, batch: Batch) -> None:
-        actor_loss = self.loss_actor(batch)
-        self.actor_optimizer.zero_grad()
-        actor_loss.backward()
-        self.actor_optimizer.step()
+        return metrics
 
     # ====================
     # Save and load
@@ -254,15 +237,20 @@ class IQLAgent(Agent):
         with torch.no_grad():
             return r + self.discount_factor * self.critic.v(on) * (1.0 - d)
 
-    def loss_q(self, batch: Batch) -> torch.Tensor:
+    def loss_q(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         o, a, r, on, d = batch
         target = self.target(on, r, d)
         q1 = self.critic.q1(o, a)
         q2 = self.critic.q2(o, a)
         # loss_q = E_batch{(target - Q)^2}
-        return (q1 - target).pow(2).mean() + (q2 - target).pow(2).mean()
+        loss = (q1 - target).pow(2).mean() + (q2 - target).pow(2).mean()
+        return loss, {
+            "loss_q": loss.detach(),
+            "grad_q": self._grad_norm(loss, self.critic.param_q()),
+            "target_q": self.critic.target_q_min(o, a).mean().detach(),
+        }
 
-    def loss_v(self, batch: Batch) -> torch.Tensor:
+    def loss_v(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         o, a, _, _, _ = batch
         # L2_tau = |tau - 1(u<0)| * u^2
         # loss_v = E_batch{ L2_tau(Q-V) }
@@ -270,10 +258,20 @@ class IQLAgent(Agent):
         v_t = self.critic.v(o)
         diff = q_t.detach() - v_t
         weight = (self.critic.v.expectile - (diff < 0.0).float()).abs().detach()
-        return (weight * diff.pow(2)).mean()
+        loss = (weight * diff.pow(2)).mean()
+        return loss, {
+            "loss_v": loss.detach(),
+            "grad_v": self._grad_norm(loss, self.critic.param_v()),
+        }
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
-        return self.loss_q(batch) + self.loss_v(batch)
+    def loss_critic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        loss_q, metrics_q = self.loss_q(batch)
+        loss_v, metrics_v = self.loss_v(batch)
+        loss = loss_q + loss_v
+        return loss, metrics_q | metrics_v | {
+            "loss_critic": loss.detach(),
+            "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
+        }
 
     # ====================
     # actor
@@ -287,10 +285,13 @@ class IQLAgent(Agent):
             adv = q_t - v_t
             return -(self.advantage_scale * adv).exp().clamp(max=self.cap_weight)
 
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         o, a, _, _, _ = batch
         # loss_pi = E_batch{weight * log_pi}
         weight = self.weight(batch)
         log_pi = self.actor.log_prob(o, a)
-        return (weight * log_pi).mean()
-
+        loss = (weight * log_pi).mean()
+        return loss, {
+            "loss_actor": loss.detach(),
+            "grad_actor": self._grad_norm(loss, self.actor.parameters()),
+        }

@@ -26,6 +26,15 @@ def eval(agent: Agent, env: gym.Env, seed: int = 42, count: int = 10) -> list[fl
     return returns
 
 
+def _metric_parts(metrics: dict[str, float | None]) -> list[str]:
+    parts: list[str] = []
+    for name, value in metrics.items():
+        if value is None:
+            continue
+        parts.append(f"{name}={value:.6g}")
+    return parts
+
+
 def train_model(
     agent: Agent,
     dataset: Dataset,
@@ -39,7 +48,7 @@ def train_model(
     seed: int = 42,
 ) -> Path:
     task_id = task_id or _task_id(dataset.id, agent.id)
-    recorder = MetricRecorder(task_id, initialized=start > 0)
+    recorder = MetricRecorder(task_id, keys=agent.metric_keys(), resume=start > 0)
 
     print_stage(f"Train {agent.id} in {dataset.id}")
     path: Path | None = None
@@ -51,14 +60,11 @@ def train_model(
 
         batch = dataset.sample_batch(batch_size)
         metrics = agent.update_with_metrics(batch)
-
-        for name, value in metrics.items():
-            recorder.add(name, value)
-        recorder.flush(step)
+        recorder.flush(step, metrics)
 
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
-            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+            parts = _metric_parts(metrics)
             print(f"train step={step}", *parts)
 
         if step % save_interval == 0 or step == steps:
@@ -89,7 +95,7 @@ def train(
     path = eval_data_path("train", task_id)
     resume_path = path if start > 0 else None
     eval_col = EvalCollector(eval_env, resume_path=resume_path)
-    recorder = MetricRecorder(task_id, initialized=start > 0)
+    recorder = MetricRecorder(task_id, keys=agent.metric_keys(), resume=start > 0)
 
     print_stage(f"Train {agent.id} in {dataset.id}")
     for step in range(start + 1, steps + 1):
@@ -103,14 +109,12 @@ def train(
         metrics = agent.update_with_metrics(batch)
 
         # record
-        for name, value in metrics.items():
-            recorder.add(name, value)
-        recorder.flush(step)
+        recorder.flush(step, metrics)
         
         # functional
         if print_interval > 0 and step % print_interval == 0:
             metrics = recorder.last
-            parts = [f"{name}={value:.6g}" for name, value in metrics.items()]
+            parts = _metric_parts(metrics)
             print(f"train step={step}", *parts)
         
         if eval_interval > 0 and step % eval_interval == 0:

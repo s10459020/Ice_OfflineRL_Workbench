@@ -49,23 +49,25 @@ class ScasDynamic(Agent):
     def noise_state(self, o: torch.Tensor) -> torch.Tensor:
         noise = torch.randn(o.shape, device=o.device) * self.noise_scale
         return o + noise
-    
-    def update(self, batch: Batch):
-        self.optimizer.zero_grad()
-        loss = self.loss_dynamic(batch)
-        loss.backward() 
-        self.optimizer.step()
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        loss_dynamic = self.loss_dynamic(batch)
-        grad_dynamic = self._grad_norm(loss_dynamic, self.model.parameters())
+    # ====================
+    # Update
+    # ====================
+    def metric_keys(self) -> list[str]:
+        return [
+            "loss_dynamic",
+            "grad_dynamic",
+        ]
+
+    def update(self, batch: Batch) -> MetricValues:
+        loss_dynamic, metrics = self.loss_dynamic(batch)
         self.optimizer.zero_grad()
         loss_dynamic.backward()
         self.optimizer.step()
-        return {
-            "loss_dynamic": loss_dynamic.detach(),
-            "grad_dynamic": grad_dynamic.detach(),
-        }
+        return metrics
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        return self.update(batch)
 
     # ====================
     # extend 
@@ -76,15 +78,18 @@ class ScasDynamic(Agent):
     def _load_dict(self, state: dict[str, torch.Tensor]) -> None:
         self.model.load_state_dict(state["model"])
   
-
     # ====================
     # mathmatics
     # ====================
-    def loss_dynamic(self, batch: Batch) -> torch.Tensor:
+    def loss_dynamic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         s, a, _, sn, _ = batch
         # loss: E_{s,a,s'~D} [||M(s,a) - s'||^2]
         pred = self.model(s, a)
-        return F.mse_loss(pred, sn)
+        loss = F.mse_loss(pred, sn)
+        return loss, {
+            "loss_dynamic": loss.detach(),
+            "grad_dynamic": self._grad_norm(loss, self.model.parameters()),
+        }
         
 
 class ScasAgent(TD3Agent):
@@ -96,79 +101,53 @@ class ScasAgent(TD3Agent):
         self.actor = TD3Actor(self.obs_size, self.act_size, config=config, pi_cls=_Pi).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, config=config, q_cls=_Q).to(self.device)
         self.dynamics = dynamics.prepare()
-        self.actor_optimizer = torch.optim.Adam(self.actor.pi.parameters())
-        self.critic_optimizer = torch.optim.Adam(self.critic.q_networks.parameters())
+        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
     # ====================
     # Update
-    # ====================    
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        _, _, r, sn, d = batch
-        target = self.target_td3(sn, r, d)
+    # ====================
+    def metric_keys(self) -> list[str]:
+        return [
+            "loss_td",
+            "grad_td",
+            "loss_normal",
+            "grad_normal",
+            "loss_correction",
+            "grad_correction",
+            "loss_actor",
+            "grad_actor",
+            "target_q",
+        ]
 
+    def update(self, batch: Batch) -> MetricValues:
         self.update_step += 1
-
-        loss_td = self.loss_td(batch)
-        grad_td = self._grad_norm(loss_td, self.critic.parameters())
-
-        loss_critic = self.loss_critic(batch)
-        grad_critic = self._grad_norm(loss_critic, self.critic.parameters())
-
-        self.critic_optimizer.zero_grad()
-        loss_critic.backward()
-        self.critic_optimizer.step()
-
-        metrics = {
-            "loss_td": loss_td.detach(),
-            "grad_td": grad_td.detach(),
-            "loss_critic": loss_critic.detach(),
-            "grad_critic": grad_critic.detach(),
-            "loss_td3": None,
-            "grad_td3": None,
-            "loss_correction": None,
-            "grad_correction": None,
-            "loss_actor": None,
-            "grad_actor": None,
-            "target_q": target.abs().mean(),
-        }
+        metrics = self.update_critic(batch)
 
         if self.update_step % self.update_actor_interval == 0:
-            loss_td3 = self.loss_td3(batch)
-            grad_td3 = self._grad_norm(loss_td3, self.actor.parameters())
-
-            loss_correction = self.loss_correction(batch)
-            grad_correction = self._grad_norm(loss_correction, self.actor.parameters())
-
-            loss_actor = (
-                (1.0 - self.weight_correction) * loss_td3
-                + self.weight_correction * loss_correction
-            )
-            grad_actor = self._grad_norm(loss_actor, self.actor.parameters())
-
-            self.actor_optimizer.zero_grad()
-            loss_actor.backward()
-            self.actor_optimizer.step()
+            metrics |= self.update_actor(batch)
             self.critic.update_target_soft()
             self.actor.update_target_soft()
 
-            metrics.update({
-                "loss_td3": loss_td3.detach(),
-                "grad_td3": grad_td3.detach(),
-                "loss_correction": loss_correction.detach(),
-                "grad_correction": grad_correction.detach(),
-                "loss_actor": loss_actor.detach(),
-                "grad_actor": grad_actor.detach(),
-            })
-
         return metrics
+
+    def update_with_metrics(self, batch: Batch) -> MetricValues:
+        return self.update(batch)
 
     # ====================
     # Actor loss
-    # ====================    
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        return self.loss_td3_normal(batch)
+    # ====================
+    def loss_normal(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        o, _, _, _, _ = batch
+        a = self.actor.pi(o)
+        q = self.critic.q_min(o, a)
+        loss = -q.mean() / q.abs().mean().detach()
+        return loss, {
+            "loss_normal": loss.detach(),
+            "grad_normal": self._grad_norm(loss, self.actor.param_actor()),
+        }
 
-    def loss_correction(self, batch: Batch) -> torch.Tensor:
+    def loss_correction(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch
         a = self.actor.pi(s)
@@ -183,10 +162,20 @@ class ScasAgent(TD3Agent):
         ps = self.dynamics.noise_state(s)
         pa = self.actor.pi(ps)
         mse_M = (self.dynamics.forward(ps, pa) - sn) ** 2
-        return (weight * mse_M).mean() # mean over batch
+        loss = (weight * mse_M).mean()
+        return loss, {
+            "loss_correction": loss.detach(),
+            "grad_correction": self._grad_norm(loss, self.actor.param_actor()),
+        }
 
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
-        return (
-            (1.0 - self.weight_correction) * self.loss_td3(batch)
-            + self.weight_correction * self.loss_correction(batch)
+    def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        loss_normal, metrics_normal = self.loss_normal(batch)
+        loss_correction, metrics_correction = self.loss_correction(batch)
+        loss = (
+            (1.0 - self.weight_correction) * loss_normal
+            + self.weight_correction * loss_correction
         )
+        return loss, metrics_normal | metrics_correction | {
+            "loss_actor": loss.detach(),
+            "grad_actor": self._grad_norm(loss, self.actor.param_actor()),
+        }

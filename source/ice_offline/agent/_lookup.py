@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from ice_offline.agent._spec import Agent
 from ice_offline.agent.aspl import AsplAgent
-from ice_offline.agent.bc_deterministic import BCDeterministicAgent
+from ice_offline.agent.bc import BCAgent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
@@ -43,7 +43,7 @@ MODEL_TABLE: dict[str, Callable[..., Agent]] = {
 }
 
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
-    "bc": _agent(BCDeterministicAgent),
+    "bc": _agent(BCAgent),
     "td3": _agent(TD3Agent),
     "td3bc": _agent(TD3BCAgent),
     "iql": _agent(IQLAgent),

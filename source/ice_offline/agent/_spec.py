@@ -42,6 +42,9 @@ class Agent:
         self.update(batch)
         return {}
 
+    def metric_keys(self) -> list[str]:
+        return []
+
     def _grad_norm(self, loss: torch.Tensor, params) -> torch.Tensor:
         params = [p for p in params if p.requires_grad]
         grads = torch.autograd.grad(

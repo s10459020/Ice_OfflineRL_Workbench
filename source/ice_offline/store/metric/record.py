@@ -1,49 +1,28 @@
 import csv
 
-import torch
-
 from ice_offline.config.paths import metric_path
 
 
 class MetricRecorder:
-    def __init__(self, task_id: str, initialized = False) -> None:
+    def __init__(self, task_id: str, keys: list[str] | None = None, resume: bool = False) -> None:
         self.path = metric_path(task_id)
-        self.current: dict[str, float | None] = {}
-        self.initialized = initialized
+        self.keys = keys
         self.last = {}
+        if not resume:
+            self.new()
 
-    def add(self, name: str, value: float | torch.Tensor | None) -> None:
-        if isinstance(value, torch.Tensor):
-            value = value.item()
-        self.current[name] = value
-
-    def add_grad_norm(self, name: str, loss: torch.Tensor, params) -> None:
-        params = list(params)
-        grads = torch.autograd.grad(
-            loss, 
-            params, 
-            retain_graph=True,
-            allow_unused=True,
-        )
-
-        value = torch.zeros((), device=loss.device)
-        for grad in grads:
-            if grad is not None:
-                value = value + grad.detach().square().sum()
-        value = value.sqrt()
-
-        self.add(name, value)
-        
-    def flush(self, step) -> None:
+    def new(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        mode = "a" if self.initialized else "w"
-        
-        with self.path.open(mode, encoding="utf-8", newline="") as f:
+        with self.path.open("w", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
-            if not self.initialized:
-                writer.writerow(["step", *self.current.keys()])
-                self.initialized = True
-            writer.writerow([step, *self.current.values()])
+            writer.writerow(["step", *(self.keys or [])])
 
-        self.last = self.current.copy()
-        self.current.clear()
+    def flush(self, step, metrics: dict[str, float | None]) -> None:
+        keys = self.keys or list(metrics.keys())
+        values = [metrics.get(key) for key in keys]
+        
+        with self.path.open("a", encoding="utf-8", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow([step, *values])
+
+        self.last = dict(zip(keys, values))
