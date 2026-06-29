@@ -13,14 +13,14 @@ DATASETS = [
     ("hopper_d4rl_expert_noise_2", "hopper_d4rl_expert", {"reset_noise_scale": 5e-3}),
     ("hopper_d4rl_expert_noise_3", "hopper_d4rl_expert", {"reset_noise_scale": 5e-2}),
     ("hopper_d4rl_expert_noise_4", "hopper_d4rl_expert", {"reset_noise_scale": 5e-1}),
-    ("hopper_replay_medium_noise_1", "hopper_replay_medium", {"reset_noise_scale": 5e-4}),
-    ("hopper_replay_medium_noise_2", "hopper_replay_medium", {"reset_noise_scale": 5e-3}),
-    ("hopper_replay_medium_noise_3", "hopper_replay_medium", {"reset_noise_scale": 5e-2}),
-    ("hopper_replay_medium_noise_4", "hopper_replay_medium", {"reset_noise_scale": 5e-1}),
-    ("hopper_replay_expert_noise_1", "hopper_replay_expert", {"reset_noise_scale": 5e-4}),
-    ("hopper_replay_expert_noise_2", "hopper_replay_expert", {"reset_noise_scale": 5e-3}),
-    ("hopper_replay_expert_noise_3", "hopper_replay_expert", {"reset_noise_scale": 5e-2}),
-    ("hopper_replay_expert_noise_4", "hopper_replay_expert", {"reset_noise_scale": 5e-1}),
+    # ("hopper_replay_medium_noise_1", "hopper_replay_medium", {"reset_noise_scale": 5e-4}),
+    # ("hopper_replay_medium_noise_2", "hopper_replay_medium", {"reset_noise_scale": 5e-3}),
+    # ("hopper_replay_medium_noise_3", "hopper_replay_medium", {"reset_noise_scale": 5e-2}),
+    # ("hopper_replay_medium_noise_4", "hopper_replay_medium", {"reset_noise_scale": 5e-1}),
+    # ("hopper_replay_expert_noise_1", "hopper_replay_expert", {"reset_noise_scale": 5e-4}),
+    # ("hopper_replay_expert_noise_2", "hopper_replay_expert", {"reset_noise_scale": 5e-3}),
+    # ("hopper_replay_expert_noise_3", "hopper_replay_expert", {"reset_noise_scale": 5e-2}),
+    # ("hopper_replay_expert_noise_4", "hopper_replay_expert", {"reset_noise_scale": 5e-1}),
 ]
 
 AGENTS = [

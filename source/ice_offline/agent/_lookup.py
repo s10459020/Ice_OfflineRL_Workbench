@@ -45,9 +45,6 @@ MODEL_TABLE: dict[str, Callable[..., Agent]] = {
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "bc": _agent(BCDeterministicAgent),
     "td3": _agent(TD3Agent),
-    "td3_q2": _agent(TD3Agent, q_count=2),
-    "td3_q4": _agent(TD3Agent, q_count=4),
-    "td3_q8": _agent(TD3Agent, q_count=8),
     "td3bc": _agent(TD3BCAgent),
     "iql": _agent(IQLAgent),
     "cql": _agent(CQLAgent),
