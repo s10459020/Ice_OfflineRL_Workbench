@@ -1,14 +1,18 @@
+import numpy as np
+
 from ice_offline.agent._lookup import make_agent
-from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import main_data_path
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.test import test_noise_dynamic
+from ice_offline.store.minari.collector import MinariCollectorWrapper
+from ice_offline.store.state._lookup import STATE_OPS
+from ice_offline.tools.printer import print_stage
 from table import build_tables
 
 DATASETS = [
-    ("hopper_d4rl_medium_noise_dynamic", "hopper_d4rl_medium"),
-    ("hopper_d4rl_expert_noise_dynamic", "hopper_d4rl_expert"),
-    ("hopper_replay_medium_noise_dynamic", "hopper_replay_medium"),
-    ("hopper_replay_expert_noise_dynamic", "hopper_replay_expert"),
+    "hopper_d4rl_medium",
+    "hopper_d4rl_expert",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
 ]
 
 AGENTS = [
@@ -22,37 +26,102 @@ AGENTS = [
 ]
 
 
+def _task_id(dataset_id: str, agent_id: str, scale_noise: float) -> str:
+    noise_name = f"{scale_noise:.0e}".replace("-", "m")
+    return f"{dataset_id}-noise_dynamic_{noise_name}-{agent_id}-v0"
+
+
+def _state_io(env):
+    env_id = env.unwrapped.spec.id
+    _, state_io_cls, _ = STATE_OPS[env_id]
+    return state_io_cls(env)
+
+
+def _noise_state(state, scale_noise: float):
+    payload = state.serialize()
+    noisy_payload = {}
+    for key, value in payload.items():
+        value_np = np.asarray(value, dtype=np.float64)
+        noisy_payload[key] = value_np + scale_noise * np.random.randn(*value_np.shape)
+    return state.__class__.from_serialized(noisy_payload)
+
+
+def run_noise_dynamic(agent, env, *, scale_noise: float = 5e-3, seed: int = 42) -> float:
+    agent.set_seed(seed)
+    np.random.seed(seed)
+    state_io = _state_io(env)
+    o, _ = env.reset(seed=seed)
+    result = 0.0
+    trun = term = False
+    while not (trun or term):
+        a = agent.act(o)
+        o, r, trun, term, _ = env.step(a)
+        result += float(r)
+        if trun or term:
+            continue
+        state = state_io.get_state()
+        state_noisy = _noise_state(state, scale_noise)
+        state_io.set_state(state_noisy)
+        o = env.unwrapped._get_obs()
+    return result
+
+
+def collect(
+    task_id: str,
+    agent,
+    env,
+    *,
+    scale_noise: float = 5e-3,
+    episodes: int = 100,
+    print_interval: int = 1,
+    seed: int = 42,
+):
+    path = main_data_path("test", task_id)
+    minari_col = MinariCollectorWrapper(env)
+
+    print_stage(f"Test {task_id} noise_dynamic={scale_noise:g}")
+    for i in range(episodes):
+        result = run_noise_dynamic(agent, minari_col, scale_noise=scale_noise, seed=seed + i)
+        if (i + 1) % print_interval == 0:
+            print(f"test episode={i + 1}/{episodes} return={result:.6g}")
+
+    minari_col.save(path, id=task_id, agent_id=agent.id)
+    minari_col.close()
+    return path
+
+
 def test_agent(
-    test_dataset_id: str,
-    train_dataset_id: str,
+    dataset_id: str,
     agent_id: str,
     agent_step: int,
     model_step: int,
 ) -> None:
-    dataset = make_dataset(train_dataset_id, device="cuda")
+    scale_noise = 5e-3
+    dataset = make_dataset(dataset_id, device="cuda")
     agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step)
 
-    train_id = _task_id(train_dataset_id, agent.id)
+    train_id = f"{dataset_id}-{agent.id}-v0"
     agent.load(train_id, agent_step)
 
-    task_id = _task_id(test_dataset_id, agent.id)
+    task_id = _task_id(dataset_id, agent.id, scale_noise)
     env = dataset.make_env()
     print("====================================")
     print(f"task: {task_id}")
-    print("dynamic_noise_scale: 5e-3")
+    print(f"dataset: {dataset_id}")
+    print(f"dynamic_noise_scale: {scale_noise:g}")
     print("====================================")
 
-    path = test_noise_dynamic(task_id, agent, env, scale_noise=5e-3)
+    path = collect(task_id, agent, env, scale_noise=scale_noise)
     print(f"saved: {path}")
 
 
 if __name__ == "__main__":
     tasks = [
-        (test_dataset_id, train_dataset_id, agent_id, agent_step, model_step)
+        (dataset_id, agent_id, agent_step, model_step)
         for agent_step, model_step, agent_id in AGENTS
-        for test_dataset_id, train_dataset_id in DATASETS
+        for dataset_id in DATASETS
     ]
 
-    for test_dataset_id, train_dataset_id, agent_id, agent_step, model_step in tasks:
-        test_agent(test_dataset_id, train_dataset_id, agent_id, agent_step, model_step)
+    for dataset_id, agent_id, agent_step, model_step in tasks:
+        test_agent(dataset_id, agent_id, agent_step, model_step)
     build_tables()

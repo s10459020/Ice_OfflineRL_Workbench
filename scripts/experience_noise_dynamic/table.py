@@ -1,4 +1,3 @@
-from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import table_path
 from ice_offline.run.eval import cal_dataset
 from ice_offline.run.eval import cal_main
@@ -7,10 +6,10 @@ from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
 
 DATASETS = [
-    ("hopper_d4rl_medium_noise_dynamic", "hopper_random", "hopper_d4rl_medium"),
-    ("hopper_d4rl_expert_noise_dynamic", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_replay_medium_noise_dynamic", "hopper_random", "hopper_replay_medium"),
-    ("hopper_replay_expert_noise_dynamic", "hopper_random", "hopper_replay_expert"),
+    ("hopper_d4rl_medium@noise_dynamic_5e-3", "hopper_random", "hopper_d4rl_medium"),
+    ("hopper_d4rl_expert@noise_dynamic_5e-3", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_replay_medium@noise_dynamic_5e-3", "hopper_random", "hopper_replay_medium"),
+    ("hopper_replay_expert@noise_dynamic_5e-3", "hopper_random", "hopper_replay_expert"),
 ]
 
 AGENTS = [
@@ -24,8 +23,14 @@ AGENTS = [
 ]
 
 
+def _task_id(dataset_id: str, agent_id: str, scale_noise: float) -> str:
+    noise_name = f"{scale_noise:.0e}".replace("-", "m")
+    return f"{dataset_id}-noise_dynamic_{noise_name}-{agent_id}-v0"
+
+
 def save_test_view(dataset_id: str, agent_id: str):
-    task_id = _task_id(dataset_id, agent_id)
+    base_dataset_id = dataset_id.split("@", 1)[0]
+    task_id = _task_id(base_dataset_id, agent_id, 5e-3)
     result = cal_main(task_id)
     if result is None:
         return None
