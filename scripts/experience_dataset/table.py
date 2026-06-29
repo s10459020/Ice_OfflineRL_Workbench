@@ -1,10 +1,9 @@
-from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import table_path
 from ice_offline.run.eval import cal_dataset
-from ice_offline.run.eval import cal_main
 from ice_offline.run.table import table_mean
 from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
+from prepare import eval_agent_result
 
 DATASETS = [
     ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
@@ -39,18 +38,6 @@ AGENTS = [
     "scaspl",
 ]
 
-
-def save_test_view(dataset_id: str, agent_id: str):
-    task_id = _task_id(dataset_id, agent_id)
-    result = cal_main(task_id)
-    if result is None:
-        return None
-     
-    returns_output_path, _ = result
-    print(f"saved: {returns_output_path}")
-    return returns_output_path
-
-
 def build_tables() -> None:
     dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
     datas: list[list[object]] = []
@@ -60,7 +47,7 @@ def build_tables() -> None:
 
     for dataset_id, lower_id, upper_id in DATASETS:
         datas.append([
-            save_test_view(dataset_id, agent_id)
+            eval_agent_result(dataset_id, agent_id)
             for agent_id in AGENTS
         ])
         if lower_id not in bounds:

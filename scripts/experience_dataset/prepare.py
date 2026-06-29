@@ -1,6 +1,7 @@
 from ice_offline.agent._lookup import make_model
 from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
+from ice_offline.run.eval import cal_main
 from ice_offline.run.train import train_model as run_train_model
 from plot import plot_model
 
@@ -41,6 +42,19 @@ def train_model(
         **task_kwargs,
     )
     print(f"saved: {path}")
+
+
+def eval_result(task_id: str):
+    result = cal_main(task_id)
+    if result is None:
+        return None
+    returns_output_path, _ = result
+    print(f"saved: {returns_output_path}")
+    return returns_output_path
+
+
+def eval_agent_result(dataset_id: str, agent_id: str):
+    return eval_result(_task_id(dataset_id, agent_id))
 
 
 if __name__ == "__main__":
