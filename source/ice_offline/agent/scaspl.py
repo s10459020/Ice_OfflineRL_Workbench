@@ -45,7 +45,7 @@ class ScasplAgent(ScasAgent, AsplAgent):
 
         q_avg = self.critic.update_q_avg(target)
         metrics = self.update_critic(batch)
-        metrics["q_avg"] = q_avg.detach()
+        metrics["q_avg"] = self._value(q_avg.detach())
 
         self.update_step += 1
         if self.update_step % self.update_actor_interval == 0:
@@ -54,6 +54,3 @@ class ScasplAgent(ScasAgent, AsplAgent):
             self.actor.update_target_soft()
 
         return metrics
-
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)

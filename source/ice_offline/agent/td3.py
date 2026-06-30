@@ -229,9 +229,6 @@ class TD3Agent(Agent):
 
         return metrics
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
-
     # ====================
     # Save and load
     # ====================
@@ -268,9 +265,9 @@ class TD3Agent(Agent):
         target = self.target_td3(on, r, d)
         loss = sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
         return loss, {
-            "loss_td": loss.detach(),
+            "loss_td": self._value(loss.detach()),
             "grad_td": self._grad_norm(loss, self.critic.param_critic()),
-            "target_q": target.mean().detach(),
+            "target_q": self._value(target.mean().detach()),
         }
 
     def loss_critic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
@@ -286,7 +283,7 @@ class TD3Agent(Agent):
         q = self.critic.q_min(o, a)
         loss = -q.mean()
         return loss, {
-            "loss_td3": loss.detach(),
+            "loss_td3": self._value(loss.detach()),
             "grad_td3": self._grad_norm(loss, self.actor.param_actor()),
         }
 

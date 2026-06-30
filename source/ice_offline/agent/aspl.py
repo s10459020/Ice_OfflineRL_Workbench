@@ -110,7 +110,7 @@ class AsplAgent(TD3Agent):
 
         q_avg = self.critic.update_q_avg(target)
         metrics = self.update_critic(batch)
-        metrics["q_avg"] = q_avg.detach()
+        metrics["q_avg"] = self._value(q_avg.detach())
 
         if self.update_step % self.update_actor_interval == 0:
             metrics |= self.update_actor(batch)
@@ -118,9 +118,6 @@ class AsplAgent(TD3Agent):
             self.actor.update_target_soft()
 
         return metrics
-
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
 
     # ====================
     # Critic loss
@@ -146,7 +143,7 @@ class AsplAgent(TD3Agent):
         losses = [F.mse_loss(q_value, q_pseudo_reshape) for q_value in q_values]
         loss = sum(losses)
         return loss, {
-            "loss_punish": loss.detach(),
+            "loss_punish": self._value(loss.detach()),
             "grad_punish": self._grad_norm(loss, self.critic.param_critic()),
         }
 
@@ -156,6 +153,6 @@ class AsplAgent(TD3Agent):
         loss_punish, metrics_punish = self.loss_punish(batch)
         loss = loss_td + self.weight_punish * loss_punish
         return loss, metrics_td | metrics_punish | {
-            "loss_critic": loss.detach(),
+            "loss_critic": self._value(loss.detach()),
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }

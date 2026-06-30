@@ -37,9 +37,9 @@ class _CQLMultiplier(torch.nn.Module):
         gap = loss_suppress - self.threshold
         loss = -(self() * gap).mean()
         return loss, {
-            "loss_multiplier": loss.detach(),
+            "loss_multiplier": float(loss.detach().item()),
             "grad_multiplier": SACAgent._grad_norm(loss, self.parameters()),
-            "multiplier": self().detach(),
+            "multiplier": float(self().detach().item()),
         }
 
 
@@ -119,9 +119,9 @@ class CQLAgent(SACAgent):
         loss_critic.backward()
         self.critic_optimizer.step()
         return metrics_td | {
-            "loss_suppress": loss_suppress.detach(),
+            "loss_suppress": self._value(loss_suppress.detach()),
             "grad_suppress": metrics_suppress["grad_suppress"],
-            "loss_critic": loss_critic.detach(),
+            "loss_critic": self._value(loss_critic.detach()),
             "grad_critic": grad_critic,
         } | metrics_suppress | metrics_multiplier
 
@@ -131,9 +131,6 @@ class CQLAgent(SACAgent):
         loss_multiplier.backward()
         self.multiplier.optimizer.step()
         return metrics
-
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
 
     # ====================
     # Save and load
@@ -182,11 +179,11 @@ class CQLAgent(SACAgent):
         loss = (logsumexp - data_q).mean()
 
         return loss, {
-            "q_cat": q_cat.mean().detach(),
-            "logp_cat": logp_cat.mean().detach(),
-            "logsumexp": logsumexp.mean().detach(),
+            "q_cat": self._value(q_cat.mean().detach()),
+            "logp_cat": self._value(logp_cat.mean().detach()),
+            "logsumexp": self._value(logsumexp.mean().detach()),
             "grad_logsumexp": grad_logsumexp,
-            "data_q": data_q.mean().detach(),
+            "data_q": self._value(data_q.mean().detach()),
             "grad_data_q": grad_data_q,
             "grad_suppress": self._grad_norm(loss, self.critic.param_critic()),
         }
