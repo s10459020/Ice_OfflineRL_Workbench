@@ -35,17 +35,16 @@ class Agent:
     # ====================
     # Training
     # ====================
-    def update(self, batch: Batch) -> None:
+    def update(self, batch: Batch) -> MetricValues:
         raise NotImplementedError
-
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        self.update(batch)
-        return {}
 
     def metric_keys(self) -> list[str]:
         return []
 
-    def _grad_norm(self, loss: torch.Tensor, params) -> torch.Tensor:
+    def _value(self, tensor: torch.Tensor) -> float:
+        return float(tensor.item())
+
+    def _grad_norm(self, loss: torch.Tensor, params) -> float:
         params = [p for p in params if p.requires_grad]
         grads = torch.autograd.grad(
             loss,
@@ -58,7 +57,7 @@ class Agent:
         for grad in grads:
             if grad is not None:
                 value = value + grad.detach().square().sum()
-        return value.sqrt()
+        return self._value(value.sqrt())
 
     # ====================
     # Persistence

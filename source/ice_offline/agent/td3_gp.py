@@ -83,8 +83,8 @@ class TD3GPAgent(TD3Agent):
             
         loss = torch.stack(penalties, dim=0).sum(dim=0).mean()
         return loss, {
-            "grad_norm": grad_norm.detach(),
-            "loss_gp": loss.detach(),
+            "grad_norm": self._value(grad_norm.detach().mean()),
+            "loss_gp": self._value(loss.detach()),
             "grad_gp": self._grad_norm(loss, self.critic.param_critic()),
         }
 
@@ -93,6 +93,6 @@ class TD3GPAgent(TD3Agent):
         loss_gp, metrics_gp = self.loss_gp(batch)
         loss = loss_td + self.weight_gp * loss_gp
         return loss, metrics_td | metrics_gp | {
-            "loss_critic": loss.detach(),
+            "loss_critic": self._value(loss.detach()),
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }

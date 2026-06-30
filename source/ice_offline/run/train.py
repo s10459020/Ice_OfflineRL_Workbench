@@ -59,7 +59,7 @@ def train_model(
         dataset.set_seed(now_seed)
 
         batch = dataset.sample_batch(batch_size)
-        metrics = agent.update_with_metrics(batch)
+        metrics = agent.update(batch)
         recorder.flush(step, metrics)
 
         if print_interval > 0 and step % print_interval == 0:
@@ -106,7 +106,7 @@ def train(
 
         # run
         batch = dataset.sample_batch(batch_size)
-        metrics = agent.update_with_metrics(batch)
+        metrics = agent.update(batch)
 
         # record
         recorder.flush(step, metrics)
@@ -146,7 +146,6 @@ if __name__ == "__main__":
     data = Dataset(path=path, loader=loader, device=device)
     print(f"total_episodes={data.episode_count}")
     print(f"total_steps={data.count}")
-
 
 
 

@@ -31,7 +31,7 @@ class TD3BCAgent(TD3Agent):
         q = self.critic.q_min(o, a)
         loss = -q.mean() / q.abs().mean().detach()
         return loss, {
-            "loss_normal": loss.detach(),
+            "loss_normal": self._value(loss.detach()),
             "grad_normal": self._grad_norm(loss, self.actor.param_actor()),
         }
 
@@ -40,7 +40,7 @@ class TD3BCAgent(TD3Agent):
         a_pred = self.actor.pi(o)
         loss = ((a - a_pred) ** 2).mean()
         return loss, {
-            "loss_bc": loss.detach(),
+            "loss_bc": self._value(loss.detach()),
             "grad_bc": self._grad_norm(loss, self.actor.param_actor()),
         }
 
@@ -49,6 +49,6 @@ class TD3BCAgent(TD3Agent):
         loss_bc, metrics_bc = self.loss_bc(batch)
         loss = self.weight_td3 * loss_normal + loss_bc
         return loss, {
-            "loss_actor": loss.detach(),
+            "loss_actor": self._value(loss.detach()),
             "grad_actor": self._grad_norm(loss, self.actor.param_actor()),
         } | metrics_normal | metrics_bc

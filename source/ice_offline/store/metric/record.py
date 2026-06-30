@@ -20,7 +20,7 @@ class MetricRecorder:
     def flush(self, step, metrics: dict[str, float | None]) -> None:
         keys = self.keys or list(metrics.keys())
         values = [metrics.get(key) for key in keys]
-        
+
         with self.path.open("a", encoding="utf-8", newline="") as f:
             writer = csv.writer(f)
             writer.writerow([step, *values])

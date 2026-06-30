@@ -120,18 +120,7 @@ class SDCModel(Agent):
             parameter.requires_grad = False
         return self
 
-    def update(self, batch: Batch) -> None:
-        self.dynamics_optimizer.zero_grad()
-        loss_dynamics = self.loss_dynamics(batch)
-        loss_dynamics.backward()
-        self.dynamics_optimizer.step()
-
-        self.transition_optimizer.zero_grad()
-        loss_transition = self.loss_transition(batch)
-        loss_transition.backward()
-        self.transition_optimizer.step()
-
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
+    def update(self, batch: Batch) -> MetricValues:
         loss_dynamics = self.loss_dynamics(batch)
         grad_dynamics = self._grad_norm(loss_dynamics, self.dynamics.parameters())
         self.dynamics_optimizer.zero_grad()

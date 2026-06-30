@@ -196,9 +196,6 @@ class IQLAgent(Agent):
         self.critic.update_target_soft()
         return metrics
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
-
     def update_critic(self, batch: Batch) -> MetricValues:
         loss_critic, metrics = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
@@ -245,9 +242,9 @@ class IQLAgent(Agent):
         # loss_q = E_batch{(target - Q)^2}
         loss = (q1 - target).pow(2).mean() + (q2 - target).pow(2).mean()
         return loss, {
-            "loss_q": loss.detach(),
+            "loss_q": self._value(loss.detach()),
             "grad_q": self._grad_norm(loss, self.critic.param_q()),
-            "target_q": self.critic.target_q_min(o, a).mean().detach(),
+            "target_q": self._value(self.critic.target_q_min(o, a).mean().detach()),
         }
 
     def loss_v(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
@@ -260,7 +257,7 @@ class IQLAgent(Agent):
         weight = (self.critic.v.expectile - (diff < 0.0).float()).abs().detach()
         loss = (weight * diff.pow(2)).mean()
         return loss, {
-            "loss_v": loss.detach(),
+            "loss_v": self._value(loss.detach()),
             "grad_v": self._grad_norm(loss, self.critic.param_v()),
         }
 
@@ -269,7 +266,7 @@ class IQLAgent(Agent):
         loss_v, metrics_v = self.loss_v(batch)
         loss = loss_q + loss_v
         return loss, metrics_q | metrics_v | {
-            "loss_critic": loss.detach(),
+            "loss_critic": self._value(loss.detach()),
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }
 
@@ -292,6 +289,6 @@ class IQLAgent(Agent):
         log_pi = self.actor.log_prob(o, a)
         loss = (weight * log_pi).mean()
         return loss, {
-            "loss_actor": loss.detach(),
+            "loss_actor": self._value(loss.detach()),
             "grad_actor": self._grad_norm(loss, self.actor.parameters()),
         }

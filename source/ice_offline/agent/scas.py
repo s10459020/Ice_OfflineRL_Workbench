@@ -66,9 +66,6 @@ class ScasDynamic(Agent):
         self.optimizer.step()
         return metrics
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
-
     # ====================
     # extend 
     # ====================
@@ -87,7 +84,7 @@ class ScasDynamic(Agent):
         pred = self.model(s, a)
         loss = F.mse_loss(pred, sn)
         return loss, {
-            "loss_dynamic": loss.detach(),
+            "loss_dynamic": self._value(loss.detach()),
             "grad_dynamic": self._grad_norm(loss, self.model.parameters()),
         }
         
@@ -131,9 +128,6 @@ class ScasAgent(TD3Agent):
 
         return metrics
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
-
     # ====================
     # Actor loss
     # ====================
@@ -143,7 +137,7 @@ class ScasAgent(TD3Agent):
         q = self.critic.q_min(o, a)
         loss = -q.mean() / q.abs().mean().detach()
         return loss, {
-            "loss_normal": loss.detach(),
+            "loss_normal": self._value(loss.detach()),
             "grad_normal": self._grad_norm(loss, self.actor.param_actor()),
         }
 
@@ -164,7 +158,7 @@ class ScasAgent(TD3Agent):
         mse_M = (self.dynamics.forward(ps, pa) - sn) ** 2
         loss = (weight * mse_M).mean()
         return loss, {
-            "loss_correction": loss.detach(),
+            "loss_correction": self._value(loss.detach()),
             "grad_correction": self._grad_norm(loss, self.actor.param_actor()),
         }
 
@@ -176,6 +170,6 @@ class ScasAgent(TD3Agent):
             + self.weight_correction * loss_correction
         )
         return loss, metrics_normal | metrics_correction | {
-            "loss_actor": loss.detach(),
+            "loss_actor": self._value(loss.detach()),
             "grad_actor": self._grad_norm(loss, self.actor.param_actor()),
         }

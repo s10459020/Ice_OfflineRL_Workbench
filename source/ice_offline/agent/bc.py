@@ -84,9 +84,6 @@ class BCAgent(Agent):
         self.actor_optimizer.step()
         return metrics
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
-
     # ====================
     # Save and load
     # ====================
@@ -108,6 +105,6 @@ class BCAgent(Agent):
         a_pred = self.actor.pi(o)
         loss = F.mse_loss(a_pred, a)
         return loss, {
-            "loss_actor": loss.detach(),
+            "loss_actor": self._value(loss.detach()),
             "grad_actor": self._grad_norm(loss, self.actor.parameters()),
         }

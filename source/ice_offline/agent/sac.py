@@ -147,8 +147,8 @@ class _SACTemperature(torch.nn.Module):
         # d3rl SAC source uses target_entropy = -action_size.
         loss = -(self() * (log_prob + self.target_entropy).detach()).mean()
         return loss, {
-            "temp": self().detach(),
-            "loss_temp": loss.detach(),
+            "temp": float(self().detach().item()),
+            "loss_temp": float(loss.detach().item()),
             "grad_temp": Agent._grad_norm(loss, self.parameters()),
         }
 
@@ -238,9 +238,6 @@ class SACAgent(Agent):
         self.temp.optimizer.step()
         return metrics
 
-    def update_with_metrics(self, batch: Batch) -> MetricValues:
-        return self.update(batch)
-
     # ====================
     # Save and load
     # ====================
@@ -278,9 +275,9 @@ class SACAgent(Agent):
         target = self.target_sac(on, r, d)
         loss = sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
         return loss, {
-            "loss_td": loss.detach(),
+            "loss_td": self._value(loss.detach()),
             "grad_td": self._grad_norm(loss, self.critic.param_critic()),
-            "target_q": target.mean().detach(),
+            "target_q": self._value(target.mean().detach()),
         }
 
     def loss_critic(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
@@ -296,7 +293,7 @@ class SACAgent(Agent):
         q = self.critic.q_min(o, a)
         loss = (self.temp() * log_prob - q).mean()
         return loss, {
-            "loss_sac": loss.detach(),
+            "loss_sac": self._value(loss.detach()),
             "grad_sac": self._grad_norm(loss, self.actor.parameters()),
         }
     
