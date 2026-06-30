@@ -6,10 +6,10 @@ from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
 
 DATASETS = [
-    ("hopper_d4rl_medium@noise_dynamic_5e-3", "hopper_random", "hopper_d4rl_medium"),
-    ("hopper_d4rl_expert@noise_dynamic_5e-3", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_replay_medium@noise_dynamic_5e-3", "hopper_random", "hopper_replay_medium"),
-    ("hopper_replay_expert@noise_dynamic_5e-3", "hopper_random", "hopper_replay_expert"),
+    ("hopper_d4rl_medium@noise_action_5e-3", "hopper_random", "hopper_d4rl_medium"),
+    ("hopper_d4rl_expert@noise_action_5e-3", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_replay_medium@noise_action_5e-3", "hopper_random", "hopper_replay_medium"),
+    ("hopper_replay_expert@noise_action_5e-3", "hopper_random", "hopper_replay_expert"),
 ]
 
 AGENTS = [
@@ -25,7 +25,7 @@ AGENTS = [
 
 def _task_id(dataset_id: str, agent_id: str, scale_noise: float) -> str:
     noise_name = f"{scale_noise:.0e}".replace("-", "m")
-    return f"{dataset_id}-noise_dynamic_{noise_name}-{agent_id}-v0"
+    return f"{dataset_id}-noise_action_{noise_name}-{agent_id}-v0"
 
 
 def save_test_view(dataset_id: str, agent_id: str):
@@ -59,9 +59,9 @@ def build_tables() -> None:
         lowers.append(bounds[lower_id])
         uppers.append(bounds[upper_id])
 
-    table_true(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_dynamic", "true_returns.csv"))
-    table_mean(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_dynamic", "mean_returns.csv"))
-    table_pr95(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_dynamic", "pr95_returns.csv"))
+    table_true(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_action", "true_returns.csv"))
+    table_mean(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_action", "mean_returns.csv"))
+    table_pr95(dataset_ids, AGENTS, datas, lowers, uppers, table_path("experience_noise_action", "pr95_returns.csv"))
 
 
 if __name__ == "__main__":

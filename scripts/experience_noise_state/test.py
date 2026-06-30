@@ -2,23 +2,19 @@ import numpy as np
 
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import main_data_path
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.eval import cal_main
-from ice_offline.store.minari.collector import MinariCollectorWrapper
+from ice_offline.run.test import test
 from ice_offline.store.state._lookup import STATE_OPS
-from ice_offline.tools.printer import print_stage
 from view import save_boxplots
 from view import save_tables
 
 DATASETS = [
-    ("noise_dynamic@hopper_d4rl_medium", "hopper_d4rl_medium"),
-    ("noise_dynamic@hopper_d4rl_expert", "hopper_d4rl_expert"),
-    ("noise_dynamic@hopper_replay_medium", "hopper_replay_medium"),
-    ("noise_dynamic@hopper_replay_expert", "hopper_replay_expert"),
+    ("noise_state_5e-3@hopper_d4rl_medium", "hopper_d4rl_medium", 5e-3),
+    ("noise_state_5e-3@hopper_d4rl_expert", "hopper_d4rl_expert", 5e-3),
+    ("noise_state_5e-3@hopper_replay_medium", "hopper_replay_medium", 5e-3),
+    ("noise_state_5e-3@hopper_replay_expert", "hopper_replay_expert", 5e-3),
 ]
-
-SCALE_NOISE = 5e-3
 
 AGENTS = [
     (500_000, 0, "bc"),
@@ -46,7 +42,7 @@ def _noise_state(state, scale_noise: float):
     return state.__class__.from_serialized(noisy_payload)
 
 
-def run_noise_dynamic(agent, env, *, scale_noise: float = 5e-3, seed: int = 42) -> float:
+def run_noise_state(agent, env, *, scale_noise: float = 5e-3, seed: int = 42) -> float:
     agent.set_seed(seed)
     np.random.seed(seed)
     state_io = _state_io(env)
@@ -66,33 +62,10 @@ def run_noise_dynamic(agent, env, *, scale_noise: float = 5e-3, seed: int = 42) 
     return result
 
 
-def collect(
-    task_id: str,
-    agent,
-    env,
-    *,
-    scale_noise: float = 5e-3,
-    episodes: int = 100,
-    print_interval: int = 1,
-    seed: int = 42,
-):
-    path = main_data_path("test", task_id)
-    minari_col = MinariCollectorWrapper(env)
-
-    print_stage(f"Test {task_id} noise_dynamic={scale_noise:g}")
-    for i in range(episodes):
-        result = run_noise_dynamic(agent, minari_col, scale_noise=scale_noise, seed=seed + i)
-        if (i + 1) % print_interval == 0:
-            print(f"test episode={i + 1}/{episodes} return={result:.6g}")
-
-    minari_col.save(path, id=task_id, agent_id=agent.id)
-    minari_col.close()
-    return path
-
-
 def test_agent(
     test_dataset_id: str,
     train_dataset_id: str,
+    scale_noise: float,
     agent_id: str,
     agent_step: int,
     model_step: int,
@@ -108,26 +81,36 @@ def test_agent(
     print("====================================")
     print(f"task: {task_id}")
     print(f"dataset: {train_dataset_id}")
-    print(f"dynamic_noise_scale: {SCALE_NOISE:g}")
+    print(f"state_noise_scale: {scale_noise:g}")
     print("====================================")
 
-    path = collect(task_id, agent, env, scale_noise=SCALE_NOISE)
+    path = test(
+        task_id,
+        agent,
+        env,
+        run_callback=lambda agent, env, seed: run_noise_state(
+            agent,
+            env,
+            scale_noise=scale_noise,
+            seed=seed,
+        ),
+    )
     print(f"saved: {path}")
 
 
 if __name__ == "__main__":
     agent_ids = [agent_id for _, _, agent_id in AGENTS]
     tasks = [
-        (test_dataset_id, train_dataset_id, agent_id, agent_step, model_step)
+        (test_dataset_id, train_dataset_id, scale_noise, agent_id, agent_step, model_step)
         for agent_step, model_step, agent_id in AGENTS
-        for test_dataset_id, train_dataset_id in DATASETS
+        for test_dataset_id, train_dataset_id, scale_noise in DATASETS
     ]
 
-    for test_dataset_id, train_dataset_id, agent_id, agent_step, model_step in tasks:
-        test_agent(test_dataset_id, train_dataset_id, agent_id, agent_step, model_step)
+    for test_dataset_id, train_dataset_id, scale_noise, agent_id, agent_step, model_step in tasks:
+        test_agent(test_dataset_id, train_dataset_id, scale_noise, agent_id, agent_step, model_step)
         returns_output_path, _ = cal_main(_task_id(test_dataset_id, agent_id))
         print(f"saved: {returns_output_path}")
 
-    dataset_ids = [dataset_id for dataset_id, _ in DATASETS]
+    dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
     save_tables(dataset_ids, agent_ids)
     save_boxplots(dataset_ids, agent_ids)

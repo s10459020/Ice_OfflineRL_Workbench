@@ -1,4 +1,5 @@
 import gymnasium as gym
+from collections.abc import Callable
 
 from ice_offline.agent._spec import Agent
 from ice_offline.config.paths import main_data_path
@@ -23,6 +24,7 @@ def test(
     agent: Agent,
     env: gym.Env,
     *,
+    run_callback: Callable[[Agent, gym.Env, int], float] = run,
     episodes: int = 100,
     print_interval: int = 1,
     seed: int = 42,
@@ -32,7 +34,7 @@ def test(
 
     print_stage(f"Test {task_id}")
     for i in range(episodes):
-        result = run(agent, minari_col, seed + i)
+        result = run_callback(agent, minari_col, seed + i)
         if (i + 1) % print_interval == 0:
             print(f"test episode={i + 1}/{episodes} return={result:.6g}")
 

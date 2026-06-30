@@ -11,17 +11,17 @@ from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
 
 TABLES = [
-    ("noise_dynamic@hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("noise_dynamic@hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
-    ("noise_dynamic@hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
-    ("noise_dynamic@hopper_replay_expert", "hopper_random", "hopper_replay_expert"),
+    ("noise_action_5e-3@hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
+    ("noise_action_5e-3@hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("noise_action_5e-3@hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
+    ("noise_action_5e-3@hopper_replay_expert", "hopper_random", "hopper_replay_expert"),
 ]
 
 DATASETS = [
-    "noise_dynamic@hopper_d4rl_medium",
-    "noise_dynamic@hopper_d4rl_expert",
-    "noise_dynamic@hopper_replay_medium",
-    "noise_dynamic@hopper_replay_expert",
+    "noise_action_5e-3@hopper_d4rl_medium",
+    "noise_action_5e-3@hopper_d4rl_expert",
+    "noise_action_5e-3@hopper_replay_medium",
+    "noise_action_5e-3@hopper_replay_expert",
 ]
 
 AGENTS = [
@@ -71,9 +71,9 @@ def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
         lowers.append(returns_path("dataset", lower_id))
         uppers.append(returns_path("dataset", upper_id))
 
-    table_true(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_noise_dynamic", "true_returns.csv"))
-    table_mean(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_noise_dynamic", "mean_returns.csv"))
-    table_pr95(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_noise_dynamic", "pr95_returns.csv"))
+    table_true(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_noise_action", "true_returns.csv"))
+    table_mean(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_noise_action", "mean_returns.csv"))
+    table_pr95(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_noise_action", "pr95_returns.csv"))
 
 
 def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
@@ -84,7 +84,7 @@ def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
             members.append((agent_id, returns_path("test", _task_id(dataset_id, agent_id))))
         members.append(("upper", returns_path("dataset", upper_id)))
 
-        output_path = VIEW_ROOT / "boxplot" / "experience_noise_dynamic" / f"{index}. {dataset_id}.png"
+        output_path = VIEW_ROOT / "boxplot" / "experience_noise_action" / f"{index}. {dataset_id}.png"
         path = boxplot(dataset_id, members, output_path)
         if path is not None:
             print(f"saved: {path}")
