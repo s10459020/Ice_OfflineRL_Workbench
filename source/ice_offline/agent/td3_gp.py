@@ -76,7 +76,7 @@ class TD3GPAgent(TD3Agent):
                 outputs=q.sum(),
                 inputs=a_gp,
                 create_graph=True,
-                retain_graph=i + 1 < len(q_values),
+                retain_graph=True,
             )[0]
             grad_norm = grad.norm(p=2, dim=-1)
             penalties.append(F.relu(grad_norm - self.gp_threshold).square())
