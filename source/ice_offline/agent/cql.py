@@ -37,9 +37,9 @@ class _CQLMultiplier(torch.nn.Module):
         gap = loss_suppress - self.threshold
         loss = -(self() * gap).mean()
         return loss, {
-            "loss_multiplier": float(loss.detach().item()),
-            "grad_multiplier": SACAgent._grad_norm(loss, self.parameters()),
-            "multiplier": float(self().detach().item()),
+            "loss_multiplier": Agent._value(loss.detach()),
+            "grad_multiplier": Agent._grad_norm(loss, self.parameters()),
+            "multiplier": Agent._value(self().detach()),
         }
 
 

@@ -41,10 +41,12 @@ class Agent:
     def metric_keys(self) -> list[str]:
         return []
 
-    def _value(self, tensor: torch.Tensor) -> float:
+    @staticmethod
+    def _value(tensor: torch.Tensor) -> float:
         return float(tensor.item())
 
-    def _grad_norm(self, loss: torch.Tensor, params) -> float:
+    @staticmethod
+    def _grad_norm(loss: torch.Tensor, params) -> float:
         params = [p for p in params if p.requires_grad]
         grads = torch.autograd.grad(
             loss,
@@ -57,7 +59,7 @@ class Agent:
         for grad in grads:
             if grad is not None:
                 value = value + grad.detach().square().sum()
-        return self._value(value.sqrt())
+        return Agent._value(value.sqrt())
 
     # ====================
     # Persistence

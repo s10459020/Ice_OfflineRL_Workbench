@@ -147,8 +147,8 @@ class _SACTemperature(torch.nn.Module):
         # d3rl SAC source uses target_entropy = -action_size.
         loss = -(self() * (log_prob + self.target_entropy).detach()).mean()
         return loss, {
-            "temp": float(self().detach().item()),
-            "loss_temp": float(loss.detach().item()),
+            "temp": Agent._value(self().detach()),
+            "loss_temp": Agent._value(loss.detach()),
             "grad_temp": Agent._grad_norm(loss, self.parameters()),
         }
 
