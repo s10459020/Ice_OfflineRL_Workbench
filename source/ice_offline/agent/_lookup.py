@@ -6,11 +6,10 @@ from ice_offline.agent.bc import BCAgent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
+from ice_offline.agent.scas_gp import ScasGPAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scaspl import ScasplAgent
-from ice_offline.agent.sdc import SDCAgent
-from ice_offline.agent.sdc import SDCModel
-from ice_offline.agent.sdc_cql import SDCCQLAgent
+from ice_offline.agent.scaspl_gp import ScasplGPAgent
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3_gp import TD3GPAgent
 from ice_offline.agent.td3bc import TD3BCAgent
@@ -41,7 +40,6 @@ def _model_agent(agent_cls: type[Agent], **fixed_config: object) -> Callable[...
 
 MODEL_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_model": lambda dataset, device, config: ScasDynamic(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
-    "sdc_model": lambda dataset, device, config: SDCModel(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
 }
 
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
@@ -62,9 +60,9 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_lambda_50": _model_agent(ScasAgent, weight_correction=0.5),
     "scas_lambda_75": _model_agent(ScasAgent, weight_correction=0.75),
     "scas_lambda_100": _model_agent(ScasAgent, weight_correction=1.0),
+    "scas_gp": _model_agent(ScasGPAgent),
     "scaspl": _model_agent(ScasplAgent),
-    "sdc": lambda dataset, device, model, config: SDCAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, config=config, device=device),
-    "sdc_cql": lambda dataset, device, model, config: SDCCQLAgent(obs_size=dataset.obs_dim, act_size=dataset.act_dim, model=model, config=config, device=device),
+    "scaspl_gp": _model_agent(ScasplGPAgent),
 }
 
 MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
@@ -74,7 +72,9 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas_lambda_50": "scas_model",
     "scas_lambda_75": "scas_model",
     "scas_lambda_100": "scas_model",
+    "scas_gp": "scas_model",
     "scaspl": "scas_model",
+    "scaspl_gp": "scas_model",
     "sdc": "sdc_model",
     "sdc_cql": "sdc_model",
 }
