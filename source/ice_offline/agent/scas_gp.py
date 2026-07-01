@@ -78,15 +78,15 @@ class ScasGPAgent(ScasAgent):
                 outputs=q.sum(),
                 inputs=a_gp,
                 create_graph=True,
-                retain_graph=i + 1 < len(q_values),
+                retain_graph=True,
             )[0]
             grad_norm = grad.norm(p=2, dim=-1)
             penalties.append(torch.relu(grad_norm - self.gp_threshold).square())
 
         loss = torch.stack(penalties, dim=0).sum(dim=0).mean()
         return loss, {
-            "grad_norm": grad_norm.detach(),
-            "loss_gp": loss.detach(),
+            "grad_norm": self._value(grad_norm.detach().mean()),
+            "loss_gp": self._value(loss.detach()),
             "grad_gp": self._grad_norm(loss, self.critic.param_critic()),
         }
 
@@ -95,6 +95,6 @@ class ScasGPAgent(ScasAgent):
         loss_gp, metrics_gp = self.loss_gp(batch)
         loss = loss_td + self.weight_gp * loss_gp
         return loss, metrics_td | metrics_gp | {
-            "loss_critic": loss.detach(),
+            "loss_critic": self._value(loss.detach()),
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }

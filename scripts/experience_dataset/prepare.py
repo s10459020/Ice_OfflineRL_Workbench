@@ -43,7 +43,7 @@ def train_model(
     print(f"saved: {path}")
     
 if __name__ == "__main__":
-    for index, dataset_id in enumerate(DATASETS, start=1):
+    for dataset_id in DATASETS:
         for steps, model_id in MODELS:
             train_model({"steps": steps}, dataset_id, model_id)
-            plot_model(index, dataset_id, model_id)
+            plot_model(dataset_id, model_id)
