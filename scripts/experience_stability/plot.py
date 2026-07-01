@@ -13,9 +13,11 @@ AGENTS = [
     "td3",
     "td3_n",
     "td3_gp",
+    "td3_gpn",
     "td3bc",
     "td3bc_n",
     "td3bc_gp",
+    "td3bc_gpn",
 ]
 
 

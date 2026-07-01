@@ -12,9 +12,11 @@ from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.agent.scaspl_gp import ScasplGPAgent
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3_gp import TD3GPAgent
+from ice_offline.agent.td3_gpn import TD3GPNAgent
 from ice_offline.agent.td3_n import TD3NAgent
 from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.agent.td3bc_gp import TD3BCGPAgent
+from ice_offline.agent.td3bc_gpn import TD3BCGPNAgent
 from ice_offline.agent.td3bc_n import TD3BCNAgent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import model_path
@@ -49,9 +51,11 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "td3": _agent(TD3Agent),
     "td3_n": _agent(TD3NAgent),
     "td3_gp": _agent(TD3GPAgent),
+    "td3_gpn": _agent(TD3GPNAgent),
     "td3bc": _agent(TD3BCAgent),
     "td3bc_n": _agent(TD3BCNAgent),
     "td3bc_gp": _agent(TD3BCGPAgent),
+    "td3bc_gpn": _agent(TD3BCGPNAgent),
     "iql": _agent(IQLAgent),
     "cql": _agent(CQLAgent),
     "aspl": _agent(AsplAgent),
