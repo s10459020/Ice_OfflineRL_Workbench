@@ -6,10 +6,10 @@ from plot import plot_agent
 
 DATASETS = [
     "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
-    # "hopper_d4rl_expert",
+    "hopper_d4rl_hybrid",
+    "hopper_d4rl_expert",
     "hopper_replay_medium",
-    # "hopper_replay_expert",
+    "hopper_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -19,12 +19,20 @@ DATASETS = [
 
 AGENTS = [
     # ([None, 0, 50_000], "bc"),
-    ([None, 0, 100_000], "td3"),
-    ([None, 0, 100_000], "td3_gp"),
-    ([None, 0, 100_000], "td3bc_gp"),
-    ([None, 0, 100_000], "td3bc"),
+    # ([None, 0, 100_000], "td3"),
+    # ([None, 0, 100_000], "td3_gp"),
+    # ([None, 0, 100_000], "td3bc"),
+    # ([None, 0, 100_000], "td3bc_gp"),
     # ([None, 0, 200_000], "iql"),
-    # ([100_000, 0, 500_000], "scas"),
+    # ([100_000, 0, 100_000], "scas"),
+    ([100_000, 0, 500_000], "scas_lambda_0"),
+    ([100_000, 0, 500_000], "scas_lambda_25"),
+    ([100_000, 0, 500_000], "scas_lambda_50"),
+    ([100_000, 0, 500_000], "scas_lambda_75"),
+    ([100_000, 0, 500_000], "scas_lambda_100"),
+    # ([100_000, 0, 100_000], "scas_gp"),
+    # ([100_000, 0, 500_000], "scaspl"),
+    # ([100_000, 0, 500_000], "scaspl_gp"),
 ]
 
 TASKS = [
@@ -41,8 +49,13 @@ TASKS = [
     # ([100_000, 0, 500_000], "hopper_d4rl_medium", "scaspl", {"weight_punish": 1.0}),
     # ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scaspl", {"weight_punish": 1.0}),
     # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scaspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl", {"weight_punish": 2.5}),
+    ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl", {"weight_correction": 1}),
     # ([100_000, 0, 500_000], "hopper_replay_expert", "scaspl", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_d4rl_medium", "scaspl_gp", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scaspl_gp", {"weight_punish": 1.0}),
+    # ([100_000, 0, 500_000], "hopper_d4rl_expert", "scaspl_gp", {"weight_punish": 1.0}),
+    ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl_gp", {"weight_correction": 1}),
+    # ([100_000, 0, 500_000], "hopper_replay_expert", "scaspl_gp", {"weight_punish": 1.0}),
     # ([None, 0, 500_000], "halfcheetah_d4rl_medium", "cql", {"threshold": 1.5}),
     # ([None, 0, 500_000], "halfcheetah_d4rl_hybrid", "cql", {"threshold": 1.5}),
     # ([None, 0, 500_000], "halfcheetah_d4rl_expert", "cql", {"threshold": 1.0}),
@@ -56,8 +69,13 @@ TASKS = [
     # ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scaspl", {"weight_punish": 0.5, "weight_correction": 0.25}),
     # ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scaspl", {"weight_punish": 0.5, "weight_correction": 0.25}),
     # ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
-    # ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scaspl", {"weight_punish": 0.5, "weight_correction": 0.25}),
+    # ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scaspl", {"weight_correction": 0.5}),
     # ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
+    # ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scaspl_gp", {"weight_punish": 0.5, "weight_correction": 0.25}),
+    # ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scaspl_gp", {"weight_punish": 0.5, "weight_correction": 0.25}),
+    # ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scaspl_gp", {"weight_punish": 1.0, "weight_correction": 0.25}),
+    # ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scaspl_gp", {"weight_punish": 0.5, "weight_correction": 0.25}),
+    # ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scaspl_gp", {"weight_punish": 1.0, "weight_correction": 0.25}),
 ]
 
 
@@ -93,7 +111,6 @@ if __name__ == "__main__":
         for dataset_id in DATASETS
     ] + TASKS
 
-    dataset_ids = list(dict.fromkeys(dataset_id for _, dataset_id, _, _ in tasks))
     for task_steps, dataset_id, agent_id, agent_kwargs in tasks:
         train_agent(task_steps, dataset_id, agent_id, agent_kwargs)
-        plot_agent(dataset_ids.index(dataset_id) + 1, dataset_id, agent_id)
+        plot_agent(dataset_id, agent_id)

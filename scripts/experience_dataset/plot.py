@@ -31,7 +31,9 @@ AGENTS = [
     "scas_lambda_50",
     "scas_lambda_75",
     "scas_lambda_100",
+    "scas_gp",
     "scaspl",
+    "scaspl_gp",
 ]
 
 MODELS = [
@@ -39,29 +41,29 @@ MODELS = [
     "sdc_model",
 ]
 
-def plot_item(index: int, dataset_id: str, id: str, eval_output_paths: list[str]) -> None:
+def plot_item(dataset_id: str, id: str, eval_output_paths: list[str]) -> None:
     task_id = _task_id(dataset_id, id)
     metrics_output_path = metric_path(task_id)
-    output_path = plot_path(index, dataset_id, id)
+    output_path = plot_path(dataset_id, id)
 
     print(f"plot dataset={dataset_id}, id={id}")
     plot([metrics_output_path], eval_output_paths, output_path)
     print(f"saved: {output_path}")
 
 
-def plot_agent(index: int, dataset_id: str, agent_id: str) -> None:
+def plot_agent(dataset_id: str, agent_id: str) -> None:
     task_id = _task_id(dataset_id, agent_id)
     returns_output_path, steps_output_path = cal_eval(task_id, "train")
-    plot_item(index, dataset_id, agent_id, [returns_output_path, steps_output_path])
+    plot_item(dataset_id, agent_id, [returns_output_path, steps_output_path])
 
 
-def plot_model(index: int, dataset_id: str, model_id: str) -> None:
-    plot_item(index, dataset_id, model_id, [])
+def plot_model(dataset_id: str, model_id: str) -> None:
+    plot_item(dataset_id, model_id, [])
 
 
 if __name__ == "__main__":
-    for index, dataset_id in enumerate(DATASETS, start=1):
+    for dataset_id in DATASETS:
         for agent_id in AGENTS:
-            plot_agent(index, dataset_id, agent_id)
+            plot_agent(dataset_id, agent_id)
         for model_id in MODELS:
-            plot_model(index, dataset_id, model_id)
+            plot_model(dataset_id, model_id)

@@ -9,8 +9,8 @@ from ice_offline.dataset._types import Batch
 class ScasplGPAgent(ScasplAgent, ScasGPAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
         super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
-        self.weight_gp = config.get("weight_gp", 1.0)
-        self.gp_threshold = config.get("gp_threshold", 1.0)
+        self.weight_gp = config.get("weight_gp", 0.1)
+        self.gp_threshold = config.get("gp_threshold", 100.0)
         self.gp_interval = config.get("gp_interval", 5)
         self.gp_count = config.get("gp_count", 16)
 
@@ -49,7 +49,7 @@ class ScasplGPAgent(ScasplAgent, ScasGPAgent):
             
         target = self.target_td3(sn, r, d)
         q_avg = self.critic.update_q_avg(target)
-        metrics["q_avg"] = q_avg.detach()
+        metrics["q_avg"] = self._value(q_avg.detach())
 
         if self.update_step % self.update_actor_interval == 0:
             metrics |= self.update_actor(batch)
@@ -80,6 +80,6 @@ class ScasplGPAgent(ScasplAgent, ScasGPAgent):
         loss_gp, metrics_gp = self.loss_gp(batch)
         loss = loss_scaspl + self.weight_gp * loss_gp
         return loss, metrics_scaspl | metrics_gp | {
-            "loss_critic": loss.detach(),
+            "loss_critic": self._value(loss.detach()),
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }
