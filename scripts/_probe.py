@@ -5,7 +5,7 @@ from ice_offline.run.probe import probe
 from ice_offline.store.probe.action_axis_probe import ActionAxisProbe
 
 TASKS = [
-    # ({"model_step": 10_000, "method": "Pi"}, "hopper_one_simple", {}, "bc", {}),
+    # ({"model_step": 10_000, "method": "Pi"}, "hopper_road_medium", {}, "bc", {}),
     # ({"model_step": 20_000, "method": "Pi"}, "hopper_simple", {}, "bc", {}),
 ]
 
