@@ -7,6 +7,7 @@ from view import save_boxplots
 from view import save_tables
 
 DATASETS = [
+    "hopper_random_expert_1",
     "hopper_random_expert_3",
     "hopper_random_expert_5",
     "hopper_random_expert_7",

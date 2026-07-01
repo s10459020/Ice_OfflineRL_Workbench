@@ -4,50 +4,25 @@ from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train
 from plot import plot_agent
 
-TASKS = [
-    # ([None, 0, 500_000], "hopper_random_expert_3", "bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_3", "td3bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "td3bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "td3bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "td3bc", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_3", "iql", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "iql", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "iql", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "iql", {}),
-    # ([None, 0, 500_000], "hopper_random_expert_3", "cql", {"threshold": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "cql", {"threshold": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "cql", {"threshold": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "cql", {"threshold": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_3", "aspl", {"weight_punish": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_5", "aspl", {"weight_punish": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_7", "aspl", {"weight_punish": 1.0}),
-    # ([None, 0, 500_000], "hopper_random_expert_9", "aspl", {"weight_punish": 1.0}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_3", "sdc", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_5", "sdc", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_7", "sdc", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_9", "sdc", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_3", "sdc_cql", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_5", "sdc_cql", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_7", "sdc_cql", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_9", "sdc_cql", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_3", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_5", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_7", "scas", {}),
-    # ([100_000, 0, 500_000], "hopper_random_expert_9", "scas", {}),
-    ([100_000, 0, 500_000], "hopper_random_expert_3", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
-    ([100_000, 0, 500_000], "hopper_random_expert_5", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
-    ([100_000, 0, 500_000], "hopper_random_expert_7", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
-    ([100_000, 0, 500_000], "hopper_random_expert_9", "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}),
-]
-
 DATASETS = [
+    "hopper_random_expert_1",
     "hopper_random_expert_3",
     "hopper_random_expert_5",
     "hopper_random_expert_7",
     "hopper_random_expert_9",
+]
+
+AGENTS = [
+    # ([None, 0, 50_000], "bc"),
+    ([None, 0, 100_000], "td3bc"),
+    # ([None, 0, 200_000], "iql"),
+]
+
+TASKS = [
+    # ([None, 0, 500_000], dataset_id, "cql", {"threshold": 1.0})
+    # ([None, 0, 500_000], dataset_id, "aspl", {"weight_punish": 1.0})
+    # ([100_000, 0, 500_000], dataset_id, "scas", {})
+    # *(([100_000, 0, 500_000], dataset_id, "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}) for dataset_id in DATASETS),
 ]
 
 
@@ -76,6 +51,12 @@ def train_agent(
 
 
 if __name__ == "__main__":
-    for task_steps, dataset_id, agent_id, agent_kwargs in TASKS:
+    tasks = [
+        (task_steps, dataset_id, agent_id, {})
+        for task_steps, agent_id in AGENTS
+        for dataset_id in DATASETS
+    ] + TASKS
+
+    for task_steps, dataset_id, agent_id, agent_kwargs in tasks:
         train_agent(task_steps, dataset_id, agent_id, agent_kwargs)
-        plot_agent(DATASETS.index(dataset_id) + 1, dataset_id, agent_id)
+        plot_agent(dataset_id, agent_id)

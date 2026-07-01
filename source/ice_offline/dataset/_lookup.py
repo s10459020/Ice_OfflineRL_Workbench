@@ -76,6 +76,7 @@ DATASET_TABLE: dict[str, Callable[[str], Dataset]] = {
     "hopper_replay_expert": _d4rl_dataset("Hopper-v5", "hopper_full_replay-v2"),
     "hopper_replay_medium": _d4rl_dataset("Hopper-v5", "hopper_medium_replay-v2"),
     "hopper_random": _d4rl_dataset("Hopper-v5", "hopper_random-v2"),
+    "hopper_random_expert_1": _hybrid_dataset("hopper_random_expert_1", "Hopper-v5", "hopper_random", "hopper_d4rl_expert", 1_000_000, 0.1),
     "hopper_random_expert_3": _hybrid_dataset("hopper_random_expert_3", "Hopper-v5", "hopper_random", "hopper_d4rl_expert", 1_000_000, 0.3),
     "hopper_random_expert_5": _hybrid_dataset("hopper_random_expert_5", "Hopper-v5", "hopper_random", "hopper_d4rl_expert", 1_000_000, 0.5),
     "hopper_random_expert_7": _hybrid_dataset("hopper_random_expert_7", "Hopper-v5", "hopper_random", "hopper_d4rl_expert", 1_000_000, 0.7),

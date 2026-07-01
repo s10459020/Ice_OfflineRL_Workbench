@@ -5,6 +5,7 @@ from ice_offline.run.train import train_model as run_train_model
 from plot import plot_model
 
 DATASETS = [
+    "hopper_random_expert_1",
     "hopper_random_expert_3",
     "hopper_random_expert_5",
     "hopper_random_expert_7",

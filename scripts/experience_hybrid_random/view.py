@@ -11,13 +11,15 @@ from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
 
 TABLES = [
-    ("hopper_random_expert_3", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_random_expert_5", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_random_expert_7", "hopper_random", "hopper_d4rl_expert"),
     ("hopper_random_expert_9", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_random_expert_7", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_random_expert_5", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_random_expert_3", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_random_expert_1", "hopper_random", "hopper_d4rl_expert"),
 ]
 
 DATASETS = [
+    "hopper_random_expert_1",
     "hopper_random_expert_3",
     "hopper_random_expert_5",
     "hopper_random_expert_7",
@@ -25,7 +27,7 @@ DATASETS = [
 ]
 
 AGENTS = [
-    "scaspl",
+    # "scaspl",
 ]
 
 
@@ -50,6 +52,22 @@ def _ensure_dataset_eval(dataset_id: str) -> object:
     return returns_output_path
 
 
+def _ordered_table_dataset_ids(table_specs_list: list[tuple[str, str, str]]) -> list[str]:
+    lowers = [lower_id for _, lower_id, _ in table_specs_list]
+    datasets = [dataset_id for dataset_id, _, _ in table_specs_list]
+    uppers = [upper_id for _, _, upper_id in table_specs_list]
+    dataset_ids: list[str] = []
+    for id in [*lowers, *datasets, *uppers]:
+        if id not in dataset_ids:
+            dataset_ids.append(id)
+    return dataset_ids
+
+
+def ensure_table_datasets(table_specs_list: list[tuple[str, str, str]]) -> None:
+    for dataset_id in _ordered_table_dataset_ids(table_specs_list):
+        _ensure_dataset_eval(dataset_id)
+
+
 def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids = [dataset_id for dataset_id, _, _ in table_specs_list]
@@ -70,26 +88,38 @@ def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
     table_pr95(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_hybrid_random", "pr95_returns.csv"))
 
 
+def save_table_boxplot(table_specs_list: list[tuple[str, str, str]]) -> None:
+    table_members = [
+        (dataset_id, returns_path("dataset", dataset_id))
+        for dataset_id in _ordered_table_dataset_ids(table_specs_list)
+    ]
+
+    table_output_path = VIEW_ROOT / "boxplot" / "experience_hybrid_random" / "table.png"
+    table_path = boxplot("table", table_members, table_output_path)
+    if table_path is not None:
+        print(f"saved: {table_path}")
+
+
 def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
-    for index, (dataset_id, lower_id, upper_id) in enumerate(table_specs_list, start=1):
+    for dataset_id, lower_id, upper_id in table_specs_list:
         members = [("lower", returns_path("dataset", lower_id))]
         for agent_id in agent_id_list:
             members.append((agent_id, returns_path("test", _task_id(dataset_id, agent_id))))
         members.append(("upper", returns_path("dataset", upper_id)))
 
-        output_path = VIEW_ROOT / "boxplot" / "experience_hybrid_random" / f"{index}. {dataset_id}.png"
+        output_path = VIEW_ROOT / "boxplot" / "experience_hybrid_random" / f"{dataset_id}.png"
         path = boxplot(dataset_id, members, output_path)
         if path is not None:
             print(f"saved: {path}")
 
 
 if __name__ == "__main__":
-    for dataset_id, lower_id, upper_id in TABLES:
-        _ensure_dataset_eval(lower_id)
-        _ensure_dataset_eval(upper_id)
+    ensure_table_datasets(TABLES)
+    for dataset_id, _, _ in TABLES:
         for agent_id in AGENTS:
             _ensure_agent_eval(dataset_id, agent_id)
 
     save_tables(DATASETS, AGENTS)
+    save_table_boxplot(TABLES)
     save_boxplots(DATASETS, AGENTS)
