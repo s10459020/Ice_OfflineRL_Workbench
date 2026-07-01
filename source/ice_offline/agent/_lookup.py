@@ -4,6 +4,7 @@ from ice_offline.agent._spec import Agent
 from ice_offline.agent.aspl import AsplAgent
 from ice_offline.agent.bc import BCAgent
 from ice_offline.agent.cql import CQLAgent
+from ice_offline.agent.cql_gp import CQLGPAgent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.agent.scas_gp import ScasGPAgent
@@ -58,6 +59,7 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "td3bc_gpn": _agent(TD3BCGPNAgent),
     "iql": _agent(IQLAgent),
     "cql": _agent(CQLAgent),
+    "cql_gp": _agent(CQLGPAgent),
     "aspl": _agent(AsplAgent),
 }
 
