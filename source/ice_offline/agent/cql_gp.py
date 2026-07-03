@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.dataset._types import Batch
@@ -7,10 +8,8 @@ from ice_offline.dataset._types import Batch
 class CQLGPAgent(CQLAgent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
-        self.update_step = 0
         self.weight_gp = config.get("weight_gp", 1.0)
         self.gp_threshold = config.get("gp_threshold", 1.0)
-        self.gp_interval = config.get("gp_interval", 5)
         self.gp_count = config.get("gp_count", 16)
 
     # ====================
@@ -45,13 +44,7 @@ class CQLGPAgent(CQLAgent):
         ]
 
     def update(self, batch: Batch) -> dict[str, torch.Tensor]:
-        self.update_step += 1
-
-        if self.update_step % self.gp_interval != 0:
-            metrics = super().update_critic(batch)
-        else:
-            metrics = self.update_critic(batch)
-
+        metrics = self.update_critic(batch)
         metrics |= self.update_actor(batch)
         metrics |= self.update_temperature(batch)
         self.critic.update_target_soft()
@@ -61,7 +54,6 @@ class CQLGPAgent(CQLAgent):
         loss_td, metrics_td = self.loss_td(batch)
         loss_suppress, metrics_suppress = self.loss_suppress(batch)
         loss_gp, metrics_gp = self.loss_gp(batch)
-
         metrics_multiplier = self.update_multiplier(loss_suppress)
 
         loss_critic = (
@@ -87,7 +79,11 @@ class CQLGPAgent(CQLAgent):
     def loss_gp(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         o, _, _, _, _ = batch
         o_gp = o.repeat_interleave(self.gp_count, dim=0).detach()
-        a_gp = self.actor.sample_random_n(o)[0].reshape(-1, self.act_size)
+        a_gp = torch.empty(
+            (o.shape[0], self.gp_count, self.act_size),
+            device=o.device,
+            dtype=o.dtype,
+        ).uniform_(-1.0, 1.0).reshape(-1, self.act_size)
         a_gp.requires_grad_(True)
         q_values = self.critic.q_all(o_gp, a_gp)
 
@@ -101,7 +97,7 @@ class CQLGPAgent(CQLAgent):
                 retain_graph=True,
             )[0]
             grad_norm = grad.norm(p=2, dim=-1)
-            penalties.append(torch.relu(grad_norm - self.gp_threshold).square())
+            penalties.append(F.relu(grad_norm - self.gp_threshold).square())
             grad_norm_mean = grad_norm_mean + grad_norm.mean()
 
         grad_norm_mean = grad_norm_mean / len(q_values)
@@ -111,15 +107,3 @@ class CQLGPAgent(CQLAgent):
             "loss_gp": self._value(loss.detach()),
             "grad_gp": self._grad_norm(loss, self.critic.param_critic()),
         }
-
-    # ====================
-    # Save and load
-    # ====================
-    def _save_dict(self) -> dict[str, object]:
-        state = super()._save_dict()
-        state["update_step"] = self.update_step
-        return state
-
-    def _load_dict(self, state: dict[str, object]) -> None:
-        super()._load_dict(state)
-        self.update_step = int(state.get("update_step", 0))

@@ -9,7 +9,7 @@ class ScasGPAgent(ScasAgent):
         super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
         self.weight_gp = config.get("weight_gp", 1.0)
         self.gp_threshold = config.get("gp_threshold", 1.0)
-        self.gp_interval = config.get("gp_interval", 5)
+        self.gp_interval = config.get("gp_interval", 1)
         self.gp_count = config.get("gp_count", 16)
 
     # ====================

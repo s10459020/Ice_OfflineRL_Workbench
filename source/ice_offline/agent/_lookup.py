@@ -63,6 +63,8 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "td3bc_gpn": _agent(TD3BCGPNAgent),
     "iql": _agent(IQLAgent),
     "cql": _agent(CQLAgent),
+    "cql_threshold_n5": _agent(CQLAgent, threshold=-5.0),
+    "cql_threshold_5": _agent(CQLAgent, threshold=5.0),
     "cql_gp": _agent(CQLGPAgent),
     "aspl": _agent(AsplAgent),
 }

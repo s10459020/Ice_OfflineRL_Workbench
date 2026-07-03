@@ -26,7 +26,7 @@ class _CQLActor(SACActor):
 class _CQLMultiplier(torch.nn.Module):
     def __init__(self, config: dict[str, object] = {}):
         super().__init__()
-        self.threshold = config.get("threshold", 1.0)
+        self.threshold = config.get("threshold", 0.0)
         tensor = torch.full((1, 1), math.log(config.get("scale_init", 10.0)), dtype=torch.float32)
         self.log_scale = torch.nn.Parameter(tensor)
         self.optimizer = torch.optim.Adam(self.parameters())
