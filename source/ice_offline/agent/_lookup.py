@@ -8,9 +8,13 @@ from ice_offline.agent.cql_gp import CQLGPAgent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.agent.scas_gp import ScasGPAgent
+from ice_offline.agent.scas_gpn import ScasGPNAgent
+from ice_offline.agent.scas_n import ScasNAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.agent.scaspl_gp import ScasplGPAgent
+from ice_offline.agent.scaspl_gpn import ScasplGPNAgent
+from ice_offline.agent.scaspl_n import ScasplNAgent
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3_gp import TD3GPAgent
 from ice_offline.agent.td3_gpn import TD3GPNAgent
@@ -70,9 +74,13 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_lambda_50": _model_agent(ScasAgent, weight_correction=0.5),
     "scas_lambda_75": _model_agent(ScasAgent, weight_correction=0.75),
     "scas_lambda_100": _model_agent(ScasAgent, weight_correction=1.0),
+    "scas_n": _model_agent(ScasNAgent),
     "scas_gp": _model_agent(ScasGPAgent),
+    "scas_gpn": _model_agent(ScasGPNAgent),
     "scaspl": _model_agent(ScasplAgent),
+    "scaspl_n": _model_agent(ScasplNAgent),
     "scaspl_gp": _model_agent(ScasplGPAgent),
+    "scaspl_gpn": _model_agent(ScasplGPNAgent),
 }
 
 MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
@@ -82,9 +90,13 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas_lambda_50": "scas_model",
     "scas_lambda_75": "scas_model",
     "scas_lambda_100": "scas_model",
+    "scas_n": "scas_model",
     "scas_gp": "scas_model",
+    "scas_gpn": "scas_model",
     "scaspl": "scas_model",
+    "scaspl_n": "scas_model",
     "scaspl_gp": "scas_model",
+    "scaspl_gpn": "scas_model",
     "sdc": "sdc_model",
     "sdc_cql": "sdc_model",
 }

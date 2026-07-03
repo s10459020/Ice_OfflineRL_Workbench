@@ -1,8 +1,8 @@
 import math
 import torch
 
-from ice_offline.agent._spec import Agent
-from ice_offline.agent._spec import MetricValues
+
+from ice_offline.agent._spec import Agent, MetricValues
 from ice_offline.agent.sac import SACActor
 from ice_offline.agent.sac import SACAgent
 from ice_offline.agent.sac import SACCritic

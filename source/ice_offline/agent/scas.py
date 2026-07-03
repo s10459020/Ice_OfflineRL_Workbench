@@ -108,8 +108,8 @@ class ScasAgent(TD3Agent):
         return [
             "loss_td",
             "grad_td",
-            "loss_normal",
-            "grad_normal",
+            "loss_td3",
+            "grad_td3",
             "loss_correction",
             "grad_correction",
             "loss_actor",
@@ -131,16 +131,6 @@ class ScasAgent(TD3Agent):
     # ====================
     # Actor loss
     # ====================
-    def loss_normal(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        o, _, _, _, _ = batch
-        a = self.actor.pi(o)
-        q = self.critic.q_min(o, a)
-        loss = -q.mean() / q.abs().mean().detach()
-        return loss, {
-            "loss_normal": self._value(loss.detach()),
-            "grad_normal": self._grad_norm(loss, self.actor.param_actor()),
-        }
-
     def loss_correction(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch
@@ -163,13 +153,13 @@ class ScasAgent(TD3Agent):
         }
 
     def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        loss_normal, metrics_normal = self.loss_normal(batch)
+        loss_td3, metrics_td3 = self.loss_td3(batch)
         loss_correction, metrics_correction = self.loss_correction(batch)
         loss = (
-            (1.0 - self.weight_correction) * loss_normal
+            (1.0 - self.weight_correction) * loss_td3
             + self.weight_correction * loss_correction
         )
-        return loss, metrics_normal | metrics_correction | {
+        return loss, metrics_td3 | metrics_correction | {
             "loss_actor": self._value(loss.detach()),
             "grad_actor": self._grad_norm(loss, self.actor.param_actor()),
         }
