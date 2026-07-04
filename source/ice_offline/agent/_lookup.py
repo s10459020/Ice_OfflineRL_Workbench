@@ -5,6 +5,7 @@ from ice_offline.agent.aspl import AsplAgent
 from ice_offline.agent.bc import BCAgent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.cql_gp import CQLGPAgent
+from ice_offline.agent.cql_threshold_5 import CQLThreshold5Agent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.agent.scas_gp import ScasGPAgent
