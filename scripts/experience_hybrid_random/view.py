@@ -11,19 +11,19 @@ from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
 
 TABLES = [
-    ("hopper_random_expert_9", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_random_expert_7", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_random_expert_5", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_random_expert_3", "hopper_random", "hopper_d4rl_expert"),
-    ("hopper_random_expert_1", "hopper_random", "hopper_d4rl_expert"),
+    ("walker2d_random_expert_9", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_random_expert_7", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_random_expert_5", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_random_expert_3", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_random_expert_1", "walker2d_random", "walker2d_d4rl_expert"),
 ]
 
 DATASETS = [
-    "hopper_random_expert_1",
-    "hopper_random_expert_3",
-    "hopper_random_expert_5",
-    "hopper_random_expert_7",
-    "hopper_random_expert_9",
+    "walker2d_random_expert_1",
+    "walker2d_random_expert_3",
+    "walker2d_random_expert_5",
+    "walker2d_random_expert_7",
+    "walker2d_random_expert_9",
 ]
 
 AGENTS = [

@@ -5,11 +5,11 @@ from ice_offline.run.train import train_model as run_train_model
 from plot import plot_model
 
 DATASETS = [
-    "hopper_random_expert_1",
-    "hopper_random_expert_3",
-    "hopper_random_expert_5",
-    "hopper_random_expert_7",
-    "hopper_random_expert_9",
+    "walker2d_random_expert_1",
+    "walker2d_random_expert_3",
+    "walker2d_random_expert_5",
+    "walker2d_random_expert_7",
+    "walker2d_random_expert_9",
 ]
 
 MODELS = [
@@ -37,7 +37,7 @@ def train_model(
 
 
 if __name__ == "__main__":
-    for index, dataset_id in enumerate(DATASETS, start=1):
+    for dataset_id in DATASETS:
         for steps, model_id in MODELS:
             train_model({"steps": steps}, dataset_id, model_id)
-            plot_model(index, dataset_id, model_id)
+            plot_model(dataset_id, model_id)

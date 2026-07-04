@@ -5,11 +5,11 @@ from ice_offline.run.eval import cal_eval
 from ice_offline.run.plot import plot
 
 DATASETS = [
-    "hopper_random_expert_1",
-    "hopper_random_expert_3",
-    "hopper_random_expert_5",
-    "hopper_random_expert_7",
-    "hopper_random_expert_9",
+    "walker2d_random_expert_1",
+    "walker2d_random_expert_3",
+    "walker2d_random_expert_5",
+    "walker2d_random_expert_7",
+    "walker2d_random_expert_9",
 ]
 
 AGENTS = [
