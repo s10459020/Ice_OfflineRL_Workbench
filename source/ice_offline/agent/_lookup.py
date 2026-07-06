@@ -20,10 +20,12 @@ from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3_gp import TD3GPAgent
 from ice_offline.agent.td3_gpn import TD3GPNAgent
 from ice_offline.agent.td3_n import TD3NAgent
+from ice_offline.agent.td3_r import TD3RAgent
 from ice_offline.agent.td3bc import TD3BCAgent
 from ice_offline.agent.td3bc_gp import TD3BCGPAgent
 from ice_offline.agent.td3bc_gpn import TD3BCGPNAgent
 from ice_offline.agent.td3bc_n import TD3BCNAgent
+from ice_offline.agent.td3bc_r import TD3BCRAgent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import model_path
 from ice_offline.dataset.base import Dataset
@@ -55,11 +57,14 @@ MODEL_TABLE: dict[str, Callable[..., Agent]] = {
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "bc": _agent(BCAgent),
     "td3": _agent(TD3Agent),
+    "td3_gamma_90": _agent(TD3Agent, discount_factor=0.9),
     "td3_n": _agent(TD3NAgent),
+    "td3_r": _agent(TD3RAgent),
     "td3_gp": _agent(TD3GPAgent),
     "td3_gpn": _agent(TD3GPNAgent),
     "td3bc": _agent(TD3BCAgent),
     "td3bc_n": _agent(TD3BCNAgent),
+    "td3bc_r": _agent(TD3BCRAgent),
     "td3bc_gp": _agent(TD3BCGPAgent),
     "td3bc_gpn": _agent(TD3BCGPNAgent),
     "iql": _agent(IQLAgent),
@@ -68,6 +73,8 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "cql_threshold_5": _agent(CQLAgent, threshold=5.0),
     "cql_gp": _agent(CQLGPAgent),
     "aspl": _agent(AsplAgent),
+    "aspl_gamma_90": _agent(AsplAgent, discount_factor=0.9),
+    "aspl_gamma_95": _agent(AsplAgent, discount_factor=0.95),
     "aspl_gp": _agent(AsplGPAgent),
 }
 

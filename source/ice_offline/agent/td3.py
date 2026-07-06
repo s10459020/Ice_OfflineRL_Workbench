@@ -159,6 +159,9 @@ class TD3Agent(Agent):
         self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())
         self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
+    def set_seed(self, seed: int) -> None:
+        torch.manual_seed(int(seed))
+
     # ====================
     # Act
     # ====================
@@ -199,6 +202,7 @@ class TD3Agent(Agent):
             "grad_td",
             "loss_td3",
             "grad_td3",
+            "param_q",
             "target_q",
         ]
 
@@ -264,9 +268,15 @@ class TD3Agent(Agent):
         o, a, r, on, d = batch
         target = self.target_td3(on, r, d)
         loss = sum(F.mse_loss(q, target) for q in self.critic.q_all(o, a))
+        
+        param_q = torch.zeros((), device=loss.device)
+        for param in self.critic.param_critic():
+            param_q = param_q + param.detach().square().sum()
+
         return loss, {
             "loss_td": self._value(loss.detach()),
             "grad_td": self._grad_norm(loss, self.critic.param_critic()),
+            "param_q": self._value(param_q.sqrt()),
             "target_q": self._value(target.mean().detach()),
         }
 

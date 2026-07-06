@@ -90,6 +90,7 @@ def train_agent(
         agent=agent,
         dataset=dataset,
         task_id=task_id,
+        start=agent_start,
         eval_env=dataset.make_eval_env(),
         steps=steps,
     )
