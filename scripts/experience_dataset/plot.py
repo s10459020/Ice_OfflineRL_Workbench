@@ -23,6 +23,7 @@ AGENTS = [
     "iql",
     "cql",
     "aspl",
+    "aspl_r",
     "sdc",
     "sdc_cql",
     "scas",

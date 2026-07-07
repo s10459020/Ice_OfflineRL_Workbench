@@ -5,23 +5,23 @@ from ice_offline.run.train import train
 from plot import plot_agent
 
 DATASETS = [
-    "walker2d_d4rl_medium",
+    # "walker2d_d4rl_medium",
     # "walker2d_d4rl_hybrid",
-    # "walker2d_d4rl_expert",
+    "walker2d_d4rl_expert",
     # "walker2d_replay_medium",
     # "walker2d_replay_expert",
 ]
 
 AGENTS = [
-    # ([None, 0, 100_000], "td3"),
-    # ([None, 0, 100_000], "td3_gamma_90"),
+    # ([None, 0, 50_000], "td3"),
+    # ([None, 0, 50_000], "td3_gamma_90"),
     # ([None, 0, 50_000], "td3_n"),
-    # ([None, 0, 100_000], "td3_r"),
-    # ([None, 0, 100_000], "td3_gp"),
+    # ([None, 0, 50_000], "td3_r"),
+    # ([None, 0, 50_000], "td3_gp"),
     # ([None, 0, 50_000], "td3_gpn"),
     # ([None, 0, 100_000], "td3bc"),
     # ([None, 0, 100_000], "td3bc_n"),
-    # ([None, 0, 100_000], "td3bc_r"),
+    ([None, 0, 100_000], "td3bc_r"),
     # ([None, 0, 100_000], "td3bc_gp"),
     # ([None, 0, 100_000], "td3bc_gpn"),
     # ([None, 0, 500_000], "cql"),
@@ -29,10 +29,11 @@ AGENTS = [
     # ([None, 0, 500_000], "cql_threshold_5"),
     # ([None, 0, 500_000], "cql_gp"),
     # ([None, 0, 200_000], "aspl"),
+    # ([None, 0, 200_000], "aspl_r"),
     # ([None, 0, 200_000], "aspl_gamma_90"),
     # ([None, 0, 200_000], "aspl_gamma_95"),
     # ([None, 0, 1_000_000], "aspl_gp"),
-    ([100_000, 500_000, 1_000_000], "scas"),
+    # ([100_000, 500_000, 1_000_000], "scas"),
     # ([100_000, 0, 500_000], "scas_n"),
     # ([100_000, 0, 500_000], "scas_gp"),
     # ([100_000, 0, 500_000], "scas_gpn"),
