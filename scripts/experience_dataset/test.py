@@ -31,18 +31,6 @@ DATASETS = [
     # "halfcheetah_replay_expert",
 ]
 
-AGENTS = [
-    # ("bc", None, [500_000]),
-    # ("td3bc_n", None, [500_000]),
-    # ("iql", None, [500_000]),
-    # ("cql", None, [500_000]),
-    ("aspl_gp", None, [500_000]),
-    # ("scas_gp", 100_000, [500_000]),
-    # ("scaspl_gp", 100_000, [500_000]),
-]
-
-EVALS = 100
-
 TABLES = [
     ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
     # ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
@@ -56,8 +44,25 @@ TABLES = [
     # ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
 ]
 
+AGENTS = [
+    # ("bc", None, 50_000),
+    # ("td3bc_n", None, 100_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    ("aspl_gp", None, 500_000),
+    # ("scas", 100_000, 500_000),
+    # ("scas_gp", 100_000, 500_000),
+    # ("scaspl_gp", 100_000, 500_000),
+]
+
+COUNT = 10
+EVALS = 100
+INTERVAL = 1_000
 VALUE_CACHE: dict[str, list[float]] = {}
 
+
+def _steps(start_step: int) -> list[int]:
+    return [start_step + INTERVAL * index for index in range(COUNT + 1)]
 
 def _value(id: str) -> list[float] | None:
     if id in VALUE_CACHE:
@@ -138,8 +143,9 @@ def eval(task_id: str, eval_path: Path) -> EvalRows:
 
 if __name__ == "__main__":
     for dataset_id in DATASETS:
-        for agent_id, model_step, agent_steps in AGENTS:
+        for agent_id, model_step, agent_step in AGENTS:
             task_id = _task_id(dataset_id, agent_id)
+            agent_steps = _steps(agent_step)
             path = test(task_id, dataset_id, agent_id, model_step, agent_steps)
             returns_rows = eval(task_id, path)
             _cache(task_id, returns_rows)
