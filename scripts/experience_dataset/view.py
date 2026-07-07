@@ -37,6 +37,7 @@ AGENTS = [
     # "iql",
     # "cql",
     # "aspl",
+    # "aspl_r",
     # "scas",
     # "scas_gp",
     # "scaspl",

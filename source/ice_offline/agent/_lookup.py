@@ -3,6 +3,7 @@ from collections.abc import Callable
 from ice_offline.agent._spec import Agent
 from ice_offline.agent.aspl import AsplAgent
 from ice_offline.agent.aspl_gp import AsplGPAgent
+from ice_offline.agent.aspl_r import AsplRAgent
 from ice_offline.agent.bc import BCAgent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.cql_gp import CQLGPAgent
@@ -73,6 +74,7 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "cql_threshold_5": _agent(CQLAgent, threshold=5.0),
     "cql_gp": _agent(CQLGPAgent),
     "aspl": _agent(AsplAgent),
+    "aspl_r": _agent(AsplRAgent),
     "aspl_gamma_90": _agent(AsplAgent, discount_factor=0.9),
     "aspl_gamma_95": _agent(AsplAgent, discount_factor=0.95),
     "aspl_gp": _agent(AsplGPAgent),
