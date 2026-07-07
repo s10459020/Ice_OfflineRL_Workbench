@@ -8,6 +8,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot
 import numpy as np
 
+MetricSeries = tuple[str, np.ndarray, np.ndarray]
+EvalSeries = tuple[str, np.ndarray, np.ndarray]
+LineSeries = tuple[str, np.ndarray, np.ndarray]
+
 
 # ====================
 # Public API
@@ -19,6 +23,14 @@ def plot(
 ) -> Path:
     metrics = _read_metrics(metric_paths)
     evals = _read_evals(eval_paths)
+    return plot_data(metrics, evals, output_path)
+
+
+def plot_data(
+    metrics: list[MetricSeries],
+    evals: list[EvalSeries],
+    output_path: Path,
+) -> Path:
     row_count = _row_count(len(metrics)) + _row_count(len(evals))
 
     figure = matplotlib.pyplot.figure(figsize=(14, row_count * 4))
@@ -34,11 +46,32 @@ def plot(
     return output_path
 
 
+def plot_overlay(
+    title: str,
+    series_list: list[LineSeries],
+    output_path: Path,
+) -> Path:
+    figure, axis = matplotlib.pyplot.subplots(figsize=(14, 6))
+    colors = matplotlib.pyplot.rcParams["axes.prop_cycle"].by_key()["color"]
+    for index, (label, steps, values) in enumerate(series_list):
+        color = colors[index % len(colors)]
+        axis.plot(steps, values, linewidth=1.8, color=color, label=label)
+
+    axis.set_title(title)
+    axis.grid(alpha=0.3)
+    axis.legend()
+
+    figure.tight_layout()
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(output_path)
+    matplotlib.pyplot.close(figure)
+    return output_path
+
 # ====================
 # Private Methods
 # ====================
-def _read_metrics(metric_paths: list[Path]) -> list[tuple[str, np.ndarray, np.ndarray]]:
-    metrics: list[tuple[str, np.ndarray, np.ndarray]] = []
+def _read_metrics(metric_paths: list[Path]) -> list[MetricSeries]:
+    metrics: list[MetricSeries] = []
     for path in metric_paths:
         steps, values, names = _read_metric_csv(path)
         for index, name in enumerate(names):
@@ -46,7 +79,7 @@ def _read_metrics(metric_paths: list[Path]) -> list[tuple[str, np.ndarray, np.nd
     return metrics
 
 
-def _read_evals(eval_paths: list[Path]) -> list[tuple[str, np.ndarray, np.ndarray]]:
+def _read_evals(eval_paths: list[Path]) -> list[EvalSeries]:
     return [
         (_eval_name(path), *_read_eval_csv(path))
         for path in eval_paths
@@ -79,7 +112,7 @@ def _read_eval_csv(path: Path) -> tuple[np.ndarray, np.ndarray]:
 def _draw_metrics(
     figure,
     grid,
-    metrics: list[tuple[str, np.ndarray, np.ndarray]],
+    metrics: list[MetricSeries],
 ) -> None:
     for index, (name, steps, values) in enumerate(metrics):
         axis = figure.add_subplot(grid[index // 2, index % 2])
@@ -90,7 +123,7 @@ def _draw_evals(
     figure,
     grid,
     row_offset: int,
-    evals: list[tuple[str, np.ndarray, np.ndarray]],
+    evals: list[EvalSeries],
 ) -> None:
     for index, (name, steps, values) in enumerate(evals):
         axis = figure.add_subplot(grid[row_offset + index // 2, index % 2])

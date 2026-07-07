@@ -14,10 +14,17 @@ METRICS_ROOT = PROJECT_ROOT / "tmps" / "metrics"
 VIEW_ROOT = PROJECT_ROOT / "tmps" / "view"
 
 
-def _task_id(dataset_id: str, agent_id: str | None = None) -> str:
+def _task_id(
+    dataset_id: str,
+    agent_id: str | None = None,
+    postfix: object | None = None,
+) -> str:
     if agent_id is None:
         return f"{dataset_id}-v0"
-    return f"{dataset_id}-{agent_id}-v0"
+    if postfix is None:
+        return f"{dataset_id}-{agent_id}-v0"
+    return f"{dataset_id}-{agent_id}-{postfix}-v0"
+
 
 def eval_data_path(mode: str, task_id: str) -> Path:
     return RUNS_ROOT / mode / task_id / "data" / "eval_data.hdf5"
