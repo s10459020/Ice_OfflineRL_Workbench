@@ -76,7 +76,7 @@ class AsplCritic(TD3Critic):
 
 class AsplAgent(TD3Agent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        self.weight_punish = config.get("weight_punish", 0.5)
+        self.weight_punish = config.get("weight_punish", 0.05)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
         self.actor = AsplActor(self.obs_size, self.act_size, config).to(self.device)
         self.critic = AsplCritic(self.obs_size, self.act_size, config).to(self.device)
