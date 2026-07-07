@@ -132,7 +132,7 @@ def _row_count(count: int) -> int:
 
 
 def _eval_name(path: Path) -> str:
-    return path.parent.name
+    return path.parent.parent.name
 
 
 def _smooth_by_step(steps: np.ndarray, values: np.ndarray) -> np.ndarray:
