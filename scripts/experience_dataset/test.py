@@ -19,11 +19,16 @@ from ice_offline.run.test import run
 from ice_offline.store.eval.collector import EvalCollector
 
 DATASETS = [
-    "hopper_d4rl_medium",
+    # "hopper_d4rl_medium",
     # "hopper_d4rl_hybrid",
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_d4rl_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -32,11 +37,16 @@ DATASETS = [
 ]
 
 TABLES = [
-    ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
+    # ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
     # ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     # ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
     # ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
     # ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
+    ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
     # ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
     # ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     # ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
@@ -45,14 +55,15 @@ TABLES = [
 ]
 
 AGENTS = [
-    # ("bc", None, 50_000),
-    # ("td3bc_n", None, 100_000),
-    # ("iql", None, 200_000),
-    # ("cql", None, 500_000),
-    ("aspl_gp", None, 500_000),
-    # ("scas", 100_000, 500_000),
-    # ("scas_gp", 100_000, 500_000),
-    # ("scaspl_gp", 100_000, 500_000),
+    ("bc", None, 50_000),
+    ("td3bc_n", None, 100_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_gp_punish_005", None, 500_000),
+    ("aspl_gp_punish_010", None, 500_000),
+    ("aspl_gp_punish_050", None, 500_000),
+    ("scas_gp", 100_000, 500_000),
+    ("scaspl_gp", 100_000, 500_000),
 ]
 
 COUNT = 10
