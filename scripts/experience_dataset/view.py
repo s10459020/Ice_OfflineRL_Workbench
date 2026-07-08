@@ -29,6 +29,11 @@ TABLES = [
 ]
 
 DATASETS = [
+    "hopper_d4rl_medium",
+    "hopper_d4rl_hybrid",
+    "hopper_d4rl_expert",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
     "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
@@ -42,16 +47,16 @@ DATASETS = [
 ]
 
 AGENTS = [
-    # ([None, 0, 50_000], "bc"),
-    # ([None, 0, 100_000], "td3bc_n"),
-    # ([None, 0, 200_000], "iql"),
-    # ([None, 0, 500_000], "cql"),
-    ([None, 0, 500_000], "aspl_gp_punish_005"),
-    ([None, 0, 500_000], "aspl_gp_punish_010"),
-    ([None, 0, 500_000], "aspl_gp_punish_050"),
+    ([None, 0, 50_000], "bc"),
+    ([None, 0, 100_000], "td3bc_n"),
+    ([None, 0, 200_000], "iql"),
+    ([None, 0, 500_000], "cql"),
+    # ([None, 0, 200_000], "aspl_gp_punish_005"),
+    # ([None, 0, 200_000], "aspl_gp_punish_010"),
+    ([None, 0, 200_000], "aspl_gp_punish_050"),
     # ([None, 0, 500_000], "aspl_gp"),
-    # ([100_000, 0, 500_000], "scas_gp"),
-    # ([100_000, 0, 500_000], "scaspl_gp"),
+    ([100_000, 0, 500_000], "scas_gp"),
+    ([100_000, 0, 500_000], "scaspl_gp"),
 ]
 
 VALUE_CACHE: dict[str, list[float]] = {}
