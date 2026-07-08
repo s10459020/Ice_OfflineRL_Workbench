@@ -23,6 +23,9 @@ AGENTS = [
     "iql",
     "cql",
     "aspl",
+    "aspl_gp_punish_005",
+    "aspl_gp_punish_010",
+    "aspl_gp_punish_050",
     "aspl_r",
     "sdc",
     "sdc_cql",
@@ -45,7 +48,7 @@ MODELS = [
 def plot_item(dataset_id: str, id: str, eval_output_paths: list[str]) -> None:
     task_id = _task_id(dataset_id, id)
     metrics_output_path = metric_path(task_id)
-    output_path = plot_path(dataset_id, id)
+    output_path = plot_path("train", dataset_id, id)
 
     print(f"plot dataset={dataset_id}, id={id}")
     plot([metrics_output_path], eval_output_paths, output_path)

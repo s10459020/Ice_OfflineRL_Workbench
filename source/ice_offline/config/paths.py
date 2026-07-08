@@ -66,8 +66,8 @@ def metric_path(task_id: str) -> Path:
     return METRICS_ROOT / f"{task_id}.csv"
 
 
-def plot_path(dataset_id: str, agent_id: str) -> Path:
-    return VIEW_ROOT / "plot" / agent_id / f"{dataset_id}.png"
+def plot_path(task_group: str, dataset_id: str, agent_id: str) -> Path:
+    return VIEW_ROOT / "plot" / task_group / agent_id / f"{dataset_id}.png"
 
 
 def table_path(group: str, name: str) -> Path:

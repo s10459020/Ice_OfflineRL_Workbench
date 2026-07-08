@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 
 from ice_offline.agent._lookup import make_agent
-from ice_offline.config.paths import VIEW_ROOT
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import eval_data_path
+from ice_offline.config.paths import plot_path
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.dataset.eval import EvalDataset
 from ice_offline.run.boxplot import write_boxplots
@@ -19,11 +19,16 @@ from ice_offline.run.test import run
 from ice_offline.store.eval.collector import EvalCollector
 
 DATASETS = [
-    "hopper_d4rl_medium",
+    # "hopper_d4rl_medium",
     # "hopper_d4rl_hybrid",
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_d4rl_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -32,11 +37,16 @@ DATASETS = [
 ]
 
 TABLES = [
-    ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
+    # ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
     # ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     # ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
     # ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
     # ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
+    ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
     # ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
     # ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     # ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
@@ -45,14 +55,15 @@ TABLES = [
 ]
 
 AGENTS = [
-    # ("bc", None, 50_000),
-    # ("td3bc_n", None, 100_000),
-    # ("iql", None, 200_000),
-    # ("cql", None, 500_000),
-    ("aspl_gp", None, 500_000),
-    # ("scas", 100_000, 500_000),
-    # ("scas_gp", 100_000, 500_000),
-    # ("scaspl_gp", 100_000, 500_000),
+    ("bc", None, 50_000),
+    ("td3bc_n", None, 100_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_gp_punish_005", None, 500_000),
+    ("aspl_gp_punish_010", None, 500_000),
+    ("aspl_gp_punish_050", None, 500_000),
+    ("scas_gp", 100_000, 500_000),
+    ("scaspl_gp", 100_000, 500_000),
 ]
 
 COUNT = 10
@@ -93,7 +104,8 @@ def plot(task_id: str, rows: EvalRows) -> Path:
         )
         for step, values in rows
     ]
-    output_path = VIEW_ROOT / "plot" / "experience_dataset" / f"{task_id}.png"
+    dataset_id, agent_id, _ = task_id.rsplit("-", 2)
+    output_path = plot_path("dataset", dataset_id, agent_id)
     path = plot_overlay(
         task_id,
         series_list,

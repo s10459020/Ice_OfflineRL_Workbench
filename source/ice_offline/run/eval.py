@@ -2,8 +2,11 @@ import csv
 from collections.abc import Callable
 from pathlib import Path
 
+from ice_offline.config.paths import eval_data_path
+from ice_offline.config.paths import main_data_path
 from ice_offline.config.paths import returns_path
 from ice_offline.config.paths import steps_path
+from ice_offline.dataset.base import Dataset
 from ice_offline.dataset._types import Episode
 
 
@@ -69,6 +72,28 @@ def read_eval(mode: str, task_id: str) -> EvalData:
         "returns": _read_csv(returns_path(mode, task_id)),
         "steps": _read_csv(steps_path(mode, task_id)),
     }
+
+
+def cal_dataset(dataset_id: str) -> tuple[Path, Path]:
+    from ice_offline.dataset._lookup import make_dataset
+
+    dataset = make_dataset(dataset_id, device="cpu")
+    batches = [(0, dataset.episodes)]
+    return write_eval("dataset", dataset_id, batches)
+
+
+def cal_main(task_id: str, mode: str = "test") -> tuple[Path, Path]:
+    path = main_data_path(mode, task_id)
+    dataset = Dataset(path=path, device="cpu")
+    batches = [(0, dataset.episodes)]
+    return write_eval(mode, task_id, batches)
+
+
+def cal_eval(task_id: str, mode: str = "train") -> tuple[Path, Path]:
+    from ice_offline.dataset._lookup import make_eval_dataset
+
+    dataset = make_eval_dataset(task_id, mode=mode, device="cpu")
+    return write_eval(mode, task_id, dataset.batch_episodes)
 
 
 def _read_csv(path: Path) -> EvalTable:
