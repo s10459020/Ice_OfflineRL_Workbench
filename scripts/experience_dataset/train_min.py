@@ -26,12 +26,12 @@ AGENTS = [
     # ([None, 100_000], "td3bc_n"),
     # ([None, 200_000], "iql"),
     # ([None, 500_000], "cql"),
-    # ([None, 500_000], "aspl_gp"),
+    # ([None, 200_000], "aspl_gp"),
     # ([100_000, 500_000], "scas_gp"),
     # ([100_000, 500_000], "scaspl_gp"),
-    ([None, 500_000], "aspl_gp_punish_005"),
-    ([None, 500_000], "aspl_gp_punish_010"),
-    ([None, 500_000], "aspl_gp_punish_050"),
+    # ([None, 200_000], "aspl_gp_punish_005"),
+    # ([None, 200_000], "aspl_gp_punish_010"),
+    # ([None, 200_000], "aspl_gp_punish_050"),
 ]
 
 TASKS = [
