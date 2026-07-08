@@ -3,9 +3,9 @@ from pathlib import Path
 import numpy as np
 
 from ice_offline.agent._lookup import make_agent
-from ice_offline.config.paths import VIEW_ROOT
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import eval_data_path
+from ice_offline.config.paths import plot_path
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.dataset.eval import EvalDataset
 from ice_offline.run.boxplot import write_boxplots
@@ -104,7 +104,8 @@ def plot(task_id: str, rows: EvalRows) -> Path:
         )
         for step, values in rows
     ]
-    output_path = VIEW_ROOT / "plot" / "experience_dataset" / f"{task_id}.png"
+    dataset_id, agent_id, _ = task_id.rsplit("-", 2)
+    output_path = plot_path("dataset", dataset_id, agent_id)
     path = plot_overlay(
         task_id,
         series_list,

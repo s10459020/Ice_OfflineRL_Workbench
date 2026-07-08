@@ -1,6 +1,6 @@
 from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import VIEW_ROOT
 from ice_offline.config.paths import metric_path
+from ice_offline.config.paths import plot_path
 from ice_offline.run.eval import cal_eval
 from ice_offline.run.plot import plot
 
@@ -26,7 +26,7 @@ def plot_agent(dataset_id: str, agent_id: str) -> None:
     task_id = _task_id(dataset_id, agent_id)
     metrics_output_path = metric_path(task_id)
     returns_output_path, steps_output_path = cal_eval(task_id, "train")
-    output_path = VIEW_ROOT / "plot" / "experience_cql_gap" / f"{task_id}.png"
+    output_path = plot_path("train", dataset_id, agent_id)
 
     print(f"plot task={task_id}")
     plot([metrics_output_path], [returns_output_path, steps_output_path], output_path)
