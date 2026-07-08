@@ -1,23 +1,19 @@
+from pathlib import Path
+
 from ice_offline.config.paths import VIEW_ROOT
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import eval_data_path
-from ice_offline.config.paths import main_data_path
 from ice_offline.config.paths import plot_path
-from ice_offline.config.paths import returns_path
-from ice_offline.config.paths import steps_path
-from ice_offline.config.paths import table_path
+from ice_offline.dataset._lookup import make_dataset
 from ice_offline.dataset.eval import EvalDataset
-from ice_offline.run.boxplot import boxplot
-from ice_offline.run.eval import cal_dataset
-from ice_offline.run.eval import cal_main
+from ice_offline.run.boxplot import boxplot_data
+from ice_offline.run.boxplot import write_boxplots
+from ice_offline.run.eval import EvalRows
 from ice_offline.run.eval import eval_returns
 from ice_offline.run.eval import eval_steps
-from ice_offline.run.eval import read_eval
 from ice_offline.run.eval import write_eval_rows
 from ice_offline.run.plot import plot_overlay
-from ice_offline.run.table import table_mean
-from ice_offline.run.table import table_pr95
-from ice_offline.run.table import table_true
+from ice_offline.run.table import write_tables
 
 TABLES = [
     ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
@@ -30,43 +26,75 @@ TABLES = [
     ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
     ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
-    # ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
-    # ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
-    # ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
-    # ("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
-    # ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
+    ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
+    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
+    ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
+    ("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
+    ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
 ]
 
 DATASETS = [
-    # "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
-    # "hopper_d4rl_expert",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
     "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
     "walker2d_replay_medium",
     "walker2d_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
-    # "bc",
-    # "td3bc",
-    # "iql",
-    # "cql",
-    # "aspl",
-    # "aspl_r",
-    # "scas",
-    # "scas_gp",
-    # "scaspl",
-    # "scaspl_gp",
+    # ([None, 0, 50_000], "bc"),
+    # ([None, 0, 100_000], "td3bc_n"),
+    # ([None, 0, 200_000], "iql"),
+    # ([None, 0, 500_000], "cql"),
+    ([None, 0, 500_000], "aspl_gp_punish_005"),
+    ([None, 0, 500_000], "aspl_gp_punish_010"),
+    ([None, 0, 500_000], "aspl_gp_punish_050"),
+    # ([None, 0, 500_000], "aspl_gp"),
+    # ([100_000, 0, 500_000], "scas_gp"),
+    # ([100_000, 0, 500_000], "scaspl_gp"),
 ]
 
+VALUE_CACHE: dict[str, list[float]] = {}
 
-def _plot_agent_eval(task_id: str) -> object:
-    eval_data = read_eval("test", task_id)
-    returns_rows = eval_data["returns"][1]
+
+def _cache(id: str, rows: EvalRows) -> list[float]:
+    VALUE_CACHE[id] = [
+        value
+        for _, values in rows
+        for value in values
+    ]
+    return VALUE_CACHE[id]
+
+
+def _ordered_table_dataset_ids(table_specs_list: list[tuple[str, str, str]]) -> list[str]:
+    lowers = [lower_id for _, lower_id, _ in table_specs_list]
+    datasets = [dataset_id for dataset_id, _, _ in table_specs_list]
+    uppers = [upper_id for _, _, upper_id in table_specs_list]
+    dataset_ids: list[str] = []
+    for dataset_id in [*lowers, *datasets, *uppers]:
+        if dataset_id not in dataset_ids:
+            dataset_ids.append(dataset_id)
+    return dataset_ids
+
+
+def _value(dataset_id: str) -> list[float]:
+    if dataset_id in VALUE_CACHE:
+        return VALUE_CACHE[dataset_id]
+    dataset = make_dataset(dataset_id, device="cpu")
+    values = [
+        float(episode.rewards.sum())
+        for episode in dataset.episodes
+    ]
+    VALUE_CACHE[dataset_id] = values
+    return values
+
+
+def _plot_agent_eval(task_id: str, returns_rows: EvalRows) -> Path:
     dataset_id, agent_id, _ = task_id.rsplit("-", 2)
     series_list = [
         (str(step), list(range(1, len(values) + 1)), values)
@@ -78,51 +106,26 @@ def _plot_agent_eval(task_id: str) -> object:
     return path
 
 
-def ensure_agent_eval(dataset_id: str, agent_id: str) -> object:
+def ensure_agent_eval(dataset_id: str, agent_id: str) -> list[float] | None:
     task_id = _task_id(dataset_id, agent_id)
     eval_path = eval_data_path("test", task_id)
-    if eval_path.exists():
-        returns_output_path = returns_path("test", task_id)
-        steps_output_path = steps_path("test", task_id)
-        if not returns_output_path.exists() or not steps_output_path.exists():
-            eval_dataset = EvalDataset(path=eval_path, device="cpu")
-            batches = eval_dataset.batch_episodes
-            returns_rows = eval_returns(batches)
-            steps_rows = eval_steps(batches)
-            returns_output_path, _ = write_eval_rows("test", task_id, returns_rows, steps_rows)
-            print(f"saved: {returns_output_path}")
-        _plot_agent_eval(task_id)
-        return returns_output_path
-
-    input_path = main_data_path("test", task_id)
-    if not input_path.exists():
+    if not eval_path.exists():
         print(f"skip missing: {eval_path}")
-        print(f"skip missing: {input_path}")
         return None
 
-    returns_output_path, _ = cal_main(task_id)
+    eval_dataset = EvalDataset(path=eval_path, device="cpu")
+    batches = eval_dataset.batch_episodes
+    returns_rows = eval_returns(batches)
+    steps_rows = eval_steps(batches)
+    returns_output_path, steps_output_path = write_eval_rows("test", task_id, returns_rows, steps_rows)
     print(f"saved: {returns_output_path}")
-    return returns_output_path
+    print(f"saved: {steps_output_path}")
+    _plot_agent_eval(task_id, returns_rows)
+    return _cache(task_id, returns_rows)
 
 
-def ensure_dataset_eval(dataset_id: str) -> object:
-    output_path = returns_path("dataset", dataset_id)
-    if output_path.exists():
-        return output_path
-    returns_output_path, _ = cal_dataset(dataset_id)
-    print(f"saved: {returns_output_path}")
-    return returns_output_path
-
-
-def _ordered_table_dataset_ids(table_specs_list: list[tuple[str, str, str]]) -> list[str]:
-    lowers = [lower_id for _, lower_id, _ in table_specs_list]
-    datasets = [dataset_id for dataset_id, _, _ in table_specs_list]
-    uppers = [upper_id for _, _, upper_id in table_specs_list]
-    dataset_ids: list[str] = []
-    for id in [*lowers, *datasets, *uppers]:
-        if id not in dataset_ids:
-            dataset_ids.append(id)
-    return dataset_ids
+def ensure_dataset_eval(dataset_id: str) -> list[float]:
+    return _value(dataset_id)
 
 
 def ensure_table_datasets(table_specs_list: list[tuple[str, str, str]]) -> None:
@@ -130,50 +133,54 @@ def ensure_table_datasets(table_specs_list: list[tuple[str, str, str]]) -> None:
         ensure_dataset_eval(dataset_id)
 
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
-    dataset_ids = [dataset_id for dataset_id, _, _ in table_specs_list]
-    datas: list[list[object]] = []
-    lowers: list[object] = []
-    uppers: list[object] = []
+    dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
+    data_values = [
+        [VALUE_CACHE.get(_task_id(dataset_id, agent_id)) for agent_id in agent_id_list]
+        for dataset_id in dataset_ids
+    ]
+    lower_values = [_value(lower_id) for lower_id in lower_ids]
+    upper_values = [_value(upper_id) for upper_id in upper_ids]
+    return write_tables(
+        "experience_dataset",
+        dataset_ids,
+        agent_id_list,
+        data_values,
+        lower_values,
+        upper_values,
+    )
 
-    for dataset_id, lower_id, upper_id in table_specs_list:
-        datas.append([
-            returns_path("test", _task_id(dataset_id, agent_id))
-            for agent_id in agent_id_list
-        ])
-        lowers.append(returns_path("dataset", lower_id))
-        uppers.append(returns_path("dataset", upper_id))
 
-    table_true(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_dataset", "true_returns.csv"))
-    table_mean(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_dataset", "mean_returns.csv"))
-    table_pr95(dataset_ids, agent_id_list, datas, lowers, uppers, table_path("experience_dataset", "pr95_returns.csv"))
-
-
-def save_table_boxplot(table_specs_list: list[tuple[str, str, str]]) -> None:
-    table_members = [
-        (dataset_id, returns_path("dataset", dataset_id))
+def save_table_boxplot(table_specs_list: list[tuple[str, str, str]]) -> Path | None:
+    members = [
+        (dataset_id, _value(dataset_id))
         for dataset_id in _ordered_table_dataset_ids(table_specs_list)
     ]
-
-    table_output_path = VIEW_ROOT / "boxplot" / "experience_dataset" / "table.png"
-    path = boxplot("table", table_members, table_output_path)
+    output_path = VIEW_ROOT / "boxplot" / "experience_dataset" / "table.png"
+    path = boxplot_data("table", members, output_path)
     if path is not None:
         print(f"saved: {path}")
+    return path
 
 
-def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
+def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> list[Path]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
-    for dataset_id, lower_id, upper_id in table_specs_list:
-        members = [("lower", returns_path("dataset", lower_id))]
-        for agent_id in agent_id_list:
-            members.append((agent_id, returns_path("test", _task_id(dataset_id, agent_id))))
-        members.append(("upper", returns_path("dataset", upper_id)))
-
-        output_path = VIEW_ROOT / "boxplot" / "experience_dataset" / f"{dataset_id}.png"
-        path = boxplot(dataset_id, members, output_path)
-        if path is not None:
-            print(f"saved: {path}")
+    dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
+    data_values = [
+        [VALUE_CACHE.get(_task_id(dataset_id, agent_id)) for agent_id in agent_id_list]
+        for dataset_id in dataset_ids
+    ]
+    lower_values = [_value(lower_id) for lower_id in lower_ids]
+    upper_values = [_value(upper_id) for upper_id in upper_ids]
+    return write_boxplots(
+        "experience_dataset",
+        dataset_ids,
+        agent_id_list,
+        data_values,
+        lower_values,
+        upper_values,
+    )
 
 
 if __name__ == "__main__":
