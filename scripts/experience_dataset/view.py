@@ -1,11 +1,20 @@
 from ice_offline.config.paths import VIEW_ROOT
 from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import eval_data_path
 from ice_offline.config.paths import main_data_path
+from ice_offline.config.paths import plot_path
 from ice_offline.config.paths import returns_path
+from ice_offline.config.paths import steps_path
 from ice_offline.config.paths import table_path
+from ice_offline.dataset.eval import EvalDataset
 from ice_offline.run.boxplot import boxplot
 from ice_offline.run.eval import cal_dataset
 from ice_offline.run.eval import cal_main
+from ice_offline.run.eval import eval_returns
+from ice_offline.run.eval import eval_steps
+from ice_offline.run.eval import read_eval
+from ice_offline.run.eval import write_eval_rows
+from ice_offline.run.plot import plot_overlay
 from ice_offline.run.table import table_mean
 from ice_offline.run.table import table_pr95
 from ice_offline.run.table import table_true
@@ -16,6 +25,11 @@ TABLES = [
     ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
     ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
     ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
+    ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
     # ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
     # ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     # ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
@@ -29,6 +43,11 @@ DATASETS = [
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_d4rl_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
 ]
 
 AGENTS = [
@@ -45,10 +64,39 @@ AGENTS = [
 ]
 
 
-def _ensure_agent_eval(dataset_id: str, agent_id: str) -> object:
+def _plot_agent_eval(task_id: str) -> object:
+    eval_data = read_eval("test", task_id)
+    returns_rows = eval_data["returns"][1]
+    dataset_id, agent_id, _ = task_id.rsplit("-", 2)
+    series_list = [
+        (str(step), list(range(1, len(values) + 1)), values)
+        for step, values in returns_rows
+    ]
+    output_path = plot_path("dataset", dataset_id, agent_id)
+    path = plot_overlay(task_id, series_list, output_path)
+    print(f"saved: {path}")
+    return path
+
+
+def ensure_agent_eval(dataset_id: str, agent_id: str) -> object:
     task_id = _task_id(dataset_id, agent_id)
+    eval_path = eval_data_path("test", task_id)
+    if eval_path.exists():
+        returns_output_path = returns_path("test", task_id)
+        steps_output_path = steps_path("test", task_id)
+        if not returns_output_path.exists() or not steps_output_path.exists():
+            eval_dataset = EvalDataset(path=eval_path, device="cpu")
+            batches = eval_dataset.batch_episodes
+            returns_rows = eval_returns(batches)
+            steps_rows = eval_steps(batches)
+            returns_output_path, _ = write_eval_rows("test", task_id, returns_rows, steps_rows)
+            print(f"saved: {returns_output_path}")
+        _plot_agent_eval(task_id)
+        return returns_output_path
+
     input_path = main_data_path("test", task_id)
     if not input_path.exists():
+        print(f"skip missing: {eval_path}")
         print(f"skip missing: {input_path}")
         return None
 
@@ -57,7 +105,7 @@ def _ensure_agent_eval(dataset_id: str, agent_id: str) -> object:
     return returns_output_path
 
 
-def _ensure_dataset_eval(dataset_id: str) -> object:
+def ensure_dataset_eval(dataset_id: str) -> object:
     output_path = returns_path("dataset", dataset_id)
     if output_path.exists():
         return output_path
@@ -79,7 +127,7 @@ def _ordered_table_dataset_ids(table_specs_list: list[tuple[str, str, str]]) -> 
 
 def ensure_table_datasets(table_specs_list: list[tuple[str, str, str]]) -> None:
     for dataset_id in _ordered_table_dataset_ids(table_specs_list):
-        _ensure_dataset_eval(dataset_id)
+        ensure_dataset_eval(dataset_id)
 
 
 def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
@@ -129,11 +177,11 @@ def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
 
 
 if __name__ == "__main__":
-    ensure_table_datasets(TABLES)
     for dataset_id, _, _ in TABLES:
         for agent_id in AGENTS:
-            _ensure_agent_eval(dataset_id, agent_id)
+            ensure_agent_eval(dataset_id, agent_id)
 
+    ensure_table_datasets(TABLES)
     save_tables(DATASETS, AGENTS)
     save_table_boxplot(TABLES)
     save_boxplots(DATASETS, AGENTS)
