@@ -1,8 +1,8 @@
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.train import train
 from plot import plot_agent
+from ice_offline.run.train import train
 
 DATASETS = [
     # "hopper_d4rl_medium",

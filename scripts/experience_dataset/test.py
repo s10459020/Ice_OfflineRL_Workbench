@@ -4,9 +4,10 @@ from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import eval_data_path
 from ice_offline.dataset._lookup import make_dataset
+from plot import eval
+from plot import plot
 from ice_offline.run.test import run
 from ice_offline.store.eval.collector import EvalCollector
-from view import ensure_agent_eval
 from view import save_boxplots
 from view import save_tables
 
@@ -81,8 +82,9 @@ if __name__ == "__main__":
         for agent_id, model_step, agent_step in AGENTS:
             task_id = _task_id(dataset_id, agent_id)
             agent_steps = _steps(agent_step)
-            test(task_id, dataset_id, agent_id, model_step, agent_steps)
-            ensure_agent_eval(dataset_id, agent_id)
+            path = test(task_id, dataset_id, agent_id, model_step, agent_steps)
+            returns_rows = eval(task_id, path)
+            plot(task_id, returns_rows)
 
     agent_ids = [agent_id for agent_id, _, _ in AGENTS]
     save_tables(DATASETS, agent_ids)
