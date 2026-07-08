@@ -5,9 +5,9 @@ from ice_offline.run.train import train
 from plot import plot_agent
 
 DATASETS = [
-    # "walker2d_random_expert_1",
-    # "walker2d_random_expert_3",
-    # "walker2d_random_expert_5",
+    "walker2d_random_expert_1",
+    "walker2d_random_expert_3",
+    "walker2d_random_expert_5",
     "walker2d_random_expert_7",
     "walker2d_random_expert_9",
 ]
@@ -17,9 +17,9 @@ AGENTS = [
     # ([None, 0, 100_000], "td3bc_n"),
     # ([None, 0, 200_000], "iql"),
     # ([None, 0, 500_000], "aspl"),
-    # ([None, 0, 500_000], "cql"),
+    ([None, 0, 500_000], "cql"),
     # ([100_000, 0, 500_000], "scas_gp"),
-    ([100_000, 0, 500_000], "scaspl_gp"),
+    # ([100_000, 0, 500_000], "scaspl_gp"),
 ]
 
 TASKS = [
