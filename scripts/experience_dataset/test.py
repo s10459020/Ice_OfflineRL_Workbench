@@ -55,15 +55,15 @@ TABLES = [
 ]
 
 AGENTS = [
-    ("bc", None, 50_000),
-    ("td3bc_n", None, 100_000),
-    ("iql", None, 200_000),
-    ("cql", None, 500_000),
+    # ("bc", None, 50_000),
+    # ("td3bc_n", None, 100_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    # ("scas_gp", 100_000, 500_000),
+    # ("scaspl_gp", 100_000, 500_000),
     ("aspl_gp_punish_005", None, 500_000),
     ("aspl_gp_punish_010", None, 500_000),
     ("aspl_gp_punish_050", None, 500_000),
-    ("scas_gp", 100_000, 500_000),
-    ("scaspl_gp", 100_000, 500_000),
 ]
 
 COUNT = 10
