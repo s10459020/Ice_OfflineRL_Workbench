@@ -30,14 +30,14 @@ DATASETS = [
 ]
 
 AGENTS = [
-    # ("bc", None, 50_000),
-    # ("td3bc_n", None, 100_000),
-    # ("iql", None, 200_000),
-    # ("cql", None, 500_000),
-    # ("scas_gp", 100_000, 500_000),
-    # ("scaspl_gp", 100_000, 500_000),
-    ("aspl_gp_punish_005", None, 500_000),
-    ("aspl_gp_punish_010", None, 500_000),
+    ("bc", None, 50_000),
+    ("td3bc_n", None, 100_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("scas_gp", 100_000, 500_000),
+    ("scaspl_gp", 100_000, 500_000),
+    # ("aspl_gp_punish_005", None, 500_000),
+    # ("aspl_gp_punish_010", None, 500_000),
     ("aspl_gp_punish_050", None, 500_000),
 ]
 
@@ -78,8 +78,8 @@ def test(
 
 
 if __name__ == "__main__":
-    for dataset_id in DATASETS:
-        for agent_id, model_step, agent_step in AGENTS:
+    for agent_id, model_step, agent_step in AGENTS:
+        for dataset_id in DATASETS:
             task_id = _task_id(dataset_id, agent_id)
             agent_steps = _steps(agent_step)
             path = test(task_id, dataset_id, agent_id, model_step, agent_steps)
