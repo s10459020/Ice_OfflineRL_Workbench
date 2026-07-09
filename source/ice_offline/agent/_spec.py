@@ -65,13 +65,12 @@ class Agent:
     # Persistence
     # ====================
     def save(self, task_id: str, step: int = 0) -> Path:
-        path = model_path(task_id, step).with_suffix(".pt")
+        path = model_path(task_id, step)
         path.parent.mkdir(parents=True, exist_ok=True)
         torch.save(self._save_dict(), path)
         return path
 
-    def load(self, task_id: str, step: int = 0) -> None:
-        path = model_path(task_id, step).with_suffix(".pt")
+    def load(self, path: Path) -> None:
         state = torch.load(path, map_location=self.device)
         self._load_dict(state)
 

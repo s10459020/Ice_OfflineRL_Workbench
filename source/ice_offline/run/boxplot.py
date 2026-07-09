@@ -16,7 +16,7 @@ def boxplot(
     title: str,
     members: list[tuple[str, Path | None]],
     output_path: Path,
-) -> Path | None:
+) -> None:
     labels: list[str] = []
     values: list[list[float]] = []
     steps: list[list[float]] = []
@@ -31,26 +31,27 @@ def boxplot(
         values.append(member_values)
         steps.append(member_steps)
 
-    return _save_boxplot(title, labels, values, steps, output_path)
+    _save_boxplot(title, labels, values, steps, output_path)
 
 
 def boxplot_data(
     title: str,
-    members: list[tuple[str, list[float] | None]],
+    labels: list[str],
+    values: list[list[float] | None],
     output_path: Path,
-) -> Path | None:
-    labels: list[str] = []
-    values: list[list[float]] = []
+) -> None:
+    filtered_labels: list[str] = []
+    filtered_values: list[list[float]] = []
     steps: list[list[float]] = []
 
-    for label, member_values in members:
+    for label, member_values in zip(labels, values):
         if not member_values:
             continue
-        labels.append(label)
-        values.append(member_values)
+        filtered_labels.append(label)
+        filtered_values.append(member_values)
         steps.append([1.0] * len(member_values))
 
-    return _save_boxplot(title, labels, values, steps, output_path)
+    _save_boxplot(title, filtered_labels, filtered_values, steps, output_path)
 
 
 def write_boxplots(
@@ -60,19 +61,12 @@ def write_boxplots(
     data_values: list[list[list[float] | None]],
     lower_values: list[list[float] | None],
     upper_values: list[list[float] | None],
-) -> list[Path]:
-    output_paths: list[Path] = []
+) -> None:
     for index, dataset_id in enumerate(dataset_ids):
-        members = [("lower", lower_values[index])]
-        for agent_index, agent_id in enumerate(agent_ids):
-            members.append((agent_id, data_values[index][agent_index]))
-        members.append(("upper", upper_values[index]))
+        labels = ["lower", *agent_ids, "upper"]
+        values = [lower_values[index], *data_values[index], upper_values[index]]
         output_path = VIEW_ROOT / "boxplot" / group / f"{dataset_id}.png"
-        path = boxplot_data(dataset_id, members, output_path)
-        if path is not None:
-            print(f"saved: {path}")
-            output_paths.append(path)
-    return output_paths
+        boxplot_data(dataset_id, labels, values, output_path)
 
 
 def _save_boxplot(
@@ -81,9 +75,9 @@ def _save_boxplot(
     values: list[list[float]],
     steps: list[list[float]],
     output_path: Path,
-) -> Path | None:
+) -> None:
     if not values:
-        return None
+        return
 
     figure, axis = plt.subplots(figsize=(14, 6))
     for index, (member_values, member_steps) in enumerate(zip(values, steps), start=1):
@@ -109,7 +103,7 @@ def _save_boxplot(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output_path, dpi=150)
     plt.close(figure)
-    return output_path
+    print(f"saved: {output_path}")
 
 
 def _read_member(path: Path) -> tuple[list[float], list[float]]:

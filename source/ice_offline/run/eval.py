@@ -2,7 +2,6 @@ import csv
 from collections.abc import Callable
 from pathlib import Path
 
-from ice_offline.config.paths import eval_data_path
 from ice_offline.config.paths import main_data_path
 from ice_offline.config.paths import returns_path
 from ice_offline.config.paths import steps_path
@@ -24,18 +23,18 @@ def write_eval(
     return write_eval_data(mode, task_id, eval_data(batches))
 
 
-def eval_returns(batches: EvalBatches) -> EvalRows:
+def analyze_returns(batches: EvalBatches) -> EvalRows:
     return _rows(batches, _episode_return)
 
 
-def eval_steps(batches: EvalBatches) -> EvalRows:
+def analyze_steps(batches: EvalBatches) -> EvalRows:
     return _rows(batches, _episode_length)
 
 
 def eval_data(batches: EvalBatches) -> EvalData:
     return {
-        "returns": ("step", eval_returns(batches)),
-        "steps": ("step", eval_steps(batches)),
+        "returns": ("step", analyze_returns(batches)),
+        "steps": ("step", analyze_steps(batches)),
     }
 
 

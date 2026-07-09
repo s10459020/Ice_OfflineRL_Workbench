@@ -5,9 +5,8 @@ from ice_offline.agent._spec import Agent
 from ice_offline.store.eval.collector import EvalCollector
 
 from ice_offline.dataset.base import Dataset
+from ice_offline.config.paths import eval_path
 from ice_offline.store.metric.record import MetricRecorder
-from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import eval_data_path
 from ice_offline.tools.printer import print_stage
 
 
@@ -39,7 +38,7 @@ def train_model(
     agent: Agent,
     dataset: Dataset,
     *,
-    task_id: str | None = None,
+    task_id: str,
     start: int = 0,
     steps: int = 200_000,
     batch_size: int = 256,
@@ -47,7 +46,6 @@ def train_model(
     print_interval: int = 200,
     seed: int = 42,
 ) -> Path:
-    task_id = task_id or _task_id(dataset.id, agent.id)
     recorder = MetricRecorder(task_id, keys=agent.metric_keys(), resume=start > 0)
 
     print_stage(f"Train {agent.id} in {dataset.id}")
@@ -74,11 +72,11 @@ def train_model(
         return agent.save(task_id, start)
     return path
 
-def train(
+def train_agent(
+    task_id: str,
     agent: Agent,
     dataset: Dataset,
     *,
-    task_id: str | None = None,
     start: int = 0,
     steps: int = 200_000,
     batch_size: int = 256,
@@ -89,10 +87,9 @@ def train(
     print_interval: int = 200,
     seed: int = 42,
 ) -> None:
-    task_id = task_id or _task_id(dataset.id, agent.id)
     eval_env = eval_env or dataset.make_eval_env()
 
-    path = eval_data_path("train", task_id)
+    path = eval_path(task_id)
     resume_path = path if start > 0 else None
     eval_col = EvalCollector(eval_env, resume_path=resume_path)
     recorder = MetricRecorder(task_id, keys=agent.metric_keys(), resume=start > 0)
@@ -128,6 +125,7 @@ def train(
 
     eval_col.save(path)
     eval_col.close()
+    print(f"saved: {path}")
     return path
 
 
@@ -137,10 +135,10 @@ if __name__ == "__main__":
     from ice_offline.store.eval.loader import EvalLoader
 
     device = "cuda:0"
-    task_id = "check_run-v0"
+    task_id = "train/check_run-v0"
     dataset = make_dataset("hopper_medium", device=device)
     agent = make_agent("td3bc", dataset, device=device)
-    path = train(agent, dataset, task_id=task_id, steps=50000)
+    path = train_agent(task_id=task_id, agent=agent, dataset=dataset, steps=50000)
 
     loader = EvalLoader(path, device=device)
     data = Dataset(path=path, loader=loader, device=device)

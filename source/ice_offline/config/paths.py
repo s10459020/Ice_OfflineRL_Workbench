@@ -14,21 +14,19 @@ METRICS_ROOT = PROJECT_ROOT / "tmps" / "metrics"
 VIEW_ROOT = PROJECT_ROOT / "tmps" / "view"
 
 
-def _task_id(
+def task_id(
     dataset_id: str,
     agent_id: str | None = None,
-    postfix: object | None = None,
+    dir: str | None = None,
 ) -> str:
+    prefix = "" if dir is None else f"{dir}/"
     if agent_id is None:
-        return f"{dataset_id}-v0"
-    if postfix is None:
-        return f"{dataset_id}-{agent_id}-v0"
-    return f"{dataset_id}-{agent_id}-{postfix}-v0"
+        return f"{prefix}{dataset_id}-v0"
+    return f"{prefix}{dataset_id}-{agent_id}-v0"
 
 
-def eval_data_path(mode: str, task_id: str) -> Path:
-    return RUNS_ROOT / mode / task_id / "data" / "eval_data.hdf5"
-
+def eval_path(task_id: str) -> Path:
+    return EVALS_ROOT / task_id / "data" / "eval_data.hdf5"
 
 def custom_dataset_path(dataset_id: str) -> Path:
     return CUSTOM_DATASETS_ROOT / dataset_id / "data" / "main_data.hdf5"
@@ -47,27 +45,27 @@ def main_data_path(mode: str, task_id: str) -> Path:
 
 
 def model_path(task_id: str, step: int) -> Path:
-    return MODELS_ROOT / task_id / str(step)
+    return MODELS_ROOT / task_id / f"{step}.pt"
 
 
-def eval_path(task_id: str) -> Path:
-    return EVALS_ROOT / f"{task_id}.csv"
+def returns_path(task_id: str) -> Path:
+    return RETURNS_ROOT / f"{task_id}.csv"
 
 
-def returns_path(mode: str, task_id: str) -> Path:
-    return RETURNS_ROOT / mode / f"{task_id}.csv"
-
-
-def steps_path(mode: str, task_id: str) -> Path:
-    return STEPS_ROOT / mode / f"{task_id}.csv"
+def steps_path(task_id: str) -> Path:
+    return STEPS_ROOT / f"{task_id}.csv"
 
 
 def metric_path(task_id: str) -> Path:
     return METRICS_ROOT / f"{task_id}.csv"
 
 
-def plot_path(task_group: str, dataset_id: str, agent_id: str) -> Path:
-    return VIEW_ROOT / "plot" / task_group / agent_id / f"{dataset_id}.png"
+def plot_path(task_id: str) -> Path:
+    return VIEW_ROOT / "plot" / f"{task_id}.png"
+
+
+def boxplot_path(group: str, name: str) -> Path:
+    return VIEW_ROOT / "boxplot" / group / name
 
 
 def table_path(group: str, name: str) -> Path:

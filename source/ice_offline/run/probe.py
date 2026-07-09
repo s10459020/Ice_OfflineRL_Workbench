@@ -2,6 +2,7 @@ import gymnasium as gym
 
 from ice_offline.dataset.base import Dataset
 from ice_offline.config.paths import main_data_path
+from ice_offline.config.paths import model_path
 from ice_offline.store.minari.collector import MinariCollectorWrapper
 from ice_offline.store.probe.op_collector import ProbeCollectWrapper
 from ice_offline.store.probe.op_collector import ProbeEvalFn
@@ -70,7 +71,7 @@ if __name__ == "__main__":
     model_task_id = "check_run-v0"
     dataset = make_dataset("hopper_simple", device=device)
     agent = make_agent("td3bc", dataset, device=device)
-    agent.load(model_task_id, 20_000)
+    agent.load(model_path(model_task_id, 20_000))
     eval_pi = lambda observations, actions: agent.eval(observations, actions, "Pi")
     eval_q = lambda observations, actions: agent.eval(observations, actions, "Q")
 

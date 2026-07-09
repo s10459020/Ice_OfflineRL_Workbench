@@ -27,8 +27,8 @@ from ice_offline.agent.td3bc_gp import TD3BCGPAgent
 from ice_offline.agent.td3bc_gpn import TD3BCGPNAgent
 from ice_offline.agent.td3bc_n import TD3BCNAgent
 from ice_offline.agent.td3bc_r import TD3BCRAgent
-from ice_offline.config.paths import _task_id
 from ice_offline.config.paths import model_path
+from ice_offline.config.paths import task_id
 from ice_offline.dataset.base import Dataset
 
 
@@ -127,11 +127,11 @@ def make_model(id: str, dataset: Dataset, device: str = "cuda", **kwargs) -> Age
 
 def _require_model(id: str, dataset: Dataset, device: str, step: int) -> Agent:
     model = make_model(id, dataset, device)
-    task_id = _task_id(dataset.id, id)
-    path = model_path(task_id, step).with_suffix(".pt")
+    id = task_id(dataset.id, id)
+    path = model_path(id, step)
     if not path.exists():
         raise FileNotFoundError(f"missing model checkpoint: {path}; train {id} first")
-    model.load(task_id, step)
+    model.load(path)
     return model
 
 

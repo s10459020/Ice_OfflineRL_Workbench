@@ -4,7 +4,7 @@ import gymnasium as gym
 
 from ice_offline.config.paths import custom_dataset_path
 from ice_offline.config.paths import d4rl_dataset_path
-from ice_offline.config.paths import eval_data_path
+from ice_offline.config.paths import eval_path
 from ice_offline.config.paths import minari_dataset_path
 from ice_offline.dataset.base import Dataset
 from ice_offline.dataset.d4rl import D4rlDataset
@@ -119,6 +119,6 @@ def make_dataset(id: str, device: str = "cuda") -> Dataset:
     return dataset
 
 def make_eval_dataset(id: str, mode: str = "train", device: str = "cpu") -> EvalDataset:
-    dataset = EvalDataset(path=eval_data_path(mode, id), device=device)
+    dataset = EvalDataset(path=eval_path(id), device=device)
     dataset.id = id
     return dataset

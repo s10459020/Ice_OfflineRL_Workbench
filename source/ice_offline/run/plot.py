@@ -16,12 +16,12 @@ LineSeries = tuple[str, np.ndarray, np.ndarray]
 # ====================
 # Public API
 # ====================
-def plot(
-    metric_paths: list[Path],
+def plot_multi(
+    metric_path: Path,
     eval_paths: list[Path],
     output_path: Path,
 ) -> Path:
-    metrics = _read_metrics(metric_paths)
+    metrics = _read_metrics(metric_path)
     evals = _read_evals(eval_paths)
     return plot_data(metrics, evals, output_path)
 
@@ -50,7 +50,7 @@ def plot_overlay(
     title: str,
     series_list: list[LineSeries],
     output_path: Path,
-) -> Path:
+) -> None:
     figure, axis = matplotlib.pyplot.subplots(figsize=(14, 6))
     colors = matplotlib.pyplot.rcParams["axes.prop_cycle"].by_key()["color"]
     for index, (label, steps, values) in enumerate(series_list):
@@ -65,17 +65,15 @@ def plot_overlay(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     figure.savefig(output_path)
     matplotlib.pyplot.close(figure)
-    return output_path
 
 # ====================
 # Private Methods
 # ====================
-def _read_metrics(metric_paths: list[Path]) -> list[MetricSeries]:
+def _read_metrics(metric_path: Path) -> list[MetricSeries]:
     metrics: list[MetricSeries] = []
-    for path in metric_paths:
-        steps, values, names = _read_metric_csv(path)
-        for index, name in enumerate(names):
-            metrics.append((name, steps, values[:, index]))
+    steps, values, names = _read_metric_csv(metric_path)
+    for index, name in enumerate(names):
+        metrics.append((name, steps, values[:, index]))
     return metrics
 
 

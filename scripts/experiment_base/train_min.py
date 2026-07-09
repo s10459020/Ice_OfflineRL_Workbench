@@ -1,5 +1,6 @@
 from ice_offline.agent._lookup import make_agent
-from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import model_path
+from ice_offline.config.paths import task_id
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_model
 
@@ -54,15 +55,15 @@ def train_min_agent(
 
     dataset = make_dataset(dataset_id, device="cuda")
     agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
-    task_id = _task_id(dataset.id, agent.id)
+    id = task_id(dataset.id, agent.id)
 
     if agent_start > 0:
-        agent.load(task_id, agent_start)
+        agent.load(model_path(id, agent_start))
 
     path = train_model(
         agent=agent,
         dataset=dataset,
-        task_id=task_id,
+        task_id=id,
         start=agent_start,
         steps=agent_start + INTERVAL * COUNT,
         save_interval=INTERVAL,
