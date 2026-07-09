@@ -80,32 +80,41 @@ def plot_train(task_id: str, metrics_path: Path, analyze_paths: list[Path]) -> P
     print(f"saved: {path}")
     return path
 
-def _skip(task_id: str, step: int) -> bool:
-    path = model_path(task_id, step)
-    if path.exists():
-        return False
-    print(f"skip missing: {path}")
-    return True
+def _skip(*paths: Path) -> bool:
+    for path in paths:
+        if path.exists():
+            continue
+        print(f"skip missing: {path}")
+        return True
+    return False
 
 if __name__ == "__main__":
     for dataset_id in DATASETS:
         for agent_id, step in AGENTS:
             id = task_id(dataset_id, agent_id, EXPERIMENT_TRAIN)
-            if _skip(id, step):
+            train_eval_path = eval_path(id)
+            train_metric_path = metric_path(id)
+            if _skip(model_path(id, step), train_eval_path, train_metric_path):
                 continue
-            analyze(id, eval_path(id))
-            plot_train(id, metric_path(id), [returns_path(id), steps_path(id)])
+
+            analyze(id, train_eval_path)
+            plot_train(id, train_metric_path, [returns_path(id), steps_path(id)])
+            
         for model_id in MODELS:
             id = task_id(dataset_id, model_id, EXPERIMENT_TRAIN)
-            if _skip(id, 100_000):
+            train_metric_path = metric_path(id)
+            if _skip(model_path(id, 100_000), train_metric_path):
                 continue
-            plot_train(id, metric_path(id), [])
+
+            plot_train(id, train_metric_path, [])
 
     for dataset_id in DATASETS:
         for agent_id, step in AGENTS:
             train_id = task_id(dataset_id, agent_id, EXPERIMENT_TRAIN)
-            if _skip(train_id, step):
-                continue
             test_id = task_id(dataset_id, agent_id, EXPERIMENT)
-            analyze(test_id, eval_path(test_id))
+            test_eval_path = eval_path(test_id)
+            if _skip(model_path(train_id, step), test_eval_path):
+                continue
+            
+            analyze(test_id, test_eval_path)
             plot_test(test_id, returns_path(test_id))
