@@ -157,6 +157,10 @@ class AsplAgent(TD3Agent):
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }
 
+
+    # ====================
+    # Actor loss
+    # ====================    
     def loss_td3(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         o, _, _, _, _ = batch
         a = self.actor.noise_action(self.actor.pi(o))
