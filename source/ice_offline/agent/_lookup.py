@@ -12,6 +12,7 @@ from ice_offline.agent.scas import ScasDynamic
 from ice_offline.agent.scas_gp import ScasGPAgent
 from ice_offline.agent.scas_gpn import ScasGPNAgent
 from ice_offline.agent.scas_n import ScasNAgent
+from ice_offline.agent.scc import SccAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.agent.scaspl_gp import ScasplGPAgent
@@ -90,6 +91,7 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_lambda_50": _model_agent(ScasAgent, weight_correction=0.5),
     "scas_lambda_75": _model_agent(ScasAgent, weight_correction=0.75),
     "scas_lambda_100": _model_agent(ScasAgent, weight_correction=1.0),
+    "scc": _model_agent(SccAgent),
     "scas_n": _model_agent(ScasNAgent),
     "scas_gp": _model_agent(ScasGPAgent),
     "scas_gpn": _model_agent(ScasGPNAgent),
@@ -106,6 +108,7 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas_lambda_50": "scas_model",
     "scas_lambda_75": "scas_model",
     "scas_lambda_100": "scas_model",
+    "scc": "scas_model",
     "scas_n": "scas_model",
     "scas_gp": "scas_model",
     "scas_gpn": "scas_model",
