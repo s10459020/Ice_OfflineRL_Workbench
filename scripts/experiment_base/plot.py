@@ -3,12 +3,12 @@ from pathlib import Path
 import numpy as np
 
 from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import metric_path
 from ice_offline.config.paths import model_path
 from ice_offline.config.paths import plot_path
 from ice_offline.config.paths import returns_path
 from ice_offline.config.paths import steps_path
-from ice_offline.config.paths import task_id
 from ice_offline.dataset.eval import EvalDataset
 from ice_offline.run.analyze import analyze_returns
 from ice_offline.run.analyze import analyze_steps
@@ -25,16 +25,16 @@ DATASETS = [
     "hopper_d4rl_expert",
     "hopper_replay_medium",
     "hopper_replay_expert",
-    "halfcheetah_d4rl_medium",
-    "halfcheetah_d4rl_hybrid",
-    "halfcheetah_d4rl_expert",
-    "halfcheetah_replay_medium",
-    "halfcheetah_replay_expert",
     "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
     "walker2d_replay_medium",
     "walker2d_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
@@ -43,12 +43,23 @@ AGENTS = [
     ("iql", 200_000),
     ("cql", 500_000),
     ("aspl_gp", 500_000),
+    ("scc", 500_000),
+    ("scc_ns", 500_000),
+    ("scc_n", 500_000),
+    ("scc_gp", 500_000),
+    ("scas_n", 500_000),
+    ("scas_n_lambda_0", 500_000),
+    ("scas_n_lambda_100", 500_000),
     ("scas_gp", 500_000),
+    ("scaspl_n", 500_000),
+    ("scaspl_n_lambda_0", 500_000),
+    ("scaspl_n_lambda_100", 500_000),
+    ("scaspl_ns", 500_000),
     ("scaspl_gp", 500_000),
 ]
 
 MODELS = [
-    "scas_model",
+    # "scas_model",
 ]
 
 def analyze(task_id: str, eval_path: Path) -> None:
@@ -59,7 +70,7 @@ def analyze(task_id: str, eval_path: Path) -> None:
     path = analyze_steps(task_id, batches)
     print(f"saved: {path}")
 
-def plot_test(task_id: str, returns_path: Path) -> Path:
+def plot_test(task_id: str, returns_path: Path, dataset_id: str, agent_id: str) -> Path:
     rows = read_csv(returns_path)[1]
     series_list = [
         (
@@ -69,13 +80,13 @@ def plot_test(task_id: str, returns_path: Path) -> Path:
         )
         for step, values in rows
     ]
-    path = plot_path(task_id)
+    path = plot_path(EXPERIMENT, dataset_id, agent_id)
     plot_overlay(task_id, series_list, path)
     print(f"saved: {path}")
     return path
 
-def plot_train(task_id: str, metrics_path: Path, analyze_paths: list[Path]) -> Path:
-    path = plot_path(task_id)
+def plot_train(task_id: str, metrics_path: Path, analyze_paths: list[Path], dataset_id: str, agent_id: str) -> Path:
+    path = plot_path(EXPERIMENT_TRAIN, dataset_id, agent_id)
     plot_multi(metrics_path, analyze_paths, path)
     print(f"saved: {path}")
     return path
@@ -91,30 +102,30 @@ def _skip(*paths: Path) -> bool:
 if __name__ == "__main__":
     for dataset_id in DATASETS:
         for agent_id, step in AGENTS:
-            id = task_id(dataset_id, agent_id, EXPERIMENT_TRAIN)
+            id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
             train_eval_path = eval_path(id)
             train_metric_path = metric_path(id)
             if _skip(model_path(id, step), train_eval_path, train_metric_path):
                 continue
 
             analyze(id, train_eval_path)
-            plot_train(id, train_metric_path, [returns_path(id), steps_path(id)])
+            plot_train(id, train_metric_path, [returns_path(id), steps_path(id)], dataset_id, agent_id)
             
         for model_id in MODELS:
-            id = task_id(dataset_id, model_id, EXPERIMENT_TRAIN)
+            id = experiment_task_id(EXPERIMENT_TRAIN, model_id, dataset_id)
             train_metric_path = metric_path(id)
             if _skip(model_path(id, 100_000), train_metric_path):
                 continue
 
-            plot_train(id, train_metric_path, [])
+            plot_train(id, train_metric_path, [], dataset_id, model_id)
 
     for dataset_id in DATASETS:
         for agent_id, step in AGENTS:
-            train_id = task_id(dataset_id, agent_id, EXPERIMENT_TRAIN)
-            test_id = task_id(dataset_id, agent_id, EXPERIMENT)
+            train_id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
+            test_id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
             test_eval_path = eval_path(test_id)
             if _skip(model_path(train_id, step), test_eval_path):
                 continue
             
             analyze(test_id, test_eval_path)
-            plot_test(test_id, returns_path(test_id))
+            plot_test(test_id, returns_path(test_id), dataset_id, agent_id)

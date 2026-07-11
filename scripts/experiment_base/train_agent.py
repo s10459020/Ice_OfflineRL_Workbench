@@ -1,10 +1,10 @@
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import model_path
 from ice_offline.config.paths import metric_path
 from ice_offline.config.paths import returns_path
 from ice_offline.config.paths import steps_path
-from ice_offline.config.paths import task_id
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_agent
 from plot import analyze
@@ -14,34 +14,49 @@ EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    "hopper_d4rl_hybrid",
-    "hopper_d4rl_expert",
-    "hopper_replay_medium",
-    "hopper_replay_expert",
-    # "walker2d_d4rl_medium",
-    # "walker2d_d4rl_hybrid",
-    # "walker2d_d4rl_expert",
-    # "walker2d_replay_medium",
-    # "walker2d_replay_expert",
-    "halfcheetah_d4rl_medium",
-    "halfcheetah_d4rl_hybrid",
-    "halfcheetah_d4rl_expert",
-    "halfcheetah_replay_medium",
-    "halfcheetah_replay_expert",
+    # "hopper_d4rl_medium",
+    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_expert",
+    # "hopper_replay_medium",
+    # "hopper_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_d4rl_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
+    # "halfcheetah_d4rl_medium",
+    # "halfcheetah_d4rl_hybrid",
+    # "halfcheetah_d4rl_expert",
+    # "halfcheetah_replay_medium",
+    # "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
     # ([None, 0, 50_000], "bc"),
     # ([None, 0, 100_000], "td3bc_n"),
     # ([None, 0, 200_000], "iql"),
-    ([None, 0, 500_000], "cql"),
+    # ([None, 0, 500_000], "cql"),
     # ([None, 0, 200_000], "aspl_gp_punish_005"),
     # ([None, 0, 200_000], "aspl_gp_punish_010"),
     # ([None, 0, 200_000], "aspl_gp_punish_050"),
     # ([None, 0, 500_000], "aspl_gp"),
-    ([100_000, 0, 500_000], "scas_gp"),
+    # ([100_000, 0, 500_000], "scc"),
+    # ([100_000, 0, 500_000], "scc_n"),
+    # ([100_000, 0, 500_000], "scc_ns"),
+    # ([100_000, 0, 500_000], "scc_gp"),
+    # ([100_000, 0, 500_000], "scc_gp_lambda_0"),
+    # ([100_000, 0, 500_000], "scc_gp_lambda_100"),
+    # ([100_000, 0, 500_000], "scas_n"),
+    # ([100_000, 0, 500_000], "scas_n_lambda_0"),
+    # ([100_000, 0, 500_000], "scas_n_lambda_100"),
+    # ([100_000, 0, 500_000], "scas_gp"),
+    # ([100_000, 0, 500_000], "scas_gpn"),
+    # ([100_000, 0, 500_000], "scaspl_n"),
+    # ([100_000, 0, 500_000], "scaspl_n_lambda_0"),
+    # ([100_000, 0, 500_000], "scaspl_n_lambda_100"),
+    # ([100_000, 0, 500_000], "scaspl_ns"),
     # ([100_000, 0, 500_000], "scaspl_gp"),
+    # ([100_000, 0, 500_000], "scaspl_gpn"),
 ]
 
 TASKS = [
@@ -51,7 +66,7 @@ TASKS = [
 ]
 
 def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:
-    id = task_id(dataset_id, agent_id, EXPERIMENT_TRAIN)
+    id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
     model_start, agent_start, steps = task_steps
 
     dataset = make_dataset(dataset_id, device="cuda")
@@ -78,4 +93,4 @@ if __name__ == "__main__":
     for task_steps, dataset_id, agent_id, agent_kwargs in agent_tasks:
         id = train(task_steps, dataset_id, agent_id, agent_kwargs)
         analyze(id, eval_path(id))
-        plot_train(id, metric_path(id), [returns_path(id), steps_path(id)])
+        plot_train(id, metric_path(id), [returns_path(id), steps_path(id)], dataset_id, agent_id)

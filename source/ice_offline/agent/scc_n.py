@@ -1,10 +1,10 @@
 import torch
 
-from ice_offline.agent.scas import ScasAgent
+from ice_offline.agent.scc import SccAgent
 from ice_offline.dataset._types import Batch
 
 
-class ScasNAgent(ScasAgent):
+class SccNAgent(SccAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
         super().__init__(
             obs_size=obs_size,
@@ -18,6 +18,10 @@ class ScasNAgent(ScasAgent):
         return [
             "loss_td",
             "grad_td",
+            "loss_conservative",
+            "grad_conservative",
+            "loss_critic",
+            "grad_critic",
             "loss_normal",
             "grad_normal",
             "loss_correction",

@@ -1,7 +1,7 @@
 from ice_offline.agent._lookup import make_agent
 from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import returns_path
-from ice_offline.config.paths import task_id
 from ice_offline.dataset._lookup import make_dataset
 from plot import analyze
 from plot import plot_test
@@ -31,15 +31,29 @@ DATASETS = [
 ]
 
 AGENTS = [
-    ("bc", None, 50_000),
-    ("td3bc_n", None, 100_000),
-    ("iql", None, 200_000),
-    ("cql", None, 500_000),
-    ("scas_gp", 100_000, 500_000),
-    ("scaspl_gp", 100_000, 500_000),
+    # ("bc", None, 50_000),
+    # ("td3bc_n", None, 100_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    # ("aspl_gp", 100_000, 500_000),
+    ("scc", 100_000, 500_000),
+    ("scc_ns", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
+    ("scc_gp", 100_000, 500_000),
+    # ("scc_gp_lambda_0", 100_000, 500_000),
+    # ("scc_gp_lambda_100", 100_000, 500_000),
+    # ("scas_gp", 100_000, 500_000),
+    ("scas_n", 100_000, 500_000),
+    ("scas_n_lambda_0", 100_000, 500_000),
+    ("scas_n_lambda_100", 100_000, 500_000),
+    # ("scaspl_gp", 100_000, 500_000),
+    ("scaspl_n", 100_000, 500_000),
+    ("scaspl_n_lambda_0", 100_000, 500_000),
+    ("scaspl_n_lambda_100", 100_000, 500_000),
+    ("scaspl_ns", 100_000, 500_000),
     # ("aspl_gp_punish_005", None, 500_000),
     # ("aspl_gp_punish_010", None, 500_000),
-    ("aspl_gp_punish_050", None, 500_000),
+    # ("aspl_gp_punish_050", None, 500_000),
 ]
 
 COUNT = 10
@@ -57,8 +71,8 @@ def test(
     model_step: int | None,
     start_step: int,
 ) -> str:
-    test_id = task_id(dataset_id, agent_id, EXPERIMENT)
-    train_id = task_id(dataset_id, agent_id, EXPERIMENT_TRAIN)
+    test_id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
+    train_id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
     steps = _steps(start_step)
 
     dataset = make_dataset(dataset_id, device="cuda")
@@ -80,7 +94,7 @@ if __name__ == "__main__":
         for dataset_id in DATASETS:
             id = test(dataset_id, agent_id, model_step, agent_step)
             analyze(id, eval_path(id))
-            plot_test(id, returns_path(id))
+            plot_test(id, returns_path(id), dataset_id, agent_id)
 
     agent_ids = [agent_id for agent_id, _, _ in AGENTS]
     save_tables(DATASETS, agent_ids)

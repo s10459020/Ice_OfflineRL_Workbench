@@ -13,10 +13,14 @@ from ice_offline.agent.scas_gp import ScasGPAgent
 from ice_offline.agent.scas_gpn import ScasGPNAgent
 from ice_offline.agent.scas_n import ScasNAgent
 from ice_offline.agent.scc import SccAgent
+from ice_offline.agent.scc_gp import SccGPAgent
+from ice_offline.agent.scc_ns import SccNSAgent
+from ice_offline.agent.scc_n import SccNAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.agent.scaspl_gp import ScasplGPAgent
 from ice_offline.agent.scaspl_gpn import ScasplGPNAgent
+from ice_offline.agent.scaspl_ns import ScasplNSAgent
 from ice_offline.agent.scaspl_n import ScasplNAgent
 from ice_offline.agent.td3 import TD3Agent
 from ice_offline.agent.td3_gp import TD3GPAgent
@@ -75,6 +79,8 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "cql_threshold_5": _agent(CQLAgent, threshold=5.0),
     "cql_gp": _agent(CQLGPAgent),
     "aspl": _agent(AsplAgent),
+    "aspl_lr_3e4": _agent(AsplAgent, learning_rate=3e-4),
+    "aspl_lr_1e4": _agent(AsplAgent, learning_rate=1e-4),
     "aspl_gp_punish_005": _agent(AsplGPAgent, weight_punish=0.05),
     "aspl_gp_punish_010": _agent(AsplGPAgent, weight_punish=0.1),
     "aspl_gp_punish_050": _agent(AsplGPAgent, weight_punish=0.5),
@@ -92,11 +98,23 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_lambda_75": _model_agent(ScasAgent, weight_correction=0.75),
     "scas_lambda_100": _model_agent(ScasAgent, weight_correction=1.0),
     "scc": _model_agent(SccAgent),
+    "scc_ns": _model_agent(SccNSAgent),
+    "scc_n": _model_agent(SccNAgent),
+    "scc_gp": _model_agent(SccGPAgent),
+    "scc_gp_lambda_0": _model_agent(SccGPAgent, weight_correction=0.0),
+    "scc_gp_lambda_100": _model_agent(SccGPAgent, weight_correction=1.0),
     "scas_n": _model_agent(ScasNAgent),
+    "scas_n_lambda_0": _model_agent(ScasNAgent, weight_correction=0.0),
+    "scas_n_lambda_100": _model_agent(ScasNAgent, weight_correction=1.0),
+    "scas_n_lr3e4": _model_agent(ScasNAgent, learning_rate=3e-4),
+    "scas_n_lr1e4": _model_agent(ScasNAgent, learning_rate=1e-4),
     "scas_gp": _model_agent(ScasGPAgent),
     "scas_gpn": _model_agent(ScasGPNAgent),
     "scaspl": _model_agent(ScasplAgent),
     "scaspl_n": _model_agent(ScasplNAgent),
+    "scaspl_n_lambda_0": _model_agent(ScasplNAgent, weight_correction=0.0),
+    "scaspl_n_lambda_100": _model_agent(ScasplNAgent, weight_correction=1.0),
+    "scaspl_ns": _model_agent(ScasplNSAgent),
     "scaspl_gp": _model_agent(ScasplGPAgent),
     "scaspl_gpn": _model_agent(ScasplGPNAgent),
 }
@@ -109,11 +127,23 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas_lambda_75": "scas_model",
     "scas_lambda_100": "scas_model",
     "scc": "scas_model",
+    "scc_ns": "scas_model",
+    "scc_n": "scas_model",
+    "scc_gp": "scas_model",
+    "scc_gp_lambda_0": "scas_model",
+    "scc_gp_lambda_100": "scas_model",
     "scas_n": "scas_model",
+    "scas_n_lambda_0": "scas_model",
+    "scas_n_lambda_100": "scas_model",
+    "scas_n_lr3e4": "scas_model",
+    "scas_n_lr1e4": "scas_model",
     "scas_gp": "scas_model",
     "scas_gpn": "scas_model",
     "scaspl": "scas_model",
     "scaspl_n": "scas_model",
+    "scaspl_n_lambda_0": "scas_model",
+    "scaspl_n_lambda_100": "scas_model",
+    "scaspl_ns": "scas_model",
     "scaspl_gp": "scas_model",
     "scaspl_gpn": "scas_model",
     "sdc": "sdc_model",

@@ -92,14 +92,15 @@ class ScasDynamic(Agent):
 class ScasAgent(TD3Agent):
     def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.weight_correction = config.get("weight_correction", 0.25)
+        self.learning_rate = config.get("learning_rate", 1e-3)
         self.scale_gap = config.get("scale_gap", 5.0)
         self.max_gap = config.get("max_gap", 50.0)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
         self.actor = TD3Actor(self.obs_size, self.act_size, config=config, pi_cls=_Pi).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, config=config, q_cls=_Q).to(self.device)
         self.dynamics = dynamics.prepare()
-        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())
-        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
+        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor(), lr=self.learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic(), lr=self.learning_rate)
 
     # ====================
     # Update

@@ -25,6 +25,14 @@ def task_id(
     return f"{prefix}{dataset_id}-{agent_id}-v0"
 
 
+def experiment_task_id(
+    experiment_id: str,
+    agent_id: str,
+    dataset_id: str,
+) -> str:
+    return f"{experiment_id}/{agent_id}/{dataset_id}-v0"
+
+
 def eval_path(task_id: str) -> Path:
     return EVALS_ROOT / task_id / "data" / "eval_data.hdf5"
 
@@ -60,8 +68,8 @@ def metric_path(task_id: str) -> Path:
     return METRICS_ROOT / f"{task_id}.csv"
 
 
-def plot_path(task_id: str) -> Path:
-    return VIEW_ROOT / "plot" / f"{task_id}.png"
+def plot_path(group: str, dataset_id: str, agent_id: str) -> Path:
+    return VIEW_ROOT / "plot" / group / agent_id / f"{dataset_id}.png"
 
 
 def boxplot_path(group: str, name: str) -> Path:

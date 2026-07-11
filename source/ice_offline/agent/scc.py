@@ -9,10 +9,10 @@ from ice_offline.dataset._types import Batch
 
 class SccAgent(ScasAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        self.weight_conservative = config.get("weight_conservative", config.get("alpha", 0.1))
+        super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
+        self.weight_conservative = config.get("weight_conservative", config.get("alpha", 10))
         self.conservative_count = int(config.get("conservative_count", config.get("noise_count", 16)))
         self.threshold = config.get("threshold", config.get("threshold", 2.0))
-        super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
 
     def metric_keys(self) -> list[str]:
         return [

@@ -2,8 +2,8 @@ from pathlib import Path
 
 from ice_offline.config.paths import boxplot_path
 from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import returns_path
-from ice_offline.config.paths import task_id
 from ice_offline.dataset._lookup import make_dataset
 from plot import analyze
 from ice_offline.run.analyze import read_csv
@@ -33,21 +33,21 @@ TABLES = [
 ]
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    "hopper_d4rl_hybrid",
-    "hopper_d4rl_expert",
-    "hopper_replay_medium",
-    "hopper_replay_expert",
+    # "hopper_d4rl_medium",
+    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_expert",
+    # "hopper_replay_medium",
+    # "hopper_replay_expert",
     "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
     "walker2d_replay_medium",
     "walker2d_replay_expert",
-    "halfcheetah_d4rl_medium",
-    "halfcheetah_d4rl_hybrid",
-    "halfcheetah_d4rl_expert",
-    "halfcheetah_replay_medium",
-    "halfcheetah_replay_expert",
+    # "halfcheetah_d4rl_medium",
+    # "halfcheetah_d4rl_hybrid",
+    # "halfcheetah_d4rl_expert",
+    # "halfcheetah_replay_medium",
+    # "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
@@ -55,11 +55,19 @@ AGENTS = [
     ([None, 0, 100_000], "td3bc_n"),
     ([None, 0, 200_000], "iql"),
     ([None, 0, 500_000], "cql"),
-    # ([None, 0, 200_000], "aspl_gp_punish_005"),
-    # ([None, 0, 200_000], "aspl_gp_punish_010"),
-    ([None, 0, 200_000], "aspl_gp_punish_050"),
-    # ([None, 0, 500_000], "aspl_gp"),
+    ([None, 0, 500_000], "aspl_gp"),
+    ([100_000, 0, 500_000], "scc"),
+    ([100_000, 0, 500_000], "scc_ns"),
+    ([100_000, 0, 500_000], "scc_n"),
+    ([100_000, 0, 500_000], "scc_gp"),
+    ([100_000, 0, 500_000], "scas_n"),
+    ([100_000, 0, 500_000], "scas_n_lambda_0"),
+    ([100_000, 0, 500_000], "scas_n_lambda_100"),
     ([100_000, 0, 500_000], "scas_gp"),
+    ([100_000, 0, 500_000], "scaspl_n"),
+    ([100_000, 0, 500_000], "scaspl_n_lambda_0"),
+    ([100_000, 0, 500_000], "scaspl_n_lambda_100"),
+    ([100_000, 0, 500_000], "scaspl_ns"),
     ([100_000, 0, 500_000], "scaspl_gp"),
 ]
 
@@ -70,11 +78,11 @@ def _agent_value(dataset_id: str, agent_id: str) -> list[float]:
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
     
-    id = task_id(dataset_id, agent_id, EXPERIMENT)
+    id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
     path = eval_path(id)
     if not path.exists():
         print(f"skip missing eval: {path}")
-        VALUE_CACHE[key] = []
+        VALUE_CACHE[key] = None
         return VALUE_CACHE[key]
     
     analyze(id, path)
