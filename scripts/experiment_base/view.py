@@ -51,24 +51,19 @@ DATASETS = [
 ]
 
 AGENTS = [
-    ([None, 0, 50_000], "bc"),
-    ([None, 0, 100_000], "td3bc_n"),
-    ([None, 0, 200_000], "iql"),
-    ([None, 0, 500_000], "cql"),
-    ([None, 0, 500_000], "aspl_gp"),
-    ([100_000, 0, 500_000], "scc"),
-    ([100_000, 0, 500_000], "scc_ns"),
-    ([100_000, 0, 500_000], "scc_n"),
-    ([100_000, 0, 500_000], "scc_gp"),
-    ([100_000, 0, 500_000], "scas_n"),
-    ([100_000, 0, 500_000], "scas_n_lambda_0"),
-    ([100_000, 0, 500_000], "scas_n_lambda_100"),
-    ([100_000, 0, 500_000], "scas_gp"),
-    ([100_000, 0, 500_000], "scaspl_n"),
-    ([100_000, 0, 500_000], "scaspl_n_lambda_0"),
-    ([100_000, 0, 500_000], "scaspl_n_lambda_100"),
-    ([100_000, 0, 500_000], "scaspl_ns"),
-    ([100_000, 0, 500_000], "scaspl_gp"),
+    ("bc", None, 50_000),
+    ("td3bc_n", None, 100_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_gp", None, 500_000),
+    ("scas_n", 100_000, 500_000),
+    ("scas_gp", 100_000, 500_000),
+    ("scaspl_n", 100_000, 500_000),
+    ("scaspl_gp", 100_000, 500_000),
+    ("scaspl_ns", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
+    ("scc_gp", 100_000, 500_000),
+    ("scc_ns", 100_000, 500_000),
 ]
 
 VALUE_CACHE: dict[str, list[float]] = {}
@@ -108,7 +103,7 @@ def _dataset_value(dataset_id: str) -> list[float]:
     VALUE_CACHE[key] = values
     return VALUE_CACHE[key]
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path]:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     
@@ -164,7 +159,7 @@ def save_table_boxplots() -> None:
 
 
 if __name__ == "__main__":
-    agent_ids = [agent_id for _, agent_id in AGENTS]
+    agent_ids = [agent_id for agent_id, _, _ in AGENTS]
     save_table_boxplots()
     save_tables(DATASETS, agent_ids)
     save_boxplots(DATASETS, agent_ids)

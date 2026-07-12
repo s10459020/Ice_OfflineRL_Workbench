@@ -86,7 +86,7 @@ def ensure_table_datasets(table_specs_list: list[tuple[str, str, str]]) -> None:
         ensure_dataset_eval(dataset_id)
 
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path]:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     data_values = [

@@ -38,24 +38,23 @@ DATASETS = [
 ]
 
 AGENTS = [
-    ("bc", 50_000),
-    ("td3bc_n", 100_000),
-    ("iql", 200_000),
-    ("cql", 500_000),
-    ("aspl_gp", 500_000),
-    ("scc", 500_000),
-    ("scc_ns", 500_000),
-    ("scc_n", 500_000),
-    ("scc_gp", 500_000),
-    ("scas_n", 500_000),
-    ("scas_n_lambda_0", 500_000),
-    ("scas_n_lambda_100", 500_000),
-    ("scas_gp", 500_000),
-    ("scaspl_n", 500_000),
-    ("scaspl_n_lambda_0", 500_000),
-    ("scaspl_n_lambda_100", 500_000),
-    ("scaspl_ns", 500_000),
-    ("scaspl_gp", 500_000),
+    # ("bc", None, 50_000),
+    # ("td3bc_n", None, 100_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    ("aspl", None, 500_000),
+    # ("aspl_gp", None, 500_000),
+    ("scas", 100_000, 500_000),
+    # ("scas_n", 100_000, 500_000),
+    # ("scas_gp", 100_000, 500_000),
+    ("scaspl", 100_000, 500_000),
+    # ("scaspl_n", 100_000, 500_000),
+    # ("scaspl_gp", 100_000, 500_000),
+    # ("scaspl_ns", 100_000, 500_000),
+    ("scc", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
+    # ("scc_gp", 100_000, 500_000),
+    # ("scc_ns", 100_000, 500_000),
 ]
 
 MODELS = [
@@ -101,11 +100,11 @@ def _skip(*paths: Path) -> bool:
 
 if __name__ == "__main__":
     for dataset_id in DATASETS:
-        for agent_id, step in AGENTS:
+        for agent_id, _, agent_step in AGENTS:
             id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
             train_eval_path = eval_path(id)
             train_metric_path = metric_path(id)
-            if _skip(model_path(id, step), train_eval_path, train_metric_path):
+            if _skip(model_path(id, agent_step), train_eval_path, train_metric_path):
                 continue
 
             analyze(id, train_eval_path)
@@ -120,11 +119,11 @@ if __name__ == "__main__":
             plot_train(id, train_metric_path, [], dataset_id, model_id)
 
     for dataset_id in DATASETS:
-        for agent_id, step in AGENTS:
+        for agent_id, _, agent_step in AGENTS:
             train_id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
             test_id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
             test_eval_path = eval_path(test_id)
-            if _skip(model_path(train_id, step), test_eval_path):
+            if _skip(model_path(train_id, agent_step), test_eval_path):
                 continue
             
             analyze(test_id, test_eval_path)

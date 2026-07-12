@@ -79,7 +79,7 @@ def _read_metrics(metric_path: Path) -> list[MetricSeries]:
 
 def _read_evals(eval_paths: list[Path]) -> list[EvalSeries]:
     return [
-        (_eval_name(path), *_read_eval_csv(path))
+        _read_eval_csv(path)
         for path in eval_paths
     ]
 
@@ -99,12 +99,13 @@ def _read_metric_csv(path: Path) -> tuple[np.ndarray, np.ndarray, list[str]]:
     return data[:, 0], data[:, 1:], names
 
 
-def _read_eval_csv(path: Path) -> tuple[np.ndarray, np.ndarray]:
+def _read_eval_csv(path: Path) -> EvalSeries:
     with path.open("r", encoding="utf-8") as file:
         rows = list(csv.reader(file))
 
+    title = rows[0][0]
     data = np.asarray(rows[1:], dtype=np.float64)
-    return data[:, 0], data[:, 1:]
+    return title, data[:, 0], data[:, 1:]
 
 
 def _draw_metrics(
@@ -160,10 +161,6 @@ def _draw_eval(
 
 def _row_count(count: int) -> int:
     return (count + 1) // 2
-
-
-def _eval_name(path: Path) -> str:
-    return path.parent.parent.name
 
 
 def _smooth_by_step(steps: np.ndarray, values: np.ndarray) -> np.ndarray:

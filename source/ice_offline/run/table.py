@@ -60,6 +60,23 @@ def table_pr95(
     return _write(output_path, ["task", *agent_ids], rows)
 
 
+def table_max(
+    dataset_ids: list[str],
+    agent_ids: list[str],
+    data_values: list[list[TableCell]],
+    lower_values: list[TableBound],
+    upper_values: list[TableBound],
+    output_path: Path,
+) -> Path:
+    rows = []
+    for index, dataset_id in enumerate(dataset_ids):
+        values = [_max(item) for item in data_values[index]]
+        lower = _bound(lower_values[index], values, min, _mean)
+        upper = _bound(upper_values[index], values, max, _max)
+        rows.append([dataset_id, *[_cell(_scale(value, lower, upper)) if value is not None else "" for value in values]])
+    return _write(output_path, ["task", *agent_ids], rows)
+
+
 def write_tables(
     group: str,
     dataset_ids: list[str],
@@ -67,7 +84,7 @@ def write_tables(
     data_values: list[list[TableCell]],
     lower_values: list[TableBound],
     upper_values: list[TableBound],
-) -> tuple[Path, Path, Path]:
+) -> tuple[Path, Path, Path, Path]:
     return (
         table_true(
             dataset_ids,
@@ -93,6 +110,14 @@ def write_tables(
             upper_values,
             table_path(group, "pr95_returns.csv"),
         ),
+        table_max(
+            dataset_ids,
+            agent_ids,
+            data_values,
+            lower_values,
+            upper_values,
+            table_path(group, "max_returns.csv"),
+        ),
     )
 
 
@@ -111,6 +136,12 @@ def _pr95(values: TableCell) -> float | None:
     upper = min(lower + 1, len(sorted_values) - 1)
     weight = index - lower
     return sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight
+
+
+def _max(values: TableCell) -> float | None:
+    if values is None:
+        return None
+    return max(values)
 
 
 def _write(path: Path, header: list[str], rows: list[list[str]]) -> Path:
