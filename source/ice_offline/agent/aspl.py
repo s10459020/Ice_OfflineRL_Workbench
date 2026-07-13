@@ -77,12 +77,11 @@ class AsplCritic(TD3Critic):
 class AsplAgent(TD3Agent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.weight_punish = config.get("weight_punish", 2.5)
-        self.learning_rate = config.get("learning_rate", 3e-4)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
         self.actor = AsplActor(self.obs_size, self.act_size, config).to(self.device)
         self.critic = AsplCritic(self.obs_size, self.act_size, config).to(self.device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor(), lr=self.learning_rate)
-        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic(), lr=self.learning_rate)
+        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
     def set_seed(self, seed: int) -> None:
         self.actor.set_seed(seed)
