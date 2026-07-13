@@ -1,8 +1,10 @@
 from ice_offline.agent._lookup import make_agent
+from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import model_path
-from ice_offline.config.paths import task_id
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_model
+
+EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
     # "hopper_d4rl_medium",
@@ -23,16 +25,19 @@ DATASETS = [
 ]
 
 AGENTS = [
-    # ([None, 50_000], "bc"),
-    # ([None, 100_000], "td3bc_n"),
-    # ([None, 200_000], "iql"),
-    # ([None, 500_000], "cql"),
-    # ([None, 200_000], "aspl_gp"),
-    # ([100_000, 500_000], "scas_gp"),
-    # ([100_000, 500_000], "scaspl_gp"),
-    # ([None, 200_000], "aspl_gp_punish_005"),
-    # ([None, 200_000], "aspl_gp_punish_010"),
-    # ([None, 200_000], "aspl_gp_punish_050"),
+    ("bc", None, 50_000),
+    ("td3bc_n", None, 100_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_gp", None, 500_000),
+    ("scas_n", 100_000, 500_000),
+    ("scas_gp", 100_000, 500_000),
+    ("scaspl_n", 100_000, 500_000),
+    ("scaspl_gp", 100_000, 500_000),
+    ("scaspl_ns", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
+    ("scc_gp", 100_000, 500_000),
+    ("scc_ns", 100_000, 500_000),
 ]
 
 TASKS = [
@@ -42,7 +47,7 @@ TASKS = [
 ]
 
 INTERVAL = 1_000
-COUNT = 10
+COUNT = 20
 
 
 def train_min_agent(
@@ -55,7 +60,7 @@ def train_min_agent(
 
     dataset = make_dataset(dataset_id, device="cuda")
     agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
-    id = task_id(dataset.id, agent.id)
+    id = experiment_task_id(EXPERIMENT_TRAIN, agent.id, dataset.id)
 
     if agent_start > 0:
         agent.load(model_path(id, agent_start))
@@ -73,8 +78,8 @@ def train_min_agent(
 
 if __name__ == "__main__":
     tasks = [
-        (task_start, dataset_id, agent_id, {})
-        for task_start, agent_id in AGENTS
+        ((model_step, agent_step), dataset_id, agent_id, {})
+        for agent_id, model_step, agent_step in AGENTS
         for dataset_id in DATASETS
     ] + TASKS
 

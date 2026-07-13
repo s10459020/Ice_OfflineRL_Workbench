@@ -55,19 +55,34 @@ class EvalCollector(gym.Wrapper):
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(self._temp_path, path)
-        
-        metadata = {
-            "id": "not imprement id",
-            "env_id": self.env.spec.id,
-            "agent_id": "not imprement agent id",
-        }
+        temp_output_path = path.with_name(f".{path.name}.tmp")
         metadata_path = path.parent / "metadata.json"
-        with metadata_path.open("w", encoding="utf-8", newline="\n") as file:
-            json.dump(metadata, file, ensure_ascii=False)
-            file.write("\n")
+        temp_metadata_path = metadata_path.with_name(f".{metadata_path.name}.tmp")
+        try:
+            shutil.copy2(self._temp_path, temp_output_path)
+            temp_output_path.replace(path)
 
-        self._temp_dir.cleanup()
+            metadata = {
+                "id": "not imprement id",
+                "env_id": self.env.spec.id,
+                "agent_id": "not imprement agent id",
+            }
+            with temp_metadata_path.open("w", encoding="utf-8", newline="\n") as file:
+                json.dump(metadata, file, ensure_ascii=False)
+                file.write("\n")
+            temp_metadata_path.replace(metadata_path)
+        finally:
+            if temp_output_path.exists():
+                temp_output_path.unlink()
+            if temp_metadata_path.exists():
+                temp_metadata_path.unlink()
+            self._temp_dir.cleanup()
+
+    def close(self) -> None:
+        try:
+            super().close()
+        finally:
+            self._temp_dir.cleanup()
     
     
     # ====================

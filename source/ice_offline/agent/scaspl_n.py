@@ -5,6 +5,15 @@ from ice_offline.dataset._types import Batch
 
 
 class ScasplNAgent(ScasplAgent):
+    def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        super().__init__(
+            obs_size=obs_size,
+            act_size=act_size,
+            dynamics=dynamics,
+            config={"weight_correction": 0.01} | config,
+            device=device,
+        )
+
     def metric_keys(self) -> list[str]:
         return [
             "loss_td",
@@ -15,6 +24,10 @@ class ScasplNAgent(ScasplAgent):
             "grad_critic",
             "loss_normal",
             "grad_normal",
+            "loss_correction",
+            "grad_correction",
+            "loss_actor",
+            "grad_actor",
             "q_avg",
             "target_q",
         ]
@@ -30,4 +43,13 @@ class ScasplNAgent(ScasplAgent):
         }
 
     def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        return self.loss_normal(batch)
+        loss_normal, metrics_normal = self.loss_normal(batch)
+        loss_correction, metrics_correction = self.loss_correction(batch)
+        loss = (
+            (1.0 - self.weight_correction) * loss_normal
+            + self.weight_correction * loss_correction
+        )
+        return loss, metrics_normal | metrics_correction | {
+            "loss_actor": self._value(loss.detach()),
+            "grad_actor": self._grad_norm(loss, self.actor.param_actor()),
+        }

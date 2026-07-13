@@ -32,7 +32,7 @@ def test_eval(
     seed: int = 42,
 ) -> Path:
     path = eval_path(task_id)
-    eval_col = EvalCollector(env, resume_path=path)
+    eval_col = EvalCollector(env)
     try:
         for step in steps:
             agent.load(model_path(train_id, step))

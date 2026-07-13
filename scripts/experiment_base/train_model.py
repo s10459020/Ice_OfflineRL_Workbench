@@ -1,6 +1,6 @@
 from ice_offline.agent._lookup import make_model
 from ice_offline.config.paths import metric_path
-from ice_offline.config.paths import task_id
+from ice_offline.config.paths import experiment_task_id
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_model
 from plot import plot_train
@@ -33,9 +33,8 @@ MODELS = [
     (100_000, "scas_model"),
 ]
 
-
 def train(steps: int, dataset_id: str, model_id: str) -> str:
-    id = task_id(dataset_id, model_id, EXPERIMENT_TRAIN)
+    id = experiment_task_id(EXPERIMENT_TRAIN, model_id, dataset_id)
     dataset = make_dataset(dataset_id, device="cuda")
     model = make_model(model_id, dataset, device="cuda")
     path = train_model(
@@ -52,4 +51,4 @@ if __name__ == "__main__":
     for dataset_id in DATASETS:
         for steps, model_id in MODELS:
             id = train(steps, dataset_id, model_id)
-            plot_train(id, metric_path(id), [])
+            plot_train(id, metric_path(id), [], dataset_id, model_id)

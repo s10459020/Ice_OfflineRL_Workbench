@@ -13,12 +13,12 @@ EvalTable = tuple[str, EvalRows]
 
 def analyze_returns(task_id: str, batches: EvalBatches) -> Path:
     rows = _rows(batches, _episode_return)
-    return write_csv(returns_path(task_id), "step", rows)
+    return write_csv(returns_path(task_id), "returns", rows)
 
 
 def analyze_steps(task_id: str, batches: EvalBatches) -> Path:
     rows = _rows(batches, _episode_length)
-    return write_csv(steps_path(task_id), "step", rows)
+    return write_csv(steps_path(task_id), "steps", rows)
 
 
 def read_csv(path: Path) -> EvalTable:

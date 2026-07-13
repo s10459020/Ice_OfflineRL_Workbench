@@ -8,7 +8,6 @@ from ice_offline.run.test import run
 from ice_offline.store.eval.collector import EvalCollector
 from plot import eval
 from plot import plot
-from train_min import COUNT
 from train_min import INTERVAL
 from view import TABLES
 from view import save_boxplots
@@ -28,6 +27,7 @@ AGENTS = [
 ]
 
 EVALS = 100
+COUNT = 20
 
 
 def _steps(start_step: int) -> list[int]:
