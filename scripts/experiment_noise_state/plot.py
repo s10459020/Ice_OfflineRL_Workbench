@@ -1,18 +1,28 @@
 from pathlib import Path
 
 import numpy as np
-import ice_offline.run.plot
 
 from ice_offline.config.paths import plot_path
 from ice_offline.dataset.eval import EvalDataset
-from ice_offline.run.eval import EvalRows
-from ice_offline.run.eval import eval_returns
-from ice_offline.run.eval import eval_steps
-from ice_offline.run.eval import write_eval_rows
+from ice_offline.run.analyze import analyze_returns
+from ice_offline.run.analyze import analyze_steps
+from ice_offline.run.analyze import read_csv
+from ice_offline.run.plot import plot_overlay
+
+EXPERIMENT = "noise_state"
 
 
-def plot(task_id: str, rows: EvalRows) -> Path:
-    dataset_id, agent_id, _ = task_id.rsplit("-", 2)
+def analyze(task_id: str, eval_path: Path) -> None:
+    eval_dataset = EvalDataset(path=eval_path, device="cpu")
+    batches = eval_dataset.batch_episodes
+    path = analyze_returns(task_id, batches)
+    print(f"saved: {path}")
+    path = analyze_steps(task_id, batches)
+    print(f"saved: {path}")
+
+
+def plot(task_id: str, returns_path: Path, dataset_id: str, agent_id: str) -> Path:
+    rows = read_csv(returns_path)[1]
     series_list = [
         (
             str(step),
@@ -21,18 +31,7 @@ def plot(task_id: str, rows: EvalRows) -> Path:
         )
         for step, values in rows
     ]
-    output_path = plot_path("dataset", dataset_id, agent_id)
-    path = ice_offline.run.plot.plot_overlay(task_id, series_list, output_path)
-    print(f"saved: {path}")
-    return path
-
-
-def eval(task_id: str, eval_path: Path) -> EvalRows:
-    eval_dataset = EvalDataset(path=eval_path, device="cpu")
-    batches = eval_dataset.batch_episodes
-    returns_rows = eval_returns(batches)
-    steps_rows = eval_steps(batches)
-    returns_output_path, steps_output_path = write_eval_rows("test", task_id, returns_rows, steps_rows)
-    print(f"saved: {returns_output_path}")
-    print(f"saved: {steps_output_path}")
-    return returns_rows
+    output_path = plot_path(EXPERIMENT, dataset_id, agent_id)
+    plot_overlay(task_id, series_list, output_path)
+    print(f"saved: {output_path}")
+    return output_path

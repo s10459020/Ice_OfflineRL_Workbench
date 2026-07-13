@@ -1,15 +1,19 @@
 from pathlib import Path
 
 from ice_offline.agent._lookup import make_agent
-from ice_offline.config.paths import _task_id
-from ice_offline.config.paths import eval_data_path
+from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import experiment_task_id
+from ice_offline.config.paths import returns_path
+from ice_offline.config.paths import task_id
 from ice_offline.dataset._lookup import make_dataset
-from plot import eval
+from plot import analyze
 from plot import plot
 from ice_offline.run.test import run
 from ice_offline.store.eval.collector import EvalCollector
 from view import save_boxplots
 from view import save_tables
+
+EXPERIMENT = "noise_init"
 
 DATASETS = [
     ("noise_init_5e-4@hopper_d4rl_medium", "hopper_d4rl_medium", {"reset_noise_scale": 5e-4}),
@@ -36,7 +40,7 @@ AGENTS = [
     ("scaspl_gp", 100_000, 500_000),
 ]
 
-COUNT = 10
+COUNT = 20
 EVALS = 100
 INTERVAL = 1_000
 
@@ -54,8 +58,8 @@ def test(
     agent_steps: list[int],
 ) -> Path:
     dataset = make_dataset(train_dataset_id, device="cuda")
-    train_id = _task_id(train_dataset_id, agent_id)
-    eval_path = eval_data_path("test", task_id)
+    train_id = task_id(train_dataset_id, agent_id)
+    path = eval_path(task_id)
     eval_col = EvalCollector(dataset.make_env(**env_kwargs))
     try:
         for agent_step in agent_steps:
@@ -69,28 +73,28 @@ def test(
                 result = run(agent, eval_col, 42 + index)
                 print(f"test step={agent_step} episode={index + 1}/{EVALS} return={result:.6g}")
             eval_col.flush(agent_step)
-        eval_col.save(eval_path)
+        eval_col.save(path)
     finally:
         eval_col.close()
 
-    print(f"saved: {eval_path}")
-    return eval_path
+    print(f"saved: {path}")
+    return path
 
 
 if __name__ == "__main__":
     for test_dataset_id, train_dataset_id, env_kwargs in DATASETS:
         for agent_id, model_step, agent_step in AGENTS:
-            task_id = _task_id(test_dataset_id, agent_id)
+            id = experiment_task_id(EXPERIMENT, agent_id, test_dataset_id)
             path = test(
-                task_id,
+                id,
                 train_dataset_id,
                 env_kwargs,
                 agent_id,
                 model_step,
                 _steps(agent_step),
             )
-            returns_rows = eval(task_id, path)
-            plot(task_id, returns_rows)
+            analyze(id, path)
+            plot(id, returns_path(id), test_dataset_id, agent_id)
 
     dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
     agent_ids = [agent_id for agent_id, _, _ in AGENTS]

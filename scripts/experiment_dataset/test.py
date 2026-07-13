@@ -36,7 +36,7 @@ AGENTS = [
     ("aspl_gp_punish_050", None, 500_000),
 ]
 
-COUNT = 10
+COUNT = 20
 EVALS = 100
 INTERVAL = 1_000
 EXPERIMENT = "in_dataset"
