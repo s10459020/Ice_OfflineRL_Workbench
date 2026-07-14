@@ -14,12 +14,12 @@ EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
-    "hopper_d4rl_medium",
+    # "hopper_d4rl_medium",
     # "hopper_d4rl_hybrid",
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
-    # "walker2d_d4rl_medium",
+    "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
     "walker2d_replay_medium",
@@ -33,10 +33,11 @@ DATASETS = [
 
 AGENTS = [
     # ([None, 0, 50_000], "bc"),
+    ([None, 0, 100_000], "td3bc"),
     # ([None, 0, 100_000], "td3bc_n"),
     # ([None, 0, 200_000], "iql"),
     # ([None, 0, 500_000], "cql"),
-    ([None, 0, 500_000], "aspl_c"),
+    # ([None, 0, 500_000], "aspl_c"),
     # ([None, 0, 500_000], "aspl_gp"),
     # ([100_000, 0, 500_000], "scc"),
     # ([100_000, 0, 500_000], "scc_n"),
@@ -48,7 +49,7 @@ AGENTS = [
     # ([100_000, 0, 500_000], "scas_n_lambda_0"),
     # ([100_000, 0, 500_000], "scas_n_lambda_100"),
     # ([100_000, 0, 500_000], "scas_gp"),
-    ([100_000, 0, 500_000], "scas_gpn"),
+    # ([100_000, 0, 500_000], "scas_gpn"),
     # ([100_000, 0, 500_000], "scaspl_n"),
     # ([100_000, 0, 500_000], "scaspl_n_lambda_0"),
     # ([100_000, 0, 500_000], "scaspl_n_lambda_100"),
@@ -58,9 +59,17 @@ AGENTS = [
 ]
 
 TASKS = [
-    # ([None, 0, 500_000], "hopper_d4rl_medium", "cql", {"threshold": 1.5}),
-    # ([None, 0, 500_000], "hopper_d4rl_hybrid", "cql", {"threshold": 1.5}),
-    # ([None, 0, 500_000], "hopper_d4rl_expert", "cql", {"threshold": 1.0}),
+    # ([100_000, 0, 500_000], "walker2d_replay_expert", "aspl_c", {}),
+    # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scaspl_c", {}),
+    # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scaspl_nc", {}),
+    # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scaspl_c", {}),
+    # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scaspl_nc", {}),
+    # ([100_000, 0, 500_000], "walker2d_d4rl_hybrid", "scaspl_c", {}),
+    # ([100_000, 0, 500_000], "walker2d_d4rl_hybrid", "scaspl_nc", {}),
+    # ([100_000, 0, 500_000], "walker2d_replay_medium", "scaspl_c", {}),
+    # ([100_000, 0, 500_000], "walker2d_replay_medium", "scaspl_nc", {}),
+    # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_c", {}),
+    # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_nc", {}),
 ]
 
 def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:

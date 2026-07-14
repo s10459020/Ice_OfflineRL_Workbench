@@ -19,8 +19,10 @@ from ice_offline.agent.scc_ns import SccNSAgent
 from ice_offline.agent.scc_n import SccNAgent
 from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scaspl import ScasplAgent
+from ice_offline.agent.scaspl_c import ScasplCAgent
 from ice_offline.agent.scaspl_gp import ScasplGPAgent
 from ice_offline.agent.scaspl_gpn import ScasplGPNAgent
+from ice_offline.agent.scaspl_nc import ScasplNCAgent
 from ice_offline.agent.scaspl_ns import ScasplNSAgent
 from ice_offline.agent.scaspl_n import ScasplNAgent
 from ice_offline.agent.td3 import TD3Agent
@@ -71,6 +73,7 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "td3_gpn": _agent(TD3GPNAgent),
     "td3bc": _agent(TD3BCAgent),
     "td3bc_n": _agent(TD3BCNAgent),
+    "td3bc_n_1": _agent(TD3BCNAgent, weight_td3=1.0),
     "td3bc_r": _agent(TD3BCRAgent),
     "td3bc_gp": _agent(TD3BCGPAgent),
     "td3bc_gpn": _agent(TD3BCGPNAgent),
@@ -81,6 +84,12 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "cql_gp": _agent(CQLGPAgent),
     "aspl": _agent(AsplAgent),
     "aspl_c": _agent(AsplCAgent),
+    "aspl_c_00005": _agent(AsplCAgent, weight_compensate=0.0005),
+    "aspl_c_0001": _agent(AsplCAgent, weight_compensate=0.001),
+    "aspl_c_0005": _agent(AsplCAgent, weight_compensate=0.005),
+    "aspl_c_0050": _agent(AsplCAgent, weight_compensate=0.05),
+    "aspl_c_0500": _agent(AsplCAgent, weight_compensate=0.5),
+    "aspl_c_5000": _agent(AsplCAgent, weight_compensate=5.0),
     "aspl_lr_3e4": _agent(AsplAgent, learning_rate=3e-4),
     "aspl_lr_1e4": _agent(AsplAgent, learning_rate=1e-4),
     "aspl_gp_punish_005": _agent(AsplGPAgent, weight_punish=0.05),
@@ -113,6 +122,8 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_gp": _model_agent(ScasGPAgent),
     "scas_gpn": _model_agent(ScasGPNAgent),
     "scaspl": _model_agent(ScasplAgent),
+    "scaspl_c": _model_agent(ScasplCAgent),
+    "scaspl_nc": _model_agent(ScasplNCAgent),
     "scaspl_n": _model_agent(ScasplNAgent),
     "scaspl_n_lambda_0": _model_agent(ScasplNAgent, weight_correction=0.0),
     "scaspl_n_lambda_100": _model_agent(ScasplNAgent, weight_correction=1.0),
@@ -142,6 +153,8 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas_gp": "scas_model",
     "scas_gpn": "scas_model",
     "scaspl": "scas_model",
+    "scaspl_c": "scas_model",
+    "scaspl_nc": "scas_model",
     "scaspl_n": "scas_model",
     "scaspl_n_lambda_0": "scas_model",
     "scaspl_n_lambda_100": "scas_model",

@@ -5,6 +5,14 @@ from ice_offline.dataset._types import Batch
 
 
 class TD3BCNAgent(TD3BCAgent):
+    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        super().__init__(
+            obs_size=obs_size,
+            act_size=act_size,
+            config={"weight_td3": 2.5} | config,
+            device=device,
+        )
+
     def metric_keys(self) -> list[str]:
         return [
             "loss_td",
