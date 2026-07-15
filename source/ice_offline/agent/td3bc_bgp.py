@@ -1,11 +1,8 @@
 from ice_offline.agent.td3_gp import TD3GPAgent
-from ice_offline.agent.td3bc import TD3BCAgent
+from ice_offline.agent.td3bc_b import TD3BCBAgent
 
 
-class TD3BCGPAgent(TD3BCAgent, TD3GPAgent):
-    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        super().__init__(obs_size=obs_size, act_size=act_size, config={"weight_td3": 0.01} | config, device=device)
-
+class TD3BCBGPAgent(TD3BCBAgent, TD3GPAgent):
     def metric_keys(self) -> list[str]:
         return [
             "loss_td",

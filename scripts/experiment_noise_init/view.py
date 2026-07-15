@@ -12,30 +12,31 @@ from plot import analyze
 EXPERIMENT = "noise_init"
 
 TABLES = [
-    ("noise_init_5e-4@hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("noise_init_5e-3@hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("noise_init_5e-2@hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("noise_init_5e-1@hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("noise_init_5e-4@hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
-    ("noise_init_5e-3@hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
-    ("noise_init_5e-2@hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
-    ("noise_init_5e-1@hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
-    ("noise_init_5e-4@hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
-    ("noise_init_5e-3@hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
-    ("noise_init_5e-2@hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
-    ("noise_init_5e-1@hopper_replay_medium", "hopper_random", "hopper_replay_medium"),
+    ("noise_init_5e-4@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-3@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-2@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-1@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-4@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-3@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-2@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-1@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-4@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-3@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-2@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_init_5e-1@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
 ]
 
 DATASETS = [dataset_id for dataset_id, _, _ in TABLES]
 
 AGENTS = [
-    ("bc", None, 50_000),
+    # ("bc", None, 50_000),
     ("td3bc_n", None, 100_000),
-    ("iql", None, 200_000),
-    ("cql", None, 500_000),
-    ("aspl_gp", None, 500_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    # ("aspl_gp", None, 500_000),
+    # ("scas_gp", 100_000, 500_000),
     ("scas_gp", 100_000, 500_000),
-    ("scaspl_gp", 100_000, 500_000),
+    ("scaspl_n", 100_000, 500_000),
 ]
 
 VALUE_CACHE: dict[str, list[float] | None] = {}
@@ -46,32 +47,21 @@ def _task_value(dataset_id: str, agent_id: str) -> list[float] | None:
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
 
-    id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
-    path = eval_path(id)
+    task_id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
+    path = eval_path(task_id)
     if not path.exists():
         print(f"skip missing eval: {path}")
         VALUE_CACHE[key] = None
         return VALUE_CACHE[key]
 
-    analyze(id, path)
-    _, rows = read_csv(returns_path(id))
+    analyze(task_id, path)
+    _, rows = read_csv(returns_path(task_id))
     VALUE_CACHE[key] = [
         value
         for _, values in rows
         for value in values
     ]
     return VALUE_CACHE[key]
-
-
-def _ordered_table_dataset_ids(table_specs_list: list[tuple[str, str, str]]) -> list[str]:
-    lowers = [lower_id for _, lower_id, _ in table_specs_list]
-    datasets = [dataset_id for dataset_id, _, _ in table_specs_list]
-    uppers = [upper_id for _, _, upper_id in table_specs_list]
-    dataset_ids: list[str] = []
-    for dataset_id in [*lowers, *datasets, *uppers]:
-        if dataset_id not in dataset_ids:
-            dataset_ids.append(dataset_id)
-    return dataset_ids
 
 
 def _value(dataset_id: str) -> list[float]:
@@ -84,15 +74,6 @@ def _value(dataset_id: str) -> list[float]:
     ]
     VALUE_CACHE[dataset_id] = values
     return values
-
-
-def ensure_dataset_eval(dataset_id: str) -> list[float]:
-    return _value(dataset_id)
-
-
-def ensure_table_datasets(table_specs_list: list[tuple[str, str, str]]) -> None:
-    for dataset_id in _ordered_table_dataset_ids(table_specs_list):
-        ensure_dataset_eval(dataset_id)
 
 
 def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
@@ -114,7 +95,7 @@ def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[P
     )
 
 
-def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> list[Path]:
+def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     data_values = [
@@ -134,7 +115,6 @@ def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> list[
 
 
 if __name__ == "__main__":
-    ensure_table_datasets(TABLES)
     for dataset_id, _, _ in TABLES:
         for agent_id, _, _ in AGENTS:
             _task_value(dataset_id, agent_id)

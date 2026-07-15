@@ -19,11 +19,11 @@ DATASETS = [
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
-    "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
+    # "walker2d_d4rl_medium",
+    # "walker2d_d4rl_hybrid",
+    # "walker2d_d4rl_expert",
     "walker2d_replay_medium",
-    "walker2d_replay_expert",
+    # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -33,10 +33,15 @@ DATASETS = [
 
 AGENTS = [
     # ([None, 0, 50_000], "bc"),
-    ([None, 0, 100_000], "td3bc"),
+    # ([None, 0, 100_000], "td3_s"),
+    # ([None, 0, 100_000], "td3bc"),
+    # ([None, 0, 100_000], "td3bc_b"),
+    # ([None, 0, 100_000], "td3bc_gp"),
+    # ([None, 0, 100_000], "td3bc_bgp"),
     # ([None, 0, 100_000], "td3bc_n"),
     # ([None, 0, 200_000], "iql"),
     # ([None, 0, 500_000], "cql"),
+    # ([None, 0, 200_000], "aspl"),
     # ([None, 0, 500_000], "aspl_c"),
     # ([None, 0, 500_000], "aspl_gp"),
     # ([100_000, 0, 500_000], "scc"),
@@ -45,6 +50,16 @@ AGENTS = [
     # ([100_000, 0, 500_000], "scc_gp"),
     # ([100_000, 0, 500_000], "scc_gp_lambda_0"),
     # ([100_000, 0, 500_000], "scc_gp_lambda_100"),
+    # ([100_000, 0, 500_000], "scas"),
+    # ([100_000, 200_000, 500_000], "scas_adject"),
+    # ([100_000, 200_000, 500_000], "scas_adject_1"),
+    # ([100_000, 200_000, 500_000], "scas_adject_01"),
+    # ([100_000, 0, 500_000], "scas_adject_00075_00025"),
+    # ([100_000, 0, 200_000], "scas_adject_075_025"),
+    # ([100_000, 0, 200_000], "scas_adject_75_25"),
+    # ([100_000, 0, 200_000], "scas_adject_1_01"),
+    ([100_000, 300_000, 500_000], "scas_adject_5_5"),
+    # ([100_000, 200_000, 500_000], "scas_adject_10"),
     # ([100_000, 0, 500_000], "scas_n"),
     # ([100_000, 0, 500_000], "scas_n_lambda_0"),
     # ([100_000, 0, 500_000], "scas_n_lambda_100"),
@@ -74,10 +89,11 @@ TASKS = [
 
 def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:
     id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
+    model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     model_start, agent_start, steps = task_steps
 
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
+    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     if agent_start > 0:
         agent.load(model_path(id, agent_start))
 

@@ -12,11 +12,11 @@ DATASETS = [
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
-    "walker2d_d4rl_medium",
+    # "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
-    "walker2d_replay_expert",
+    # "walker2d_d4rl_expert",
+    # "walker2d_replay_medium",
+    # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -26,12 +26,25 @@ DATASETS = [
 
 AGENTS = [
     # ("bc", None, 50_000),
-    ("td3bc", None, 100_000),
-    ("td3bc_n", None, 100_000),
-    ("td3bc_n_1", None, 100_000),
+    # ("td3_s", None, 100_000),
+    # ("td3bc", None, 100_000),
+    # ("td3bc_b", None, 100_000),
+    # ("td3bc_bgp", None, 100_000),
+    # ("td3bc_gp", None, 100_000),
+    # ("td3bc_n", None, 100_000),
+    # ("td3bc_n_1", None, 100_000),
     # ("iql", None, 200_000),
     # ("cql", None, 500_000),
     # ("aspl_gp", None, 500_000),
+    # ("scas_adject", 100_000, 500_000),
+    # ("scas_adject_01", 100_000, 500_000),
+    # ("scas_adject_00075_00025", 100_000, 500_000),
+    # ("scas_adject_075_025", 100_000, 500_000),
+    # ("scas_adject_75_25", 100_000, 500_000),
+    # ("scas_adject_1", 100_000, 500_000),
+    # ("scas_adject_1_01", 100_000, 500_000),
+    # ("scas_adject_5_5", 100_000, 500_000),
+    # ("scas_adject_10", 100_000, 500_000),
     # ("scas_n", 100_000, 500_000),
     # ("scas_gp", 100_000, 500_000),
     # ("scaspl_n", 100_000, 500_000),
@@ -61,9 +74,10 @@ def train_min_agent(
     agent_kwargs: dict,
 ) -> None:
     model_start, agent_start = task_start
+    model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
 
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
+    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     id = experiment_task_id(EXPERIMENT_TRAIN, agent.id, dataset.id)
 
     if agent_start > 0:

@@ -10,6 +10,7 @@ from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.cql_gp import CQLGPAgent
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
+from ice_offline.agent.scas_adject import ScasAdjectAgent
 from ice_offline.agent.scas_gp import ScasGPAgent
 from ice_offline.agent.scas_gpn import ScasGPNAgent
 from ice_offline.agent.scas_n import ScasNAgent
@@ -30,7 +31,10 @@ from ice_offline.agent.td3_gp import TD3GPAgent
 from ice_offline.agent.td3_gpn import TD3GPNAgent
 from ice_offline.agent.td3_n import TD3NAgent
 from ice_offline.agent.td3_r import TD3RAgent
+from ice_offline.agent.td3_s import TD3SAgent
 from ice_offline.agent.td3bc import TD3BCAgent
+from ice_offline.agent.td3bc_b import TD3BCBAgent
+from ice_offline.agent.td3bc_bgp import TD3BCBGPAgent
 from ice_offline.agent.td3bc_gp import TD3BCGPAgent
 from ice_offline.agent.td3bc_gpn import TD3BCGPNAgent
 from ice_offline.agent.td3bc_n import TD3BCNAgent
@@ -66,12 +70,15 @@ MODEL_TABLE: dict[str, Callable[..., Agent]] = {
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "bc": _agent(BCAgent),
     "td3": _agent(TD3Agent),
+    "td3_s": _agent(TD3SAgent),
     "td3_gamma_90": _agent(TD3Agent, discount_factor=0.9),
     "td3_n": _agent(TD3NAgent),
     "td3_r": _agent(TD3RAgent),
     "td3_gp": _agent(TD3GPAgent),
     "td3_gpn": _agent(TD3GPNAgent),
     "td3bc": _agent(TD3BCAgent),
+    "td3bc_b": _agent(TD3BCBAgent),
+    "td3bc_bgp": _agent(TD3BCBGPAgent),
     "td3bc_n": _agent(TD3BCNAgent),
     "td3bc_n_1": _agent(TD3BCNAgent, weight_td3=1.0),
     "td3bc_r": _agent(TD3BCRAgent),
@@ -108,6 +115,15 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_lambda_50": _model_agent(ScasAgent, weight_correction=0.5),
     "scas_lambda_75": _model_agent(ScasAgent, weight_correction=0.75),
     "scas_lambda_100": _model_agent(ScasAgent, weight_correction=1.0),
+    "scas_adject": _model_agent(ScasAdjectAgent),
+    "scas_adject_01": _model_agent(ScasAdjectAgent, lambda_td3=0.1),
+    "scas_adject_00075_00025": _model_agent(ScasAdjectAgent, lambda_td3=0.0075, lambda_corr=0.0025),
+    "scas_adject_075_025": _model_agent(ScasAdjectAgent, lambda_td3=0.75, lambda_corr=0.25),
+    "scas_adject_75_25": _model_agent(ScasAdjectAgent, lambda_td3=75.0, lambda_corr=25.0),
+    "scas_adject_1": _model_agent(ScasAdjectAgent, lambda_td3=1.0),
+    "scas_adject_1_01": _model_agent(ScasAdjectAgent, lambda_td3=1.0, lambda_corr=0.1),
+    "scas_adject_5_5": _model_agent(ScasAdjectAgent, lambda_td3=5.0, lambda_corr=5.0),
+    "scas_adject_10": _model_agent(ScasAdjectAgent, lambda_td3=10.0),
     "scc": _model_agent(SccAgent),
     "scc_ns": _model_agent(SccNSAgent),
     "scc_n": _model_agent(SccNAgent),
@@ -139,6 +155,15 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scas_lambda_50": "scas_model",
     "scas_lambda_75": "scas_model",
     "scas_lambda_100": "scas_model",
+    "scas_adject": "scas_model",
+    "scas_adject_01": "scas_model",
+    "scas_adject_00075_00025": "scas_model",
+    "scas_adject_075_025": "scas_model",
+    "scas_adject_75_25": "scas_model",
+    "scas_adject_1": "scas_model",
+    "scas_adject_1_01": "scas_model",
+    "scas_adject_5_5": "scas_model",
+    "scas_adject_10": "scas_model",
     "scc": "scas_model",
     "scc_ns": "scas_model",
     "scc_n": "scas_model",
@@ -173,13 +198,22 @@ def make_model(id: str, dataset: Dataset, device: str = "cuda", **kwargs) -> Age
     return model
 
 
-def _require_model(id: str, dataset: Dataset, device: str, step: int) -> Agent:
+def _require_model(
+    id: str,
+    dataset: Dataset,
+    device: str,
+    step: int | None,
+    train_id: str | None,
+) -> Agent:
     model = make_model(id, dataset, device)
-    id = task_id(dataset.id, id)
-    path = model_path(id, step)
-    if not path.exists():
-        raise FileNotFoundError(f"missing model checkpoint: {path}; train {id} first")
-    model.load(path)
+    if step is not None:
+        model_train_id = task_id(dataset.id, id)
+        if train_id is not None:
+            model_train_id = train_id
+        path = model_path(model_train_id, step)
+        if not path.exists():
+            raise FileNotFoundError(f"missing model checkpoint: {path}; train {model_train_id} first")
+        model.load(path)
     return model
 
 
@@ -188,12 +222,13 @@ def make_agent(
     dataset: Dataset,
     device: str = "cuda",
     model_step: int | None = None,
+    model_train_id: str | None = None,
     **kwargs,
 ) -> Agent:
     config = dict(kwargs)
     if id in MODEL_AGENT_TABLE:
         model_id = MODEL_AGENT_MODEL_TABLE[id]
-        model = _require_model(model_id, dataset, device, step=model_step)
+        model = _require_model(model_id, dataset, device, step=model_step, train_id=model_train_id)
         agent = MODEL_AGENT_TABLE[id](dataset, device, model, config)
     else:
         agent = AGENT_TABLE[id](dataset, device, config)

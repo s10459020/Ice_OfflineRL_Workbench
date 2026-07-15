@@ -18,11 +18,11 @@ DATASETS = [
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
-    "walker2d_d4rl_medium",
+    # "walker2d_d4rl_medium",
     "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
-    "walker2d_replay_expert",
+    # "walker2d_d4rl_expert",
+    # "walker2d_replay_medium",
+    # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -32,12 +32,25 @@ DATASETS = [
 
 AGENTS = [
     # ("bc", None, 50_000),
-    ("td3bc", None, 100_000),
-    ("td3bc_n", None, 100_000),
-    ("td3bc_n_1", None, 100_000),
+    # ("td3_s", None, 100_000),
+    # ("td3bc", None, 100_000),
+    ("td3bc_b", None, 100_000),
+    ("td3bc_bgp", None, 100_000),
+    ("td3bc_gp", None, 100_000),
+    # ("td3bc_n", None, 100_000),
+    # ("td3bc_n_1", None, 100_000),
     # ("iql", None, 200_000),
     # ("cql", None, 500_000),
     # ("aspl_gp", None, 500_000),
+    ("scas_adject", 100_000, 500_000),
+    ("scas_adject_01", 100_000, 500_000),
+    ("scas_adject_00075_00025", 100_000, 500_000),
+    ("scas_adject_075_025", 100_000, 500_000),
+    ("scas_adject_75_25", 100_000, 500_000),
+    ("scas_adject_1", 100_000, 500_000),
+    ("scas_adject_1_01", 100_000, 500_000),
+    ("scas_adject_5_5", 100_000, 500_000),
+    ("scas_adject_10", 100_000, 500_000),
     # ("scas_n", 100_000, 500_000),
     # ("scas_gp", 100_000, 500_000),
     # ("scaspl_n", 100_000, 500_000),
@@ -67,10 +80,11 @@ def test(
 ) -> str:
     test_id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
     train_id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
+    model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     steps = _steps(start_step)
 
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step)
+    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step, model_train_id=model_train_id)
     path = test_eval(
         test_id,
         train_id,
