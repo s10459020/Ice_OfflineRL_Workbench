@@ -6,7 +6,7 @@ from ice_offline.dataset._types import Batch
 
 class TD3BCAgent(TD3Agent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        self.weight_td3 = config.get("weight_td3", 0.01)
+        self.weight_td3 = config.get("weight_td3", 2.5)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
 
     def metric_keys(self) -> list[str]:

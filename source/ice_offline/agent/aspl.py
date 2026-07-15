@@ -156,17 +156,3 @@ class AsplAgent(TD3Agent):
             "loss_critic": self._value(loss.detach()),
             "grad_critic": self._grad_norm(loss, self.critic.param_critic()),
         }
-
-
-    # ====================
-    # Actor loss
-    # ====================    
-    def loss_td3(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        o, _, _, _, _ = batch
-        a = self.actor.noise_action(self.actor.pi(o))
-        q = self.critic.q_networks[0](o, a)
-        loss = -q.mean()
-        return loss, {
-            "loss_td3": self._value(loss.detach()),
-            "grad_td3": self._grad_norm(loss, self.actor.param_actor()),
-        }

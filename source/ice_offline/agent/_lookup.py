@@ -15,6 +15,7 @@ from ice_offline.agent.scas_gp import ScasGPAgent
 from ice_offline.agent.scas_gpn import ScasGPNAgent
 from ice_offline.agent.scas_n import ScasNAgent
 from ice_offline.agent.scc import SccAgent
+from ice_offline.agent.scc_gpn import SccGPNAgent
 from ice_offline.agent.scc_gp import SccGPAgent
 from ice_offline.agent.scc_ns import SccNSAgent
 from ice_offline.agent.scc_n import SccNAgent
@@ -97,8 +98,6 @@ AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "aspl_c_0050": _agent(AsplCAgent, weight_compensate=0.05),
     "aspl_c_0500": _agent(AsplCAgent, weight_compensate=0.5),
     "aspl_c_5000": _agent(AsplCAgent, weight_compensate=5.0),
-    "aspl_lr_3e4": _agent(AsplAgent, learning_rate=3e-4),
-    "aspl_lr_1e4": _agent(AsplAgent, learning_rate=1e-4),
     "aspl_gp_punish_005": _agent(AsplGPAgent, weight_punish=0.05),
     "aspl_gp_punish_010": _agent(AsplGPAgent, weight_punish=0.1),
     "aspl_gp_punish_050": _agent(AsplGPAgent, weight_punish=0.5),
@@ -128,13 +127,12 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scc_ns": _model_agent(SccNSAgent),
     "scc_n": _model_agent(SccNAgent),
     "scc_gp": _model_agent(SccGPAgent),
+    "scc_gpn": _model_agent(SccGPNAgent),
     "scc_gp_lambda_0": _model_agent(SccGPAgent, weight_correction=0.0),
     "scc_gp_lambda_100": _model_agent(SccGPAgent, weight_correction=1.0),
     "scas_n": _model_agent(ScasNAgent),
     "scas_n_lambda_0": _model_agent(ScasNAgent, weight_correction=0.0),
     "scas_n_lambda_100": _model_agent(ScasNAgent, weight_correction=1.0),
-    "scas_n_lr3e4": _model_agent(ScasNAgent, learning_rate=3e-4),
-    "scas_n_lr1e4": _model_agent(ScasNAgent, learning_rate=1e-4),
     "scas_gp": _model_agent(ScasGPAgent),
     "scas_gpn": _model_agent(ScasGPNAgent),
     "scaspl": _model_agent(ScasplAgent),
@@ -168,13 +166,12 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scc_ns": "scas_model",
     "scc_n": "scas_model",
     "scc_gp": "scas_model",
+    "scc_gpn": "scas_model",
     "scc_gp_lambda_0": "scas_model",
     "scc_gp_lambda_100": "scas_model",
     "scas_n": "scas_model",
     "scas_n_lambda_0": "scas_model",
     "scas_n_lambda_100": "scas_model",
-    "scas_n_lr3e4": "scas_model",
-    "scas_n_lr1e4": "scas_model",
     "scas_gp": "scas_model",
     "scas_gpn": "scas_model",
     "scaspl": "scas_model",

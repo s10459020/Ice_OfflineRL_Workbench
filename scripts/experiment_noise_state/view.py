@@ -13,29 +13,29 @@ EXPERIMENT = "noise_state"
 
 TABLES = [
     ("noise_state_5e-4@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_1e-3@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_state_5e-3@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_state_5e-2@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_state_5e-1@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_state_5e-4@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
-    ("noise_state_5e-3@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
-    ("noise_state_5e-2@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
-    ("noise_state_5e-1@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
-    ("noise_state_5e-4@walker2d_replay_medium", "walker2d_random", "walker2d_replay_medium"),
-    ("noise_state_5e-3@walker2d_replay_medium", "walker2d_random", "walker2d_replay_medium"),
-    ("noise_state_5e-2@walker2d_replay_medium", "walker2d_random", "walker2d_replay_medium"),
-    ("noise_state_5e-1@walker2d_replay_medium", "walker2d_random", "walker2d_replay_medium"),
+    ("noise_state_1e-2@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_5e-4@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_1e-3@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_5e-3@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_1e-2@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_5e-4@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_1e-3@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_5e-3@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_state_1e-2@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
 ]
 
 DATASETS = [dataset_id for dataset_id, _, _ in TABLES]
 
 AGENTS = [
-    ("bc", None, 50_000),
+    # ("bc", None, 50_000),
     ("td3bc_n", None, 100_000),
-    ("iql", None, 200_000),
-    ("cql", None, 500_000),
-    ("aspl_gp", None, 500_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    # ("aspl_gp", None, 500_000),
     ("scas_gp", 100_000, 500_000),
-    ("scaspl_gp", 100_000, 500_000),
+    ("scaspl_n", 100_000, 500_000),
 ]
 
 VALUE_CACHE: dict[str, list[float] | None] = {}

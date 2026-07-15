@@ -17,17 +17,17 @@ EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
     ("noise_state_5e-4@walker2d_d4rl_medium", "walker2d_d4rl_medium", 5e-4),
+    ("noise_state_1e-3@walker2d_d4rl_medium", "walker2d_d4rl_medium", 1e-3),
     ("noise_state_5e-3@walker2d_d4rl_medium", "walker2d_d4rl_medium", 5e-3),
-    ("noise_state_5e-2@walker2d_d4rl_medium", "walker2d_d4rl_medium", 5e-2),
-    ("noise_state_5e-1@walker2d_d4rl_medium", "walker2d_d4rl_medium", 5e-1),
+    ("noise_state_1e-2@walker2d_d4rl_medium", "walker2d_d4rl_medium", 1e-2),
     ("noise_state_5e-4@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", 5e-4),
+    ("noise_state_1e-3@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", 1e-3),
     ("noise_state_5e-3@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", 5e-3),
-    ("noise_state_5e-2@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", 5e-2),
-    ("noise_state_5e-1@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", 5e-1),
+    ("noise_state_1e-2@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", 1e-2),
     ("noise_state_5e-4@walker2d_replay_medium", "walker2d_replay_medium", 5e-4),
+    ("noise_state_1e-3@walker2d_replay_medium", "walker2d_replay_medium", 1e-3),
     ("noise_state_5e-3@walker2d_replay_medium", "walker2d_replay_medium", 5e-3),
-    ("noise_state_5e-2@walker2d_replay_medium", "walker2d_replay_medium", 5e-2),
-    ("noise_state_5e-1@walker2d_replay_medium", "walker2d_replay_medium", 5e-1),
+    ("noise_state_1e-2@walker2d_replay_medium", "walker2d_replay_medium", 1e-2),
 ]
 
 AGENTS = [
