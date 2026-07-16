@@ -4,12 +4,15 @@ from ice_offline.config.paths import boxplot_path
 from ice_offline.config.paths import eval_path
 from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import returns_path
+from ice_offline.config.paths import steps_path
+from ice_offline.config.paths import table_path
 from ice_offline.dataset._lookup import make_dataset
 from plot import analyze
 from ice_offline.run.analyze import read_csv
 from ice_offline.run.boxplot import boxplot_data
 from ice_offline.run.boxplot import write_boxplots
-from ice_offline.run.table import write_tables
+from ice_offline.run.table import table_mean
+from ice_offline.run.table import table_var
 
 EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
@@ -65,7 +68,7 @@ VALUE_CACHE: dict[str, list[float] | None] = {}
 
 
 def _agent_value(dataset_id: str, agent_id: str) -> list[float] | None:
-    key = f"{dataset_id}:{agent_id}"
+    key = f"returns:{dataset_id}:{agent_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
 
@@ -86,8 +89,30 @@ def _agent_value(dataset_id: str, agent_id: str) -> list[float] | None:
     return VALUE_CACHE[key]
 
 
+def _agent_steps(dataset_id: str, agent_id: str) -> list[float] | None:
+    key = f"steps:{dataset_id}:{agent_id}"
+    if key in VALUE_CACHE:
+        return VALUE_CACHE[key]
+
+    id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
+    path = eval_path(id)
+    if not path.exists():
+        print(f"skip missing eval: {path}")
+        VALUE_CACHE[key] = None
+        return VALUE_CACHE[key]
+
+    analyze(id, path)
+    _, rows = read_csv(steps_path(id))
+    VALUE_CACHE[key] = [
+        value
+        for _, values in rows
+        for value in values
+    ]
+    return VALUE_CACHE[key]
+
+
 def _dataset_value(dataset_id: str) -> list[float]:
-    key = f"{dataset_id}"
+    key = f"returns:{dataset_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
 
@@ -101,7 +126,22 @@ def _dataset_value(dataset_id: str) -> list[float]:
     return VALUE_CACHE[key]
 
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
+def _dataset_steps(dataset_id: str) -> list[float]:
+    key = f"steps:{dataset_id}"
+    if key in VALUE_CACHE:
+        return VALUE_CACHE[key]
+
+    dataset = make_dataset(dataset_id, device="cpu")
+    values = [
+        float(len(episode.rewards))
+        for episode in dataset.episodes
+    ]
+
+    VALUE_CACHE[key] = values
+    return VALUE_CACHE[key]
+
+
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, ...]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
 
@@ -112,13 +152,23 @@ def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[P
     lower_values = [_dataset_value(lower_id) for lower_id in lower_ids]
     upper_values = [_dataset_value(upper_id) for upper_id in upper_ids]
 
-    return write_tables(
-        EXPERIMENT,
-        dataset_ids,
-        agent_id_list,
-        data_values,
-        lower_values,
-        upper_values,
+    return (
+        table_mean(
+            dataset_ids,
+            agent_id_list,
+            data_values,
+            lower_values,
+            upper_values,
+            table_path(EXPERIMENT, "mean_returns.csv"),
+        ),
+        table_var(
+            dataset_ids,
+            agent_id_list,
+            data_values,
+            lower_values,
+            upper_values,
+            table_path(EXPERIMENT, "var_returns.csv"),
+        ),
     )
 
 

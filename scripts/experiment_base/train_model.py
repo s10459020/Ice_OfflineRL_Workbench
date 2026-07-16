@@ -14,11 +14,11 @@ DATASETS = [
     # "hopper_d4rl_expert",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
-    "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
-    "walker2d_replay_expert",
+    # "walker2d_d4rl_medium",
+    # "walker2d_d4rl_hybrid",
+    # "walker2d_d4rl_expert",
+    # "walker2d_replay_medium",
+    # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
     # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
@@ -27,8 +27,17 @@ DATASETS = [
 ]
 
 MODELS = [
-    (100_000, "scas_model"),
+    # (100_000, "scas_model"),
 ]
+
+TASKS = [
+    (100_000, "halfcheetah_d4rl_medium", "scas_model"),
+    (100_000, "halfcheetah_d4rl_hybrid", "scas_model"),
+    (100_000, "halfcheetah_d4rl_expert", "scas_model"),
+    (100_000, "halfcheetah_replay_medium", "scas_model"),
+    (100_000, "halfcheetah_replay_expert", "scas_model"),
+]
+
 
 def train(steps: int, dataset_id: str, model_id: str) -> str:
     id = experiment_task_id(EXPERIMENT_TRAIN, model_id, dataset_id)
@@ -45,7 +54,12 @@ def train(steps: int, dataset_id: str, model_id: str) -> str:
 
 
 if __name__ == "__main__":
-    for dataset_id in DATASETS:
-        for steps, model_id in MODELS:
-            id = train(steps, dataset_id, model_id)
-            plot_train(id, metric_path(id), [], dataset_id, model_id)
+    model_tasks = [
+        (steps, dataset_id, model_id)
+        for steps, model_id in MODELS
+        for dataset_id in DATASETS
+    ] + TASKS
+
+    for steps, dataset_id, model_id in model_tasks:
+        id = train(steps, dataset_id, model_id)
+        plot_train(id, metric_path(id), [], dataset_id, model_id)

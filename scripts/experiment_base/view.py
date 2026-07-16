@@ -83,10 +83,10 @@ AGENTS = [
     # ("scc_ns", 100_000, 500_000),
 ]
 
-VALUE_CACHE: dict[str, list[float]] = {}
+VALUE_CACHE: dict[str, list[float] | None] = {}
 
 def _agent_value(dataset_id: str, agent_id: str) -> list[float]:
-    key = f"{dataset_id}:{agent_id}"
+    key = f"returns:{dataset_id}:{agent_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
     
@@ -107,7 +107,7 @@ def _agent_value(dataset_id: str, agent_id: str) -> list[float]:
     return VALUE_CACHE[key]
 
 def _dataset_value(dataset_id: str) -> list[float]:
-    key = f"{dataset_id}"
+    key = f"returns:{dataset_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
     
@@ -120,7 +120,7 @@ def _dataset_value(dataset_id: str) -> list[float]:
     VALUE_CACHE[key] = values
     return VALUE_CACHE[key]
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, ...]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     

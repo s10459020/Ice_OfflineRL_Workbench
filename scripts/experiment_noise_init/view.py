@@ -43,7 +43,7 @@ VALUE_CACHE: dict[str, list[float] | None] = {}
 
 
 def _task_value(dataset_id: str, agent_id: str) -> list[float] | None:
-    key = f"{dataset_id}:{agent_id}"
+    key = f"returns:{dataset_id}:{agent_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
 
@@ -65,18 +65,19 @@ def _task_value(dataset_id: str, agent_id: str) -> list[float] | None:
 
 
 def _value(dataset_id: str) -> list[float]:
-    if dataset_id in VALUE_CACHE:
-        return VALUE_CACHE[dataset_id]  # type: ignore[return-value]
+    key = f"returns:{dataset_id}"
+    if key in VALUE_CACHE:
+        return VALUE_CACHE[key]  # type: ignore[return-value]
     dataset = make_dataset(dataset_id, device="cpu")
     values = [
         float(episode.rewards.sum())
         for episode in dataset.episodes
     ]
-    VALUE_CACHE[dataset_id] = values
+    VALUE_CACHE[key] = values
     return values
 
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, ...]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     data_values = [

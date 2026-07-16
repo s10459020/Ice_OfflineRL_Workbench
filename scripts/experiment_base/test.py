@@ -19,7 +19,7 @@ DATASETS = [
     # "hopper_replay_medium",
     # "hopper_replay_expert",
     # "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
+    # "walker2d_d4rl_hybrid",
     # "walker2d_d4rl_expert",
     # "walker2d_replay_medium",
     # "walker2d_replay_expert",
@@ -34,23 +34,23 @@ AGENTS = [
     # ("bc", None, 50_000),
     # ("td3_s", None, 100_000),
     # ("td3bc", None, 100_000),
-    ("td3bc_b", None, 100_000),
-    ("td3bc_bgp", None, 100_000),
-    ("td3bc_gp", None, 100_000),
+    # ("td3bc_b", None, 100_000),
+    # ("td3bc_bgp", None, 100_000),
+    # ("td3bc_gp", None, 100_000),
     # ("td3bc_n", None, 100_000),
     # ("td3bc_n_1", None, 100_000),
     # ("iql", None, 200_000),
     # ("cql", None, 500_000),
     # ("aspl_gp", None, 500_000),
-    ("scas_adject", 100_000, 500_000),
-    ("scas_adject_01", 100_000, 500_000),
-    ("scas_adject_00075_00025", 100_000, 500_000),
-    ("scas_adject_075_025", 100_000, 500_000),
-    ("scas_adject_75_25", 100_000, 500_000),
-    ("scas_adject_1", 100_000, 500_000),
-    ("scas_adject_1_01", 100_000, 500_000),
-    ("scas_adject_5_5", 100_000, 500_000),
-    ("scas_adject_10", 100_000, 500_000),
+    # ("scas_adject", 100_000, 500_000),
+    # ("scas_adject_01", 100_000, 500_000),
+    # ("scas_adject_00075_00025", 100_000, 500_000),
+    # ("scas_adject_075_025", 100_000, 500_000),
+    # ("scas_adject_75_25", 100_000, 500_000),
+    # ("scas_adject_1", 100_000, 500_000),
+    # ("scas_adject_1_01", 100_000, 500_000),
+    # ("scas_adject_5_5", 100_000, 500_000),
+    # ("scas_adject_10", 100_000, 500_000),
     # ("scas_n", 100_000, 500_000),
     # ("scas_gp", 100_000, 500_000),
     # ("scaspl_n", 100_000, 500_000),
@@ -61,6 +61,94 @@ AGENTS = [
     # ("scc_n", 100_000, 500_000),
     # ("scc_gp", 100_000, 500_000),
     # ("scc_ns", 100_000, 500_000),
+]
+
+TASKS = [
+    ("hopper_d4rl_medium", "bc", None, 50_000),
+    ("hopper_d4rl_hybrid", "bc", None, 50_000),
+    ("hopper_d4rl_expert", "bc", None, 50_000),
+    ("hopper_replay_medium", "bc", None, 50_000),
+    ("hopper_replay_expert", "bc", None, 50_000),
+    ("halfcheetah_d4rl_medium", "bc", None, 50_000),
+    ("halfcheetah_d4rl_hybrid", "bc", None, 50_000),
+    ("halfcheetah_d4rl_expert", "bc", None, 50_000),
+    ("halfcheetah_replay_medium", "bc", None, 50_000),
+    ("halfcheetah_replay_expert", "bc", None, 50_000),
+    ("hopper_d4rl_medium", "td3bc_n", None, 100_000),
+    ("hopper_d4rl_hybrid", "td3bc_n", None, 100_000),
+    ("hopper_d4rl_expert", "td3bc_n", None, 100_000),
+    ("hopper_replay_medium", "td3bc_n", None, 100_000),
+    ("hopper_replay_expert", "td3bc_n", None, 100_000),
+    ("halfcheetah_d4rl_medium", "td3bc_n", None, 100_000),
+    ("halfcheetah_d4rl_hybrid", "td3bc_n", None, 100_000),
+    ("halfcheetah_d4rl_expert", "td3bc_n", None, 100_000),
+    ("halfcheetah_replay_medium", "td3bc_n", None, 100_000),
+    ("halfcheetah_replay_expert", "td3bc_n", None, 100_000),
+    ("hopper_d4rl_medium", "iql", None, 200_000),
+    ("hopper_d4rl_hybrid", "iql", None, 200_000),
+    ("hopper_d4rl_expert", "iql", None, 200_000),
+    ("hopper_replay_medium", "iql", None, 200_000),
+    ("hopper_replay_expert", "iql", None, 200_000),
+    ("halfcheetah_d4rl_medium", "iql", None, 200_000),
+    ("halfcheetah_d4rl_hybrid", "iql", None, 200_000),
+    ("halfcheetah_d4rl_expert", "iql", None, 200_000),
+    ("halfcheetah_replay_medium", "iql", None, 200_000),
+    ("halfcheetah_replay_expert", "iql", None, 200_000),
+    ("hopper_d4rl_medium", "cql", None, 500_000),
+    ("hopper_d4rl_hybrid", "cql", None, 500_000),
+    ("hopper_d4rl_expert", "cql", None, 500_000),
+    ("hopper_replay_medium", "cql", None, 500_000),
+    ("hopper_replay_expert", "cql", None, 500_000),
+    ("halfcheetah_d4rl_medium", "cql", None, 500_000),
+    ("halfcheetah_d4rl_hybrid", "cql", None, 500_000),
+    ("halfcheetah_d4rl_expert", "cql", None, 500_000),
+    ("halfcheetah_replay_medium", "cql", None, 500_000),
+    ("halfcheetah_replay_expert", "cql", None, 500_000),
+    ("hopper_d4rl_medium", "aspl_c", None, 500_000),
+    ("hopper_d4rl_hybrid", "aspl_c", None, 500_000),
+    ("hopper_d4rl_expert", "aspl_c", None, 500_000),
+    ("hopper_replay_medium", "aspl_c", None, 500_000),
+    ("hopper_replay_expert", "aspl_c", None, 500_000),
+    ("walker2d_d4rl_medium", "aspl_c", None, 500_000),
+    ("walker2d_d4rl_hybrid", "aspl_c", None, 500_000),
+    ("walker2d_d4rl_expert", "aspl_c", None, 500_000),
+    ("walker2d_replay_medium", "aspl_c", None, 500_000),
+    ("walker2d_replay_expert", "aspl_c", None, 500_000),
+    ("halfcheetah_d4rl_medium", "aspl_c", None, 500_000),
+    ("halfcheetah_d4rl_hybrid", "aspl_c", None, 500_000),
+    ("halfcheetah_d4rl_expert", "aspl_c", None, 500_000),
+    ("halfcheetah_replay_medium", "aspl_c", None, 500_000),
+    ("halfcheetah_replay_expert", "aspl_c", None, 500_000),
+    ("hopper_d4rl_medium", "scas_gp", 100_000, 500_000),
+    ("hopper_d4rl_hybrid", "scas_gp", 100_000, 500_000),
+    ("hopper_d4rl_expert", "scas_gp", 100_000, 500_000),
+    ("hopper_replay_medium", "scas_gp", 100_000, 500_000),
+    ("hopper_replay_expert", "scas_gp", 100_000, 500_000),
+    ("halfcheetah_d4rl_medium", "scas_gp", 100_000, 500_000),
+    ("halfcheetah_d4rl_hybrid", "scas_gp", 100_000, 500_000),
+    ("halfcheetah_d4rl_expert", "scas_gp", 100_000, 500_000),
+    ("halfcheetah_replay_medium", "scas_gp", 100_000, 500_000),
+    ("halfcheetah_replay_expert", "scas_gp", 100_000, 500_000),
+    ("hopper_d4rl_medium", "scaspl_n", 100_000, 500_000),
+    ("hopper_d4rl_hybrid", "scaspl_n", 100_000, 500_000),
+    ("hopper_d4rl_expert", "scaspl_n", 100_000, 500_000),
+    ("hopper_replay_medium", "scaspl_n", 100_000, 500_000),
+    ("hopper_replay_expert", "scaspl_n", 100_000, 500_000),
+    ("halfcheetah_d4rl_medium", "scaspl_n", 100_000, 500_000),
+    ("halfcheetah_d4rl_hybrid", "scaspl_n", 100_000, 500_000),
+    ("halfcheetah_d4rl_expert", "scaspl_n", 100_000, 500_000),
+    ("halfcheetah_replay_medium", "scaspl_n", 100_000, 500_000),
+    ("halfcheetah_replay_expert", "scaspl_n", 100_000, 500_000),
+    ("hopper_d4rl_medium", "scc_gp", 100_000, 500_000),
+    ("hopper_d4rl_hybrid", "scc_gp", 100_000, 500_000),
+    ("hopper_d4rl_expert", "scc_gp", 100_000, 500_000),
+    ("hopper_replay_medium", "scc_gp", 100_000, 500_000),
+    ("hopper_replay_expert", "scc_gp", 100_000, 500_000),
+    ("halfcheetah_d4rl_medium", "scc_gp", 100_000, 500_000),
+    ("halfcheetah_d4rl_hybrid", "scc_gp", 100_000, 500_000),
+    ("halfcheetah_d4rl_expert", "scc_gp", 100_000, 500_000),
+    ("halfcheetah_replay_medium", "scc_gp", 100_000, 500_000),
+    ("halfcheetah_replay_expert", "scc_gp", 100_000, 500_000),
 ]
 
 COUNT = 20
@@ -98,12 +186,25 @@ def test(
 
 
 if __name__ == "__main__":
-    for agent_id, model_step, agent_step in AGENTS:
-        for dataset_id in DATASETS:
-            id = test(dataset_id, agent_id, model_step, agent_step)
-            analyze(id, eval_path(id))
-            plot_test(id, returns_path(id), dataset_id, agent_id)
+    test_tasks = [
+        (dataset_id, agent_id, model_step, agent_step)
+        for agent_id, model_step, agent_step in AGENTS
+        for dataset_id in DATASETS
+    ] + TASKS
 
-    agent_ids = [agent_id for agent_id, _, _ in AGENTS]
-    save_tables(DATASETS, agent_ids)
-    save_boxplots(DATASETS, agent_ids)
+    for dataset_id, agent_id, model_step, agent_step in test_tasks:
+        id = test(dataset_id, agent_id, model_step, agent_step)
+        analyze(id, eval_path(id))
+        plot_test(id, returns_path(id), dataset_id, agent_id)
+
+    dataset_ids: list[str] = []
+    for dataset_id, _, _, _ in test_tasks:
+        if dataset_id not in dataset_ids:
+            dataset_ids.append(dataset_id)
+
+    agent_ids: list[str] = []
+    for _, agent_id, _, _ in test_tasks:
+        if agent_id not in agent_ids:
+            agent_ids.append(agent_id)
+    save_tables(dataset_ids, agent_ids)
+    save_boxplots(dataset_ids, agent_ids)
