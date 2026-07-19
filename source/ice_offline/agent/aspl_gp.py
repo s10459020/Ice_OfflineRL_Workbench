@@ -8,7 +8,7 @@ from ice_offline.dataset._types import Batch
 class AsplGPAgent(AsplAgent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
-        self.weight_gp = config.get("weight_gp", 1.0)
+        self.weight_gp = config.get("weight_gp", 1)
         self.gp_threshold = config.get("gp_threshold", 1.0)
         self.gp_count = config.get("gp_count", 16)
 

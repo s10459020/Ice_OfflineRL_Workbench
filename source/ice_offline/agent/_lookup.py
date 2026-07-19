@@ -23,6 +23,7 @@ from ice_offline.agent.iql import IQLAgent
 from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.agent.scaspl_c import ScasplCAgent
 from ice_offline.agent.scaspl_gp import ScasplGPAgent
+from ice_offline.agent.scaspl_gpc import ScasplGPCAgent
 from ice_offline.agent.scaspl_gpn import ScasplGPNAgent
 from ice_offline.agent.scaspl_nc import ScasplNCAgent
 from ice_offline.agent.scaspl_ns import ScasplNSAgent
@@ -145,6 +146,7 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scaspl_n_lambda_100": _model_agent(ScasplNAgent, weight_correction=1.0),
     "scaspl_ns": _model_agent(ScasplNSAgent),
     "scaspl_gp": _model_agent(ScasplGPAgent),
+    "scaspl_gpc": _model_agent(ScasplGPCAgent),
     "scaspl_gpn": _model_agent(ScasplGPNAgent),
 }
 
@@ -184,6 +186,7 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scaspl_n_lambda_100": "scas_model",
     "scaspl_ns": "scas_model",
     "scaspl_gp": "scas_model",
+    "scaspl_gpc": "scas_model",
     "scaspl_gpn": "scas_model",
     "sdc": "sdc_model",
     "sdc_cql": "sdc_model",

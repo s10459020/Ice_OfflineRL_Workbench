@@ -5,6 +5,7 @@ from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_model
 
 EXPERIMENT_TRAIN = "base_train"
+DEVICE = "cpu"
 
 DATASETS = [
     "walker2d_d4rl_medium",
@@ -23,10 +24,10 @@ AGENTS = [
     # ("td3_gpn", None, 50_000),
     # ("td3bc", None, 100_000),
     # ("td3bc_n", None, 100_000),
-    ("td3bc_plus", None, 100_000),
+    # ("td3bc_plus", None, 100_000),
     # ("td3bc_r", None, 100_000),
-    ("td3bc_gp", None, 100_000),
-    ("td3bc_gp_plus", None, 100_000),
+    # ("td3bc_gp", None, 100_000),
+    # ("td3bc_gp_plus", None, 100_000),
     # ("td3bc_gpn", None, 100_000),
     # ("cql", None, 500_000),
     # ("cql_threshold_n5", None, 500_000),
@@ -48,46 +49,37 @@ AGENTS = [
 ]
 
 TASKS = [
-    # ((None, 100_000), "walker2d_d4rl_medium", "td3bc_gpn", {}),
-    # ((None, 100_000), "walker2d_d4rl_hybrid", "td3bc_gpn", {}),
-    # ((None, 100_000), "walker2d_d4rl_expert", "td3bc_gpn", {}),
-    # ((None, 100_000), "walker2d_replay_medium", "td3bc_gpn", {}),
-    # ((None, 100_000), "walker2d_replay_expert", "td3bc_gpn", {}),
-    # ((None, 200_000), "walker2d_d4rl_medium", "aspl", {}),
-    # ((None, 200_000), "walker2d_d4rl_hybrid", "aspl", {}),
-    # ((None, 200_000), "walker2d_d4rl_expert", "aspl", {}),
-    # ((None, 200_000), "walker2d_replay_medium", "aspl", {}),
-    # ((None, 200_000), "walker2d_replay_expert", "aspl", {}),
-    # ((None, 500_000), "walker2d_d4rl_medium", "aspl_c", {}),
-    # ((None, 500_000), "walker2d_d4rl_hybrid", "aspl_c", {}),
-    # ((None, 500_000), "walker2d_d4rl_expert", "aspl_c", {}),
-    # ((None, 500_000), "walker2d_replay_medium", "aspl_c", {}),
-    # ((None, 500_000), "walker2d_replay_expert", "aspl_c", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_medium", "scas", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_hybrid", "scas", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_expert", "scas", {}),
-    # ((100_000, 500_000), "walker2d_replay_medium", "scas", {}),
-    # ((100_000, 500_000), "walker2d_replay_expert", "scas", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_medium", "scas_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_hybrid", "scas_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_expert", "scas_gpn", {}),
-    # ((100_000, 500_000), "walker2d_replay_medium", "scas_gpn", {}),
-    # ((100_000, 500_000), "walker2d_replay_expert", "scas_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_medium", "scaspl", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_hybrid", "scaspl", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_expert", "scaspl", {}),
-    # ((100_000, 500_000), "walker2d_replay_medium", "scaspl", {}),
-    # ((100_000, 500_000), "walker2d_replay_expert", "scaspl", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_medium", "scaspl_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_hybrid", "scaspl_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_expert", "scaspl_gpn", {}),
-    # ((100_000, 500_000), "walker2d_replay_medium", "scaspl_gpn", {}),
-    # ((100_000, 500_000), "walker2d_replay_expert", "scaspl_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_medium", "scc_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_hybrid", "scc_gpn", {}),
-    # ((100_000, 500_000), "walker2d_d4rl_expert", "scc_gpn", {}),
-    # ((100_000, 500_000), "walker2d_replay_medium", "scc_gpn", {}),
-    # ((100_000, 500_000), "walker2d_replay_expert", "scc_gpn", {}),
+    # ("walker2d_replay_medium", "scas_gp", 100_000, 500_000),
+    # ("walker2d_d4rl_medium", "td3bc_gp", None, 100_000),
+    # ("walker2d_d4rl_hybrid", "td3bc_gp", None, 100_000),
+    # ("walker2d_d4rl_expert", "td3bc_gp", None, 100_000),
+    # ("walker2d_replay_medium", "td3bc_gp", None, 100_000),
+    # ("walker2d_replay_expert", "td3bc_gp", None, 100_000),
+    # ("walker2d_d4rl_medium", "td3bc_gp_plus", None, 100_000),
+    # ("walker2d_d4rl_hybrid", "td3bc_gp_plus", None, 100_000),
+    # ("walker2d_d4rl_expert", "td3bc_gp_plus", None, 100_000),
+    # ("walker2d_replay_medium", "td3bc_gp_plus", None, 100_000),
+    ("walker2d_replay_expert", "td3bc_gp_plus", None, 100_000),
+    ("walker2d_d4rl_medium", "td3bc_gpn", None, 100_000),
+    ("walker2d_d4rl_hybrid", "td3bc_gpn", None, 100_000),
+    ("walker2d_d4rl_expert", "td3bc_gpn", None, 100_000),
+    ("walker2d_replay_medium", "td3bc_gpn", None, 100_000),
+    ("walker2d_replay_expert", "td3bc_gpn", None, 100_000),
+    ("walker2d_d4rl_medium", "scas_n", 100_000, 500_000),
+    ("walker2d_d4rl_hybrid", "scas_n", 100_000, 500_000),
+    ("walker2d_d4rl_expert", "scas_n", 100_000, 500_000),
+    ("walker2d_replay_medium", "scas_n", 100_000, 500_000),
+    ("walker2d_replay_expert", "scas_n", 100_000, 500_000),
+    ("walker2d_d4rl_medium", "scas_gpn", 100_000, 500_000),
+    ("walker2d_d4rl_hybrid", "scas_gpn", 100_000, 500_000),
+    ("walker2d_d4rl_expert", "scas_gpn", 100_000, 500_000),
+    ("walker2d_replay_medium", "scas_gpn", 100_000, 500_000),
+    ("walker2d_replay_expert", "scas_gpn", 100_000, 500_000),
+    ("walker2d_d4rl_medium", "aspl_gp", None, 500_000),
+    ("walker2d_d4rl_hybrid", "aspl_gp", None, 500_000),
+    ("walker2d_d4rl_expert", "aspl_gp", None, 500_000),
+    ("walker2d_replay_medium", "aspl_gp", None, 500_000),
+    ("walker2d_replay_expert", "aspl_gp", None, 500_000),
 ]
 
 INTERVAL = 1_000
@@ -95,16 +87,15 @@ COUNT = 20
 
 
 def train_min_agent(
-    task_start: list[int | None],
     dataset_id: str,
     agent_id: str,
-    agent_kwargs: dict,
+    model_start: int | None,
+    agent_start: int,
 ) -> None:
-    model_start, agent_start = task_start
     model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
 
-    dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_start, model_train_id=model_train_id)
     id = experiment_task_id(EXPERIMENT_TRAIN, agent.id, dataset.id)
 
     if agent_start > 0:
@@ -123,10 +114,10 @@ def train_min_agent(
 
 if __name__ == "__main__":
     tasks = [
-        ((model_step, agent_step), dataset_id, agent_id, {})
+        (dataset_id, agent_id, model_step, agent_step)
         for agent_id, model_step, agent_step in AGENTS
         for dataset_id in DATASETS
     ] + TASKS
 
-    for task_start, dataset_id, agent_id, agent_kwargs in tasks:
-        train_min_agent(task_start, dataset_id, agent_id, agent_kwargs)
+    for dataset_id, agent_id, model_step, agent_step in tasks:
+        train_min_agent(dataset_id, agent_id, model_step, agent_step)

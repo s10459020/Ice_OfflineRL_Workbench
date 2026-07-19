@@ -15,9 +15,9 @@ AGENTS = [
     "scaspl",
     "scaspl_n",
     "scaspl_gp",
-    "scaspl_gpn",
     "scaspl_c",
     "scaspl_nc",
+    "scaspl_gpc",
 ]
 
 

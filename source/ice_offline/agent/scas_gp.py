@@ -7,9 +7,8 @@ from ice_offline.dataset._types import Batch
 class ScasGPAgent(ScasAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
         super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
-        self.weight_gp = config.get("weight_gp", 0.2)
+        self.weight_gp = config.get("weight_gp", 1)
         self.gp_threshold = config.get("gp_threshold", 1)
-        self.gp_interval = config.get("gp_interval", 1)
         self.gp_count = config.get("gp_count", 16)
 
     # ====================
@@ -35,24 +34,13 @@ class ScasGPAgent(ScasAgent):
 
     def update(self, batch: Batch) -> dict[str, torch.Tensor]:
         self.update_step += 1
-
-        if self.update_step % self.gp_interval != 0:
-            metrics = self.update_td(batch)
-        else:
-            metrics = self.update_critic(batch)
+        metrics = self.update_critic(batch)
 
         if self.update_step % self.update_actor_interval == 0:
             metrics |= self.update_actor(batch)
             self.critic.update_target_soft()
             self.actor.update_target_soft()
 
-        return metrics
-
-    def update_td(self, batch: Batch) -> dict[str, torch.Tensor]:
-        loss_td, metrics = self.loss_td(batch)
-        self.critic_optimizer.zero_grad()
-        loss_td.backward()
-        self.critic_optimizer.step()
         return metrics
 
     def update_critic(self, batch: Batch) -> dict[str, torch.Tensor]:

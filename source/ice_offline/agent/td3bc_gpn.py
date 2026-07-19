@@ -1,8 +1,8 @@
-from ice_offline.agent.td3_gp import TD3GPAgent
+from ice_offline.agent.td3bc_gp import TD3BCGPAgent
 from ice_offline.agent.td3bc_n import TD3BCNAgent
 
 
-class TD3BCGPNAgent(TD3BCNAgent, TD3GPAgent):
+class TD3BCGPNAgent(TD3BCNAgent, TD3BCGPAgent):
     def metric_keys(self) -> list[str]:
         return [
             "loss_td",

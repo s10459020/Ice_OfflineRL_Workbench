@@ -19,16 +19,16 @@ EXPERIMENT_TRAIN = "base_train"
 
 TABLES = [
     ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
     ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
     ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
 ]
 
 DATASETS = [
     "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
+    "walker2d_d4rl_hybrid",
     "walker2d_replay_medium",
     "walker2d_replay_expert",
 ]
@@ -42,9 +42,10 @@ AGENTS = [
     # ("td3_gpn", None, 50_000),
     # ("td3bc", None, 100_000),
     # ("td3bc_n", None, 100_000),
-    ("td3bc_r", None, 100_000),
-    # ("td3bc_gp", None, 100_000),
-    # ("td3bc_gpn", None, 100_000),
+    # ("td3bc_r", None, 100_000),
+    ("td3bc_gp", None, 100_000),
+    ("td3bc_gp_plus", None, 100_000),
+    ("td3bc_gpn", None, 100_000),
     # ("cql", None, 500_000),
     # ("cql_threshold_n5", None, 500_000),
     # ("cql_threshold_5", None, 500_000),

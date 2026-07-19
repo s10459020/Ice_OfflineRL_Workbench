@@ -13,6 +13,10 @@ class ScasGPNAgent(ScasNAgent, ScasGPAgent):
             "grad_critic",
             "loss_normal",
             "grad_normal",
+            "loss_correction",
+            "grad_correction",
+            "loss_actor",
+            "grad_actor",
             "target_q",
             "grad_norm",
         ]
