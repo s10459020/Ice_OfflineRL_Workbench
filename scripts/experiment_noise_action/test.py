@@ -30,14 +30,26 @@ DATASETS = [
 ]
 
 AGENTS = [
-    # ("bc", None, 50_000),
+    ("bc", None, 50_000),
     ("td3bc_n", None, 100_000),
-    # ("iql", None, 200_000),
-    # ("cql", None, 500_000),
-    # ("aspl_gp", None, 500_000),
-    # ("scas_gp", 100_000, 500_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_c", None, 500_000),
     ("scas_gp", 100_000, 500_000),
     ("scaspl_n", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
+]
+
+TASKS = [
+    (test_dataset_id, train_dataset_id, scale_noise, agent_id, model_step, agent_step)
+    for test_dataset_id, train_dataset_id, scale_noise in DATASETS
+    for agent_id, model_step, agent_step in [
+        ("bc", None, 50_000),
+        ("iql", None, 200_000),
+        ("cql", None, 500_000),
+        ("aspl_c", None, 500_000),
+        ("scc_n", 100_000, 500_000),
+    ]
 ]
 
 COUNT = 20
@@ -102,18 +114,23 @@ def test(
 
 
 if __name__ == "__main__":
-    for agent_id, model_step, agent_step in AGENTS:
-        for test_dataset_id, train_dataset_id, scale_noise in DATASETS:
-            test_id = test(
-                test_dataset_id,
-                train_dataset_id,
-                scale_noise,
-                agent_id,
-                model_step,
-                agent_step,
-            )
-            analyze(test_id, eval_path(test_id))
-            plot(test_id, returns_path(test_id), test_dataset_id, agent_id)
+    test_tasks = TASKS or [
+        (test_dataset_id, train_dataset_id, scale_noise, agent_id, model_step, agent_step)
+        for test_dataset_id, train_dataset_id, scale_noise in DATASETS
+        for agent_id, model_step, agent_step in AGENTS
+    ]
+
+    for test_dataset_id, train_dataset_id, scale_noise, agent_id, model_step, agent_step in test_tasks:
+        test_id = test(
+            test_dataset_id,
+            train_dataset_id,
+            scale_noise,
+            agent_id,
+            model_step,
+            agent_step,
+        )
+        analyze(test_id, eval_path(test_id))
+        plot(test_id, returns_path(test_id), test_dataset_id, agent_id)
 
     dataset_ids = [dataset_id for dataset_id, _, _ in DATASETS]
     agent_ids = [agent_id for agent_id, _, _ in AGENTS]

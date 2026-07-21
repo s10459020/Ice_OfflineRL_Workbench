@@ -15,18 +15,18 @@ EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
     # "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
     # "hopper_d4rl_expert",
+    # "hopper_d4rl_hybrid",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
     # "walker2d_d4rl_medium",
-    # "walker2d_d4rl_hybrid",
     # "walker2d_d4rl_expert",
+    # "walker2d_d4rl_hybrid",
     # "walker2d_replay_medium",
     # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
+    # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_replay_medium",
     # "halfcheetah_replay_expert",
 ] 
@@ -38,14 +38,31 @@ AGENTS = [
     # ([None, 0, 500_000], "cql"),
     # ([None, 0, 500_000], "aspl_c"),
     # ([100_000, 0, 500_000], "scas_gp"),
+    # ([100_000, 0, 500_000], "scaspl_n"),
+    # ([100_000, 0, 500_000], "scc_n"),
 ]
 
 TASKS = [
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scas_gp", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scas_gp", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scas_gp", {}),
-    ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scas_gp", {}),
-    ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scas_gp", {}),
+    ([100_000, 0, 500_000], "hopper_d4rl_medium", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "hopper_d4rl_expert", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "hopper_replay_expert", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scaspl_n", {}),
+    ([100_000, 0, 500_000], "hopper_d4rl_medium", "scc_n", {}),
+    ([100_000, 0, 500_000], "hopper_d4rl_expert", "scc_n", {}),
+    ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scc_n", {}),
+    ([100_000, 0, 500_000], "hopper_replay_medium", "scc_n", {}),
+    ([100_000, 0, 500_000], "hopper_replay_expert", "scc_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scc_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scc_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scc_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scc_n", {}),
+    ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scc_n", {}),
 ]
 
 def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:

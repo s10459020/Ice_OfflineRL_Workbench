@@ -135,9 +135,9 @@ class ScasAgent(TD3Agent):
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch
         a = self.actor.pi(s)
-        v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))
+        v = self.critic.q_min(s, a) # scas V(s) = Q(s, pi(s))
         an = self.actor.pi(sn)
-        vn = self.critic.q_mean(sn, an) # scas V(s') = Q(s', pi(s'))
+        vn = self.critic.q_min(sn, an) # scas V(s') = Q(s', pi(s'))
 
         weight = (
             self.scale_gap * (vn.detach() - v.detach())

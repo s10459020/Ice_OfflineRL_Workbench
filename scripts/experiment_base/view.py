@@ -33,59 +33,37 @@ TABLES = [
 ]
 
 DATASETS = [
-    # "hopper_d4rl_medium",
-    # "hopper_d4rl_expert",
-    # "hopper_d4rl_hybrid",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
-    # "walker2d_d4rl_medium",
-    # "walker2d_d4rl_expert",
+    "hopper_d4rl_medium",
+    "hopper_d4rl_expert",
+    "hopper_d4rl_hybrid",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_expert",
     "walker2d_d4rl_hybrid",
-    # "walker2d_replay_medium",
-    # "walker2d_replay_expert",
-    # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_expert",
-    # "halfcheetah_d4rl_hybrid",
-    # "halfcheetah_replay_medium",
-    # "halfcheetah_replay_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
-    # ("bc", None, 50_000),
-    # ("td3_s", None, 100_000),
-    ("td3bc", None, 100_000),
-    ("td3bc_b", None, 100_000),
-    ("td3bc_bgp", None, 100_000),
-    ("td3bc_gp", None, 100_000),
+    ("bc", None, 50_000),
     ("td3bc_n", None, 100_000),
-    ("td3bc_n_1", None, 100_000),
-    # ("iql", None, 200_000),
-    # ("cql", None, 500_000),
-    # ("aspl_gp", None, 500_000),
-    ("scas_adject", 100_000, 500_000),
-    ("scas_adject_01", 100_000, 500_000),
-    ("scas_adject_00075_00025", 100_000, 500_000),
-    ("scas_adject_075_025", 100_000, 500_000),
-    ("scas_adject_75_25", 100_000, 500_000),
-    ("scas_adject_1", 100_000, 500_000),
-    ("scas_adject_1_01", 100_000, 500_000),
-    ("scas_adject_5_5", 100_000, 500_000),
-    ("scas_adject_10", 100_000, 500_000),
-    # ("scas_n", 100_000, 500_000),
-    # ("scas_gp", 100_000, 500_000),
-    # ("scaspl_n", 100_000, 500_000),
-    # ("scaspl_c", 100_000, 500_000),
-    # ("scaspl_gp", 100_000, 500_000),
-    # ("scaspl_ns", 100_000, 500_000),
-    # ("scaspl_nc", 100_000, 500_000),
-    # ("scc_n", 100_000, 500_000),
-    # ("scc_gp", 100_000, 500_000),
-    # ("scc_ns", 100_000, 500_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_c", None, 500_000),
+    ("scas_gp", 100_000, 500_000),
+    ("scaspl_n", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
 ]
 
 VALUE_CACHE: dict[str, list[float] | None] = {}
 
-def _agent_value(dataset_id: str, agent_id: str) -> list[float]:
+def _agent_value(dataset_id: str, agent_id: str) -> list[float] | None:
     key = f"returns:{dataset_id}:{agent_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]

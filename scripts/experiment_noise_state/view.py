@@ -29,13 +29,14 @@ TABLES = [
 DATASETS = [dataset_id for dataset_id, _, _ in TABLES]
 
 AGENTS = [
-    # ("bc", None, 50_000),
+    ("bc", None, 50_000),
     ("td3bc_n", None, 100_000),
-    # ("iql", None, 200_000),
-    # ("cql", None, 500_000),
-    # ("aspl_gp", None, 500_000),
+    ("iql", None, 200_000),
+    ("cql", None, 500_000),
+    ("aspl_c", None, 500_000),
     ("scas_gp", 100_000, 500_000),
     ("scaspl_n", 100_000, 500_000),
+    ("scc_n", 100_000, 500_000),
 ]
 
 VALUE_CACHE: dict[str, list[float] | None] = {}

@@ -1,8 +1,17 @@
 from ice_offline.agent._lookup import make_agent
-from ice_offline.config.paths import _task_id
+from ice_offline.config.paths import eval_path
+from ice_offline.config.paths import experiment_task_id
+from ice_offline.config.paths import metric_path
+from ice_offline.config.paths import model_path
+from ice_offline.config.paths import returns_path
+from ice_offline.config.paths import steps_path
 from ice_offline.dataset._lookup import make_dataset
-from ice_offline.run.train import train
-from plot import plot_agent
+from ice_offline.run.train import train_agent
+from plot import analyze
+from plot import plot_train
+
+EXPERIMENT = "experience_hybrid_random"
+EXPERIMENT_TRAIN = "experience_hybrid_random_train"
 
 DATASETS = [
     "walker2d_random_expert_1",
@@ -13,55 +22,47 @@ DATASETS = [
 ]
 
 AGENTS = [
-    # ([None, 0, 50_000], "bc"),
-    # ([None, 0, 100_000], "td3bc_n"),
-    # ([None, 0, 200_000], "iql"),
-    # ([None, 0, 500_000], "aspl"),
+    ([None, 0, 50_000], "bc"),
+    ([None, 0, 100_000], "td3bc_n"),
+    ([None, 0, 200_000], "iql"),
     ([None, 0, 500_000], "cql"),
-    # ([100_000, 0, 500_000], "scas_gp"),
-    # ([100_000, 0, 500_000], "scaspl_gp"),
+    ([None, 0, 500_000], "aspl_c"),
+    ([500_000, 0, 500_000], "scas_gp"),
+    ([500_000, 0, 500_000], "scaspl_n"),
+    ([500_000, 0, 500_000], "scc_n"),
 ]
 
-TASKS = [
-    # ([None, 0, 500_000], dataset_id, "cql", {"threshold": 1.0})
-    # ([None, 0, 500_000], dataset_id, "aspl", {"weight_punish": 1.0})
-    # ([100_000, 0, 500_000], dataset_id, "scas", {})
-    # *(([100_000, 0, 500_000], dataset_id, "scaspl", {"weight_punish": 1.0, "weight_correction": 0.25}) for dataset_id in DATASETS),
-]
+TASKS = []
 
 
-def train_agent(
-    task_steps: list[int | None],
-    dataset_id: str,
-    agent_id: str,
-    agent_kwargs: dict,
-) -> None:
+def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:
+    id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
+    model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     model_start, agent_start, steps = task_steps
+
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
-    task_id = _task_id(dataset.id, agent.id)
-
+    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     if agent_start > 0:
-        agent.load(task_id, agent_start)
+        agent.load(model_path(id, agent_start))
 
-    path = train(
+    train_agent(
         agent=agent,
         dataset=dataset,
-        task_id=task_id,
+        task_id=id,
         start=agent_start,
-        eval_env=dataset.make_eval_env(),
         steps=steps,
     )
-    print(f"saved: {path}")
+    return id
 
 
 if __name__ == "__main__":
-    tasks = [
+    agent_tasks = [
         (task_steps, dataset_id, agent_id, {})
         for task_steps, agent_id in AGENTS
         for dataset_id in DATASETS
     ] + TASKS
 
-    for task_steps, dataset_id, agent_id, agent_kwargs in tasks:
-        train_agent(task_steps, dataset_id, agent_id, agent_kwargs)
-        plot_agent(dataset_id, agent_id)
+    for task_steps, dataset_id, agent_id, agent_kwargs in agent_tasks:
+        id = train(task_steps, dataset_id, agent_id, agent_kwargs)
+        analyze(id, eval_path(id))
+        plot_train(id, metric_path(id), [returns_path(id), steps_path(id)], dataset_id, agent_id)

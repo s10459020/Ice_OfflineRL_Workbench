@@ -1,44 +1,26 @@
 from ice_offline.agent._lookup import make_model
-from ice_offline.config.paths import metric_path
 from ice_offline.config.paths import experiment_task_id
+from ice_offline.config.paths import metric_path
 from ice_offline.config.paths import model_path
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_model
 from plot import plot_train
 
-EXPERIMENT = "base"
-EXPERIMENT_TRAIN = "base_train"
+EXPERIMENT_TRAIN = "experience_hybrid_random_train"
 
 DATASETS = [
-    # "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
-    # "hopper_d4rl_expert",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
-    # "walker2d_d4rl_medium",
-    # "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
-    # "walker2d_replay_expert",
-    # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
-    # "halfcheetah_d4rl_expert",
-    # "halfcheetah_replay_medium",
-    # "halfcheetah_replay_expert",
+    "walker2d_random_expert_1",
+    "walker2d_random_expert_3",
+    "walker2d_random_expert_5",
+    "walker2d_random_expert_7",
+    "walker2d_random_expert_9",
 ]
 
 MODELS = [
-    # ((500_000, 1_000_000), "scas_model"),
-    ((0, 500_000), "normalization_dynamic"),
+    ((0, 500_000), "scas_model"),
 ]
 
-TASKS = [
-    # ((500_000, 1_000_000), "halfcheetah_d4rl_medium", "scas_model"),
-    # ((500_000, 1_000_000), "halfcheetah_d4rl_hybrid", "scas_model"),
-    # ((500_000, 1_000_000), "halfcheetah_d4rl_expert", "scas_model"),
-    # ((500_000, 1_000_000), "halfcheetah_replay_medium", "scas_model"),
-    # ((500_000, 1_000_000), "halfcheetah_replay_expert", "scas_model"),
-]
+TASKS = []
 
 
 def train(task_steps: tuple[int, int], dataset_id: str, model_id: str) -> str:

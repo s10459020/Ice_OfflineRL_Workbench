@@ -8,6 +8,7 @@ from ice_offline.agent.aspl_r import AsplRAgent
 from ice_offline.agent.bc import BCAgent
 from ice_offline.agent.cql import CQLAgent
 from ice_offline.agent.cql_gp import CQLGPAgent
+from ice_offline.agent.dynamic import NormalizationDynamic
 from ice_offline.agent.scas import ScasAgent
 from ice_offline.agent.scas import ScasDynamic
 from ice_offline.agent.scas_adject import ScasAdjectAgent
@@ -65,8 +66,24 @@ def _model_agent(agent_cls: type[Agent], **fixed_config: object) -> Callable[...
     )
 
 
+def _normalization_dynamic(dataset: Dataset, device: str, config: dict[str, object]) -> Agent:
+    state_eps = float(config.get("state_eps", 1e-3))
+    state_mean = dataset.buffer.observations.mean(dim=0, keepdim=True)
+    state_std = dataset.buffer.observations.std(dim=0, unbiased=False, keepdim=True) + state_eps
+    return NormalizationDynamic(
+        obs_size=dataset.obs_dim,
+        act_size=dataset.act_dim,
+        config=config | {
+            "state_mean": state_mean,
+            "state_std": state_std,
+        },
+        device=device,
+    )
+
+
 MODEL_TABLE: dict[str, Callable[..., Agent]] = {
     "scas_model": lambda dataset, device, config: ScasDynamic(obs_size=dataset.obs_dim, act_size=dataset.act_dim, config=config, device=device),
+    "normalization_dynamic": _normalization_dynamic,
 }
 
 AGENT_TABLE: dict[str, Callable[..., Agent]] = {
