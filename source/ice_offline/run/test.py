@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import gymnasium as gym
 from pathlib import Path
 
@@ -30,6 +31,7 @@ def test_eval(
     episodes: int = 100,
     print_interval: int = 1,
     seed: int = 42,
+    runner: Callable[[Agent, gym.Env, int], float] = _run,
 ) -> Path:
     path = eval_path(task_id)
     eval_col = EvalCollector(env)
@@ -38,7 +40,7 @@ def test_eval(
             agent.load(model_path(train_id, step))
             print_stage(f"Test {task_id} step={step}")
             for i in range(episodes):
-                result = _run(agent, eval_col, seed + i)
+                result = runner(agent, eval_col, seed + i)
                 if (i + 1) % print_interval == 0:
                     print(f"test step={step} episode={i + 1}/{episodes} return={result:.6g}")
             eval_col.flush(step)

@@ -92,15 +92,14 @@ class ScasDynamic(Agent):
 class ScasAgent(TD3Agent):
     def __init__(self, obs_size: int, act_size: int, dynamics: ScasDynamic, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.weight_correction = config.get("weight_correction", 0.25)
-        self.learning_rate = config.get("learning_rate", 1e-3)
         self.scale_gap = config.get("scale_gap", 5.0)
         self.max_gap = config.get("max_gap", 50.0)
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
         self.actor = TD3Actor(self.obs_size, self.act_size, config=config, pi_cls=_Pi).to(self.device)
         self.critic = TD3Critic(self.obs_size, self.act_size, config=config, q_cls=_Q).to(self.device)
         self.dynamics = dynamics.prepare()
-        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor(), lr=self.learning_rate)
-        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic(), lr=self.learning_rate)
+        self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())
+        self.critic_optimizer = torch.optim.Adam(self.critic.param_critic())
 
     # ====================
     # Update
@@ -136,9 +135,9 @@ class ScasAgent(TD3Agent):
         # loss = E_{s,s'~D, ps~perturbed(s)} [exp( scale * ( V' - V ) ) * ||M(ps, pi(ps)) - s'||^2]
         s, _, _, sn, _ = batch
         a = self.actor.pi(s)
-        v = self.critic.q_mean(s, a) # scas V(s) = Q(s, pi(s))
+        v = self.critic.q_min(s, a) # scas V(s) = Q(s, pi(s))
         an = self.actor.pi(sn)
-        vn = self.critic.q_mean(sn, an) # scas V(s') = Q(s', pi(s'))
+        vn = self.critic.q_min(sn, an) # scas V(s') = Q(s', pi(s'))
 
         weight = (
             self.scale_gap * (vn.detach() - v.detach())

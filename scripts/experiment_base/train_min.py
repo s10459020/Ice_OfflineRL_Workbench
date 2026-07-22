@@ -8,42 +8,54 @@ EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
     # "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
     # "hopper_d4rl_expert",
+    # "hopper_d4rl_hybrid",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
-    "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
-    "walker2d_replay_expert",
+    # "walker2d_d4rl_medium",
+    # "walker2d_d4rl_expert",
+    # "walker2d_d4rl_hybrid",
+    # "walker2d_replay_medium",
+    # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
+    # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_replay_medium",
     # "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
-    ("bc", None, 50_000),
-    ("td3bc_n", None, 100_000),
-    ("iql", None, 200_000),
-    ("cql", None, 500_000),
-    ("aspl_gp", None, 500_000),
-    ("scas_n", 100_000, 500_000),
-    ("scas_gp", 100_000, 500_000),
-    ("scaspl_n", 100_000, 500_000),
-    ("scaspl_gp", 100_000, 500_000),
-    ("scaspl_ns", 100_000, 500_000),
-    ("scc_n", 100_000, 500_000),
-    ("scc_gp", 100_000, 500_000),
-    ("scc_ns", 100_000, 500_000),
+    # ("bc", None, 50_000),
+    # ("td3bc_n", None, 100_000),
+    # ("iql", None, 200_000),
+    # ("cql", None, 500_000),
+    # ("aspl_c", None, 500_000),
+    # ("scas_gp", 100_000, 500_000),
+    # ("scaspl_n", 100_000, 500_000),
+    # ("scc_n", 100_000, 500_000),
 ]
 
 TASKS = [
-    # ([None, 500_000], "hopper_d4rl_medium", "cql", {"threshold": 1.5}),
-    # ([None, 500_000], "hopper_d4rl_hybrid", "aspl", {"weight_punish": 0.5}),
-    # ([100_000, 500_000], "hopper_d4rl_medium", "scaspl_gp", {"weight_punish": 1.0}),
+    ([100_000, 500_000], "hopper_d4rl_medium", "scaspl_n", {}),
+    ([100_000, 500_000], "hopper_d4rl_expert", "scaspl_n", {}),
+    ([100_000, 500_000], "hopper_d4rl_hybrid", "scaspl_n", {}),
+    ([100_000, 500_000], "hopper_replay_medium", "scaspl_n", {}),
+    ([100_000, 500_000], "hopper_replay_expert", "scaspl_n", {}),
+    ([100_000, 500_000], "halfcheetah_d4rl_medium", "scaspl_n", {}),
+    ([100_000, 500_000], "halfcheetah_d4rl_expert", "scaspl_n", {}),
+    ([100_000, 500_000], "halfcheetah_d4rl_hybrid", "scaspl_n", {}),
+    ([100_000, 500_000], "halfcheetah_replay_medium", "scaspl_n", {}),
+    ([100_000, 500_000], "halfcheetah_replay_expert", "scaspl_n", {}),
+    ([100_000, 500_000], "hopper_d4rl_medium", "scc_n", {}),
+    ([100_000, 500_000], "hopper_d4rl_expert", "scc_n", {}),
+    ([100_000, 500_000], "hopper_d4rl_hybrid", "scc_n", {}),
+    ([100_000, 500_000], "hopper_replay_medium", "scc_n", {}),
+    ([100_000, 500_000], "hopper_replay_expert", "scc_n", {}),
+    ([100_000, 500_000], "halfcheetah_d4rl_medium", "scc_n", {}),
+    ([100_000, 500_000], "halfcheetah_d4rl_expert", "scc_n", {}),
+    ([100_000, 500_000], "halfcheetah_d4rl_hybrid", "scc_n", {}),
+    ([100_000, 500_000], "halfcheetah_replay_medium", "scc_n", {}),
+    ([100_000, 500_000], "halfcheetah_replay_expert", "scc_n", {}),
 ]
 
 INTERVAL = 1_000
@@ -57,9 +69,10 @@ def train_min_agent(
     agent_kwargs: dict,
 ) -> None:
     model_start, agent_start = task_start
+    model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
 
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
+    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     id = experiment_task_id(EXPERIMENT_TRAIN, agent.id, dataset.id)
 
     if agent_start > 0:

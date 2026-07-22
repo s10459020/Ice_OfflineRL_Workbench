@@ -14,19 +14,19 @@ EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
-    "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
+    # "hopper_d4rl_medium",
     # "hopper_d4rl_expert",
+    # "hopper_d4rl_hybrid",
     # "hopper_replay_medium",
     # "hopper_replay_expert",
     # "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
-    "walker2d_replay_expert",
+    # "walker2d_d4rl_expert",
+    # "walker2d_d4rl_hybrid",
+    # "walker2d_replay_medium",
+    # "walker2d_replay_expert",
     # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_d4rl_expert",
+    # "halfcheetah_d4rl_hybrid",
     # "halfcheetah_replay_medium",
     # "halfcheetah_replay_expert",
 ] 
@@ -36,39 +36,21 @@ AGENTS = [
     # ([None, 0, 100_000], "td3bc_n"),
     # ([None, 0, 200_000], "iql"),
     # ([None, 0, 500_000], "cql"),
-    ([None, 0, 500_000], "aspl_c"),
-    # ([None, 0, 500_000], "aspl_gp"),
-    # ([100_000, 0, 500_000], "scc"),
-    # ([100_000, 0, 500_000], "scc_n"),
-    # ([100_000, 0, 500_000], "scc_ns"),
-    # ([100_000, 0, 500_000], "scc_gp"),
-    # ([100_000, 0, 500_000], "scc_gp_lambda_0"),
-    # ([100_000, 0, 500_000], "scc_gp_lambda_100"),
-    # ([100_000, 0, 500_000], "scas_n"),
-    # ([100_000, 0, 500_000], "scas_n_lambda_0"),
-    # ([100_000, 0, 500_000], "scas_n_lambda_100"),
+    # ([None, 0, 500_000], "aspl_c"),
     # ([100_000, 0, 500_000], "scas_gp"),
-    ([100_000, 0, 500_000], "scas_gpn"),
     # ([100_000, 0, 500_000], "scaspl_n"),
-    # ([100_000, 0, 500_000], "scaspl_n_lambda_0"),
-    # ([100_000, 0, 500_000], "scaspl_n_lambda_100"),
-    # ([100_000, 0, 500_000], "scaspl_ns"),
-    # ([100_000, 0, 500_000], "scaspl_gp"),
-    # ([100_000, 0, 500_000], "scaspl_gpn"),
+    # ([100_000, 0, 500_000], "scc_n"),
 ]
 
-TASKS = [
-    # ([None, 0, 500_000], "hopper_d4rl_medium", "cql", {"threshold": 1.5}),
-    # ([None, 0, 500_000], "hopper_d4rl_hybrid", "cql", {"threshold": 1.5}),
-    # ([None, 0, 500_000], "hopper_d4rl_expert", "cql", {"threshold": 1.0}),
-]
+TASKS = []
 
 def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:
     id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
+    model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     model_start, agent_start, steps = task_steps
 
     dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, **agent_kwargs)
+    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     if agent_start > 0:
         agent.load(model_path(id, agent_start))
 

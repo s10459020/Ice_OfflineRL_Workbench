@@ -1,0 +1,6 @@
+task,scc,scc_n,scc_gp
+walker2d_d4rl_medium,104.309,118.770,122.248
+walker2d_d4rl_expert,21.335,11.177,40.647
+walker2d_d4rl_hybrid,70.967,83.678,70.494
+walker2d_replay_medium,118.936,123.070,110.686
+walker2d_replay_expert,87.001,84.441,84.633

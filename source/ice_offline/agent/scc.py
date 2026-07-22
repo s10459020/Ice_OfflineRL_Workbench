@@ -38,8 +38,8 @@ class SccAgent(ScasAgent):
         noise_count = self.conservative_count
 
         a_noise = self.actor.sample_random_n(o, noise_count)
-        o_repeat = o.unsqueeze(1).expand(-1, noise_count, -1).reshape(batch_size * noise_count, self.obs_size)
         a_noise = a_noise.reshape(batch_size * noise_count, self.act_size)
+        o_repeat = o.unsqueeze(1).expand(-1, noise_count, -1).reshape(batch_size * noise_count, self.obs_size)
 
         losses = []
         for q_network in self.critic.q_networks:

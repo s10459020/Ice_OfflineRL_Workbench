@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from secrets import randbits
 
 import gymnasium as gym
 
@@ -53,11 +54,13 @@ def _hybrid_dataset(
 
         dataset_a = make_dataset(dataset_a_id, device="cpu")
         dataset_b = make_dataset(dataset_b_id, device="cpu")
+        seed = randbits(32)
         hybrid_dataset = HybridDataset(
             dataset_a=dataset_a,
             dataset_b=dataset_b,
             sample_count=count,
             random_ratio=random_ratio,
+            seed=seed,
             device=device,
             env_id=env_id,
         )

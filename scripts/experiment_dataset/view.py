@@ -15,36 +15,36 @@ EXPERIMENT = "in_dataset"
 
 TABLES = [
     ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
     ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
     ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
     ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
     ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
     ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
-    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
+    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     ("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
     ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
 ]
 
 DATASETS = [
     "hopper_d4rl_medium",
-    "hopper_d4rl_hybrid",
     "hopper_d4rl_expert",
+    "hopper_d4rl_hybrid",
     "hopper_replay_medium",
     "hopper_replay_expert",
     "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
+    "walker2d_d4rl_hybrid",
     "walker2d_replay_medium",
     "walker2d_replay_expert",
     "halfcheetah_d4rl_medium",
-    "halfcheetah_d4rl_hybrid",
     "halfcheetah_d4rl_expert",
+    "halfcheetah_d4rl_hybrid",
     "halfcheetah_replay_medium",
     "halfcheetah_replay_expert",
 ]
@@ -97,7 +97,7 @@ def _value(dataset_id: str) -> list[float]:
     return values
 
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, ...]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     data_values = [

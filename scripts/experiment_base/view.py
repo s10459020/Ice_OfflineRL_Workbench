@@ -16,38 +16,38 @@ EXPERIMENT_TRAIN = "base_train"
 
 TABLES = [
     ("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium"),
-    ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     ("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert"),
+    ("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid"),
     ("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium"),
     ("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert"),
     ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
     ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
     ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
     ("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
-    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     ("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
+    ("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid"),
     ("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium"),
     ("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert"),
 ]
 
 DATASETS = [
-    # "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
-    # "hopper_d4rl_expert",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
+    "hopper_d4rl_medium",
+    "hopper_d4rl_expert",
+    "hopper_d4rl_hybrid",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
     "walker2d_d4rl_medium",
-    "walker2d_d4rl_hybrid",
     "walker2d_d4rl_expert",
+    "walker2d_d4rl_hybrid",
     "walker2d_replay_medium",
     "walker2d_replay_expert",
-    # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
-    # "halfcheetah_d4rl_expert",
-    # "halfcheetah_replay_medium",
-    # "halfcheetah_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 AGENTS = [
@@ -55,21 +55,16 @@ AGENTS = [
     ("td3bc_n", None, 100_000),
     ("iql", None, 200_000),
     ("cql", None, 500_000),
-    ("aspl_gp", None, 500_000),
-    ("scas_n", 100_000, 500_000),
+    ("aspl_c", None, 500_000),
     ("scas_gp", 100_000, 500_000),
     ("scaspl_n", 100_000, 500_000),
-    ("scaspl_gp", 100_000, 500_000),
-    ("scaspl_ns", 100_000, 500_000),
     ("scc_n", 100_000, 500_000),
-    ("scc_gp", 100_000, 500_000),
-    ("scc_ns", 100_000, 500_000),
 ]
 
-VALUE_CACHE: dict[str, list[float]] = {}
+VALUE_CACHE: dict[str, list[float] | None] = {}
 
-def _agent_value(dataset_id: str, agent_id: str) -> list[float]:
-    key = f"{dataset_id}:{agent_id}"
+def _agent_value(dataset_id: str, agent_id: str) -> list[float] | None:
+    key = f"returns:{dataset_id}:{agent_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
     
@@ -90,7 +85,7 @@ def _agent_value(dataset_id: str, agent_id: str) -> list[float]:
     return VALUE_CACHE[key]
 
 def _dataset_value(dataset_id: str) -> list[float]:
-    key = f"{dataset_id}"
+    key = f"returns:{dataset_id}"
     if key in VALUE_CACHE:
         return VALUE_CACHE[key]
     
@@ -103,7 +98,7 @@ def _dataset_value(dataset_id: str) -> list[float]:
     VALUE_CACHE[key] = values
     return VALUE_CACHE[key]
 
-def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, Path, Path, Path]:
+def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, ...]:
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     

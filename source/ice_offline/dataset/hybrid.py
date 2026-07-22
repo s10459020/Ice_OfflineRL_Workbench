@@ -111,6 +111,7 @@ class HybridDataset(Dataset):
             source_dataset_id_a=self.dataset_a.id,
             source_dataset_id_b=self.dataset_b.id,
             random_ratio=self.random_ratio,
+            seed=self.seed,
         )
         with metadata_path.open("w", encoding="utf-8", newline="\n") as file:
             json.dump(metadata, file, ensure_ascii=False, indent=2)

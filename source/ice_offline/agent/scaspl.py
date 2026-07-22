@@ -11,7 +11,13 @@ from ice_offline.dataset._types import Batch
 class ScasplAgent(ScasAgent, AsplAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
         self.weight_punish = config.get("weight_punish", 2.5)
-        super().__init__(obs_size=obs_size, act_size=act_size, dynamics=dynamics, config=config, device=device)
+        super().__init__(
+            obs_size=obs_size,
+            act_size=act_size,
+            dynamics=dynamics,
+            config=config,
+            device=device,
+        )
         self.actor = AsplActor(self.obs_size, self.act_size, config).to(self.device)
         self.critic = AsplCritic(self.obs_size, self.act_size, config).to(self.device)
         self.actor_optimizer = torch.optim.Adam(self.actor.param_actor())

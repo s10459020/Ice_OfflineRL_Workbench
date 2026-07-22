@@ -1,0 +1,13 @@
+task,bc,td3bc_n,iql,cql,aspl_c,scas_n,scaspl_n,scc_n
+noise_action_5e-2@walker2d_d4rl_medium,112.926,117.816,97.813,114.695,117.392,!99.620(tm),!120.869,116.146
+noise_action_1e-1@walker2d_d4rl_medium,109.852,114.886,95.038,112.861,117.188,!99.620(tm),!120.824,113.788
+noise_action_5e-1@walker2d_d4rl_medium,35.656,40.060,36.191,36.907,44.383,!99.620(tm),!38.964,42.230
+noise_action_1e0@walker2d_d4rl_medium,8.667,10.909,9.373,11.194,13.646,!99.620(tm),!10.037,10.444
+noise_action_5e-2@walker2d_d4rl_hybrid,113.600,144.465,132.935,106.353,146.444,!42.656(tm),!119.588,105.255
+noise_action_1e-1@walker2d_d4rl_hybrid,107.145,139.308,124.882,97.874,143.711,!42.656(tm),!123.490,96.785
+noise_action_5e-1@walker2d_d4rl_hybrid,31.648,34.608,29.987,26.159,48.649,!42.656(tm),!111.240(t),32.148
+noise_action_1e0@walker2d_d4rl_hybrid,114.837(tm),145.073(tm),143.375(tm),!139.429(tm),138.756(tm),!42.656(tm),!111.240(t),115.223(tm)
+noise_action_5e-2@walker2d_replay_medium,25.005,104.278,67.776,33.453,70.508,,,122.085
+noise_action_1e-1@walker2d_replay_medium,25.279(tm),104.150(tm),72.166(tm),!28.971(tm),71.134(tm),,,123.011(tm)
+noise_action_5e-1@walker2d_replay_medium,15.585,32.694,28.505,21.186,34.279,,,48.517
+noise_action_1e0@walker2d_replay_medium,25.279(tm),104.150(tm),72.166(tm),!28.971(tm),71.134(tm),,,123.011(tm)
