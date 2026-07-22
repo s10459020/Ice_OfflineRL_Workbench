@@ -16,8 +16,8 @@ EXPERIMENT_TRAIN = "base_train"
 DATASETS = [
     # "walker2d_d4rl_medium",
     # "walker2d_d4rl_hybrid",
-    # "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
+    "walker2d_d4rl_expert",
+    # "walker2d_replay_medium",
     # "walker2d_replay_expert",
 ]
 
@@ -32,16 +32,18 @@ AGENTS = [
     # ([None, 0, 500_000], "cql"),
     # ([None, 0, 500_000], "cql_gp"),
     # ([None, 0, 200_000], "aspl"),
-    # ([None, 0, 200_000], "aspl_r"),
+    ([None, 0, 200_000], "aspl_r"),
     # ([None, 0, 500_000], "aspl_gp"),
     # ([100_000, 0, 500_000], "scas"),
     # ([500_000, 0, 200_000], "scas_n"),
     # ([100_000, 0, 500_000], "scas_gp"),
     # ([100_000, 0, 500_000], "scas_gpn"),
     # ([100_000, 0, 500_000], "scaspl"),
-    ([500_000, 0, 200_000], "scaspl_n"),
+    # ([500_000, 0, 200_000], "scaspl_n"),
+    # ([500_000, 0, 200_000], "scaspl_nc"),
     # ([100_000, 0, 500_000], "scaspl_gp"),
-    # ([100_000, 0, 500_000], "scaspl_gpn"),
+    # ([100_000, 0, 200_000], "scaspl_gpn"),
+    # ([100_000, 0, 200_000], "scaspl_n_decay"),
 ]
 
 TASKS = [

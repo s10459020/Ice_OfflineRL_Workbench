@@ -14,7 +14,7 @@ EXPERIMENT = "experience_hybrid_random"
 EXPERIMENT_TRAIN = "experience_hybrid_random_train"
 
 DATASETS = [
-    # "walker2d_random_expert_1",
+    "walker2d_random_expert_1",
     # "walker2d_random_expert_3",
     # "walker2d_random_expert_5",
     # "walker2d_random_expert_7",
@@ -24,17 +24,17 @@ DATASETS = [
 AGENTS = [
     ([None, 0, 50_000], "bc"),
     ([None, 0, 100_000], "td3bc_n"),
-    # ([None, 0, 200_000], "iql"),
+    ([None, 0, 200_000], "iql"),
     ([None, 0, 500_000], "cql"),
     ([None, 0, 500_000], "aspl_c"),
-    ([500_000, 0, 500_000], "scas_gp"),
-    ([500_000, 0, 500_000], "scaspl_n"),
-    ([500_000, 0, 500_000], "scc_n"),
+    # ([500_000, 0, 500_000], "scas_gp"),
+    # ([500_000, 0, 500_000], "scaspl_n"),
+    # ([500_000, 0, 500_000], "scc_n"),
 ]
 
 TASKS = [
-    ([500_000, 0, 500_000], "walker2d_random_expert_7", "scas_gp", {}),
-    ([500_000, 0, 500_000], "walker2d_random_expert_9", "scas_gp", {}),
+    # ([500_000, 0, 500_000], "walker2d_random_expert_7", "scas_gp", {}),
+    # ([500_000, 0, 500_000], "walker2d_random_expert_9", "scas_gp", {}),
     ([500_000, 0, 500_000], "walker2d_random_expert_1", "scc_n", {}),
     ([500_000, 0, 500_000], "walker2d_random_expert_3", "scc_n", {}),
     ([500_000, 0, 500_000], "walker2d_random_expert_5", "scc_n", {}),
