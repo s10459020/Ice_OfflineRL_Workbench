@@ -94,27 +94,34 @@ class SelectedCell:
     expected_step: int | None
 
 
-WALKER_TABLES = (
-    DatasetSpec("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium", "walker2d_d4rl_medium"),
-    DatasetSpec("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert", "walker2d_d4rl_expert"),
-    DatasetSpec("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid"),
-    DatasetSpec("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium", "walker2d_replay_medium"),
-    DatasetSpec("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert", "walker2d_replay_expert"),
+DATASET_KIND_ORDER = (
+    ("d4rl_medium", "d4rl_medium"),
+    ("d4rl_expert", "d4rl_expert"),
+    ("d4rl_hybrid", "d4rl_hybrid"),
+    ("replay_medium", "d4rl_medium"),
+    ("replay_expert", "d4rl_expert"),
 )
 
 
+def standard_tables(environment: str) -> tuple[DatasetSpec, ...]:
+    return tuple(
+        DatasetSpec(
+            f"{environment}_{dataset_kind}",
+            f"{environment}_random",
+            f"{environment}_{upper_kind}",
+            f"{environment}_{dataset_kind}",
+        )
+        for dataset_kind, upper_kind in DATASET_KIND_ORDER
+    )
+
+
+WALKER_TABLES = standard_tables("walker2d")
+
+
 BASE_TABLES = (
-    DatasetSpec("hopper_d4rl_medium", "hopper_random", "hopper_d4rl_medium", "hopper_d4rl_medium"),
-    DatasetSpec("hopper_d4rl_expert", "hopper_random", "hopper_d4rl_expert", "hopper_d4rl_expert"),
-    DatasetSpec("hopper_d4rl_hybrid", "hopper_random", "hopper_d4rl_hybrid", "hopper_d4rl_hybrid"),
-    DatasetSpec("hopper_replay_medium", "hopper_random", "hopper_d4rl_medium", "hopper_replay_medium"),
-    DatasetSpec("hopper_replay_expert", "hopper_random", "hopper_d4rl_expert", "hopper_replay_expert"),
+    *standard_tables("hopper"),
     *WALKER_TABLES,
-    DatasetSpec("halfcheetah_d4rl_medium", "halfcheetah_random", "halfcheetah_d4rl_medium", "halfcheetah_d4rl_medium"),
-    DatasetSpec("halfcheetah_d4rl_expert", "halfcheetah_random", "halfcheetah_d4rl_expert", "halfcheetah_d4rl_expert"),
-    DatasetSpec("halfcheetah_d4rl_hybrid", "halfcheetah_random", "halfcheetah_d4rl_hybrid", "halfcheetah_d4rl_hybrid"),
-    DatasetSpec("halfcheetah_replay_medium", "halfcheetah_random", "halfcheetah_d4rl_medium", "halfcheetah_replay_medium"),
-    DatasetSpec("halfcheetah_replay_expert", "halfcheetah_random", "halfcheetah_d4rl_expert", "halfcheetah_replay_expert"),
+    *standard_tables("halfcheetah"),
 )
 
 
@@ -131,11 +138,11 @@ REPRESENTATIVE_AGENTS = (
 
 
 STABILITY_TD3BC_AGENTS = (
+    AgentSpec("td3bc_n", None, 100_000),
     AgentSpec("td3bc", None, 100_000),
     AgentSpec("td3bc_plus", None, 100_000),
     AgentSpec("td3bc_gp", None, 100_000),
     AgentSpec("td3bc_gp_plus", None, 100_000),
-    AgentSpec("td3bc_n", None, 100_000),
     AgentSpec("td3bc_gpn", None, 100_000),
 )
 

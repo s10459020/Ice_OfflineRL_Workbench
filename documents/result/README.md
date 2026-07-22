@@ -50,6 +50,13 @@ tmps/evals/{experiment}/{agent}/{dataset}-v0/data/eval_data.hdf5
 
 如果較早流程的 eval 比較晚流程更新，採用較新的 eval；若最新 eval 沒達到指定步數，cell 留空。
 
+## 排序規則
+
+- `stability_*`：agent 欄位順序必須對齊 `scripts/experiment_stability/view_*.py` 內各子 view 的 `AGENTS`。
+- 標準資料集列順序固定為 `M, E, H, MR, ER`，也就是 `d4rl_medium`, `d4rl_expert`, `d4rl_hybrid`, `replay_medium`, `replay_expert`。
+- `base`：每個環境內都使用 `M, E, H, MR, ER`，環境順序維持 `hopper`, `walker2d`, `halfcheetah`。
+- `noise_*`：只包含該 view 定義的 walker2d 任務，任務內資料集順序維持 `M, H, MR`。
+
 ## 可信度標記
 
 第一次版本檢查使用 agent 檔案更新時間：

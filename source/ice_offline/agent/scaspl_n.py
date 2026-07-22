@@ -10,7 +10,7 @@ class ScasplNAgent(ScasplAgent):
             obs_size=obs_size,
             act_size=act_size,
             dynamics=dynamics,
-            config={"weight_correction": 0.001, "weight_punish": 0.05} | config,
+            config={"weight_correction": 0.1, "weight_punish": 0.005} | config,
             device=device,
         )
 

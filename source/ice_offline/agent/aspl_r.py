@@ -8,7 +8,7 @@ from ice_offline.dataset._types import Batch
 class AsplRAgent(AsplAgent):
     def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
         super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
-        self.weight_r = config.get("weight_r", 10)
+        self.weight_r = config.get("weight_r", 1)
 
     def metric_keys(self) -> list[str]:
         return [

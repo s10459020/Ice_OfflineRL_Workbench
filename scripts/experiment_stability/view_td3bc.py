@@ -16,11 +16,11 @@ from view import _dataset_value
 GROUP = "stability/td3bc"
 
 AGENTS = [
+    "td3bc_n",
     "td3bc",
     "td3bc_plus",
     "td3bc_gp",
     "td3bc_gp_plus",
-    "td3bc_n",
     "td3bc_gpn",
 ]
 
