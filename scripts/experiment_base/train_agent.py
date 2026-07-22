@@ -42,28 +42,7 @@ AGENTS = [
     # ([100_000, 0, 500_000], "scc_n"),
 ]
 
-TASKS = [
-    ([100_000, 0, 500_000], "hopper_d4rl_medium", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "hopper_d4rl_expert", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "hopper_replay_medium", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "hopper_replay_expert", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scaspl_n", {}),
-    ([100_000, 0, 500_000], "hopper_d4rl_medium", "scc_n", {}),
-    ([100_000, 0, 500_000], "hopper_d4rl_expert", "scc_n", {}),
-    ([100_000, 0, 500_000], "hopper_d4rl_hybrid", "scc_n", {}),
-    ([100_000, 0, 500_000], "hopper_replay_medium", "scc_n", {}),
-    ([100_000, 0, 500_000], "hopper_replay_expert", "scc_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scc_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scc_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scc_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_replay_medium", "scc_n", {}),
-    ([100_000, 0, 500_000], "halfcheetah_replay_expert", "scc_n", {}),
-]
+TASKS = []
 
 def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> str:
     id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)

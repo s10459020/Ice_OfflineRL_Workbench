@@ -1,0 +1,6 @@
+task,aspl,aspl_gp,aspl_c
+walker2d_d4rl_medium,20.690,66.117,117.295
+walker2d_d4rl_expert,12.416,46.327,85.299
+walker2d_d4rl_hybrid,64.815,72.683,107.185
+walker2d_replay_medium,67.411,14.092,73.481
+walker2d_replay_expert,30.673,57.017,72.788

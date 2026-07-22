@@ -12,18 +12,18 @@ from plot import analyze
 EXPERIMENT = "noise_action"
 
 TABLES = [
-    ("noise_action_5e-4@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_action_5e-3@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_action_5e-2@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_action_1e-1@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_action_5e-1@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_action_5e-4@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_action_5e-3@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_action_1e0@walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_action_5e-2@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_action_1e-1@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_action_5e-1@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_action_5e-4@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("noise_action_5e-3@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_action_1e0@walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_action_5e-2@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_action_1e-1@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("noise_action_5e-1@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
+    ("noise_action_1e0@walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
 ]
 
 DATASETS = [dataset_id for dataset_id, _, _ in TABLES]

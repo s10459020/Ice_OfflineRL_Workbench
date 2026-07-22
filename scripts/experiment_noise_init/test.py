@@ -13,18 +13,18 @@ EXPERIMENT = "noise_init"
 EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
-    ("noise_init_5e-4@walker2d_d4rl_medium", "walker2d_d4rl_medium", {"reset_noise_scale": 5e-4}),
-    ("noise_init_5e-3@walker2d_d4rl_medium", "walker2d_d4rl_medium", {"reset_noise_scale": 5e-3}),
     ("noise_init_5e-2@walker2d_d4rl_medium", "walker2d_d4rl_medium", {"reset_noise_scale": 5e-2}),
+    ("noise_init_1e-1@walker2d_d4rl_medium", "walker2d_d4rl_medium", {"reset_noise_scale": 1e-1}),
     ("noise_init_5e-1@walker2d_d4rl_medium", "walker2d_d4rl_medium", {"reset_noise_scale": 5e-1}),
-    ("noise_init_5e-4@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", {"reset_noise_scale": 5e-4}),
-    ("noise_init_5e-3@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", {"reset_noise_scale": 5e-3}),
+    ("noise_init_1e0@walker2d_d4rl_medium", "walker2d_d4rl_medium", {"reset_noise_scale": 1.0}),
     ("noise_init_5e-2@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", {"reset_noise_scale": 5e-2}),
+    ("noise_init_1e-1@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", {"reset_noise_scale": 1e-1}),
     ("noise_init_5e-1@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", {"reset_noise_scale": 5e-1}),
-    ("noise_init_5e-4@walker2d_replay_medium", "walker2d_replay_medium", {"reset_noise_scale": 5e-4}),
-    ("noise_init_5e-3@walker2d_replay_medium", "walker2d_replay_medium", {"reset_noise_scale": 5e-3}),
+    ("noise_init_1e0@walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", {"reset_noise_scale": 1.0}),
     ("noise_init_5e-2@walker2d_replay_medium", "walker2d_replay_medium", {"reset_noise_scale": 5e-2}),
+    ("noise_init_1e-1@walker2d_replay_medium", "walker2d_replay_medium", {"reset_noise_scale": 1e-1}),
     ("noise_init_5e-1@walker2d_replay_medium", "walker2d_replay_medium", {"reset_noise_scale": 5e-1}),
+    ("noise_init_1e0@walker2d_replay_medium", "walker2d_replay_medium", {"reset_noise_scale": 1.0}),
 ]
 
 AGENTS = [
@@ -39,15 +39,6 @@ AGENTS = [
 ]
 
 TASKS = [
-    (test_dataset_id, train_dataset_id, env_kwargs, agent_id, model_step, agent_step)
-    for test_dataset_id, train_dataset_id, env_kwargs in DATASETS
-    for agent_id, model_step, agent_step in [
-        ("bc", None, 50_000),
-        ("iql", None, 200_000),
-        ("cql", None, 500_000),
-        ("aspl_c", None, 500_000),
-        ("scc_n", 100_000, 500_000),
-    ]
 ]
 
 COUNT = 20

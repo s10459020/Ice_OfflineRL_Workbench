@@ -10,7 +10,7 @@ class ScasNAgent(ScasAgent):
             obs_size=obs_size,
             act_size=act_size,
             dynamics=dynamics,
-            config={"weight_correction": 0.01} | config,
+            config={"weight_correction": 0.001} | config,
             device=device,
         )
 

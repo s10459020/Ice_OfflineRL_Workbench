@@ -1,0 +1,6 @@
+task,td3bc,td3bc_plus,td3bc_gp,td3bc_gp_plus,td3bc_n,td3bc_gpn
+walker2d_d4rl_medium,!121.310,-0.284,118.707,2.330,!118.811,117.956
+walker2d_d4rl_expert,!90.107,4.674,89.525,-0.284,92.364,94.565
+walker2d_d4rl_hybrid,!95.685,0.558,101.647,-0.460,107.065,95.309
+walker2d_replay_medium,!98.784,25.271,45.528,66.693,102.252,68.368
+walker2d_replay_expert,!73.488,17.432,59.485,31.216,72.472,66.259
