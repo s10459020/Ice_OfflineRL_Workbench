@@ -1,6 +1,6 @@
 task,scas,scas_n,scas_gp,scas_gpn
-walker2d_d4rl_medium,!67.40,!101.57,!126.72,105.76
-walker2d_d4rl_expert,!1.78,!5.72,!8.29,15.65
-walker2d_d4rl_hybrid,!1.32,!32.91,!18.04,55.72
-walker2d_replay_medium,!126.29,,136.79,113.01
-walker2d_replay_expert,!92.18,!85.25,!89.02,83.21
+walker2d_d4rl_medium,!67.40,!101.57,!126.72*,105.76
+walker2d_d4rl_expert,!1.78,!5.72,!8.29,15.65*
+walker2d_d4rl_hybrid,!1.32,!32.91,!18.04,55.72*
+walker2d_replay_medium,!126.29,,136.79*,113.01
+walker2d_replay_expert,!92.18*,!85.25,!89.02*,83.21

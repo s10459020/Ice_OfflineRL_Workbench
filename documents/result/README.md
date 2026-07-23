@@ -67,6 +67,8 @@ source/ice_offline/agent/{agent}.py
 
 若 agent 檔案比採用的 eval data 新，cell 前綴 `!`，代表分數可能已被目前 agent 定義淘汰，需要重新訓練/測試。
 
+同一個資料集列內，若 cell 分數達到該列最高分的 95% 以上，cell 後綴 `*`，代表該方法在同資料集比較中屬於接近最佳區間。
+
 `agent_dataset_versions.csv` 會列出每個 cell 的：
 
 - 使用來源 stage。

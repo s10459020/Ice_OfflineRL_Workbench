@@ -23,6 +23,7 @@ TEST_COUNT = 20
 TEST_INTERVAL = 1_000
 TRAIN_FALLBACK_COUNT = 10
 SCORE_DIGITS = 2
+TOP_SCORE_RATIO = 0.95
 
 
 @dataclass(frozen=True)
@@ -417,6 +418,20 @@ def formatted_cell(score: float | None, suffix: str, stale: bool) -> str:
     return f"{prefix}{score:.{SCORE_DIGITS}f}{stage_suffix}"
 
 
+def top_score_threshold(best_score: float) -> float:
+    if best_score > 0.0:
+        return best_score * TOP_SCORE_RATIO
+    return best_score - abs(best_score) * (1.0 - TOP_SCORE_RATIO)
+
+
+def marked_cell(cell: SelectedCell, threshold: float | None) -> str:
+    if threshold is None or cell.score is None:
+        return cell.cell
+    if cell.score >= threshold:
+        return f"{cell.cell}*"
+    return cell.cell
+
+
 def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> SelectedCell:
     lower_mean = mean(dataset_returns(dataset.lower_id))
     upper_mean = mean(dataset_returns(dataset.upper_id))
@@ -490,11 +505,17 @@ def write_experiment_table(spec: ExperimentSpec, cells: list[SelectedCell]) -> P
         writer = csv.writer(file)
         writer.writerow(["task", *[agent.agent_id for agent in spec.agents]])
         for dataset in spec.datasets:
+            row_cells = [
+                by_key[(dataset.dataset_id, agent.agent_id)]
+                for agent in spec.agents
+            ]
+            scores = [cell.score for cell in row_cells if cell.score is not None]
+            threshold = top_score_threshold(max(scores)) if scores else None
             writer.writerow([
                 dataset.dataset_id,
                 *[
-                    by_key[(dataset.dataset_id, agent.agent_id)].cell
-                    for agent in spec.agents
+                    marked_cell(cell, threshold)
+                    for cell in row_cells
                 ],
             ])
     return path

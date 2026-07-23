@@ -6,9 +6,9 @@ from ice_offline.dataset._types import Batch
 
 class ScasplParamAgent(ScasplAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        config = {"weight_punish": 0.005} | config
-        self.weight_pi = config.get("weight_pi", 0.01)
-        self.weight_cor = config.get("weight_cor", 0.00)
+        config = {"weight_punish": 0.000} | config
+        self.weight_pi = config.get("weight_pi", 0.001)
+        self.weight_cor = config.get("weight_cor", 0.01)
         super().__init__(
             obs_size=obs_size,
             act_size=act_size,
