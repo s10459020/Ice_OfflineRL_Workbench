@@ -13,6 +13,7 @@ if str(SOURCE_ROOT) not in sys.path:
 
 from ice_offline.config.paths import eval_path
 from ice_offline.config.paths import experiment_task_id
+from ice_offline.config.paths import model_path
 from ice_offline.config.paths import returns_path
 from ice_offline.dataset._lookup import make_dataset
 
@@ -49,6 +50,7 @@ class ExperimentSpec:
     train_min_experiment: str | None
     datasets: tuple[DatasetSpec, ...]
     agents: tuple[AgentSpec, ...]
+    fallback_scores: bool = True
 
 
 @dataclass(frozen=True)
@@ -215,9 +217,9 @@ EXPERIMENTS = (
     ExperimentSpec("stability_scaspl", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCASPL_AGENTS),
     ExperimentSpec("stability_scc", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCC_AGENTS),
     ExperimentSpec("base", "base", "base_train", None, BASE_TABLES, REPRESENTATIVE_AGENTS),
-    ExperimentSpec("noise_init", "noise_init", "base_train", "base", noise_tables("noise_init", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS),
-    ExperimentSpec("noise_action", "noise_action", "base_train", "base", noise_tables("noise_action", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS),
-    ExperimentSpec("noise_state", "noise_state", "base_train", "base", noise_tables("noise_state", ("5e-4", "1e-3", "5e-3", "1e-2")), REPRESENTATIVE_AGENTS),
+    ExperimentSpec("noise_init", "noise_init", "base_train", "base", noise_tables("noise_init", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS, False),
+    ExperimentSpec("noise_action", "noise_action", "base_train", "base", noise_tables("noise_action", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS, False),
+    ExperimentSpec("noise_state", "noise_state", "base_train", "base", noise_tables("noise_state", ("5e-4", "1e-3", "5e-3", "1e-2")), REPRESENTATIVE_AGENTS, False),
     ExperimentSpec("hybrid_random", "experience_hybrid_random", "experience_hybrid_random_train", None, HYBRID_TABLES, REPRESENTATIVE_AGENTS),
 )
 
@@ -310,6 +312,13 @@ def test_expected_end(agent_step: int) -> int:
     return agent_step + TEST_COUNT * TEST_INTERVAL
 
 
+def test_steps(agent_step: int) -> tuple[int, ...]:
+    return tuple(
+        agent_step + TEST_INTERVAL * index
+        for index in range(TEST_COUNT + 1)
+    )
+
+
 def test_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_step: int, stage: str, suffix: str) -> Candidate | None:
     path = task_eval_path(experiment_id, agent_id, dataset_id)
     eval_rows = read_eval_rows(path)
@@ -372,6 +381,9 @@ def candidates_for(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec)
     if test is not None:
         candidates.append(test)
 
+    if not spec.fallback_scores:
+        return candidates
+
     if spec.train_min_experiment is not None:
         train_min_path = task_eval_path(spec.train_min_experiment, agent.agent_id, dataset.train_dataset_id)
         test_path = task_eval_path(spec.test_experiment, agent.agent_id, dataset.dataset_id)
@@ -391,6 +403,28 @@ def selected_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentS
     if not candidates:
         return None
     return max(candidates, key=lambda candidate: candidate.mtime)
+
+
+def model_status(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> tuple[str, str, Path | None, int | None, int]:
+    if agent.model_step is not None:
+        model_id = experiment_task_id(spec.train_experiment, "scas_model", dataset.train_dataset_id)
+        if not model_path(model_id, agent.model_step).exists():
+            return "missing_model", "", None, None, agent.model_step
+
+    task_id = experiment_task_id(spec.train_experiment, agent.agent_id, dataset.train_dataset_id)
+    steps = test_steps(agent.agent_step)
+    existing_steps = [
+        step
+        for step in steps
+        if model_path(task_id, step).exists()
+    ]
+    if len(existing_steps) == len(steps):
+        return "train_min", "tm", model_path(task_id, steps[-1]), existing_steps[-1], steps[-1]
+    if agent.agent_step in existing_steps:
+        return "train", "t", model_path(task_id, agent.agent_step), agent.agent_step, steps[-1]
+    if existing_steps:
+        return "partial_model", "L", model_path(task_id, existing_steps[-1]), existing_steps[-1], steps[-1]
+    return "missing", "", None, None, steps[-1]
 
 
 def dataset_returns(dataset_id: str) -> tuple[float, ...]:
@@ -417,6 +451,13 @@ def formatted_cell(score: float | None, suffix: str, stale: bool) -> str:
     prefix = "!" if stale else ""
     stage_suffix = f"({suffix})" if suffix else ""
     return f"{prefix}{score:.{SCORE_DIGITS}f}{stage_suffix}"
+
+
+def formatted_marker(suffix: str, stale: bool) -> str:
+    if not suffix:
+        return ""
+    prefix = "!" if stale else ""
+    return f"{prefix}({suffix})"
 
 
 def top_score_threshold(best_score: float) -> float:
@@ -456,6 +497,33 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
     agent_newer = False
 
     if candidate is None:
+        if not spec.fallback_scores:
+            stage, suffix, status_path, max_status_step, expected_status_step = model_status(spec, dataset, agent)
+            status_mtime = status_path.stat().st_mtime if status_path is not None and status_path.exists() else None
+            if agent_mtime is not None and status_mtime is not None:
+                agent_newer = agent_mtime > status_mtime
+            return SelectedCell(
+                experiment=spec.output_name,
+                dataset_id=dataset.dataset_id,
+                train_dataset_id=dataset.train_dataset_id,
+                agent_id=agent.agent_id,
+                stage=stage,
+                suffix=suffix,
+                cell=formatted_marker(suffix, agent_newer),
+                score=None,
+                raw_mean=None,
+                lower_mean=lower_mean,
+                upper_mean=upper_mean,
+                eval_path=str(status_path.relative_to(PROJECT_ROOT)) if status_path is not None and status_path.exists() else "",
+                eval_mtime=format_time(status_mtime),
+                agent_path=str(source_path.relative_to(PROJECT_ROOT)) if source_path.exists() else "",
+                agent_mtime=format_time(agent_mtime),
+                agent_newer_than_eval=agent_newer,
+                complete=False,
+                reason="missing_noise_test",
+                max_step=max_status_step,
+                expected_step=expected_status_step,
+            )
         return SelectedCell(
             experiment=spec.output_name,
             dataset_id=dataset.dataset_id,

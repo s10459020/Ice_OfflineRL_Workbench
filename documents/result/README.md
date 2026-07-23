@@ -1,6 +1,6 @@
 # Result Quick Tables
 
-這個資料夾保存論文表格用的速查表。速查表不取代正式 `view`，而是用同一套 mean-return normalization 規則，在 `test` 尚未完整時用較新的可用資料做估計。
+這個資料夾保存論文表格用的速查表。速查表不取代正式 `view`，而是用同一套 mean-return normalization 規則，在 `test` 尚未完整時用較新的可用資料做估計；`noise_*` 例外，因為 noise 實驗不訓練新模型，只能用對應 noise test 的結果當分數。
 
 ## 檔案
 
@@ -50,6 +50,8 @@ tmps/evals/{experiment}/{agent}/{dataset}-v0/data/eval_data.hdf5
 4. 若最新可用來源尚未達到指定步數，但已經有 eval rows 可參考，使用最後 10 rows，cell 加 `(L)`。
 
 如果較早流程的 eval 比較晚流程更新，採用較新的 eval；若最新 eval 沒達到指定步數但已有可用 rows，cell 以 `(L)` 標記，沒有可用 rows 才留空。
+
+`noise_*` 不使用 `train_min` 或 `train` 的 eval 估計分數：若 noise test 缺失，cell 只顯示模型 checkpoint 狀態，`(tm)` 代表完整 test checkpoint 範圍已存在，`(t)` 代表起始模型已存在但 train-min checkpoint 範圍未完整，空白代表目前無法支撐該 noise test。這些標記不是分數，不參與同列前 95% 的 `*` 標記。
 
 ## 排序規則
 

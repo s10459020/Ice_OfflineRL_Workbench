@@ -38,72 +38,47 @@ TASKS = [
     # format: (run_name, task_steps, dataset_id, agent_id, agent_kwargs)
     # train task_steps: [model_start, agent_start, train_steps]
     # train_min task_steps: [model_start, agent_start]
-    # ("stability_train", [100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_param", {}),
-    # ("stability_train_min", [100_000, 500_000], "walker2d_d4rl_medium", "scc", {}),
-    # ("stability_train_min", [100_000, 500_000], "walker2d_d4rl_hybrid", "scc", {}),
-    # ("stability_train_min", [100_000, 500_000], "walker2d_d4rl_expert", "scc", {}),
-    # ("stability_train_min", [100_000, 500_000], "walker2d_replay_medium", "scc", {}),
-    # ("stability_train_min", [100_000, 500_000], "walker2d_replay_expert", "scc", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_d4rl_medium", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_d4rl_expert", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_d4rl_hybrid", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_replay_medium", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_replay_expert", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_medium", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_expert", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_hybrid", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_replay_medium", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_replay_expert", "scaspl_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_d4rl_medium", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_d4rl_expert", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_d4rl_hybrid", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_replay_medium", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "hopper_replay_expert", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_medium", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_expert", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_hybrid", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_replay_medium", "scc_n", {}),
-    # ("base_train_min", [100_000, 500_000], "halfcheetah_replay_expert", "scc_n", {}),
-    ("hybrid_random_train", [None, 0, 50_000], "walker2d_random_expert_1", "bc", {}),
-    ("hybrid_random_train", [None, 0, 100_000], "walker2d_random_expert_1", "td3bc_n", {}),
-    ("hybrid_random_train", [None, 0, 200_000], "walker2d_random_expert_1", "iql", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_1", "cql", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_1", "aspl_c", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_1", "scc_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_3", "scc_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_5", "scc_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_7", "scc_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_9", "scc_n", {}),
-    ("hybrid_random_train_min", [None, 50_000], "walker2d_random_expert_1", "bc", {}),
-    ("hybrid_random_train_min", [None, 50_000], "walker2d_random_expert_3", "bc", {}),
-    ("hybrid_random_train_min", [None, 50_000], "walker2d_random_expert_5", "bc", {}),
-    ("hybrid_random_train_min", [None, 50_000], "walker2d_random_expert_7", "bc", {}),
-    ("hybrid_random_train_min", [None, 50_000], "walker2d_random_expert_9", "bc", {}),
-    ("hybrid_random_train_min", [None, 100_000], "walker2d_random_expert_1", "td3bc_n", {}),
-    ("hybrid_random_train_min", [None, 100_000], "walker2d_random_expert_3", "td3bc_n", {}),
-    ("hybrid_random_train_min", [None, 100_000], "walker2d_random_expert_5", "td3bc_n", {}),
-    ("hybrid_random_train_min", [None, 100_000], "walker2d_random_expert_7", "td3bc_n", {}),
-    ("hybrid_random_train_min", [None, 100_000], "walker2d_random_expert_9", "td3bc_n", {}),
-    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_1", "iql", {}),
-    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_3", "iql", {}),
-    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_5", "iql", {}),
-    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_7", "iql", {}),
-    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_9", "iql", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_1", "cql", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_3", "cql", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_5", "cql", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_7", "cql", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_9", "cql", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_1", "aspl_c", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_3", "aspl_c", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_5", "aspl_c", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_7", "aspl_c", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_9", "aspl_c", {}),
+    ("base_train", [100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "halfcheetah_replay_expert", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "halfcheetah_replay_medium", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "hopper_d4rl_expert", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "hopper_d4rl_hybrid", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "hopper_replay_expert", "scas_n", {}),
+    ("base_train", [100_000, 0, 500_000], "hopper_replay_medium", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_expert", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_hybrid", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_medium", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "halfcheetah_replay_expert", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "halfcheetah_replay_medium", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "hopper_d4rl_expert", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "hopper_d4rl_hybrid", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "hopper_d4rl_medium", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "hopper_replay_expert", "scas_n", {}),
+    ("base_train_min", [100_000, 500_000], "hopper_replay_medium", "scas_n", {}),
+    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_1", "scas_n", {}),
+    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_3", "scas_n", {}),
+    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_5", "scas_n", {}),
+    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_7", "scas_n", {}),
+    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_9", "scas_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_1", "scas_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_1", "scc_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_3", "scas_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_3", "scc_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_5", "scas_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_5", "scc_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_7", "scas_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_7", "scc_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_9", "scas_n", {}),
+    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_9", "scc_n", {}),
 ]
 
 DEFAULT_RUNS = tuple(TRAIN_SCRIPTS.keys())
 LOCAL_MODULE_NAMES = ("plot",)
 LOADED_MODULES = {}
+TRAIN_MIN_INTERVAL = 1_000
+TRAIN_MIN_COUNT = 20
 
 
 def _load_train_module(run_name: str, script_path: Path) -> ModuleType:
@@ -142,12 +117,90 @@ def _selected_tasks(run_names: tuple[str, ...]) -> list[tuple[str, list[int | No
     return [task for task in TASKS if task[0] in run_names]
 
 
+def _task_id(train_module: ModuleType, agent_id: str, dataset_id: str) -> str:
+    return train_module.experiment_task_id(train_module.EXPERIMENT_TRAIN, agent_id, dataset_id)
+
+
+def _model_id(train_module: ModuleType, dataset_id: str) -> str:
+    return train_module.experiment_task_id(train_module.EXPERIMENT_TRAIN, "scas_model", dataset_id)
+
+
+def _checkpoint_steps(train_module: ModuleType, task_id: str) -> list[int]:
+    model_dir = train_module.model_path(task_id, 0).parent
+    if not model_dir.exists():
+        return []
+    steps = []
+    for path in model_dir.glob("*.pt"):
+        try:
+            steps.append(int(path.stem))
+        except ValueError:
+            pass
+    return sorted(steps)
+
+
+def _train_min_required_steps(agent_start: int) -> list[int]:
+    return [
+        agent_start + TRAIN_MIN_INTERVAL * index
+        for index in range(1, TRAIN_MIN_COUNT + 1)
+    ]
+
+
+def _task_status(task: tuple[str, list[int | None], str, str, dict]) -> str:
+    run_name, task_steps, dataset_id, agent_id, _ = task
+    train_module = _train_module(run_name)
+    kind = TRAIN_SCRIPTS[run_name]["kind"]
+    task_id = _task_id(train_module, agent_id, dataset_id)
+    model_start = task_steps[0]
+    agent_start = task_steps[1]
+
+    if model_start is not None:
+        model_id = _model_id(train_module, dataset_id)
+        if not train_module.model_path(model_id, model_start).exists():
+            return "blocked:model"
+
+    if kind == "train":
+        train_steps = task_steps[2]
+        if agent_start > 0 and not train_module.model_path(task_id, agent_start).exists():
+            return "blocked:agent"
+        if train_module.model_path(task_id, train_steps).exists():
+            return "ok"
+        steps = [step for step in _checkpoint_steps(train_module, task_id) if step <= train_steps]
+        if steps:
+            return f"partial:{steps[-1]}/{train_steps}"
+        return "missing"
+
+    if agent_start > 0 and not train_module.model_path(task_id, agent_start).exists():
+        return "blocked:agent"
+    required_steps = _train_min_required_steps(agent_start)
+    present_steps = [
+        step
+        for step in required_steps
+        if train_module.model_path(task_id, step).exists()
+    ]
+    if len(present_steps) == len(required_steps):
+        return "ok"
+    if present_steps:
+        return f"partial:{len(present_steps)}/{len(required_steps)}"
+    return "missing"
+
+
 def _print_tasks(run_names: tuple[str, ...]) -> None:
     for run_name in run_names:
         tasks = _selected_tasks((run_name,))
-        print(f"{run_name}: {len(tasks)} task(s)")
-        for task in tasks:
-            print(f"  {task}")
+        statuses = [_task_status(task) for task in tasks]
+        status_counts = {}
+        for status in statuses:
+            status_key = status.split(":", 1)[0]
+            status_counts[status_key] = status_counts.get(status_key, 0) + 1
+        status_text = ", ".join(
+            f"{status_key}={count}"
+            for status_key, count in sorted(status_counts.items())
+        )
+        if status_text:
+            status_text = f" ({status_text})"
+        print(f"{run_name}: {len(tasks)} task(s){status_text}")
+        for task, status in zip(tasks, statuses):
+            print(f"  [{status}] {task}")
 
 
 def _run_train(train_module: ModuleType, task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kwargs: dict) -> None:
