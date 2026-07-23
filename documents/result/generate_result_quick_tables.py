@@ -177,6 +177,7 @@ STABILITY_SCC_AGENTS = (
     AgentSpec("scc", 100_000, 500_000),
     AgentSpec("scc_n", 100_000, 500_000),
     AgentSpec("scc_gp", 100_000, 500_000),
+    AgentSpec("scc_gpn", 100_000, 500_000),
 )
 
 
@@ -326,7 +327,7 @@ def test_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_ste
         complete = stage != "test"
         reason = "partial_test_eval"
     else:
-        values = ()
+        values = flatten_rows(latest_rows(eval_rows.rows, TRAIN_FALLBACK_COUNT)) if highest_step is not None else ()
         reason = "missing_required_step"
 
     return Candidate(
@@ -350,7 +351,7 @@ def train_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_st
 
     highest_step = max_step(eval_rows.rows)
     complete = highest_step is not None and highest_step >= agent_step
-    values = flatten_rows(latest_rows(eval_rows.rows, TRAIN_FALLBACK_COUNT)) if complete else ()
+    values = flatten_rows(latest_rows(eval_rows.rows, TRAIN_FALLBACK_COUNT)) if highest_step is not None else ()
     reason = "ok" if complete else "missing_required_step"
     return Candidate(
         stage="train",
@@ -432,6 +433,20 @@ def marked_cell(cell: SelectedCell, threshold: float | None) -> str:
     return cell.cell
 
 
+def marked_cell_map(cells: list[SelectedCell]) -> dict[tuple[str, str, str], str]:
+    groups: dict[tuple[str, str], list[SelectedCell]] = {}
+    for cell in cells:
+        groups.setdefault((cell.experiment, cell.dataset_id), []).append(cell)
+
+    result: dict[tuple[str, str, str], str] = {}
+    for row_cells in groups.values():
+        scores = [cell.score for cell in row_cells if cell.score is not None]
+        threshold = top_score_threshold(max(scores)) if scores else None
+        for cell in row_cells:
+            result[(cell.experiment, cell.dataset_id, cell.agent_id)] = marked_cell(cell, threshold)
+    return result
+
+
 def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> SelectedCell:
     lower_mean = mean(dataset_returns(dataset.lower_id))
     upper_mean = mean(dataset_returns(dataset.upper_id))
@@ -467,16 +482,17 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
     if agent_mtime is not None:
         agent_newer = agent_mtime > candidate.mtime
 
-    raw_mean = mean(candidate.values) if candidate.complete and candidate.values else None
+    raw_mean = mean(candidate.values) if candidate.values else None
     score = scaled_score(raw_mean, lower_mean, upper_mean) if raw_mean is not None else None
+    suffix = candidate.suffix if candidate.complete else "L" if candidate.values else ""
     return SelectedCell(
         experiment=spec.output_name,
         dataset_id=dataset.dataset_id,
         train_dataset_id=dataset.train_dataset_id,
         agent_id=agent.agent_id,
         stage=candidate.stage,
-        suffix=candidate.suffix if candidate.complete else "",
-        cell=formatted_cell(score, candidate.suffix if candidate.complete else "", agent_newer and score is not None),
+        suffix=suffix,
+        cell=formatted_cell(score, suffix, agent_newer and score is not None),
         score=score,
         raw_mean=raw_mean,
         lower_mean=lower_mean,
@@ -523,6 +539,7 @@ def write_experiment_table(spec: ExperimentSpec, cells: list[SelectedCell]) -> P
 
 def write_version_table(cells: list[SelectedCell]) -> Path:
     path = RESULT_ROOT / "agent_dataset_versions.csv"
+    by_marked_cell = marked_cell_map(cells)
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([
@@ -553,7 +570,7 @@ def write_version_table(cells: list[SelectedCell]) -> Path:
                 cell.train_dataset_id,
                 cell.agent_id,
                 cell.stage,
-                cell.cell,
+                by_marked_cell[(cell.experiment, cell.dataset_id, cell.agent_id)],
                 "" if cell.score is None else f"{cell.score:.{SCORE_DIGITS}f}",
                 "" if cell.raw_mean is None else f"{cell.raw_mean:.{SCORE_DIGITS}f}",
                 f"{cell.lower_mean:.{SCORE_DIGITS}f}",

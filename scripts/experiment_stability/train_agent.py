@@ -14,11 +14,11 @@ EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
 
 DATASETS = [
-    # "walker2d_d4rl_medium",
-    # "walker2d_d4rl_hybrid",
-    # "walker2d_d4rl_expert",
-    # "walker2d_replay_medium",
-    # "walker2d_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_d4rl_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
 ]
 
 AGENTS = [
@@ -31,11 +31,11 @@ AGENTS = [
     # ([None, 0, 100_000], "td3bc_gpn"),
     # ([None, 0, 500_000], "cql"),
     # ([None, 0, 500_000], "cql_gp"),
-    # ([None, 0, 200_000], "aspl"),
+    ([None, 0, 200_000], "aspl"),
     # ([None, 0, 200_000], "aspl_r"),
     # ([None, 0, 500_000], "aspl_gp"),
     # ([100_000, 0, 500_000], "scas"),
-    # ([500_000, 0, 200_000], "scas_n"),
+    ([500_000, 0, 200_000], "scas_n"),
     # ([100_000, 0, 500_000], "scas_gp"),
     # ([100_000, 0, 500_000], "scas_gpn"),
     # ([100_000, 0, 500_000], "scaspl"),
@@ -108,14 +108,12 @@ TASKS = [
     # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scc_gp", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_medium", "scc_gp", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_c", {}),
-    ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_param", {}),
+    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_param", {}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_param", {}),
-    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_actor", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
-    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_pi", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
-    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_corr", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
-    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_actor", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
-    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_pi", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
-    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_corr", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_pi", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_corr", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5}),
+    ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_pi", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5}),
+    ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_corr", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5}),
 ]
 
 

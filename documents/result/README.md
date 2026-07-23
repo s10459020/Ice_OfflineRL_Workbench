@@ -47,8 +47,9 @@ tmps/evals/{experiment}/{agent}/{dataset}-v0/data/eval_data.hdf5
 1. `test`：正式 test eval，符合 `agent_step + 20_000` 才算完整，使用全部 rows。
 2. `train_min`：若正式 test 缺失，使用對應 train-min eval 的最後 10 rows，cell 加 `(tm)`。
 3. `train`：若只有 train eval，且達到該 agent 的指定訓練步數，使用最後 10 rows，cell 加 `(t)`。
+4. 若最新可用來源尚未達到指定步數，但已經有 eval rows 可參考，使用最後 10 rows，cell 加 `(L)`。
 
-如果較早流程的 eval 比較晚流程更新，採用較新的 eval；若最新 eval 沒達到指定步數，cell 留空。
+如果較早流程的 eval 比較晚流程更新，採用較新的 eval；若最新 eval 沒達到指定步數但已有可用 rows，cell 以 `(L)` 標記，沒有可用 rows 才留空。
 
 ## 排序規則
 

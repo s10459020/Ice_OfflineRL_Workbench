@@ -7,7 +7,7 @@ noise_action_5e-2@walker2d_d4rl_hybrid,113.60,144.46*,132.93,106.35,146.44*,!42.
 noise_action_1e-1@walker2d_d4rl_hybrid,107.15,139.31*,124.88,97.87,143.71*,!42.66(tm),!123.49,96.78
 noise_action_5e-1@walker2d_d4rl_hybrid,31.65,34.61,29.99,26.16,48.65*,!42.66(tm),!35.37,32.15
 noise_action_1e0@walker2d_d4rl_hybrid,9.02,10.25,8.49,7.15,12.87,!42.66(tm)*,!10.29,9.96
-noise_action_5e-2@walker2d_replay_medium,25.00,104.28,67.78,33.45,70.51,,!92.42,122.09*
-noise_action_1e-1@walker2d_replay_medium,26.17,103.36,66.66,33.66,71.88,,!89.45,119.93*
-noise_action_5e-1@walker2d_replay_medium,15.59,32.69,28.50,21.19,34.28,,!30.90,48.52*
-noise_action_1e0@walker2d_replay_medium,1.01,5.03,4.96,7.72,15.42*,,!6.53,6.17
+noise_action_5e-2@walker2d_replay_medium,25.00,104.28,67.78,33.45,70.51,129.22(L)*,!92.42,122.09
+noise_action_1e-1@walker2d_replay_medium,26.17,103.36,66.66,33.66,71.88,129.22(L)*,!89.45,119.93
+noise_action_5e-1@walker2d_replay_medium,15.59,32.69,28.50,21.19,34.28,129.22(L)*,!30.90,48.52
+noise_action_1e0@walker2d_replay_medium,1.01,5.03,4.96,7.72,15.42,129.22(L)*,!6.53,6.17

@@ -15,6 +15,7 @@ AGENTS = [
     "scc",
     "scc_n",
     "scc_gp",
+    "scc_gpn",
 ]
 
 

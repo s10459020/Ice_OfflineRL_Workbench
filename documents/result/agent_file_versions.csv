@@ -17,6 +17,7 @@ scaspl_n,source/ice_offline/agent/scaspl_n.py,1784739867.0986953
 scaspl_nc,source/ice_offline/agent/scaspl_nc.py,1784739867.0996952
 scc,source/ice_offline/agent/scc.py,1784359378.3989906
 scc_gp,source/ice_offline/agent/scc_gp.py,1784202607.3143742
+scc_gpn,source/ice_offline/agent/scc_gpn.py,1784120443.020715
 scc_n,source/ice_offline/agent/scc_n.py,1783914967.242309
 td3bc,source/ice_offline/agent/td3bc.py,1784195474.9738448
 td3bc_gp,source/ice_offline/agent/td3bc_gp.py,1784202607.2063751
