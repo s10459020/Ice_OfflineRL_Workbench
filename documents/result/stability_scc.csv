@@ -1,6 +1,6 @@
 task,scc,scc_n,scc_gp
-walker2d_d4rl_medium,104.309,118.770,122.248
-walker2d_d4rl_expert,21.335,11.177,40.647
-walker2d_d4rl_hybrid,70.967,83.678,70.494
-walker2d_replay_medium,118.936,123.070,110.686
-walker2d_replay_expert,87.001,84.441,84.633
+walker2d_d4rl_medium,104.31,118.77,122.25
+walker2d_d4rl_expert,21.34,11.18,40.65
+walker2d_d4rl_hybrid,70.97,83.68,70.49
+walker2d_replay_medium,118.94,123.07,110.69
+walker2d_replay_expert,87.00,84.44,84.63
