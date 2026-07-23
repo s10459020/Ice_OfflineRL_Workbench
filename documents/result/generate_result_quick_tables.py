@@ -141,9 +141,9 @@ STABILITY_TD3BC_AGENTS = (
     AgentSpec("td3bc_n", None, 100_000),
     AgentSpec("td3bc", None, 100_000),
     AgentSpec("td3bc_plus", None, 100_000),
+    AgentSpec("td3bc_gpn", None, 100_000),
     AgentSpec("td3bc_gp", None, 100_000),
     AgentSpec("td3bc_gp_plus", None, 100_000),
-    AgentSpec("td3bc_gpn", None, 100_000),
 )
 
 
