@@ -18,6 +18,9 @@ AGENTS = [
     "scaspl_c",
     "scaspl_nc",
     "scaspl_gpc",
+    "scaspl_pq_actor",
+    "scaspl_pq_pi",
+    "scaspl_pq_corr",
 ]
 
 

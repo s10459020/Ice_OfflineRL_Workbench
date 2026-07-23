@@ -110,6 +110,12 @@ TASKS = [
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_c", {}),
     ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_param", {}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_param", {}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_actor", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_pi", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_corr", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
+    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_actor", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
+    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_pi", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
+    # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pq_corr", {"weight_pi": 0.999, "weight_correction": 0.001, "weight_punish": 0.005}),
 ]
 
 
