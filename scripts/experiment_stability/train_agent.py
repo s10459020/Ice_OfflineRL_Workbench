@@ -16,7 +16,7 @@ EXPERIMENT_TRAIN = "base_train"
 DATASETS = [
     # "walker2d_d4rl_medium",
     # "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
+    # "walker2d_d4rl_expert",
     # "walker2d_replay_medium",
     # "walker2d_replay_expert",
 ]
@@ -32,7 +32,7 @@ AGENTS = [
     # ([None, 0, 500_000], "cql"),
     # ([None, 0, 500_000], "cql_gp"),
     # ([None, 0, 200_000], "aspl"),
-    ([None, 0, 200_000], "aspl_r"),
+    # ([None, 0, 200_000], "aspl_r"),
     # ([None, 0, 500_000], "aspl_gp"),
     # ([100_000, 0, 500_000], "scas"),
     # ([500_000, 0, 200_000], "scas_n"),
@@ -65,7 +65,7 @@ TASKS = [
     # ([None, 0, 100_000], "walker2d_replay_expert", "td3bc_gpn", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scas_n", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_hybrid", "scas_n", {}),
-    # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scas_n", {}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scas_n", {"weight_correction": 0.75}),
     # ([100_000, 0, 500_000], "walker2d_replay_medium", "scas_n", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "scas_n", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scas_gpn", {}),
@@ -80,7 +80,7 @@ TASKS = [
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "aspl_gp", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scaspl_n", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_hybrid", "scaspl_n", {}),
-    # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scaspl_n", {}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_n", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_medium", "scaspl_n", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_n", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scaspl_gp", {}),
@@ -95,7 +95,7 @@ TASKS = [
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_c", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scaspl_nc", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_hybrid", "scaspl_nc", {}),
-    # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scaspl_nc", {}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_nc", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_medium", "scaspl_nc", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_nc", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_medium", "scaspl_gpc", {}),
@@ -107,7 +107,9 @@ TASKS = [
     # ([100_000, 0, 500_000], "walker2d_d4rl_hybrid", "scc_gp", {}),
     # ([100_000, 0, 500_000], "walker2d_d4rl_expert", "scc_gp", {}),
     # ([100_000, 0, 500_000], "walker2d_replay_medium", "scc_gp", {}),
-    # ([100_000, 0, 500_000], "walker2d_replay_expert", "scc_gp", {}),
+    # ([100_000, 0, 500_000], "walker2d_replay_expert", "scaspl_c", {}),
+    ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_param", {}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_param", {}),
 ]
 
 

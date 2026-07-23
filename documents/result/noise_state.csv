@@ -1,5 +1,5 @@
 task,bc,td3bc_n,iql,cql,aspl_c,scas_n,scaspl_n,scc_n
-noise_state_5e-4@walker2d_d4rl_medium,116.914(tm),118.964,100.151(tm),!116.540(tm),117.472(tm),!99.620(tm),!122.306(t),118.523(tm)
+noise_state_5e-4@walker2d_d4rl_medium,115.114,118.964,100.520,115.317,116.916,!99.620(tm),!122.306(t),118.523(tm)
 noise_state_1e-3@walker2d_d4rl_medium,116.914(tm),119.183,100.151(tm),!116.540(tm),117.472(tm),!99.620(tm),!122.306(t),118.523(tm)
 noise_state_5e-3@walker2d_d4rl_medium,116.914(tm),100.237,100.151(tm),!116.540(tm),117.472(tm),!99.620(tm),!122.306(t),118.523(tm)
 noise_state_1e-2@walker2d_d4rl_medium,116.914(tm),69.179,100.151(tm),!116.540(tm),117.472(tm),!99.620(tm),!122.306(t),118.523(tm)
