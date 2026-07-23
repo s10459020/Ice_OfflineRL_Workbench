@@ -22,7 +22,7 @@ AGENT_ROOT = PROJECT_ROOT / "source" / "ice_offline" / "agent"
 TEST_COUNT = 20
 TEST_INTERVAL = 1_000
 TRAIN_FALLBACK_COUNT = 10
-SCORE_DIGITS = 3
+SCORE_DIGITS = 2
 
 
 @dataclass(frozen=True)
@@ -139,11 +139,11 @@ REPRESENTATIVE_AGENTS = (
 
 STABILITY_TD3BC_AGENTS = (
     AgentSpec("td3bc_n", None, 100_000),
-    AgentSpec("td3bc", None, 100_000),
     AgentSpec("td3bc_plus", None, 100_000),
-    AgentSpec("td3bc_gpn", None, 100_000),
-    AgentSpec("td3bc_gp", None, 100_000),
+    AgentSpec("td3bc", None, 100_000),
     AgentSpec("td3bc_gp_plus", None, 100_000),
+    AgentSpec("td3bc_gp", None, 100_000),
+    AgentSpec("td3bc_gpn", None, 100_000),
 )
 
 
@@ -533,10 +533,10 @@ def write_version_table(cells: list[SelectedCell]) -> Path:
                 cell.agent_id,
                 cell.stage,
                 cell.cell,
-                "" if cell.score is None else f"{cell.score:.6f}",
-                "" if cell.raw_mean is None else f"{cell.raw_mean:.6f}",
-                f"{cell.lower_mean:.6f}",
-                f"{cell.upper_mean:.6f}",
+                "" if cell.score is None else f"{cell.score:.{SCORE_DIGITS}f}",
+                "" if cell.raw_mean is None else f"{cell.raw_mean:.{SCORE_DIGITS}f}",
+                f"{cell.lower_mean:.{SCORE_DIGITS}f}",
+                f"{cell.upper_mean:.{SCORE_DIGITS}f}",
                 str(cell.complete),
                 cell.reason,
                 "" if cell.max_step is None else str(cell.max_step),

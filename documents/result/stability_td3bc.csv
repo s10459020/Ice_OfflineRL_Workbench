@@ -1,6 +1,6 @@
-task,td3bc_n,td3bc,td3bc_plus,td3bc_gpn,td3bc_gp,td3bc_gp_plus
-walker2d_d4rl_medium,!118.811,!121.310,-0.284,117.956,118.707,2.330
-walker2d_d4rl_expert,92.364,!90.107,4.674,94.565,89.525,-0.284
-walker2d_d4rl_hybrid,107.065,!95.685,0.558,95.309,101.647,-0.460
-walker2d_replay_medium,102.252,!98.784,25.271,68.368,45.528,66.693
-walker2d_replay_expert,72.472,!73.488,17.432,66.259,59.485,31.216
+task,td3bc_n,td3bc_plus,td3bc,td3bc_gp_plus,td3bc_gp,td3bc_gpn
+walker2d_d4rl_medium,!118.81,-0.28,!121.31,2.33,118.71,117.96
+walker2d_d4rl_expert,92.36,4.67,!90.11,-0.28,89.53,94.56
+walker2d_d4rl_hybrid,107.07,0.56,!95.68,-0.46,101.65,95.31
+walker2d_replay_medium,102.25,25.27,!98.78,66.69,45.53,68.37
+walker2d_replay_expert,72.47,17.43,!73.49,31.22,59.49,66.26
