@@ -1,6 +1,6 @@
 task,bc,td3bc_n,iql,cql,aspl_c,scas_n,scaspl_n,scc_n
-walker2d_random_expert_1,0.70(t),90.85(t)*,71.59(t),-0.09(t),79.26(t),,!85.26(t),20.88(t)
-walker2d_random_expert_3,0.86(t),91.43(t)*,51.00(t),53.68(t),87.87(t)*,,!-0.01(t),25.97(t)
-walker2d_random_expert_5,1.25(t),37.03(t),39.88(t),50.42(t),81.15(t)*,,!-0.06(t),29.71(t)
-walker2d_random_expert_7,1.24(t),23.25(t),36.80(t)*,7.38(t),8.35(t),,!-0.01(t),11.12(t)
-walker2d_random_expert_9,2.66(t),5.03(t),40.03(t)*,9.33(t),5.27(t),,,4.72(t)
+walker2d_random_expert_1,0.67,88.14*,75.74,2.34,79.26(t),,!85.26(t)*,20.88(t)
+walker2d_random_expert_3,0.81,89.27*,54.06,65.36,87.87(t)*,,!-0.01(t),25.97(t)
+walker2d_random_expert_5,1.17,59.44,54.23,52.86,81.15(t)*,,!-0.06(t),29.71(t)
+walker2d_random_expert_7,1.62,10.13,55.72*,6.46,8.35(t),,!-0.01(t),11.12(t)
+walker2d_random_expert_9,1.28,3.34,23.76*,4.00,5.27(t),,,4.72(t)

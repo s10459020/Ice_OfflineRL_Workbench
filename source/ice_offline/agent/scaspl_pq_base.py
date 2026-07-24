@@ -65,16 +65,13 @@ class ScasplPQBaseAgent(ScasplNAgent):
         target = self.target_td3(next_observation, reward, terminal)
         target_punish = self.target_punish_td3(next_observation, reward, terminal)
 
-        q_avg = self.critic.update_q_avg(target)
-        q_pq_avg = self.critic_punish.update_q_avg(target_punish)
-
         loss_td, metrics_td = self.loss_td_clean(batch, target)
         self.critic_optimizer.zero_grad()
         loss_td.backward()
         self.critic_optimizer.step()
 
         loss_pq_td, metrics_pq_td = self.loss_td_punish(batch, target_punish)
-        loss_punish, metrics_punish = self.loss_punish_pq(batch, target_punish)
+        loss_punish, metrics_punish = self.loss_punish_pq(batch)
         loss_pq_critic = loss_pq_td + self.weight_punish * loss_punish
         metrics_pq_critic = {
             "loss_pq_critic": self._value(loss_pq_critic.detach()),
@@ -85,8 +82,8 @@ class ScasplPQBaseAgent(ScasplNAgent):
         self.critic_punish_optimizer.step()
 
         return metrics_td | metrics_pq_td | metrics_punish | metrics_pq_critic | {
-            "q_avg": self._value(q_avg.detach()),
-            "q_pq_avg": self._value(q_pq_avg.detach()),
+            "q_avg": self._value(self.critic.q_avg.detach()),
+            "q_pq_avg": self._value(self.critic_punish.q_avg.detach()),
         }
 
     def target_punish_td3(self, next_observation: torch.Tensor, reward: torch.Tensor, terminal: torch.Tensor) -> torch.Tensor:
@@ -116,11 +113,11 @@ class ScasplPQBaseAgent(ScasplNAgent):
             "target_pq": self._value(target.mean().detach()),
         }
 
-    def loss_punish_pq(self, batch: Batch, target: torch.Tensor) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    def loss_punish_pq(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         observation, action, _, _, _ = batch
-        action_samples = self.actor.sample_actions_lhs(observation.shape[0])
+        action_samples = self.actor.sample_actions_uniform(observation.shape[0])
         action_distance = self.actor.action_distance(action, action_samples)
-        q_pseudo = self.critic_punish.q_pseudo(target, action_distance)
+        q_pseudo = self.critic_punish.q_pseudo(observation, action, action_distance)
 
         observation_reshape = observation.unsqueeze(0).expand(action_samples.shape[0], -1, -1).reshape(-1, observation.shape[1])
         action_samples_reshape = action_samples.view(-1, action.shape[1])

@@ -4,11 +4,10 @@ from ice_offline.agent.scaspl import ScasplAgent
 from ice_offline.dataset._types import Batch
 
 
-class ScasplParamAgent(ScasplAgent):
+class ScasplPAgent(ScasplAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        config = {"weight_punish": 0.000} | config
+        config = {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 0.05} | config
         self.weight_pi = config.get("weight_pi", 0.001)
-        self.weight_cor = config.get("weight_cor", 0.01)
         super().__init__(
             obs_size=obs_size,
             act_size=act_size,
@@ -38,7 +37,7 @@ class ScasplParamAgent(ScasplAgent):
     def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor | float]]:
         loss_td3, metrics_td3 = self.loss_td3(batch)
         loss_correction, metrics_correction = self.loss_correction(batch)
-        loss = self.weight_pi * loss_td3 + self.weight_cor * loss_correction
+        loss = self.weight_pi * loss_td3 + self.weight_correction * loss_correction
         return loss, metrics_td3 | metrics_correction | {
             "loss_actor": self._value(loss.detach()),
             "grad_actor": self._grad_norm(loss, self.actor.param_actor()),

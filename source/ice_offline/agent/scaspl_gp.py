@@ -37,13 +37,9 @@ class ScasplGPAgent(ScasplAgent):
         ]
 
     def update(self, batch: Batch) -> dict[str, torch.Tensor]:
-        _, _, r, sn, d = batch
         self.update_step += 1
         metrics = self.update_critic(batch)
-            
-        target = self.target_td3(sn, r, d)
-        q_avg = self.critic.update_q_avg(target)
-        metrics["q_avg"] = self._value(q_avg.detach())
+        metrics["q_avg"] = self._value(self.critic.q_avg.detach())
 
         if self.update_step % self.update_actor_interval == 0:
             metrics |= self.update_actor(batch)

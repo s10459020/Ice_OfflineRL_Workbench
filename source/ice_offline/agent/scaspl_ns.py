@@ -7,12 +7,11 @@ from ice_offline.dataset._types import Batch
 
 class ScasplNSAgent(ScasplNAgent):
     def loss_punish(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        s, a, r, sn, d = batch
-        target = self.target_td3(sn, r, d)
+        s, a, _, _, _ = batch
 
-        a_samples = self.actor.sample_actions_lhs(s.shape[0])
+        a_samples = self.actor.sample_actions_uniform(s.shape[0])
         action_distance = self.actor.action_distance(a, a_samples)
-        q_pseudo = self.critic.q_pseudo(target, action_distance)
+        q_pseudo = self.critic.q_pseudo(s, a, action_distance)
 
         s_noise = self.dynamics.noise_state(s)
         s_noise_reshape = s_noise.unsqueeze(0).expand(a_samples.shape[0], -1, -1).reshape(-1, s.shape[1])

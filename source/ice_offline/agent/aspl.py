@@ -55,9 +55,9 @@ class AsplCritic(TD3Critic):
         self.rate_decay = config.get("critic_rate_decay", 0.005)
         self.q_avg = torch.nn.Parameter(torch.tensor(0.0, dtype=torch.float32), requires_grad=False)
 
-    def update_q_avg(self, target: torch.Tensor) -> torch.Tensor:
+    def update_q_avg(self, q_anchor: torch.Tensor) -> torch.Tensor:
         with torch.no_grad():
-            current = target.abs().mean()
+            current = q_anchor.abs().mean()
             if self.q_avg.item() == 0.0:
                 self.q_avg.copy_(current)
             else:
@@ -65,13 +65,13 @@ class AsplCritic(TD3Critic):
                 self.q_avg.add_(self.rate_decay * current)
         return self.q_avg
 
-    def q_pseudo(self, q_target: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
+    def q_pseudo(self, s: torch.Tensor, a: torch.Tensor, action_distance: torch.Tensor) -> torch.Tensor:
         # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
         # c is scaling coefficent
-        # q use q_target in source
-        # q_target range: [-Q, Q], shape: (B, 1)
         with torch.no_grad():
-            return q_target - self.q_avg * action_distance  # (N, B, 1)
+            q_anchor = self.q_min(s, a)
+            q_avg = self.update_q_avg(q_anchor)
+            return q_anchor - q_avg * action_distance  # (N, B, 1)
 
 
 class AsplAgent(TD3Agent):
@@ -104,13 +104,10 @@ class AsplAgent(TD3Agent):
         ]
 
     def update(self, batch: Batch) -> MetricValues:
-        _, _, r, sn, d = batch
-        target = self.target_td3(sn, r, d)
         self.update_step += 1
 
-        q_avg = self.critic.update_q_avg(target)
         metrics = self.update_critic(batch)
-        metrics["q_avg"] = self._value(q_avg.detach())
+        metrics["q_avg"] = self._value(self.critic.q_avg.detach())
 
         if self.update_step % self.update_actor_interval == 0:
             metrics |= self.update_actor(batch)
@@ -123,13 +120,12 @@ class AsplAgent(TD3Agent):
     # Critic loss
     # ====================    
     def loss_punish(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        s, a, r, sn, d = batch
-        target = self.target_td3(sn, r, d)
+        s, a, _, _, _ = batch
 
         # E_{s~D}{(a~)~U}[ Q(s,a~) - Q~(s,a~) ]^2
         a_samples = self.actor.sample_actions_lhs(s.shape[0])       # (N,B,A)
         action_distance = self.actor.action_distance(a, a_samples)  # (N,B,1)
-        q_pseudo = self.critic.q_pseudo(target, action_distance)    # (N,B,1)
+        q_pseudo = self.critic.q_pseudo(s, a, action_distance)      # (N,B,1)
 
         # reshape
         s_reshape = s.unsqueeze(0).expand(a_samples.shape[0], -1, -1).reshape(-1, s.shape[1])    # (B,S) > (1,B,S) > (N,B,S) > (N*B,S)
