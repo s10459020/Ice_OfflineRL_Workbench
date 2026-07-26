@@ -66,6 +66,11 @@ AGENT_SOURCE_DEPENDENCIES = {
     "scaspl_gpc": ("scaspl.py", "scaspl_gp.py", "scaspl_gpc.py", "aspl_c.py", "scas.py", "aspl.py"),
 }
 
+AGENT_RESULT_DEPENDENCIES = {
+    "aspl_gp": ("aspl",),
+    "aspl_c": ("aspl",),
+}
+
 
 @dataclass(frozen=True)
 class AgentSpec:
@@ -173,7 +178,7 @@ REPRESENTATIVE_AGENTS = (
     AgentSpec("td3bc_n", None, 100_000),
     AgentSpec("iql", None, 200_000),
     AgentSpec("cql", None, 500_000),
-    AgentSpec("aspl", None, 500_000),
+    AgentSpec("aspl_c", None, 500_000),
     AgentSpec("scas_n", 100_000, 500_000),
     AgentSpec("scaspl_pn", 500_000, 500_000),
     AgentSpec("scc_n", 100_000, 500_000),
@@ -306,8 +311,70 @@ def invalidated_path(agent_id: str, path: Path) -> bool:
     return path.stat().st_mtime < source_mtime
 
 
-def invalidated_candidate(agent_id: str, candidate: Candidate) -> bool:
-    return invalidated_path(agent_id, candidate.path)
+def candidate_model_path(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str, candidate: Candidate) -> Path | None:
+    if candidate.max_step is None:
+        return None
+    train_id = experiment_task_id(spec.train_experiment, agent_id, dataset.train_dataset_id)
+    path = model_path(train_id, candidate.max_step)
+    if not path.exists():
+        return None
+    return path
+
+
+def candidate_version_mtime(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str, candidate: Candidate) -> float:
+    path = candidate_model_path(spec, dataset, agent_id, candidate)
+    if path is None:
+        return candidate.mtime
+    return path.stat().st_mtime
+
+
+def result_dependency_mtime(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str) -> float | None:
+    dependency_mtimes = []
+    for dependency_id in AGENT_RESULT_DEPENDENCIES.get(agent_id, ()):
+        dependency_path = task_eval_path(spec.train_experiment, dependency_id, dataset.train_dataset_id)
+        dependency_eval = read_eval_rows(dependency_path)
+        if dependency_eval is not None:
+            step = max_step(dependency_eval.rows)
+            train_id = experiment_task_id(spec.train_experiment, dependency_id, dataset.train_dataset_id)
+            path = model_path(train_id, step) if step is not None else None
+            if path is not None and path.exists():
+                dependency_mtimes.append(path.stat().st_mtime)
+            else:
+                dependency_mtimes.append(dependency_eval.mtime)
+    if not dependency_mtimes:
+        return None
+    return max(dependency_mtimes)
+
+
+def invalidated_by_result_dependency(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str, candidate: Candidate) -> bool:
+    dependency_mtime = result_dependency_mtime(spec, dataset, agent_id)
+    if dependency_mtime is None:
+        return False
+    return candidate_version_mtime(spec, dataset, agent_id, candidate) < dependency_mtime
+
+
+def invalidated_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str, candidate: Candidate) -> bool:
+    source_mtime = agent_source_mtime(agent_id)
+    if agent_id in INVALIDATED_AGENTS and source_mtime is not None:
+        if candidate_version_mtime(spec, dataset, agent_id, candidate) < source_mtime:
+            return True
+    return (
+        invalidated_path(agent_id, candidate.path)
+        or invalidated_by_result_dependency(spec, dataset, agent_id, candidate)
+    )
+
+
+def invalidation_reason(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str, candidate: Candidate, default_reason: str) -> str:
+    source_mtime = agent_source_mtime(agent_id)
+    if agent_id in INVALIDATED_AGENTS and source_mtime is not None:
+        if candidate_version_mtime(spec, dataset, agent_id, candidate) < source_mtime:
+            return "stale_agent"
+    if invalidated_by_result_dependency(spec, dataset, agent_id, candidate):
+        return "stale_dependency"
+    path = candidate.path
+    if invalidated_path(agent_id, path):
+        return "stale_agent"
+    return default_reason
 
 
 def format_time(timestamp: float | None) -> str:
@@ -479,7 +546,7 @@ def selected_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentS
     valid_candidates = [
         candidate
         for candidate in candidates
-        if not invalidated_candidate(agent.agent_id, candidate)
+        if not invalidated_candidate(spec, dataset, agent.agent_id, candidate)
     ]
     if valid_candidates:
         return max(valid_candidates, key=lambda candidate: candidate.mtime)
@@ -586,10 +653,20 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
                 agent_newer = agent_mtime > status_mtime
             agent_newer = agent_newer or force_updated
             reason = "missing_noise_test"
-            if status_path is not None and invalidated_path(agent.agent_id, status_path):
+            dependency_mtime = result_dependency_mtime(spec, dataset, agent.agent_id)
+            dependency_stale = (
+                dependency_mtime is not None
+                and status_path is not None
+                and status_path.exists()
+                and status_path.stat().st_mtime < dependency_mtime
+            )
+            if status_path is not None and (
+                invalidated_path(agent.agent_id, status_path)
+                or dependency_stale
+            ):
                 stage = "stale"
                 suffix = ""
-                reason = "stale_agent"
+                reason = "stale_dependency" if dependency_stale else "stale_agent"
             return SelectedCell(
                 experiment=spec.output_name,
                 dataset_id=dataset.dataset_id,
@@ -636,11 +713,11 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
         )
 
     if agent_mtime is not None:
-        agent_newer = agent_mtime > candidate.mtime
+        agent_newer = agent_mtime > candidate_version_mtime(spec, dataset, agent.agent_id, candidate)
     agent_newer = agent_newer or agent.agent_id in FORCE_UPDATED_AGENTS
 
-    if invalidated_candidate(agent.agent_id, candidate):
-        reason = "stale_agent" if invalidated_path(agent.agent_id, candidate.path) else candidate.reason
+    if invalidated_candidate(spec, dataset, agent.agent_id, candidate):
+        reason = invalidation_reason(spec, dataset, agent.agent_id, candidate, candidate.reason)
         return SelectedCell(
             experiment=spec.output_name,
             dataset_id=dataset.dataset_id,

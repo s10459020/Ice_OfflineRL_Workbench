@@ -59,20 +59,23 @@ TASKS = [
     # format: (run_name, task_steps, dataset_id, agent_id, agent_kwargs)
     # train task_steps: [model_start, agent_start, train_steps]
     # train_min task_steps: [model_start, agent_start]
-    ("base_train_min", [None, 200_000], "walker2d_d4rl_medium", "aspl", {}),
-    ("base_train_min", [None, 200_000], "walker2d_d4rl_hybrid", "aspl", {}),
-    ("base_train_min", [None, 200_000], "walker2d_replay_medium", "aspl", {}),
-    ("base_train_min", [100_000, 200_000], "walker2d_d4rl_medium", "scas_n", {}),
-    ("base_train_min", [100_000, 200_000], "walker2d_d4rl_hybrid", "scas_n", {}),
-    ("base_train_min", [100_000, 200_000], "walker2d_replay_medium", "scas_n", {}),
-    ("stability_train", [500_000, 0, 200_000], "walker2d_d4rl_medium", "scaspl_pn", {}),
-    ("stability_train", [500_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pn", {}),
-    ("stability_train", [500_000, 0, 200_000], "walker2d_d4rl_hybrid", "scaspl_pn", {}),
-    ("stability_train", [500_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pn", {}),
-    ("stability_train", [500_000, 0, 200_000], "walker2d_replay_expert", "scaspl_pn", {}),
-    ("base_train_min", [500_000, 200_000], "walker2d_d4rl_medium", "scaspl_pn", {}),
-    ("base_train_min", [500_000, 200_000], "walker2d_d4rl_hybrid", "scaspl_pn", {}),
-    ("base_train_min", [500_000, 200_000], "walker2d_replay_medium", "scaspl_pn", {}),
+    # ASPL_C prelim train_min for immediate base/noise testing.
+    ("base_train_min", [None, 200_000], "walker2d_d4rl_medium", "aspl_c", {}),
+    ("base_train_min", [None, 200_000], "walker2d_d4rl_expert", "aspl_c", {}),
+    ("base_train_min", [None, 200_000], "walker2d_d4rl_hybrid", "aspl_c", {}),
+    ("base_train_min", [None, 200_000], "walker2d_replay_medium", "aspl_c", {}),
+    ("base_train_min", [None, 200_000], "walker2d_replay_expert", "aspl_c", {}),
+    # ASPL_C prelim hybrid_random train, then train_min.
+    ("hybrid_random_train", [None, 0, 200_000], "walker2d_random_expert_1", "aspl_c", {}),
+    ("hybrid_random_train", [None, 0, 200_000], "walker2d_random_expert_3", "aspl_c", {}),
+    ("hybrid_random_train", [None, 0, 200_000], "walker2d_random_expert_5", "aspl_c", {}),
+    ("hybrid_random_train", [None, 0, 200_000], "walker2d_random_expert_7", "aspl_c", {}),
+    ("hybrid_random_train", [None, 0, 200_000], "walker2d_random_expert_9", "aspl_c", {}),
+    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_1", "aspl_c", {}),
+    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_3", "aspl_c", {}),
+    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_5", "aspl_c", {}),
+    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_7", "aspl_c", {}),
+    ("hybrid_random_train_min", [None, 200_000], "walker2d_random_expert_9", "aspl_c", {}),
 ]
 
 DEFAULT_RUNS = tuple(dict.fromkeys(task[0] for task in TASKS))

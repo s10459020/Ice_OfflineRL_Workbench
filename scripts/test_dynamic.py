@@ -1,6 +1,7 @@
 import argparse
 import csv
 import math
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,216 +14,201 @@ from ice_offline.config.paths import table_path
 from ice_offline.dataset._lookup import make_dataset
 
 
-TASKS = [
-    ("hopper_d4rl_medium", "scas_model", 500_000, {}),
-    ("hopper_d4rl_expert", "scas_model", 500_000, {}),
-    ("hopper_d4rl_hybrid", "scas_model", 500_000, {}),
-    ("hopper_replay_medium", "scas_model", 500_000, {}),
-    ("hopper_replay_expert", "scas_model", 500_000, {}),
-    ("walker2d_d4rl_medium", "scas_model", 500_000, {}),
-    ("walker2d_d4rl_expert", "scas_model", 500_000, {}),
-    ("walker2d_d4rl_hybrid", "scas_model", 500_000, {}),
-    ("walker2d_replay_medium", "scas_model", 500_000, {}),
-    ("walker2d_replay_expert", "scas_model", 500_000, {}),
-    ("walker2d_d4rl_medium", "normalization_dynamic", 500_000, {}),
-    ("walker2d_d4rl_expert", "normalization_dynamic", 500_000, {}),
-    ("walker2d_d4rl_hybrid", "normalization_dynamic", 500_000, {}),
-    ("walker2d_replay_medium", "normalization_dynamic", 500_000, {}),
-    ("walker2d_replay_expert", "normalization_dynamic", 500_000, {}),
-    ("halfcheetah_d4rl_medium", "scas_model", 500_000, {}),
-    ("halfcheetah_d4rl_expert", "scas_model", 500_000, {}),
-    ("halfcheetah_d4rl_hybrid", "scas_model", 500_000, {}),
-    ("halfcheetah_replay_medium", "scas_model", 500_000, {}),
-    ("halfcheetah_replay_expert", "scas_model", 500_000, {}),
-]
+EXPERIMENT_TRAIN = "base_train"
+TRAINING_STEP = 500_000
+DEVICE = "cpu"
+STD_EPSILON = 1e-6
+DENOMINATOR_EPSILON = 1e-12
 
-DEFAULT_OUTPUT = table_path("dynamic", "relative_threshold.csv")
-TARGET_COVERAGE = 90.0
-OUTLIER_RATIO = 0.0
-EPSILON = 1e-6
+DEFAULT_OUTPUT = table_path("dynamic", "global_standardized_transition_relative_rmse.csv")
+DEFAULT_TABLE_OUTPUT = table_path("dynamic", "env_dataset_type.csv")
+
+DATASET_TYPES = (
+    ("d4rl_medium", "medium"),
+    ("d4rl_expert", "expert"),
+    ("d4rl_hybrid", "hybrid"),
+    ("replay_medium", "medium_replay"),
+    ("replay_expert", "expert_replay"),
+)
+
+TABLE_ENVIRONMENTS = (
+    "Hopper",
+    "Walker2D",
+    "HalfCheetah",
+    "Walker2D(ORIGIN)",
+)
+
+TASKS = [
+    # format: (dataset_id, model_name, training_step, config)
+    # Walker2D uses normalization_dynamic by default.
+    *[
+        (
+            f"hopper_{dataset_key}",
+            "scas_model",
+            TRAINING_STEP,
+            {"environment": "Hopper", "dataset": dataset_name},
+        )
+        for dataset_key, dataset_name in DATASET_TYPES
+    ],
+    *[
+        (
+            f"walker2d_{dataset_key}",
+            "normalization_dynamic",
+            TRAINING_STEP,
+            {"environment": "Walker2D", "dataset": dataset_name},
+        )
+        for dataset_key, dataset_name in DATASET_TYPES
+    ],
+    *[
+        (
+            f"halfcheetah_{dataset_key}",
+            "scas_model",
+            TRAINING_STEP,
+            {"environment": "HalfCheetah", "dataset": dataset_name},
+        )
+        for dataset_key, dataset_name in DATASET_TYPES
+    ],
+    *[
+        (
+            f"walker2d_{dataset_key}",
+            "scas_model",
+            TRAINING_STEP,
+            {"environment": "Walker2D(ORIGIN)", "dataset": dataset_name},
+        )
+        for dataset_key, dataset_name in DATASET_TYPES
+    ],
+]
 
 
 @dataclass
 class DynamicResult:
-    train_dataset_id: str
-    validation_dataset_id: str
-    model_id: str
-    step: int
-    status: str
-    raw_validation_sample_count: int
-    validation_sample_count: int
-    outlier_count: int
-    outlier_ratio: float
-    target_coverage: float
-    actual_coverage: float | None
-    relative_error_threshold: float | None
-    percentage_error_threshold: float | None
-    relative_error_mean: float | None
-    relative_error_median: float | None
-    relative_error_p90: float | None
-    relative_error_p95: float | None
-    relative_error_p99: float | None
-    d_true_under_epsilon_count: int
-    raw_d_true_under_epsilon_count: int
-    true_d_pr50: float | None
-    true_d_mean: float | None
-    pred_d_pr50: float | None
-    pred_d_mean: float | None
-    validation_independent: bool
+    environment: str
+    dataset: str
+    model_name: str
+    training_step: int
+    sample_count: int
+    state_dimension: int
+    global_standardized_transition_relative_rmse: float
+    percentage_relative_error: float
 
 
-def _nearest_rank(values: torch.Tensor, coverage: float) -> float:
-    sorted_values = values.sort().values
-    value_count = int(sorted_values.shape[0])
-    rank = math.ceil((coverage / 100.0) * value_count)
-    rank = max(1, min(rank, value_count))
-    return float(sorted_values[rank - 1].item())
+def _task_parts(task: tuple) -> tuple[str, str, int, dict[str, object]]:
+    dataset_id, model_name, training_step, config = task
+    return dataset_id, model_name, training_step, config
 
 
-def _score_dynamic(
-    train_dataset_id: str,
-    validation_dataset_id: str,
+def _default_environment(dataset_id: str) -> str:
+    environment_id = dataset_id.split("_", 1)[0]
+    names = {
+        "hopper": "Hopper",
+        "walker2d": "Walker2D",
+        "halfcheetah": "HalfCheetah",
+    }
+    return names[environment_id]
+
+
+def _default_dataset_type(dataset_id: str) -> str:
+    for dataset_key, dataset_name in DATASET_TYPES:
+        if dataset_id.endswith(dataset_key):
+            return dataset_name
+    return dataset_id
+
+
+def _format_float(value: float) -> str:
+    return f"{value:.8g}"
+
+
+def _model_checkpoint(experiment_id: str, model_name: str, dataset_id: str, training_step: int) -> Path:
+    task_id = experiment_task_id(experiment_id, model_name, dataset_id)
+    return model_path(task_id, training_step)
+
+
+def _verify_metric(
+    prediction_squared_sum: float,
+    transition_squared_sum: float,
+    value_count: int,
+    metric: float,
+    percentage: float,
+    denominator_epsilon: float,
+) -> None:
+    if not math.isfinite(prediction_squared_sum):
+        raise ValueError("prediction_squared_sum is not finite")
+    if not math.isfinite(transition_squared_sum):
+        raise ValueError("transition_squared_sum is not finite")
+    if transition_squared_sum <= 0.0:
+        raise ValueError("transition_squared_sum must be positive")
+    if not math.isfinite(metric):
+        raise ValueError("global_standardized_transition_relative_rmse is not finite")
+    if not math.isfinite(percentage):
+        raise ValueError("percentage_relative_error is not finite")
+    prediction_rmse = math.sqrt(prediction_squared_sum / value_count)
+    transition_rmse = math.sqrt(transition_squared_sum / value_count)
+    ratio_metric = prediction_rmse / transition_rmse
+    if not math.isclose(metric, ratio_metric, rel_tol=1e-6, abs_tol=1e-8):
+        raise ValueError("sum-of-squares metric and RMSE-ratio metric differ")
+    if not math.isclose(percentage, metric * 100.0, rel_tol=1e-12, abs_tol=1e-12):
+        raise ValueError("percentage_relative_error must equal metric * 100")
+    if denominator_epsilon >= transition_squared_sum:
+        raise ValueError("denominator_epsilon materially changes the transition denominator")
+
+
+def _evaluate_task(
+    dataset_id: str,
+    model_name: str,
+    training_step: int,
+    config: dict[str, object],
     experiment_id: str,
-    model_id: str,
-    step: int,
     device: str,
-    batch_size: int,
-    target_coverage: float,
-    outlier_ratio: float,
-    epsilon: float,
-) -> DynamicResult:
-    task_id = experiment_task_id(experiment_id, model_id, train_dataset_id)
-    path = model_path(task_id, step)
+    std_epsilon: float,
+    denominator_epsilon: float,
+) -> DynamicResult | None:
+    path = _model_checkpoint(experiment_id, model_name, dataset_id, training_step)
     if not path.exists():
-        return DynamicResult(
-            train_dataset_id=train_dataset_id,
-            validation_dataset_id=validation_dataset_id,
-            model_id=model_id,
-            step=step,
-            status="missing_model",
-            raw_validation_sample_count=0,
-            validation_sample_count=0,
-            outlier_count=0,
-            outlier_ratio=outlier_ratio,
-            target_coverage=target_coverage,
-            actual_coverage=None,
-            relative_error_threshold=None,
-            percentage_error_threshold=None,
-            relative_error_mean=None,
-            relative_error_median=None,
-            relative_error_p90=None,
-            relative_error_p95=None,
-            relative_error_p99=None,
-            d_true_under_epsilon_count=0,
-            raw_d_true_under_epsilon_count=0,
-            true_d_pr50=None,
-            true_d_mean=None,
-            pred_d_pr50=None,
-            pred_d_mean=None,
-            validation_independent=validation_dataset_id != train_dataset_id,
-        )
+        print(f"missing_model: {path}", file=sys.stderr)
+        return None
 
-    train_dataset = make_dataset(train_dataset_id, device=device)
-    validation_dataset = make_dataset(validation_dataset_id, device=device)
-    model = make_model(model_id, train_dataset, device=device)
+    dataset = make_dataset(dataset_id, device=device)
+    model = make_model(model_name, dataset, device=device)
     model.load(path)
     model.prepare()
 
-    train_buffer = train_dataset.buffer
-    validation_buffer = validation_dataset.buffer
-    state_std = train_buffer.observations.std(dim=0, unbiased=False).clamp_min(epsilon)
-
-    buffer = validation_buffer
-    count = int(buffer.observations.shape[0])
-    true_d_parts: list[torch.Tensor] = []
-    pred_d_parts: list[torch.Tensor] = []
-    relative_error_parts: list[torch.Tensor] = []
-    d_true_under_epsilon_parts: list[torch.Tensor] = []
+    buffer = dataset.buffer
+    observations = buffer.observations
+    actions = buffer.actions
+    next_observations = buffer.next_observations
+    sample_count = int(observations.shape[0])
+    state_dimension = int(observations.shape[1])
+    safe_state_std = observations.std(dim=0, unbiased=False).clamp_min(std_epsilon)
 
     with torch.inference_mode():
-        for start in range(0, count, batch_size):
-            end = min(start + batch_size, count)
-            observations = buffer.observations[start:end]
-            actions = buffer.actions[start:end]
-            next_observations = buffer.next_observations[start:end]
-            prediction = model.forward(observations, actions)
-            error = prediction - next_observations
-            true_d = ((next_observations - observations) / state_std).square().mean(dim=1).sqrt()
-            pred_d = (error / state_std).square().mean(dim=1).sqrt()
-            relative_error = pred_d / true_d.clamp_min(epsilon)
-            d_true_under_epsilon = true_d < epsilon
-            true_d_parts.append(true_d.detach().cpu())
-            pred_d_parts.append(pred_d.detach().cpu())
-            relative_error_parts.append(relative_error.detach().cpu())
-            d_true_under_epsilon_parts.append(d_true_under_epsilon.detach().cpu())
+        predicted_next_state = model.forward(observations, actions)
+        standardized_prediction_error = (predicted_next_state - next_observations) / safe_state_std
+        standardized_true_transition = (next_observations - observations) / safe_state_std
+        prediction_squared_sum = float(standardized_prediction_error.double().square().sum().item())
+        transition_squared_sum = float(standardized_true_transition.double().square().sum().item())
 
-    true_d_values = torch.cat(true_d_parts)
-    pred_d_values = torch.cat(pred_d_parts)
-    relative_error_values = torch.cat(relative_error_parts)
-    d_true_under_epsilon_values = torch.cat(d_true_under_epsilon_parts)
-
-    raw_count = int(relative_error_values.shape[0])
-    raw_d_true_under_epsilon_count = int(d_true_under_epsilon_values.sum().item())
-    keep_count = int(raw_count * (1.0 - outlier_ratio))
-    indices = torch.argsort(relative_error_values)[:keep_count]
-    true_d_values = true_d_values[indices]
-    pred_d_values = pred_d_values[indices]
-    relative_error_values = relative_error_values[indices]
-    d_true_under_epsilon_values = d_true_under_epsilon_values[indices]
-
-    threshold = _nearest_rank(relative_error_values, target_coverage)
-    success = int((relative_error_values <= threshold).sum().item())
-    count = int(relative_error_values.shape[0])
-    return DynamicResult(
-        train_dataset_id=train_dataset_id,
-        validation_dataset_id=validation_dataset_id,
-        model_id=model_id,
-        step=step,
-        status="ok",
-        raw_validation_sample_count=raw_count,
-        validation_sample_count=count,
-        outlier_count=raw_count - count,
-        outlier_ratio=outlier_ratio,
-        target_coverage=target_coverage,
-        actual_coverage=100.0 * success / count,
-        relative_error_threshold=threshold,
-        percentage_error_threshold=threshold * 100.0,
-        relative_error_mean=float(relative_error_values.mean().item()),
-        relative_error_median=_nearest_rank(relative_error_values, 50.0),
-        relative_error_p90=_nearest_rank(relative_error_values, 90.0),
-        relative_error_p95=_nearest_rank(relative_error_values, 95.0),
-        relative_error_p99=_nearest_rank(relative_error_values, 99.0),
-        d_true_under_epsilon_count=int(d_true_under_epsilon_values.sum().item()),
-        raw_d_true_under_epsilon_count=raw_d_true_under_epsilon_count,
-        true_d_pr50=_nearest_rank(true_d_values, 50.0),
-        true_d_mean=float(true_d_values.mean().item()),
-        pred_d_pr50=_nearest_rank(pred_d_values, 50.0),
-        pred_d_mean=float(pred_d_values.mean().item()),
-        validation_independent=validation_dataset_id != train_dataset_id,
+    value_count = sample_count * state_dimension
+    metric = math.sqrt(prediction_squared_sum / max(transition_squared_sum, denominator_epsilon))
+    percentage = metric * 100.0
+    _verify_metric(
+        prediction_squared_sum=prediction_squared_sum,
+        transition_squared_sum=transition_squared_sum,
+        value_count=value_count,
+        metric=metric,
+        percentage=percentage,
+        denominator_epsilon=denominator_epsilon,
     )
 
-
-def _target_coverage(config: dict[str, object], target_coverage: float) -> float:
-    if "target_coverage" in config:
-        return float(config["target_coverage"])
-    if "target_success_rate" in config:
-        return float(config["target_success_rate"]) * 100.0
-    return target_coverage
-
-
-def _outlier_ratio(config: dict[str, object], outlier_ratio: float) -> float:
-    if "outlier_ratio" in config:
-        return float(config["outlier_ratio"])
-    return outlier_ratio
-
-
-def _task_parts(task):
-    if len(task) == 5:
-        train_dataset_id, validation_dataset_id, model_id, step, config = task
-        return train_dataset_id, validation_dataset_id, model_id, step, config
-    dataset_id, model_id, step, config = task
-    validation_dataset_id = str(config.get("validation_dataset_id", config.get("validation_dataset", dataset_id)))
-    return dataset_id, validation_dataset_id, model_id, step, config
+    return DynamicResult(
+        environment=str(config.get("environment", _default_environment(dataset_id))),
+        dataset=str(config.get("dataset", _default_dataset_type(dataset_id))),
+        model_name=model_name,
+        training_step=training_step,
+        sample_count=sample_count,
+        state_dimension=state_dimension,
+        global_standardized_transition_relative_rmse=metric,
+        percentage_relative_error=percentage,
+    )
 
 
 def _write_results(path: Path, results: list[DynamicResult]) -> None:
@@ -230,129 +216,116 @@ def _write_results(path: Path, results: list[DynamicResult]) -> None:
     with path.open("w", encoding="utf-8", newline="") as file:
         writer = csv.writer(file)
         writer.writerow([
-            "train_dataset",
-            "validation_dataset",
-            "model",
-            "step",
-            "status",
-            "raw_validation_sample_count",
-            "validation_sample_count",
-            "outlier_count",
-            "outlier_ratio",
-            "target_coverage",
-            "relative_error_threshold",
-            "percentage_error_threshold",
-            "actual_coverage",
-            "relative_error_mean",
-            "relative_error_median",
-            "relative_error_p90",
-            "relative_error_p95",
-            "relative_error_p99",
-            "d_true_under_epsilon_count",
-            "raw_d_true_under_epsilon_count",
-            "true_d_pr50",
-            "true_d_mean",
-            "pred_d_pr50",
-            "pred_d_mean",
-            "validation_independent",
+            "environment",
+            "dataset",
+            "model_name",
+            "training_step",
+            "sample_count",
+            "state_dimension",
+            "global_standardized_transition_relative_rmse",
+            "percentage_relative_error",
         ])
         for result in results:
             writer.writerow([
-                result.train_dataset_id,
-                result.validation_dataset_id,
-                result.model_id,
-                result.step,
-                result.status,
-                result.raw_validation_sample_count,
-                result.validation_sample_count,
-                result.outlier_count,
-                _cell(result.outlier_ratio),
-                _cell(result.target_coverage),
-                _cell(result.relative_error_threshold),
-                _cell(result.percentage_error_threshold),
-                _cell(result.actual_coverage),
-                _cell(result.relative_error_mean),
-                _cell(result.relative_error_median),
-                _cell(result.relative_error_p90),
-                _cell(result.relative_error_p95),
-                _cell(result.relative_error_p99),
-                result.d_true_under_epsilon_count,
-                result.raw_d_true_under_epsilon_count,
-                _cell(result.true_d_pr50),
-                _cell(result.true_d_mean),
-                _cell(result.pred_d_pr50),
-                _cell(result.pred_d_mean),
-                result.validation_independent,
+                result.environment,
+                result.dataset,
+                result.model_name,
+                result.training_step,
+                result.sample_count,
+                result.state_dimension,
+                _format_float(result.global_standardized_transition_relative_rmse),
+                f"{result.percentage_relative_error:.2f}",
             ])
     print(f"saved: {path}")
 
 
-def _cell(value: float | None) -> str:
-    if value is None:
-        return ""
-    return f"{value:.8g}"
+def _write_table(path: Path, results: list[DynamicResult]) -> None:
+    values = {
+        (result.environment, result.dataset): result.percentage_relative_error
+        for result in results
+    }
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(["environment", *[dataset_name for _, dataset_name in DATASET_TYPES]])
+        for environment in TABLE_ENVIRONMENTS:
+            writer.writerow([
+                environment,
+                *[
+                    "" if (environment, dataset_name) not in values else f"{values[(environment, dataset_name)]:.2f}"
+                    for _, dataset_name in DATASET_TYPES
+                ],
+            ])
+    print(f"saved: {path}")
 
 
 def _print_results(results: list[DynamicResult]) -> None:
-    print("train_dataset,validation_dataset,model,step,status,samples,target_coverage,percentage_error_threshold,actual_coverage,mean_relative_error,median_relative_error,relative_error_p90,relative_error_p95,relative_error_p99,d_true_under_epsilon_count,validation_independent")
+    print("environment,dataset,model_name,training_step,sample_count,state_dimension,global_standardized_transition_relative_rmse,percentage_relative_error")
     for result in results:
         print(
             ",".join([
-                result.train_dataset_id,
-                result.validation_dataset_id,
-                result.model_id,
-                str(result.step),
-                result.status,
-                str(result.validation_sample_count),
-                _cell(result.target_coverage),
-                _cell(result.percentage_error_threshold),
-                _cell(result.actual_coverage),
-                _cell(result.relative_error_mean),
-                _cell(result.relative_error_median),
-                _cell(result.relative_error_p90),
-                _cell(result.relative_error_p95),
-                _cell(result.relative_error_p99),
-                str(result.d_true_under_epsilon_count),
-                str(result.validation_independent),
+                result.environment,
+                result.dataset,
+                result.model_name,
+                str(result.training_step),
+                str(result.sample_count),
+                str(result.state_dimension),
+                _format_float(result.global_standardized_transition_relative_rmse),
+                f"{result.percentage_relative_error:.2f}",
             ])
         )
 
 
-def main(default_output: Path = DEFAULT_OUTPUT, default_outlier_ratio: float = OUTLIER_RATIO) -> None:
+def _print_tasks(experiment_id: str) -> None:
+    for task in TASKS:
+        dataset_id, model_name, training_step, config = _task_parts(task)
+        path = _model_checkpoint(experiment_id, model_name, dataset_id, training_step)
+        print(
+            ",".join([
+                str(config.get("environment", _default_environment(dataset_id))),
+                str(config.get("dataset", _default_dataset_type(dataset_id))),
+                dataset_id,
+                model_name,
+                str(training_step),
+                "ok" if path.exists() else "missing_model",
+            ])
+        )
+
+
+def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--experiment", default="base_train")
-    parser.add_argument("--target-coverage", type=float, default=TARGET_COVERAGE)
-    parser.add_argument("--target-success-rate", type=float, default=None)
-    parser.add_argument("--outlier-ratio", type=float, default=default_outlier_ratio)
-    parser.add_argument("--epsilon", type=float, default=EPSILON)
-    parser.add_argument("--batch-size", type=int, default=8192)
-    parser.add_argument("--device", default="cpu")
-    parser.add_argument("--output", type=Path, default=default_output)
+    parser.add_argument("--experiment", default=EXPERIMENT_TRAIN)
+    parser.add_argument("--device", default=DEVICE)
+    parser.add_argument("--std-epsilon", type=float, default=STD_EPSILON)
+    parser.add_argument("--denominator-epsilon", type=float, default=DENOMINATOR_EPSILON)
+    parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument("--table-output", type=Path, default=DEFAULT_TABLE_OUTPUT)
+    parser.add_argument("--list", action="store_true")
     args = parser.parse_args()
-    target_coverage = args.target_coverage
-    if args.target_success_rate is not None:
-        target_coverage = args.target_success_rate * 100.0
+
+    if args.list:
+        _print_tasks(args.experiment)
+        return
 
     results: list[DynamicResult] = []
     for task in TASKS:
-        train_dataset_id, validation_dataset_id, model_id, step, config = _task_parts(task)
-        results.append(
-            _score_dynamic(
-                train_dataset_id=train_dataset_id,
-                validation_dataset_id=validation_dataset_id,
-                experiment_id=str(config.get("experiment", args.experiment)),
-                model_id=model_id,
-                step=step,
-                device=args.device,
-                batch_size=args.batch_size,
-                target_coverage=_target_coverage(config, target_coverage),
-                outlier_ratio=_outlier_ratio(config, args.outlier_ratio),
-                epsilon=float(config.get("epsilon", args.epsilon)),
-            )
+        dataset_id, model_name, training_step, config = _task_parts(task)
+        result = _evaluate_task(
+            dataset_id=dataset_id,
+            model_name=model_name,
+            training_step=training_step,
+            config=config,
+            experiment_id=args.experiment,
+            device=args.device,
+            std_epsilon=args.std_epsilon,
+            denominator_epsilon=args.denominator_epsilon,
         )
+        if result is not None:
+            results.append(result)
 
     _print_results(results)
     _write_results(args.output, results)
+    _write_table(args.table_output, results)
 
 
 if __name__ == "__main__":

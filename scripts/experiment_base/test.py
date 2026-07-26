@@ -36,7 +36,7 @@ AGENTS = [
     # ("td3bc_n", None, 100_000),
     # ("iql", None, 200_000),
     # ("cql", None, 500_000),
-    # ("aspl", None, 500_000),
+    # ("aspl_c", None, 500_000),
     # ("scas_n", 100_000, 500_000),
     # ("scaspl_pn", 500_000, 500_000),
     # ("scc_n", 100_000, 500_000),
@@ -79,11 +79,12 @@ def test(
     agent_id: str,
     model_step: int | None,
     start_step: int,
+    steps: list[int] | None = None,
 ) -> str:
     test_id = experiment_task_id(EXPERIMENT, agent_id, dataset_id)
     train_id = experiment_task_id(EXPERIMENT_TRAIN, agent_id, dataset_id)
     model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
-    steps = _steps(start_step)
+    steps = steps or _steps(start_step)
 
     dataset = make_dataset(dataset_id, device=DEVICE)
     agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_step, model_train_id=model_train_id)

@@ -1,9 +1,12 @@
 import argparse
 import csv
 import importlib.util
+import os
 import sys
 from pathlib import Path
 from types import ModuleType
+
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 from ice_offline.config.paths import model_path
 
@@ -42,6 +45,7 @@ RUN_SCRIPTS = {
 TASKS = [
     # format: (run_name, task_steps, dataset_id, agent_id, agent_kwargs)
     # train task_steps: [model_start, agent_start, train_steps]
+    ("stability_train", [100_000, 0, 200_000], "walker2d_replay_medium", "scas_gp", {}),
 ]
 
 DEFAULT_RUNS = tuple(dict.fromkeys(task[0] for task in TASKS))

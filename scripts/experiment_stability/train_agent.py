@@ -15,11 +15,11 @@ EXPERIMENT_TRAIN = "base_train"
 DEVICE = "cuda"
 
 DATASETS = [
-    # "walker2d_d4rl_medium",
-    # "walker2d_d4rl_hybrid",
-    # "walker2d_d4rl_expert",
-    # "walker2d_replay_medium",
-    # "walker2d_replay_expert",
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_d4rl_expert",
+    "walker2d_replay_medium",
+    "walker2d_replay_expert",
 ]
 
 AGENTS = [
@@ -48,9 +48,9 @@ AGENTS = [
 ]
 
 TASKS = [
-    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pnc", {"weight_pi": 0.5, "weight_correction": 0.001, "weight_punish": 1, "weight_compensate": 5}),
+    ([500_000, 0, 200_000], "walker2d_d4rl_medium", "scas_n", {"weight_correction": 0.002}),
     # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pnc", {"weight_pi": 0.5, "weight_correction": 0.001, "weight_punish": 1, "weight_compensate": 5}),
-    ([500_000, 200_000, 500_000], "walker2d_d4rl_expert", "scaspl_pn", {}),
+    # ([500_000, 200_000, 500_000], "walker2d_d4rl_expert", "scaspl_pn", {}),
     # ([500_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pn", {"weight_pi": 5, "weight_correction": 0.001, "weight_punish": 0.5, "lambda_td": 0.5}),
     # ([500_000, 0, 500_000], "walker2d_replay_medium", "scaspl_pn", {"weight_pi": 0.5, "weight_correction": 0.001, "weight_punish": 1, "weight_compensate": 1}),
     # ([500_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pn", {"weight_pi": 0.5, "weight_correction": 0.001, "weight_punish": 2.5}),
