@@ -11,6 +11,7 @@ from view import save_tables
 
 EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
+DEVICE = "cpu"
 
 DATASETS = [
     # "hopper_d4rl_medium",
@@ -35,7 +36,7 @@ AGENTS = [
     # ("td3bc_n", None, 100_000),
     # ("iql", None, 200_000),
     # ("cql", None, 500_000),
-    # ("aspl_c", None, 500_000),
+    # ("aspl", None, 500_000),
     # ("scas_gp", 100_000, 500_000),
     # ("scaspl_n", 100_000, 500_000),
     # ("scc_n", 100_000, 500_000),
@@ -84,8 +85,8 @@ def test(
     model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     steps = _steps(start_step)
 
-    dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step, model_train_id=model_train_id)
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_step, model_train_id=model_train_id)
     path = test_eval(
         test_id,
         train_id,

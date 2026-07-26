@@ -7,6 +7,7 @@ from ice_offline.run.train import train_model
 from plot import plot_train
 
 EXPERIMENT_TRAIN = "experience_hybrid_random_train"
+DEVICE = "cuda"
 
 DATASETS = [
     "walker2d_random_expert_1",
@@ -26,8 +27,8 @@ TASKS = []
 def train(task_steps: tuple[int, int], dataset_id: str, model_id: str) -> str:
     id = experiment_task_id(EXPERIMENT_TRAIN, model_id, dataset_id)
     start, steps = task_steps
-    dataset = make_dataset(dataset_id, device="cuda")
-    model = make_model(model_id, dataset, device="cuda")
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    model = make_model(model_id, dataset, device=DEVICE)
     if start > 0:
         model.load(model_path(id, start))
     path = train_model(

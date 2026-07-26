@@ -40,6 +40,7 @@ COUNT = 20
 EVALS = 100
 INTERVAL = 1_000
 EXPERIMENT = "in_dataset"
+DEVICE = "cpu"
 
 
 def _steps(start_step: int) -> list[int]:
@@ -117,13 +118,13 @@ def test(
     model_step: int | None,
     agent_steps: list[int],
 ) -> Path:
-    dataset = make_dataset(dataset_id, device="cuda")
+    dataset = make_dataset(dataset_id, device=DEVICE)
     eval_path = eval_data_path(EXPERIMENT, task_id)
     eval_col = EvalCollector(dataset.make_env())
     reset_callback = _make_reset_callback(dataset)
     try:
         for agent_step in agent_steps:
-            agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step)
+            agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_step)
             agent.load(task_id, agent_step)
             print(f"experiment={EXPERIMENT}, task={task_id}, agent_step={agent_step}")
             for index in range(EVALS):

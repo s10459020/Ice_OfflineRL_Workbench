@@ -50,7 +50,7 @@ AGENTS = [
     # ("cql_threshold_n5", None, 500_000),
     # ("cql_threshold_5", None, 500_000),
     # ("cql_gp", None, 500_000),
-    # ("aspl", None, 200_000),
+    # ("aspl", None, 500_000),
     # ("aspl_r", None, 200_000),
     # ("aspl_gamma_90", None, 200_000),
     # ("aspl_gamma_95", None, 200_000),

@@ -12,11 +12,12 @@ from plot import plot_train
 
 EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
+DEVICE = "cuda"
 
 DATASETS = [
     # "walker2d_d4rl_medium",
     # "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
+    # "walker2d_d4rl_expert",
     # "walker2d_replay_medium",
     # "walker2d_replay_expert",
 ]
@@ -31,8 +32,8 @@ AGENTS = [
     # ([None, 0, 100_000], "td3bc_gpn"),
     # ([None, 0, 500_000], "cql"),
     # ([None, 0, 500_000], "cql_gp"),
-    # ([None, 0, 200_000], "aspl"),
-    # ([None, 0, 200_000], "aspl_r"),
+    # ([None, 0, 500_000], "aspl"),
+    # ([None, 0, 200_000], "aspl_c"),
     # ([None, 0, 500_000], "aspl_gp"),
     # ([100_000, 0, 500_000], "scas"),
     # ([500_000, 0, 200_000], "scas_n"),
@@ -47,7 +48,9 @@ AGENTS = [
 ]
 
 TASKS = [
-    ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_p", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_p", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
+    ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_pi", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
+    ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_corr", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pc", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5, "weight_compensate": 0.005}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_pi", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pq_corr", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5}),
@@ -62,8 +65,8 @@ def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kw
     model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     model_start, agent_start, steps = task_steps
 
-    dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     if agent_start > 0:
         agent.load(model_path(id, agent_start))
 

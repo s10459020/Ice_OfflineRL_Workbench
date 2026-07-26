@@ -5,7 +5,7 @@ from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.train import train_model
 
 EXPERIMENT_TRAIN = "base_train"
-DEVICE = "cpu"
+DEVICE = "cuda"
 
 DATASETS = [
     "walker2d_d4rl_medium",
@@ -33,7 +33,7 @@ AGENTS = [
     # ("cql_threshold_n5", None, 500_000),
     # ("cql_threshold_5", None, 500_000),
     # ("cql_gp", None, 500_000),
-    # ("aspl", None, 200_000),
+    # ("aspl", None, 500_000),
     # ("aspl_r", None, 200_000),
     # ("aspl_gamma_90", None, 200_000),
     # ("aspl_gamma_95", None, 200_000),

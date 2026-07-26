@@ -6,6 +6,10 @@ from types import ModuleType
 
 
 SCRIPT_ROOT = Path(__file__).resolve().parent
+AGENT_ROOT = SCRIPT_ROOT.parent / "source" / "ice_offline" / "agent"
+INVALIDATED_AGENTS = {
+    "aspl",
+}
 
 TRAIN_SCRIPTS = {
     "base_train": {
@@ -38,40 +42,51 @@ TASKS = [
     # format: (run_name, task_steps, dataset_id, agent_id, agent_kwargs)
     # train task_steps: [model_start, agent_start, train_steps]
     # train_min task_steps: [model_start, agent_start]
-    ("base_train", [100_000, 0, 500_000], "halfcheetah_d4rl_expert", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "halfcheetah_d4rl_hybrid", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "halfcheetah_d4rl_medium", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "halfcheetah_replay_expert", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "halfcheetah_replay_medium", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "hopper_d4rl_expert", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "hopper_d4rl_hybrid", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "hopper_replay_expert", "scas_n", {}),
-    ("base_train", [100_000, 0, 500_000], "hopper_replay_medium", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_expert", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_hybrid", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "halfcheetah_d4rl_medium", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "halfcheetah_replay_expert", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "halfcheetah_replay_medium", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "hopper_d4rl_expert", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "hopper_d4rl_hybrid", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "hopper_d4rl_medium", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "hopper_replay_expert", "scas_n", {}),
-    ("base_train_min", [100_000, 500_000], "hopper_replay_medium", "scas_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_1", "scas_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_3", "scas_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_5", "scas_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_7", "scas_n", {}),
-    ("hybrid_random_train", [500_000, 0, 500_000], "walker2d_random_expert_9", "scas_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_1", "scas_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_1", "scc_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_3", "scas_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_3", "scc_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_5", "scas_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_5", "scc_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_7", "scas_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_7", "scc_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_9", "scas_n", {}),
-    ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_9", "scc_n", {}),
+    ("base_train", [None, 0, 500_000], "hopper_d4rl_medium", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "hopper_d4rl_expert", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "hopper_d4rl_hybrid", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "hopper_replay_medium", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "hopper_replay_expert", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "walker2d_d4rl_medium", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "walker2d_d4rl_expert", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "walker2d_d4rl_hybrid", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "walker2d_replay_medium", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "walker2d_replay_expert", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "halfcheetah_d4rl_medium", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "halfcheetah_d4rl_expert", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "halfcheetah_d4rl_hybrid", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "halfcheetah_replay_medium", "aspl", {}),
+    ("base_train", [None, 0, 500_000], "halfcheetah_replay_expert", "aspl", {}),
+    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_1", "aspl", {}),
+    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_3", "aspl", {}),
+    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_5", "aspl", {}),
+    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_7", "aspl", {}),
+    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_9", "aspl", {}),
+    ("base_train_min", [None, 500_000], "hopper_d4rl_medium", "aspl", {}),
+    ("base_train_min", [None, 500_000], "hopper_d4rl_expert", "aspl", {}),
+    ("base_train_min", [None, 500_000], "hopper_d4rl_hybrid", "aspl", {}),
+    ("base_train_min", [None, 500_000], "hopper_replay_medium", "aspl", {}),
+    ("base_train_min", [None, 500_000], "hopper_replay_expert", "aspl", {}),
+    ("base_train_min", [None, 500_000], "walker2d_d4rl_medium", "aspl", {}),
+    ("base_train_min", [None, 500_000], "walker2d_d4rl_expert", "aspl", {}),
+    ("base_train_min", [None, 500_000], "walker2d_d4rl_hybrid", "aspl", {}),
+    ("base_train_min", [None, 500_000], "walker2d_replay_medium", "aspl", {}),
+    ("base_train_min", [None, 500_000], "walker2d_replay_expert", "aspl", {}),
+    ("base_train_min", [None, 500_000], "halfcheetah_d4rl_medium", "aspl", {}),
+    ("base_train_min", [None, 500_000], "halfcheetah_d4rl_expert", "aspl", {}),
+    ("base_train_min", [None, 500_000], "halfcheetah_d4rl_hybrid", "aspl", {}),
+    ("base_train_min", [None, 500_000], "halfcheetah_replay_medium", "aspl", {}),
+    ("base_train_min", [None, 500_000], "halfcheetah_replay_expert", "aspl", {}),
+    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_1", "aspl", {}),
+    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_3", "aspl", {}),
+    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_5", "aspl", {}),
+    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_7", "aspl", {}),
+    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_9", "aspl", {}),
+    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_1", "scc_n", {}),
+    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_3", "scc_n", {}),
+    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_5", "scc_n", {}),
+    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_7", "scc_n", {}),
+    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_9", "scc_n", {}),
 ]
 
 DEFAULT_RUNS = tuple(TRAIN_SCRIPTS.keys())
@@ -121,6 +136,23 @@ def _task_id(train_module: ModuleType, agent_id: str, dataset_id: str) -> str:
     return train_module.experiment_task_id(train_module.EXPERIMENT_TRAIN, agent_id, dataset_id)
 
 
+def _agent_path(agent_id: str) -> Path:
+    return AGENT_ROOT / f"{agent_id}.py"
+
+
+def _is_stale(agent_id: str, path: Path) -> bool:
+    source_path = _agent_path(agent_id)
+    if agent_id not in INVALIDATED_AGENTS:
+        return False
+    if not source_path.exists() or not path.exists():
+        return False
+    return path.stat().st_mtime < source_path.stat().st_mtime
+
+
+def _model_ready(agent_id: str, path: Path) -> bool:
+    return path.exists() and not _is_stale(agent_id, path)
+
+
 def _model_id(train_module: ModuleType, dataset_id: str) -> str:
     return train_module.experiment_task_id(train_module.EXPERIMENT_TRAIN, "scas_model", dataset_id)
 
@@ -160,22 +192,29 @@ def _task_status(task: tuple[str, list[int | None], str, str, dict]) -> str:
 
     if kind == "train":
         train_steps = task_steps[2]
-        if agent_start > 0 and not train_module.model_path(task_id, agent_start).exists():
+        if agent_start > 0 and not _model_ready(agent_id, train_module.model_path(task_id, agent_start)):
             return "blocked:agent"
-        if train_module.model_path(task_id, train_steps).exists():
+        final_path = train_module.model_path(task_id, train_steps)
+        if final_path.exists() and _is_stale(agent_id, final_path):
+            return "stale"
+        if final_path.exists():
             return "ok"
-        steps = [step for step in _checkpoint_steps(train_module, task_id) if step <= train_steps]
+        steps = [
+            step
+            for step in _checkpoint_steps(train_module, task_id)
+            if step <= train_steps and _model_ready(agent_id, train_module.model_path(task_id, step))
+        ]
         if steps:
             return f"partial:{steps[-1]}/{train_steps}"
         return "missing"
 
-    if agent_start > 0 and not train_module.model_path(task_id, agent_start).exists():
+    if agent_start > 0 and not _model_ready(agent_id, train_module.model_path(task_id, agent_start)):
         return "blocked:agent"
     required_steps = _train_min_required_steps(agent_start)
     present_steps = [
         step
         for step in required_steps
-        if train_module.model_path(task_id, step).exists()
+        if _model_ready(agent_id, train_module.model_path(task_id, step))
     ]
     if len(present_steps) == len(required_steps):
         return "ok"

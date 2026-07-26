@@ -8,6 +8,7 @@ from plot import plot_train
 
 EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
+DEVICE = "cuda"
 
 DATASETS = [
     # "hopper_d4rl_medium",
@@ -44,8 +45,8 @@ TASKS = [
 def train(task_steps: tuple[int, int], dataset_id: str, model_id: str) -> str:
     id = experiment_task_id(EXPERIMENT_TRAIN, model_id, dataset_id)
     start, steps = task_steps
-    dataset = make_dataset(dataset_id, device="cuda")
-    model = make_model(model_id, dataset, device="cuda")
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    model = make_model(model_id, dataset, device=DEVICE)
     if start > 0:
         model.load(model_path(id, start))
     path = train_model(

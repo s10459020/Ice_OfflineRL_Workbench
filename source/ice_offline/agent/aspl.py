@@ -69,7 +69,7 @@ class AsplCritic(TD3Critic):
         # Q~(s,a~) = Q^(s,a) - c * d(a,a~)
         # c is scaling coefficent
         with torch.no_grad():
-            q_anchor = self.q_min(s, a)
+            q_anchor = self.tq_min(s, a)
             q_avg = self.update_q_avg(q_anchor)
             return q_anchor - q_avg * action_distance  # (N, B, 1)
 

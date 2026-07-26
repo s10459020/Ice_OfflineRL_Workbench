@@ -12,6 +12,7 @@ from plot import plot_train
 
 EXPERIMENT = "experience_hybrid_random"
 EXPERIMENT_TRAIN = "experience_hybrid_random_train"
+DEVICE = "cuda"
 
 DATASETS = [
     "walker2d_random_expert_1",
@@ -26,7 +27,7 @@ AGENTS = [
     ([None, 0, 100_000], "td3bc_n"),
     ([None, 0, 200_000], "iql"),
     ([None, 0, 500_000], "cql"),
-    ([None, 0, 500_000], "aspl_c"),
+    ([None, 0, 500_000], "aspl"),
     # ([500_000, 0, 500_000], "scas_gp"),
     # ([500_000, 0, 500_000], "scaspl_n"),
     # ([500_000, 0, 500_000], "scc_n"),
@@ -48,8 +49,8 @@ def train(task_steps: list[int | None], dataset_id: str, agent_id: str, agent_kw
     model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     model_start, agent_start, steps = task_steps
 
-    dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_start, model_train_id=model_train_id, **agent_kwargs)
     if agent_start > 0:
         agent.load(model_path(id, agent_start))
 

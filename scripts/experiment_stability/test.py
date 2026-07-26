@@ -11,6 +11,7 @@ from view import save_tables
 
 EXPERIMENT = "base"
 EXPERIMENT_TRAIN = "base_train"
+DEVICE = "cpu"
 
 DATASETS = [
     "walker2d_d4rl_medium",
@@ -38,7 +39,7 @@ AGENTS = [
     # ("cql_threshold_n5", None, 500_000),
     # ("cql_threshold_5", None, 500_000),
     # ("cql_gp", None, 500_000),
-    # ("aspl", None, 200_000),
+    # ("aspl", None, 500_000),
     # ("aspl_r", None, 200_000),
     # ("aspl_gamma_90", None, 200_000),
     # ("aspl_gamma_95", None, 200_000),
@@ -123,8 +124,8 @@ def test(
     model_train_id = experiment_task_id(EXPERIMENT_TRAIN, "scas_model", dataset_id)
     steps = _steps(start_step)
 
-    dataset = make_dataset(dataset_id, device="cuda")
-    agent = make_agent(agent_id, dataset, device="cuda", model_step=model_step, model_train_id=model_train_id)
+    dataset = make_dataset(dataset_id, device=DEVICE)
+    agent = make_agent(agent_id, dataset, device=DEVICE, model_step=model_step, model_train_id=model_train_id)
     path = test_eval(
         test_id,
         train_id,

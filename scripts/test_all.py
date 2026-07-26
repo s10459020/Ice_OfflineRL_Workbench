@@ -18,20 +18,20 @@ TEST_SCRIPTS = {
 }
 
 TASKS = [
-    # format: (run_name, dataset_id, agent_id, model_step, agent_step)
-    # aspl/scaspl-series agents are intentionally excluded.
-    ("noise_init", "noise_init_5e-2@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_init", "noise_init_1e-1@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_init", "noise_init_5e-1@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_init", "noise_init_1e0@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_action", "noise_action_5e-2@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_action", "noise_action_1e-1@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_action", "noise_action_5e-1@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_action", "noise_action_1e0@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_state", "noise_state_5e-4@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_state", "noise_state_1e-3@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_state", "noise_state_5e-3@walker2d_replay_medium", "scas_n", 100_000, 500_000),
-    ("noise_state", "noise_state_1e-2@walker2d_replay_medium", "scas_n", 100_000, 500_000),
+    # format: (run_name, dataset_id, agent_id, model_step, agent_step[, steps])
+    # SCASPL-series agents are intentionally excluded.
+    ("noise_init", "noise_init_5e-2@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_init", "noise_init_1e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_init", "noise_init_5e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_init", "noise_init_1e0@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_action", "noise_action_5e-2@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_action", "noise_action_1e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_action", "noise_action_5e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_action", "noise_action_1e0@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_state", "noise_state_5e-4@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_state", "noise_state_1e-3@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_state", "noise_state_5e-3@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    ("noise_state", "noise_state_1e-2@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
 ]
 
 DEFAULT_RUNS = tuple(TEST_SCRIPTS.keys())
@@ -70,16 +70,17 @@ def _test_module(run_name: str) -> ModuleType:
     return LOADED_MODULES[run_name]
 
 
-def _selected_tasks(run_names: tuple[str, ...]) -> list[tuple[str, str, str, int | None, int]]:
+def _selected_tasks(run_names: tuple[str, ...]) -> list[tuple]:
     selected = []
     seen = set()
     for task in TASKS:
         if task[0] not in run_names:
             continue
-        if task in seen:
+        task_key = tuple(tuple(value) if isinstance(value, list) else value for value in task)
+        if task_key in seen:
             continue
         selected.append(task)
-        seen.add(task)
+        seen.add(task_key)
     return selected
 
 
@@ -92,16 +93,19 @@ def _dataset_spec(test_module: ModuleType, dataset_id: str) -> tuple:
     return (dataset_id,)
 
 
-def _return_status(test_module: ModuleType, dataset_id: str, agent_id: str, start_step: int) -> str:
+def _return_status(test_module: ModuleType, dataset_id: str, agent_id: str, start_step: int, steps: list[int] | None = None) -> str:
     test_id = test_module.experiment_task_id(test_module.EXPERIMENT, agent_id, dataset_id)
     path_returns = test_module.returns_path(test_id)
     path_eval = test_module.eval_path(test_id)
-    expected_last = start_step + test_module.INTERVAL * test_module.COUNT
+    expected_steps = steps or [
+        start_step + test_module.INTERVAL * index
+        for index in range(test_module.COUNT + 1)
+    ]
 
     if not path_returns.exists() or not path_eval.exists():
         return "missing"
 
-    rows = 0
+    actual_steps = []
     first_step = None
     last_step = None
     with path_returns.open("r", encoding="utf-8", newline="") as file:
@@ -110,13 +114,13 @@ def _return_status(test_module: ModuleType, dataset_id: str, agent_id: str, star
         for row in reader:
             if not row:
                 continue
-            rows += 1
             step = int(float(row[0]))
+            actual_steps.append(step)
             if first_step is None:
                 first_step = step
             last_step = step
 
-    if rows >= test_module.COUNT + 1 and first_step == start_step and last_step == expected_last:
+    if all(step in actual_steps for step in expected_steps):
         return "refresh"
     return f"partial({first_step}..{last_step})"
 
@@ -127,8 +131,9 @@ def _print_tasks(run_names: tuple[str, ...]) -> None:
         tasks = _selected_tasks((run_name,))
         task_statuses = []
         for task in tasks:
-            _, dataset_id, agent_id, model_step, agent_step = task
-            status = _return_status(test_module, dataset_id, agent_id, agent_step)
+            _, dataset_id, agent_id, model_step, agent_step, *extra = task
+            steps = extra[0] if extra else None
+            status = _return_status(test_module, dataset_id, agent_id, agent_step, steps)
             task_statuses.append((task, status))
 
         missing_count = sum(status == "missing" for _, status in task_statuses)
@@ -147,13 +152,17 @@ def _plot_task(test_module: ModuleType, task_id: str, dataset_id: str, agent_id:
         test_module.plot(task_id, path_returns, dataset_id, agent_id)
 
 
-def _run_task(task: tuple[str, str, str, int | None, int]) -> tuple[str, str, str]:
-    run_name, dataset_id, agent_id, model_step, agent_step = task
+def _run_task(task: tuple) -> tuple[str, str, str]:
+    run_name, dataset_id, agent_id, model_step, agent_step, *extra = task
     test_module = _test_module(run_name)
     dataset_spec = _dataset_spec(test_module, dataset_id)
+    steps = extra[0] if extra else None
 
     print(f"start {run_name}: {dataset_id}, {agent_id}, model_step={model_step}, agent_step={agent_step}")
-    task_id = test_module.test(*dataset_spec, agent_id, model_step, agent_step)
+    if steps is None:
+        task_id = test_module.test(*dataset_spec, agent_id, model_step, agent_step)
+    else:
+        task_id = test_module.test(*dataset_spec, agent_id, model_step, agent_step, steps)
     test_module.analyze(task_id, test_module.eval_path(task_id))
     _plot_task(test_module, task_id, dataset_id, agent_id)
     print(f"done {run_name}: {dataset_id}, {agent_id}")

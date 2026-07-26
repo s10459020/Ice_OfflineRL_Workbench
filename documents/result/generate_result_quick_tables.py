@@ -25,6 +25,14 @@ TEST_INTERVAL = 1_000
 TRAIN_FALLBACK_COUNT = 10
 SCORE_DIGITS = 2
 TOP_SCORE_RATIO = 0.95
+FORCE_UPDATED_AGENTS = {
+    "aspl",
+    "aspl_gp",
+    "aspl_c",
+}
+INVALIDATED_AGENTS = {
+    "aspl",
+}
 
 
 @dataclass(frozen=True)
@@ -133,7 +141,7 @@ REPRESENTATIVE_AGENTS = (
     AgentSpec("td3bc_n", None, 100_000),
     AgentSpec("iql", None, 200_000),
     AgentSpec("cql", None, 500_000),
-    AgentSpec("aspl_c", None, 500_000),
+    AgentSpec("aspl", None, 500_000),
     AgentSpec("scas_n", 100_000, 500_000),
     AgentSpec("scaspl_n", 100_000, 500_000),
     AgentSpec("scc_n", 100_000, 500_000),
@@ -151,7 +159,7 @@ STABILITY_TD3BC_AGENTS = (
 
 
 STABILITY_ASPL_AGENTS = (
-    AgentSpec("aspl", None, 200_000),
+    AgentSpec("aspl", None, 500_000),
     AgentSpec("aspl_gp", None, 500_000),
     AgentSpec("aspl_c", None, 500_000),
 )
@@ -185,18 +193,18 @@ STABILITY_SCC_AGENTS = (
 
 def noise_tables(prefix: str, values: tuple[str, ...]) -> tuple[DatasetSpec, ...]:
     base_specs = (
-        ("walker2d_d4rl_medium", "walker2d_d4rl_medium"),
-        ("walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid"),
-        ("walker2d_replay_medium", "walker2d_replay_medium"),
+        ("walker2d_d4rl_medium", "walker2d_d4rl_medium", "walker2d_d4rl_medium"),
+        ("walker2d_d4rl_hybrid", "walker2d_d4rl_hybrid", "walker2d_d4rl_medium"),
+        ("walker2d_replay_medium", "walker2d_replay_medium", "walker2d_d4rl_medium"),
     )
     return tuple(
         DatasetSpec(
             f"{prefix}_{value}@{dataset_id}",
             "walker2d_random",
-            "walker2d_d4rl_medium",
+            upper_id,
             train_dataset_id,
         )
-        for dataset_id, train_dataset_id in base_specs
+        for dataset_id, train_dataset_id, upper_id in base_specs
         for value in values
     )
 
@@ -234,6 +242,21 @@ def task_eval_path(experiment_id: str, agent_id: str, dataset_id: str) -> Path:
 
 def agent_source_path(agent_id: str) -> Path:
     return AGENT_ROOT / f"{agent_id}.py"
+
+
+def invalidated_path(agent_id: str, path: Path) -> bool:
+    source_path = agent_source_path(agent_id)
+    if agent_id not in INVALIDATED_AGENTS:
+        return False
+    if not source_path.exists() or not path.exists():
+        return False
+    return path.stat().st_mtime < source_path.stat().st_mtime
+
+
+def invalidated_candidate(agent_id: str, candidate: Candidate) -> bool:
+    if invalidated_path(agent_id, candidate.path):
+        return True
+    return agent_id in INVALIDATED_AGENTS and not candidate.complete
 
 
 def format_time(timestamp: float | None) -> str:
@@ -500,8 +523,15 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
         if not spec.fallback_scores:
             stage, suffix, status_path, max_status_step, expected_status_step = model_status(spec, dataset, agent)
             status_mtime = status_path.stat().st_mtime if status_path is not None and status_path.exists() else None
+            force_updated = agent.agent_id in FORCE_UPDATED_AGENTS
             if agent_mtime is not None and status_mtime is not None:
                 agent_newer = agent_mtime > status_mtime
+            agent_newer = agent_newer or force_updated
+            reason = "missing_noise_test"
+            if status_path is not None and invalidated_path(agent.agent_id, status_path):
+                stage = "stale"
+                suffix = ""
+                reason = "stale_agent"
             return SelectedCell(
                 experiment=spec.output_name,
                 dataset_id=dataset.dataset_id,
@@ -520,7 +550,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
                 agent_mtime=format_time(agent_mtime),
                 agent_newer_than_eval=agent_newer,
                 complete=False,
-                reason="missing_noise_test",
+                reason=reason,
                 max_step=max_status_step,
                 expected_step=expected_status_step,
             )
@@ -549,6 +579,32 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
 
     if agent_mtime is not None:
         agent_newer = agent_mtime > candidate.mtime
+    agent_newer = agent_newer or agent.agent_id in FORCE_UPDATED_AGENTS
+
+    if invalidated_candidate(agent.agent_id, candidate):
+        reason = "stale_agent" if invalidated_path(agent.agent_id, candidate.path) else candidate.reason
+        return SelectedCell(
+            experiment=spec.output_name,
+            dataset_id=dataset.dataset_id,
+            train_dataset_id=dataset.train_dataset_id,
+            agent_id=agent.agent_id,
+            stage=candidate.stage,
+            suffix="",
+            cell="",
+            score=None,
+            raw_mean=None,
+            lower_mean=lower_mean,
+            upper_mean=upper_mean,
+            eval_path=str(candidate.path.relative_to(PROJECT_ROOT)),
+            eval_mtime=format_time(candidate.mtime),
+            agent_path=str(source_path.relative_to(PROJECT_ROOT)) if source_path.exists() else "",
+            agent_mtime=format_time(agent_mtime),
+            agent_newer_than_eval=True,
+            complete=False,
+            reason=reason,
+            max_step=candidate.max_step,
+            expected_step=candidate.expected_step,
+        )
 
     raw_mean = mean(candidate.values) if candidate.values else None
     score = scaled_score(raw_mean, lower_mean, upper_mean) if raw_mean is not None else None
