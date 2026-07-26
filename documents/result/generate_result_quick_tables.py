@@ -26,12 +26,44 @@ TRAIN_FALLBACK_COUNT = 10
 SCORE_DIGITS = 2
 TOP_SCORE_RATIO = 0.95
 FORCE_UPDATED_AGENTS = {
-    "aspl",
-    "aspl_gp",
-    "aspl_c",
+    "scaspl",
+    "scaspl_n",
+    "scaspl_pn",
+    "scaspl_gp",
+    "scaspl_c",
+    "scaspl_nc",
+    "scaspl_gpc",
 }
 INVALIDATED_AGENTS = {
     "aspl",
+    "aspl_gp",
+    "aspl_c",
+    "scas",
+    "scas_n",
+    "scas_gp",
+    "scas_gpn",
+    "scaspl",
+    "scaspl_n",
+    "scaspl_pn",
+    "scaspl_gp",
+    "scaspl_c",
+    "scaspl_nc",
+    "scaspl_gpc",
+}
+
+AGENT_SOURCE_DEPENDENCIES = {
+    "aspl_gp": ("aspl.py", "aspl_gp.py"),
+    "aspl_c": ("aspl.py", "aspl_c.py"),
+    "scas_n": ("scas.py", "scas_n.py"),
+    "scas_gp": ("scas.py", "scas_gp.py"),
+    "scas_gpn": ("scas.py", "scas_n.py", "scas_gp.py", "scas_gpn.py"),
+    "scaspl": ("scaspl.py", "scas.py", "aspl.py"),
+    "scaspl_n": ("scaspl.py", "scaspl_n.py", "scas.py", "aspl.py"),
+    "scaspl_pn": ("scaspl.py", "scaspl_n.py", "scaspl_pn.py", "scas.py", "aspl.py"),
+    "scaspl_gp": ("scaspl.py", "scaspl_gp.py", "scas.py", "aspl.py"),
+    "scaspl_c": ("scaspl.py", "scaspl_c.py", "aspl_c.py", "scas.py", "aspl.py"),
+    "scaspl_nc": ("scaspl.py", "scaspl_n.py", "scaspl_nc.py", "scas.py", "aspl.py"),
+    "scaspl_gpc": ("scaspl.py", "scaspl_gp.py", "scaspl_gpc.py", "aspl_c.py", "scas.py", "aspl.py"),
 }
 
 
@@ -143,7 +175,7 @@ REPRESENTATIVE_AGENTS = (
     AgentSpec("cql", None, 500_000),
     AgentSpec("aspl", None, 500_000),
     AgentSpec("scas_n", 100_000, 500_000),
-    AgentSpec("scaspl_n", 100_000, 500_000),
+    AgentSpec("scaspl_pn", 500_000, 500_000),
     AgentSpec("scc_n", 100_000, 500_000),
 )
 
@@ -175,7 +207,7 @@ STABILITY_SCAS_AGENTS = (
 
 STABILITY_SCASPL_AGENTS = (
     AgentSpec("scaspl", 100_000, 500_000),
-    AgentSpec("scaspl_n", 100_000, 500_000),
+    AgentSpec("scaspl_pn", 500_000, 500_000),
     AgentSpec("scaspl_gp", 100_000, 500_000),
     AgentSpec("scaspl_c", 100_000, 500_000),
     AgentSpec("scaspl_nc", 100_000, 500_000),
@@ -240,23 +272,42 @@ def task_eval_path(experiment_id: str, agent_id: str, dataset_id: str) -> Path:
     return eval_path(experiment_task_id(experiment_id, agent_id, dataset_id))
 
 
+def agent_source_paths(agent_id: str) -> tuple[Path, ...]:
+    source_names = AGENT_SOURCE_DEPENDENCIES.get(agent_id, (f"{agent_id}.py",))
+    return tuple(AGENT_ROOT / source_name for source_name in source_names)
+
+
 def agent_source_path(agent_id: str) -> Path:
-    return AGENT_ROOT / f"{agent_id}.py"
+    return agent_source_paths(agent_id)[0]
+
+
+def agent_source_mtime(agent_id: str) -> float | None:
+    source_paths = agent_source_paths(agent_id)
+    existing_paths = [path for path in source_paths if path.exists()]
+    if not existing_paths:
+        return None
+    return max(path.stat().st_mtime for path in existing_paths)
+
+
+def format_agent_source_paths(agent_id: str) -> str:
+    return ";".join(
+        str(path.relative_to(PROJECT_ROOT))
+        for path in agent_source_paths(agent_id)
+        if path.exists()
+    )
 
 
 def invalidated_path(agent_id: str, path: Path) -> bool:
-    source_path = agent_source_path(agent_id)
     if agent_id not in INVALIDATED_AGENTS:
         return False
-    if not source_path.exists() or not path.exists():
+    source_mtime = agent_source_mtime(agent_id)
+    if source_mtime is None or not path.exists():
         return False
-    return path.stat().st_mtime < source_path.stat().st_mtime
+    return path.stat().st_mtime < source_mtime
 
 
 def invalidated_candidate(agent_id: str, candidate: Candidate) -> bool:
-    if invalidated_path(agent_id, candidate.path):
-        return True
-    return agent_id in INVALIDATED_AGENTS and not candidate.complete
+    return invalidated_path(agent_id, candidate.path)
 
 
 def format_time(timestamp: float | None) -> str:
@@ -425,6 +476,13 @@ def selected_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentS
     candidates = candidates_for(spec, dataset, agent)
     if not candidates:
         return None
+    valid_candidates = [
+        candidate
+        for candidate in candidates
+        if not invalidated_candidate(agent.agent_id, candidate)
+    ]
+    if valid_candidates:
+        return max(valid_candidates, key=lambda candidate: candidate.mtime)
     return max(candidates, key=lambda candidate: candidate.mtime)
 
 
@@ -515,8 +573,8 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
     lower_mean = mean(dataset_returns(dataset.lower_id))
     upper_mean = mean(dataset_returns(dataset.upper_id))
     candidate = selected_candidate(spec, dataset, agent)
-    source_path = agent_source_path(agent.agent_id)
-    agent_mtime = source_path.stat().st_mtime if source_path.exists() else None
+    source_path_text = format_agent_source_paths(agent.agent_id)
+    agent_mtime = agent_source_mtime(agent.agent_id)
     agent_newer = False
 
     if candidate is None:
@@ -546,7 +604,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
                 upper_mean=upper_mean,
                 eval_path=str(status_path.relative_to(PROJECT_ROOT)) if status_path is not None and status_path.exists() else "",
                 eval_mtime=format_time(status_mtime),
-                agent_path=str(source_path.relative_to(PROJECT_ROOT)) if source_path.exists() else "",
+                agent_path=source_path_text,
                 agent_mtime=format_time(agent_mtime),
                 agent_newer_than_eval=agent_newer,
                 complete=False,
@@ -568,7 +626,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
             upper_mean=upper_mean,
             eval_path="",
             eval_mtime="",
-            agent_path=str(source_path.relative_to(PROJECT_ROOT)) if source_path.exists() else "",
+            agent_path=source_path_text,
             agent_mtime=format_time(agent_mtime),
             agent_newer_than_eval=False,
             complete=False,
@@ -597,7 +655,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
             upper_mean=upper_mean,
             eval_path=str(candidate.path.relative_to(PROJECT_ROOT)),
             eval_mtime=format_time(candidate.mtime),
-            agent_path=str(source_path.relative_to(PROJECT_ROOT)) if source_path.exists() else "",
+            agent_path=source_path_text,
             agent_mtime=format_time(agent_mtime),
             agent_newer_than_eval=True,
             complete=False,
@@ -623,7 +681,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
         upper_mean=upper_mean,
         eval_path=str(candidate.path.relative_to(PROJECT_ROOT)),
         eval_mtime=format_time(candidate.mtime),
-        agent_path=str(source_path.relative_to(PROJECT_ROOT)) if source_path.exists() else "",
+        agent_path=source_path_text,
         agent_mtime=format_time(agent_mtime),
         agent_newer_than_eval=agent_newer,
         complete=candidate.complete,
@@ -719,11 +777,10 @@ def write_agent_file_table() -> Path:
         writer = csv.writer(file)
         writer.writerow(["agent", "agent_path", "agent_mtime"])
         for agent_id in agent_ids:
-            path_agent = agent_source_path(agent_id)
             writer.writerow([
                 agent_id,
-                str(path_agent.relative_to(PROJECT_ROOT)) if path_agent.exists() else "",
-                format_time(path_agent.stat().st_mtime if path_agent.exists() else None),
+                format_agent_source_paths(agent_id),
+                format_time(agent_source_mtime(agent_id)),
             ])
     return path
 

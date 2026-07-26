@@ -1,13 +1,20 @@
 import torch
 
-from ice_offline.agent.aspl import AsplAgent
+from ice_offline.agent.scaspl_pn import ScasplPNAgent
 from ice_offline.dataset._types import Batch
 
 
-class AsplCAgent(AsplAgent):
-    def __init__(self, obs_size: int, act_size: int, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        super().__init__(obs_size=obs_size, act_size=act_size, config=config, device=device)
-        self.weight_compensate = config.get("weight_compensate", 1)
+class ScasplPNCAgent(ScasplPNAgent):
+    def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
+        config = {"weight_compensate": 5} | config
+        super().__init__(
+            obs_size=obs_size,
+            act_size=act_size,
+            dynamics=dynamics,
+            config=config,
+            device=device,
+        )
+        self.weight_compensate = config.get("weight_compensate", 5)
 
     def metric_keys(self) -> list[str]:
         return [
@@ -19,8 +26,12 @@ class AsplCAgent(AsplAgent):
             "grad_compensate",
             "loss_critic",
             "grad_critic",
-            "loss_td3",
-            "grad_td3",
+            "loss_normal",
+            "grad_normal",
+            "loss_correction",
+            "grad_correction",
+            "loss_actor",
+            "grad_actor",
             "q_avg",
             "target_q",
         ]
@@ -39,7 +50,7 @@ class AsplCAgent(AsplAgent):
         loss_punish, metrics_punish = self.loss_punish(batch)
         loss_compensate, metrics_compensate = self.loss_compensate(batch)
         loss = (
-            loss_td
+            self.lambda_td * loss_td
             + self.weight_punish * loss_punish
             + self.weight_compensate * loss_compensate
         )

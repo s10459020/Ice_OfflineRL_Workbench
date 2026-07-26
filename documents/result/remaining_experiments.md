@@ -1,50 +1,66 @@
 # Remaining Experiments
 
-更新時間：2026-07-24
+更新時間：2026-07-25
 
-這份清單依 `documents/result/agent_dataset_versions.csv` 與目前 `scripts/trains.py`、`scripts/test_all.py` 的任務狀態整理。八個代表模型中的 ASPL 代表已改為 `aspl`，不再使用 `aspl_c`。
+這份清單依重新產生後的 `documents/result/agent_dataset_versions.csv`、目前 `scripts/trains.py`、`scripts/run_cpu.py`、`scripts/test_all.py` 整理。ASPL、SCAS、SCASPL 系列已視為新定義模型，舊分數不再作為速查表分數使用；新模型的 `200000` 局部資料仍可用 `(L)` 作為預估。
 
-## 可直接 Test
+## Result 缺口總覽
 
-目前 `scripts/test_all.py` 只保留已具備 train-min checkpoint、但 noise test 尚未完成的 ASPL 任務。
+- 目前速查表共有 115 個空白 cell。
+- SCASPL 相關空白 86 個，原因是 `scaspl` 基底與其變體已被標記為 `stale_agent`。
+- ASPL 相關空白 11 個：`stability_aspl / aspl_gp` 5 個、`stability_aspl / aspl_c` 4 個、`hybrid_random / aspl` 2 個。
+- SCAS 相關空白 18 個：`base / scas_n` 6 個、`hybrid_random / scas_n` 5 個、`stability_scas / scas_gp` 2 個、`stability_scas / scas_gpn` 5 個。
+- 仍有 12 個非空 cell 帶 `!`，這些不屬於 ASPL/SCAS/SCASPL 系列。
+- 仍有 23 個 `(L)` cell，代表新模型已有局部資料但未達指定步數。
 
-- `noise_init / aspl`：12 個 walker2d noise test
-- `noise_action / aspl`：12 個 walker2d noise test
-- `noise_state / aspl`：12 個 walker2d noise test
+## SCASPL 需重作
 
-## 仍需 Train
+SCASPL 目前不再信任任何舊結果，以下全部視為需要重新 train / train-min / test。
 
-目前 `scripts/trains.py` 已排入缺少正式 train checkpoint 的 ASPL 任務。
+- `stability_scaspl`：30 個 cell，包含 `scaspl`, `scaspl_n`, `scaspl_gp`, `scaspl_c`, `scaspl_nc`, `scaspl_gpc` 對 walker2d 五個資料集。
+- `base / scaspl_n`：15 個 cell，三個環境各五個資料集。
+- `noise_init / scaspl_n`：12 個 noise test。
+- `noise_action / scaspl_n`：12 個 noise test。
+- `noise_state / scaspl_n`：12 個 noise test。
+- `hybrid_random / scaspl_n`：5 個 hybrid random 資料集。
 
-- `base_train / aspl`：5 個 halfcheetah 資料集，訓練到 `200000`
-- `hybrid_random_train / aspl`：5 個 hybrid random 資料集，訓練到 `200000`
+目前這批 SCASPL 重作尚未排入 `scripts/trains.py` 或 `scripts/test_all.py`，避免在結構尚未定稿時污染統合任務。
 
-## 仍需 Train-Min
+## 已排入 trains
 
-目前 `scripts/trains.py` 已排入可補齊或會在前置 train 完成後補齊的 ASPL train-min 任務。
+`scripts/trains.py` 目前負責 CUDA 端的 ASPL 與 SCAS_N。
 
-- `base_train_min / aspl`：5 個 hopper 資料集，補 `200000..220000`
-- `base_train_min / aspl`：5 個 halfcheetah 資料集，需先完成對應 `base_train / aspl`
-- `hybrid_random_train_min / aspl`：5 個 hybrid random 資料集，需先完成對應 `hybrid_random_train / aspl`
+- `hybrid_random_train / aspl`：`walker2d_random_expert_7` 目前 `260000 / 500000`，`walker2d_random_expert_9` 尚缺。
+- `base_train / scas_n`：11 個任務，其中 6 個 stale、5 個 missing。
+- `hybrid_random_train / scas_n`：5 個任務尚缺。
+- `base_train_min / aspl`：15 個任務尚缺。
+- `hybrid_random_train_min / aspl`：3 個可補、2 個 blocked。
+- `base_train_min / scas_n`：4 個可補、11 個 blocked。
+- `hybrid_random_train_min / scas_n`：5 個 blocked。
 
-## 暫停 Train
+## 已排入 run_cpu
 
-`scas_n` 目前判定仍不成熟，以下速查表缺口暫停排入 `scripts/trains.py`。
+`scripts/run_cpu.py` 目前只負責 stability 中 SCAS 變體的 CPU 後段流程。
 
-- `base / scas_n`：`hopper_d4rl_expert`, `hopper_d4rl_hybrid`, `hopper_replay_medium`, `hopper_replay_expert`
-- `base / scas_n`：`halfcheetah_replay_medium`
-- `base / scas_n`：`walker2d_d4rl_medium`, `walker2d_d4rl_expert`, `walker2d_d4rl_hybrid`, `walker2d_replay_medium` 目前只有 `200000 / 500000`
-- `hybrid_random / scas_n`：5 個 hybrid random 資料集
+- `stability_train_min / scas`：5 個任務尚缺。
+- `stability_train_min / scas_gp`：3 個任務尚缺、2 個 blocked。
+- `stability_train_min / scas_gpn`：5 個 blocked。
+- `stability_test`：15 個任務目前都等待 train-min 完成。
 
-## 速查表缺口但未排入任務
+## 已排入 test_all
 
-這些仍在 `documents/result/*.csv` 內顯示缺口，但目前沒有排入 `scripts/trains.py` 或 `scripts/test_all.py`。
+`scripts/test_all.py` 維持目前待測清單，不額外加入 SCASPL。
 
-- `stability_scaspl / scaspl_n / walker2d_replay_medium`：目前只有 `200000 / 500000`
-- `base / scaspl_n / walker2d_replay_medium`：目前只有 `200000 / 500000`
-- `hybrid_random / scaspl_n / walker2d_random_expert_9`：缺 eval
-- `noise_init / scaspl_n`：6 個 noise test 尚缺，但 SCASPL 系列目前未排入統整 test
+- `base / aspl`：15 個 test。
+- `base / scas_n`：4 個 halfcheetah test。
+- `noise_init / scas_gp`：6 個 test。
+- `noise_init / aspl`：12 個 test。
+- `noise_action / aspl`：12 個 test。
+- `noise_state / aspl`：12 個 test。
+- `hybrid_random / scc_n`：5 個 test。
 
-## 可信度警告
+## 後續建議
 
-速查表內仍有不少 `!` 標記，代表目前 agent 檔案更新時間晚於採用的 eval。這些分數可以作為舊結果參考，但若要放入正式論文表格，仍需按目前最新 agent 定義重新完成 train / train-min / test。
+1. 先讓目前 `trains.py` 與 `run_cpu.py` 的非 SCASPL 任務跑完，避免交叉污染。
+2. SCASPL 定稿後，獨立建立一批 SCASPL-only train / train-min / test 清單。
+3. SCASPL 重作完成後再重新執行 `documents/result/generate_result_quick_tables.py`，確認 `stability_scaspl.csv` 與代表模型中的 `scaspl_n` 不再空白。

@@ -37,21 +37,12 @@ AGENTS = [
     ("iql", None, 200_000),
     ("cql", None, 500_000),
     ("aspl", None, 500_000),
-    ("scas_gp", 100_000, 500_000),
-    ("scaspl_n", 100_000, 500_000),
+    ("scas_n", 100_000, 500_000),
+    ("scaspl_pn", 500_000, 500_000),
     ("scc_n", 100_000, 500_000),
 ]
 
 TASKS = [
-    (test_dataset_id, train_dataset_id, scale_noise, agent_id, model_step, agent_step)
-    for test_dataset_id, train_dataset_id, scale_noise in DATASETS
-    for agent_id, model_step, agent_step in [
-        ("bc", None, 50_000),
-        ("iql", None, 200_000),
-        ("cql", None, 500_000),
-        ("aspl", None, 500_000),
-        ("scc_n", 100_000, 500_000),
-    ]
 ]
 
 COUNT = 20

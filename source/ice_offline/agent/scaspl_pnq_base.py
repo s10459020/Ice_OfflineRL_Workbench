@@ -4,11 +4,11 @@ import torch
 import torch.nn.functional as F
 
 from ice_offline.agent._spec import MetricValues
-from ice_offline.agent.scaspl_p import ScasplPAgent
+from ice_offline.agent.scaspl_pn import ScasplPNAgent
 from ice_offline.dataset._types import Batch
 
 
-class ScasplPQBaseAgent(ScasplPAgent):
+class ScasplPNQBaseAgent(ScasplPNAgent):
     normal_q_source = "value"
     correction_q_source = "value"
 
@@ -40,8 +40,8 @@ class ScasplPQBaseAgent(ScasplPAgent):
             "target_punish",
             "q_punish_data",
             "q_punish_ema",
-            "loss_td3",
-            "grad_td3",
+            "loss_normal",
+            "grad_normal",
             "loss_correction",
             "grad_correction",
             "loss_actor",
@@ -71,7 +71,7 @@ class ScasplPQBaseAgent(ScasplPAgent):
         self.critic_optimizer.step()
 
         loss_td_punish, metrics_td_punish = self.loss_td_punish(batch, target_punish)
-        loss_aspl_punish, metrics_aspl_punish = self.loss_punish_pq(batch)
+        loss_aspl_punish, metrics_aspl_punish = self.loss_punish_pnq(batch)
         loss_critic_punish = loss_td_punish + self.weight_punish * loss_aspl_punish
         metrics_critic_punish = {
             "loss_critic_punish": self._value(loss_critic_punish.detach()),
@@ -118,7 +118,7 @@ class ScasplPQBaseAgent(ScasplPAgent):
             "q_punish_data": self._value(q_min.mean().detach()),
         }
 
-    def loss_punish_pq(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    def loss_punish_pnq(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         observation, action, _, _, _ = batch
         action_samples = self.actor.sample_actions_uniform(observation.shape[0])
         action_distance = self.actor.action_distance(action, action_samples)
@@ -138,15 +138,15 @@ class ScasplPQBaseAgent(ScasplPAgent):
             "grad_aspl_punish": self._grad_norm(loss, self.critic_punish.param_critic()),
         }
 
-    def loss_td3(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    def loss_normal(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
         observation, _, _, _, _ = batch
         action = self.actor.pi(observation)
         critic = self._actor_critic(self.normal_q_source)
         q_value = critic.q_min(observation, action)
-        loss = -q_value.mean()
+        loss = -q_value.mean() / q_value.abs().mean().detach()
         return loss, {
-            "loss_td3": self._value(loss.detach()),
-            "grad_td3": self._grad_norm(loss, self.actor.param_actor()),
+            "loss_normal": self._value(loss.detach()),
+            "grad_normal": self._grad_norm(loss, self.actor.param_actor()),
         }
 
     def loss_correction(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
@@ -169,15 +169,6 @@ class ScasplPQBaseAgent(ScasplPAgent):
         return loss, {
             "loss_correction": self._value(loss.detach()),
             "grad_correction": self._grad_norm(loss, self.actor.param_actor()),
-        }
-
-    def loss_actor(self, batch: Batch) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-        loss_td3, metrics_td3 = self.loss_td3(batch)
-        loss_correction, metrics_correction = self.loss_correction(batch)
-        loss = self.weight_pi * loss_td3 + self.weight_correction * loss_correction
-        return loss, metrics_td3 | metrics_correction | {
-            "loss_actor": self._value(loss.detach()),
-            "grad_actor": self._grad_norm(loss, self.actor.param_actor()),
         }
 
     def _actor_critic(self, source: str):

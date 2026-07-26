@@ -17,21 +17,45 @@ TEST_SCRIPTS = {
     "hybrid_random": SCRIPT_ROOT / "experiment_hybrid_random" / "test.py",
 }
 
+PRELIM_AGENT_STEP = 200_000
+PRELIM_STEPS = [PRELIM_AGENT_STEP + 1_000 * index for index in range(11)]
+NOISE_TRAIN_DATASETS = (
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_replay_medium",
+)
+NOISE_PRELIM_AGENTS = (
+    ("aspl", None),
+    ("scas_n", 100_000),
+    ("scaspl_pn", 500_000),
+)
+
+
+def _noise_prelim_tasks(prefix: str, values: tuple[str, ...]) -> list[tuple]:
+    return [
+        (
+            prefix,
+            f"{prefix}_{value}@{dataset_id}",
+            agent_id,
+            model_step,
+            PRELIM_AGENT_STEP,
+            PRELIM_STEPS,
+        )
+        for dataset_id in NOISE_TRAIN_DATASETS
+        for value in values
+        for agent_id, model_step in NOISE_PRELIM_AGENTS
+    ]
+
+
 TASKS = [
     # format: (run_name, dataset_id, agent_id, model_step, agent_step[, steps])
-    # SCASPL-series agents are intentionally excluded.
-    ("noise_init", "noise_init_5e-2@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_init", "noise_init_1e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_init", "noise_init_5e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_init", "noise_init_1e0@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_action", "noise_action_5e-2@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_action", "noise_action_1e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_action", "noise_action_5e-1@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_action", "noise_action_1e0@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_state", "noise_state_5e-4@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_state", "noise_state_1e-3@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_state", "noise_state_5e-3@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
-    ("noise_state", "noise_state_1e-2@walker2d_replay_medium", "scas_n", 100_000, 200_000, [200_000]),
+    # Noise prelim applies only to adjusted representative agents: aspl, scas_n, scaspl_pn.
+
+    ("hybrid_random", "walker2d_random_expert_1", "scc_n", 500_000, 500_000),
+    ("hybrid_random", "walker2d_random_expert_3", "scc_n", 500_000, 500_000),
+    ("hybrid_random", "walker2d_random_expert_5", "scc_n", 500_000, 500_000),
+    ("hybrid_random", "walker2d_random_expert_7", "scc_n", 500_000, 500_000),
+    ("hybrid_random", "walker2d_random_expert_9", "scc_n", 500_000, 500_000),
 ]
 
 DEFAULT_RUNS = tuple(TEST_SCRIPTS.keys())

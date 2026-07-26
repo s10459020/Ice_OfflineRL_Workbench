@@ -13,7 +13,7 @@ GROUP = "stability/scaspl"
 
 AGENTS = [
     "scaspl",
-    "scaspl_n",
+    "scaspl_pn",
     "scaspl_gp",
     "scaspl_c",
     "scaspl_nc",

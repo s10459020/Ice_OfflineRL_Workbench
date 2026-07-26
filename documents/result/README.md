@@ -68,7 +68,9 @@ tmps/evals/{experiment}/{agent}/{dataset}-v0/data/eval_data.hdf5
 source/ice_offline/agent/{agent}.py
 ```
 
-若 agent 檔案比採用的 eval data 新，cell 前綴 `!`，代表分數可能已被目前 agent 定義淘汰，需要重新訓練/測試。
+若 agent 檔案比採用的 eval data 新，cell 前綴 `!`，代表分數可能已被目前 agent 定義淘汰，需要重新訓練/測試。部分繼承型 agent 會使用依賴檔的最大更新時間判斷，例如 SCASPL 系列會同時檢查 `scaspl.py` 與自身變體檔。
+
+若 agent 被列入失效清單，且採用資料早於目前 agent 依賴檔，cell 會直接留空並在 `agent_dataset_versions.csv` 中標記 `stale_agent`。目前 ASPL、SCAS、SCASPL 系列屬於這種情況，舊分數不再顯示於速查表；新模型未滿步數的 eval 仍可用 `(L)` 標記作為預估。
 
 同一個資料集列內，若 cell 分數達到該列最高分的 95% 以上，cell 後綴 `*`，代表該方法在同資料集比較中屬於接近最佳區間。
 

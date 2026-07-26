@@ -9,6 +9,23 @@ SCRIPT_ROOT = Path(__file__).resolve().parent
 AGENT_ROOT = SCRIPT_ROOT.parent / "source" / "ice_offline" / "agent"
 INVALIDATED_AGENTS = {
     "aspl",
+    "aspl_gp",
+    "aspl_c",
+    "scas_n",
+    "scas_gp",
+    "scas_gpn",
+    "scaspl_pn",
+    "scaspl_pnc",
+}
+
+AGENT_SOURCE_DEPENDENCIES = {
+    "aspl_gp": ("aspl.py", "aspl_gp.py"),
+    "aspl_c": ("aspl.py", "aspl_c.py"),
+    "scas_n": ("scas.py", "scas_n.py"),
+    "scas_gp": ("scas.py", "scas_gp.py"),
+    "scas_gpn": ("scas.py", "scas_n.py", "scas_gp.py", "scas_gpn.py"),
+    "scaspl_pn": ("scaspl.py", "scaspl_n.py", "scaspl_pn.py", "scas.py", "aspl.py"),
+    "scaspl_pnc": ("scaspl.py", "scaspl_n.py", "scaspl_pn.py", "scaspl_pnc.py", "scas.py", "aspl.py"),
 }
 
 TRAIN_SCRIPTS = {
@@ -42,58 +59,28 @@ TASKS = [
     # format: (run_name, task_steps, dataset_id, agent_id, agent_kwargs)
     # train task_steps: [model_start, agent_start, train_steps]
     # train_min task_steps: [model_start, agent_start]
-    ("base_train", [None, 0, 500_000], "hopper_d4rl_medium", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "hopper_d4rl_expert", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "hopper_d4rl_hybrid", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "hopper_replay_medium", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "hopper_replay_expert", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "walker2d_d4rl_medium", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "walker2d_d4rl_expert", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "walker2d_d4rl_hybrid", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "walker2d_replay_medium", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "walker2d_replay_expert", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "halfcheetah_d4rl_medium", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "halfcheetah_d4rl_expert", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "halfcheetah_d4rl_hybrid", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "halfcheetah_replay_medium", "aspl", {}),
-    ("base_train", [None, 0, 500_000], "halfcheetah_replay_expert", "aspl", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_1", "aspl", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_3", "aspl", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_5", "aspl", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_7", "aspl", {}),
-    ("hybrid_random_train", [None, 0, 500_000], "walker2d_random_expert_9", "aspl", {}),
-    ("base_train_min", [None, 500_000], "hopper_d4rl_medium", "aspl", {}),
-    ("base_train_min", [None, 500_000], "hopper_d4rl_expert", "aspl", {}),
-    ("base_train_min", [None, 500_000], "hopper_d4rl_hybrid", "aspl", {}),
-    ("base_train_min", [None, 500_000], "hopper_replay_medium", "aspl", {}),
-    ("base_train_min", [None, 500_000], "hopper_replay_expert", "aspl", {}),
-    ("base_train_min", [None, 500_000], "walker2d_d4rl_medium", "aspl", {}),
-    ("base_train_min", [None, 500_000], "walker2d_d4rl_expert", "aspl", {}),
-    ("base_train_min", [None, 500_000], "walker2d_d4rl_hybrid", "aspl", {}),
-    ("base_train_min", [None, 500_000], "walker2d_replay_medium", "aspl", {}),
-    ("base_train_min", [None, 500_000], "walker2d_replay_expert", "aspl", {}),
-    ("base_train_min", [None, 500_000], "halfcheetah_d4rl_medium", "aspl", {}),
-    ("base_train_min", [None, 500_000], "halfcheetah_d4rl_expert", "aspl", {}),
-    ("base_train_min", [None, 500_000], "halfcheetah_d4rl_hybrid", "aspl", {}),
-    ("base_train_min", [None, 500_000], "halfcheetah_replay_medium", "aspl", {}),
-    ("base_train_min", [None, 500_000], "halfcheetah_replay_expert", "aspl", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_1", "aspl", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_3", "aspl", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_5", "aspl", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_7", "aspl", {}),
-    ("hybrid_random_train_min", [None, 500_000], "walker2d_random_expert_9", "aspl", {}),
-    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_1", "scc_n", {}),
-    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_3", "scc_n", {}),
-    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_5", "scc_n", {}),
-    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_7", "scc_n", {}),
-    # ("hybrid_random_train_min", [500_000, 500_000], "walker2d_random_expert_9", "scc_n", {}),
+    ("base_train_min", [None, 200_000], "walker2d_d4rl_medium", "aspl", {}),
+    ("base_train_min", [None, 200_000], "walker2d_d4rl_hybrid", "aspl", {}),
+    ("base_train_min", [None, 200_000], "walker2d_replay_medium", "aspl", {}),
+    ("base_train_min", [100_000, 200_000], "walker2d_d4rl_medium", "scas_n", {}),
+    ("base_train_min", [100_000, 200_000], "walker2d_d4rl_hybrid", "scas_n", {}),
+    ("base_train_min", [100_000, 200_000], "walker2d_replay_medium", "scas_n", {}),
+    ("stability_train", [500_000, 0, 200_000], "walker2d_d4rl_medium", "scaspl_pn", {}),
+    ("stability_train", [500_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pn", {}),
+    ("stability_train", [500_000, 0, 200_000], "walker2d_d4rl_hybrid", "scaspl_pn", {}),
+    ("stability_train", [500_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pn", {}),
+    ("stability_train", [500_000, 0, 200_000], "walker2d_replay_expert", "scaspl_pn", {}),
+    ("base_train_min", [500_000, 200_000], "walker2d_d4rl_medium", "scaspl_pn", {}),
+    ("base_train_min", [500_000, 200_000], "walker2d_d4rl_hybrid", "scaspl_pn", {}),
+    ("base_train_min", [500_000, 200_000], "walker2d_replay_medium", "scaspl_pn", {}),
 ]
 
-DEFAULT_RUNS = tuple(TRAIN_SCRIPTS.keys())
+DEFAULT_RUNS = tuple(dict.fromkeys(task[0] for task in TASKS))
 LOCAL_MODULE_NAMES = ("plot",)
 LOADED_MODULES = {}
+DEVICE = "cuda"
 TRAIN_MIN_INTERVAL = 1_000
-TRAIN_MIN_COUNT = 20
+TRAIN_MIN_COUNT = 10
 
 
 def _load_train_module(run_name: str, script_path: Path) -> ModuleType:
@@ -124,7 +111,13 @@ def _load_train_module(run_name: str, script_path: Path) -> ModuleType:
 def _train_module(run_name: str) -> ModuleType:
     if run_name not in LOADED_MODULES:
         script_spec = TRAIN_SCRIPTS[run_name]
-        LOADED_MODULES[run_name] = _load_train_module(run_name, script_spec["path"])
+        train_module = _load_train_module(run_name, script_spec["path"])
+        train_module.DEVICE = DEVICE
+        if hasattr(train_module, "INTERVAL"):
+            train_module.INTERVAL = TRAIN_MIN_INTERVAL
+        if hasattr(train_module, "COUNT"):
+            train_module.COUNT = TRAIN_MIN_COUNT
+        LOADED_MODULES[run_name] = train_module
     return LOADED_MODULES[run_name]
 
 
@@ -136,17 +129,19 @@ def _task_id(train_module: ModuleType, agent_id: str, dataset_id: str) -> str:
     return train_module.experiment_task_id(train_module.EXPERIMENT_TRAIN, agent_id, dataset_id)
 
 
-def _agent_path(agent_id: str) -> Path:
-    return AGENT_ROOT / f"{agent_id}.py"
+def _agent_source_paths(agent_id: str) -> tuple[Path, ...]:
+    source_names = AGENT_SOURCE_DEPENDENCIES.get(agent_id, (f"{agent_id}.py",))
+    return tuple(AGENT_ROOT / source_name for source_name in source_names)
 
 
 def _is_stale(agent_id: str, path: Path) -> bool:
-    source_path = _agent_path(agent_id)
     if agent_id not in INVALIDATED_AGENTS:
         return False
-    if not source_path.exists() or not path.exists():
+    source_paths = _agent_source_paths(agent_id)
+    if not path.exists() or not all(source_path.exists() for source_path in source_paths):
         return False
-    return path.stat().st_mtime < source_path.stat().st_mtime
+    source_mtime = max(source_path.stat().st_mtime for source_path in source_paths)
+    return path.stat().st_mtime < source_mtime
 
 
 def _model_ready(agent_id: str, path: Path) -> bool:
@@ -287,18 +282,23 @@ def _parse_args() -> argparse.Namespace:
         "--list",
         action="store_true",
     )
+    parser.add_argument(
+        "--device",
+        default=DEVICE,
+    )
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
+    DEVICE = args.device
     run_names = tuple(args.run) or DEFAULT_RUNS
     tasks = _selected_tasks(run_names)
 
     if args.list:
         _print_tasks(run_names)
     else:
-        print(f"start trains: {len(tasks)} task(s)")
+        print(f"start trains: {len(tasks)} task(s), device={DEVICE}")
         for task in tasks:
             _run_task(task)
         print("done trains")

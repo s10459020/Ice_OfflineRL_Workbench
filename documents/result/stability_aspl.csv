@@ -1,6 +1,6 @@
 task,aspl,aspl_gp,aspl_c
-walker2d_d4rl_medium,,!66.12,!116.23(L)*
-walker2d_d4rl_expert,,!46.33,!60.58(L)*
-walker2d_d4rl_hybrid,,!72.68,!107.18*
-walker2d_replay_medium,,!14.09,!73.48*
-walker2d_replay_expert,,!57.02,!72.79*
+walker2d_d4rl_medium,121.06(t)*,,
+walker2d_d4rl_expert,44.31(t),,60.58(L)*
+walker2d_d4rl_hybrid,98.11(t)*,,
+walker2d_replay_medium,-0.57(t)*,,
+walker2d_replay_expert,81.13(t)*,,

@@ -3,7 +3,7 @@ from ice_offline.config.paths import table_path
 import test_dynamic
 
 
-DEFAULT_OUTPUT = table_path("dynamic", "success_outlier.csv")
+DEFAULT_OUTPUT = table_path("dynamic", "relative_threshold_outlier.csv")
 OUTLIER_RATIO = 0.05
 
 

@@ -11,21 +11,21 @@ EXPERIMENT_TRAIN = "base_train"
 DEVICE = "cuda"
 
 DATASETS = [
-    # "hopper_d4rl_medium",
-    # "hopper_d4rl_hybrid",
-    # "hopper_d4rl_expert",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
+    "hopper_d4rl_medium",
+    "hopper_d4rl_expert",
+    "hopper_d4rl_hybrid",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
     # "walker2d_d4rl_medium",
+    # "walker2d_d4rl_expert",
     # "walker2d_d4rl_hybrid",
-    "walker2d_d4rl_expert",
-    "walker2d_replay_medium",
+    # "walker2d_replay_medium",
     # "walker2d_replay_expert",
-    # "halfcheetah_d4rl_medium",
-    # "halfcheetah_d4rl_hybrid",
-    # "halfcheetah_d4rl_expert",
-    # "halfcheetah_replay_medium",
-    # "halfcheetah_replay_expert",
+    "halfcheetah_d4rl_medium",
+    "halfcheetah_d4rl_expert",
+    "halfcheetah_d4rl_hybrid",
+    "halfcheetah_replay_medium",
+    "halfcheetah_replay_expert",
 ]
 
 MODELS = [
