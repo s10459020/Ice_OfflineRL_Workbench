@@ -32,6 +32,7 @@ from ice_offline.agent.scaspl_ns import ScasplNSAgent
 from ice_offline.agent.scaspl_n import ScasplNAgent
 from ice_offline.agent.scaspl_p import ScasplPAgent
 from ice_offline.agent.scaspl_pc import ScasplPCAgent
+from ice_offline.agent.scaspl_pgp import ScasplPGPAgent
 from ice_offline.agent.scaspl_pn import ScasplPNAgent
 from ice_offline.agent.scaspl_pnc import ScasplPNCAgent
 from ice_offline.agent.scaspl_pnq_pi import ScasplPNQPiAgent
@@ -174,6 +175,7 @@ MODEL_AGENT_TABLE: dict[str, Callable[..., Agent]] = {
     "scaspl_ns": _model_agent(ScasplNSAgent),
     "scaspl_p": _model_agent(ScasplPAgent),
     "scaspl_pc": _model_agent(ScasplPCAgent),
+    "scaspl_pgp": _model_agent(ScasplPGPAgent),
     "scaspl_pn": _model_agent(ScasplPNAgent),
     "scaspl_pnc": _model_agent(ScasplPNCAgent),
     "scaspl_pnq_pi": _model_agent(ScasplPNQPiAgent),
@@ -223,6 +225,7 @@ MODEL_AGENT_MODEL_TABLE: dict[str, str] = {
     "scaspl_ns": "scas_model",
     "scaspl_p": "scas_model",
     "scaspl_pc": "scas_model",
+    "scaspl_pgp": "scas_model",
     "scaspl_pn": "scas_model",
     "scaspl_pnc": "scas_model",
     "scaspl_pnq_pi": "scas_model",

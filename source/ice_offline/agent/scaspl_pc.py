@@ -13,7 +13,7 @@ class ScasplPCAgent(ScasplPAgent):
             config=config,
             device=device,
         )
-        self.weight_compensate = config.get("weight_compensate", 0.005)
+        self.weight_compensate = config.get("weight_compensate", 1)
 
     def metric_keys(self) -> list[str]:
         return [

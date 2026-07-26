@@ -1,6 +1,6 @@
-task,bc,td3bc_n,iql,cql,aspl,scas_n,scaspl_pn,scc_n
-walker2d_random_expert_1,0.67,88.14*,75.74,2.34,54.54(t),-0.34(L),!68.80(L),21.37
-walker2d_random_expert_3,0.81,89.27*,54.06,65.36,25.03(t),0.90(L),!27.76(L),28.79
-walker2d_random_expert_5,1.17,59.44*,54.23,52.86,3.06(t),3.68(L),!30.50(L),27.46
-walker2d_random_expert_7,1.62,10.13,55.72*,6.46,-0.36(t),3.12(L),!12.50(L),10.09
-walker2d_random_expert_9,1.28,3.34,23.76*,4.00,-0.18(L),4.12(L),!-0.19(L),5.66
+task,bc,td3bc_n,iql,cql,aspl_c,scas_n,scaspl_pn,scc_n
+walker2d_random_expert_1,0.67,88.14*,75.74,2.34,10.91(L),,!68.80(L),21.37
+walker2d_random_expert_3,0.81,89.27*,54.06,65.36,15.85(L),,!27.76(L),28.79
+walker2d_random_expert_5,1.17,59.44*,54.23,52.86,3.00(L),,!30.50(L),27.46
+walker2d_random_expert_7,1.62,10.13,55.72*,6.46,-0.31(L),,!12.50(L),10.09
+walker2d_random_expert_9,1.28,3.34,23.76*,4.00,-0.19(L),,!-0.19(L),5.66

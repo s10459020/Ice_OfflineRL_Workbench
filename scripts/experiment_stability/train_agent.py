@@ -48,7 +48,7 @@ AGENTS = [
 ]
 
 TASKS = [
-    ([500_000, 0, 200_000], "walker2d_d4rl_medium", "scas_n", {"weight_correction": 0.002}),
+    ([500_000, 0, 200_000], "walker2d_replay_medium", "scas_n", {"weight_correction": 0.002}),
     # ([100_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pnc", {"weight_pi": 0.5, "weight_correction": 0.001, "weight_punish": 1, "weight_compensate": 5}),
     # ([500_000, 200_000, 500_000], "walker2d_d4rl_expert", "scaspl_pn", {}),
     # ([500_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pn", {"weight_pi": 5, "weight_correction": 0.001, "weight_punish": 0.5, "lambda_td": 0.5}),

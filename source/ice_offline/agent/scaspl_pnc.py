@@ -6,7 +6,7 @@ from ice_offline.dataset._types import Batch
 
 class ScasplPNCAgent(ScasplPNAgent):
     def __init__(self, obs_size: int, act_size: int, dynamics, config: dict[str, object] = {}, device: str = "cuda") -> None:
-        config = {"weight_compensate": 5} | config
+        config = {"weight_compensate": 1} | config
         super().__init__(
             obs_size=obs_size,
             act_size=act_size,
@@ -14,7 +14,7 @@ class ScasplPNCAgent(ScasplPNAgent):
             config=config,
             device=device,
         )
-        self.weight_compensate = config.get("weight_compensate", 5)
+        self.weight_compensate = config.get("weight_compensate", 1)
 
     def metric_keys(self) -> list[str]:
         return [

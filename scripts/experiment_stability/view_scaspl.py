@@ -12,14 +12,11 @@ from view import _dataset_value
 GROUP = "stability/scaspl"
 
 AGENTS = [
-    "scaspl",
+    "scaspl_p",
     "scaspl_pn",
-    "scaspl_gp",
-    "scaspl_c",
-    "scaspl_nc",
-    "scaspl_gpc",
-    "scaspl_pq_pi",
-    "scaspl_pq_corr",
+    "scaspl_pgp",
+    "scaspl_pc",
+    "scaspl_pnc",
 ]
 
 

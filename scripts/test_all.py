@@ -18,6 +18,7 @@ TEST_SCRIPTS = {
 }
 
 PRELIM_AGENT_STEP = 200_000
+PRELIM_MODEL_STEP = 500_000
 PRELIM_STEPS = [
     200_000,
     201_000,
@@ -32,60 +33,36 @@ PRELIM_STEPS = [
     210_000,
 ]
 
+NOISE_PRELIM_DATASETS = (
+    "walker2d_d4rl_medium",
+    "walker2d_d4rl_hybrid",
+    "walker2d_replay_medium",
+)
+NOISE_INIT_SCALES = ("5e-2", "1e-1", "5e-1", "1e0")
+NOISE_ACTION_SCALES = ("5e-2", "1e-1", "5e-1", "1e0")
+NOISE_STATE_SCALES = ("5e-4", "1e-3", "5e-3", "1e-2")
+
+
+def _noise_prelim_tasks(run_name: str, scales: tuple[str, ...]) -> list[tuple]:
+    return [
+        (
+            run_name,
+            f"{run_name}_{scale}@{dataset_id}",
+            "scas_n",
+            PRELIM_MODEL_STEP,
+            PRELIM_AGENT_STEP,
+            PRELIM_STEPS,
+        )
+        for dataset_id in NOISE_PRELIM_DATASETS
+        for scale in scales
+    ]
+
 
 TASKS = [
     # format: (run_name, dataset_id, agent_id, model_step, agent_step[, steps])
-    # ASPL_C prelim base tasks.
-    ("base", "walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("base", "walker2d_d4rl_expert", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("base", "walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("base", "walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("base", "walker2d_replay_expert", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ASPL_C prelim noise_init tasks.
-    ("noise_init", "noise_init_5e-2@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_1e-1@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_5e-1@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_1e0@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_5e-2@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_1e-1@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_5e-1@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_1e0@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_5e-2@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_1e-1@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_5e-1@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_init", "noise_init_1e0@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ASPL_C prelim noise_action tasks.
-    ("noise_action", "noise_action_5e-2@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_1e-1@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_5e-1@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_1e0@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_5e-2@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_1e-1@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_5e-1@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_1e0@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_5e-2@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_1e-1@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_5e-1@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_action", "noise_action_1e0@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ASPL_C prelim noise_state tasks.
-    ("noise_state", "noise_state_5e-4@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_1e-3@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_5e-3@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_1e-2@walker2d_d4rl_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_5e-4@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_1e-3@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_5e-3@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_1e-2@walker2d_d4rl_hybrid", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_5e-4@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_1e-3@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_5e-3@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    ("noise_state", "noise_state_1e-2@walker2d_replay_medium", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ASPL_C prelim hybrid_random tasks.
-    # ("hybrid_random", "walker2d_random_expert_1", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ("hybrid_random", "walker2d_random_expert_3", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ("hybrid_random", "walker2d_random_expert_5", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ("hybrid_random", "walker2d_random_expert_7", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
-    # ("hybrid_random", "walker2d_random_expert_9", "aspl_c", None, PRELIM_AGENT_STEP, PRELIM_STEPS),
+    *_noise_prelim_tasks("noise_init", NOISE_INIT_SCALES),
+    *_noise_prelim_tasks("noise_action", NOISE_ACTION_SCALES),
+    *_noise_prelim_tasks("noise_state", NOISE_STATE_SCALES),
 ]
 
 DEFAULT_RUNS = tuple(TEST_SCRIPTS.keys())

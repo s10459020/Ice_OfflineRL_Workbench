@@ -1,6 +1,6 @@
-task,scaspl,scaspl_pn,scaspl_gp,scaspl_c,scaspl_nc,scaspl_gpc
-walker2d_d4rl_medium,,!113.50(L)*,,,,
-walker2d_d4rl_expert,,!81.70(L)*,,,,
-walker2d_d4rl_hybrid,,!105.13(L)*,,,,
-walker2d_replay_medium,,!114.87(L)*,,,,
-walker2d_replay_expert,,!85.56(L)*,,,,
+task,scaspl_p,scaspl_pn,scaspl_pgp,scaspl_pc,scaspl_pnc
+walker2d_d4rl_medium,,!118.95(L)*,,,
+walker2d_d4rl_expert,!94.77(L)*,!80.66(L),,,
+walker2d_d4rl_hybrid,,!101.84(L)*,,,
+walker2d_replay_medium,!95.62(L),!117.91(L)*,,,
+walker2d_replay_expert,,!85.24(L)*,,,

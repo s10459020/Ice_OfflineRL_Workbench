@@ -28,8 +28,12 @@ TOP_SCORE_RATIO = 0.95
 FORCE_UPDATED_AGENTS = {
     "scaspl",
     "scaspl_n",
+    "scaspl_p",
     "scaspl_pn",
+    "scaspl_pgp",
     "scaspl_gp",
+    "scaspl_pc",
+    "scaspl_pnc",
     "scaspl_c",
     "scaspl_nc",
     "scaspl_gpc",
@@ -44,8 +48,12 @@ INVALIDATED_AGENTS = {
     "scas_gpn",
     "scaspl",
     "scaspl_n",
+    "scaspl_p",
     "scaspl_pn",
+    "scaspl_pgp",
     "scaspl_gp",
+    "scaspl_pc",
+    "scaspl_pnc",
     "scaspl_c",
     "scaspl_nc",
     "scaspl_gpc",
@@ -59,8 +67,12 @@ AGENT_SOURCE_DEPENDENCIES = {
     "scas_gpn": ("scas.py", "scas_n.py", "scas_gp.py", "scas_gpn.py"),
     "scaspl": ("scaspl.py", "scas.py", "aspl.py"),
     "scaspl_n": ("scaspl.py", "scaspl_n.py", "scas.py", "aspl.py"),
+    "scaspl_p": ("scaspl.py", "scaspl_p.py", "scas.py", "aspl.py"),
     "scaspl_pn": ("scaspl.py", "scaspl_n.py", "scaspl_pn.py", "scas.py", "aspl.py"),
+    "scaspl_pgp": ("scaspl.py", "scaspl_p.py", "scaspl_pgp.py", "scaspl_gp.py", "scas.py", "aspl.py"),
     "scaspl_gp": ("scaspl.py", "scaspl_gp.py", "scas.py", "aspl.py"),
+    "scaspl_pc": ("scaspl.py", "scaspl_p.py", "scaspl_pc.py", "aspl_c.py", "scas.py", "aspl.py"),
+    "scaspl_pnc": ("scaspl.py", "scaspl_n.py", "scaspl_pn.py", "scaspl_pnc.py", "aspl_c.py", "scas.py", "aspl.py"),
     "scaspl_c": ("scaspl.py", "scaspl_c.py", "aspl_c.py", "scas.py", "aspl.py"),
     "scaspl_nc": ("scaspl.py", "scaspl_n.py", "scaspl_nc.py", "scas.py", "aspl.py"),
     "scaspl_gpc": ("scaspl.py", "scaspl_gp.py", "scaspl_gpc.py", "aspl_c.py", "scas.py", "aspl.py"),
@@ -206,17 +218,15 @@ STABILITY_SCAS_AGENTS = (
     AgentSpec("scas", 100_000, 500_000),
     AgentSpec("scas_n", 100_000, 500_000),
     AgentSpec("scas_gp", 100_000, 500_000),
-    AgentSpec("scas_gpn", 100_000, 500_000),
 )
 
 
 STABILITY_SCASPL_AGENTS = (
-    AgentSpec("scaspl", 100_000, 500_000),
+    AgentSpec("scaspl_p", 100_000, 500_000),
     AgentSpec("scaspl_pn", 500_000, 500_000),
-    AgentSpec("scaspl_gp", 100_000, 500_000),
-    AgentSpec("scaspl_c", 100_000, 500_000),
-    AgentSpec("scaspl_nc", 100_000, 500_000),
-    AgentSpec("scaspl_gpc", 100_000, 500_000),
+    AgentSpec("scaspl_pgp", 100_000, 500_000),
+    AgentSpec("scaspl_pc", 100_000, 500_000),
+    AgentSpec("scaspl_pnc", 500_000, 500_000),
 )
 
 

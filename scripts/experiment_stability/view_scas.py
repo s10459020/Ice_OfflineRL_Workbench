@@ -15,7 +15,6 @@ AGENTS = [
     "scas",
     "scas_n",
     "scas_gp",
-    "scas_gpn",
 ]
 
 
