@@ -5,6 +5,9 @@ from ice_offline.config.paths import experiment_task_id
 from ice_offline.config.paths import returns_path
 from ice_offline.dataset._lookup import make_dataset
 from ice_offline.run.analyze import read_csv
+from ice_offline.run.agent_display import STANDARD_AGENT_SPECS
+from ice_offline.run.agent_display import agent_display_names
+from ice_offline.run.agent_display import standard_agent_ids
 from ice_offline.run.boxplot import write_boxplots
 from ice_offline.run.table import write_tables
 from plot import analyze
@@ -28,16 +31,7 @@ TABLES = [
 
 DATASETS = [dataset_id for dataset_id, _, _ in TABLES]
 
-AGENTS = [
-    ("bc", None, 50_000),
-    ("td3bc_n", None, 100_000),
-    ("iql", None, 200_000),
-    ("cql", None, 500_000),
-    ("aspl_c", None, 500_000),
-    ("scas_n", 100_000, 500_000),
-    ("scaspl_pn", 500_000, 500_000),
-    ("scc_n", 100_000, 500_000),
-]
+AGENTS = STANDARD_AGENT_SPECS
 
 VALUE_CACHE: dict[str, list[float] | None] = {}
 
@@ -78,10 +72,11 @@ def _value(dataset_id: str) -> list[float]:
 
 
 def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[Path, ...]:
+    agent_ids = standard_agent_ids()
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     data_values = [
-        [_task_value(dataset_id, agent_id) for agent_id in agent_id_list]
+        [_task_value(dataset_id, agent_id) for agent_id in agent_ids]
         for dataset_id in dataset_ids
     ]
     lower_values = [_value(lower_id) for lower_id in lower_ids]
@@ -89,7 +84,7 @@ def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[P
     return write_tables(
         EXPERIMENT,
         dataset_ids,
-        agent_id_list,
+        agent_display_names(agent_ids),
         data_values,
         lower_values,
         upper_values,
@@ -97,10 +92,11 @@ def save_tables(dataset_id_list: list[str], agent_id_list: list[str]) -> tuple[P
 
 
 def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
+    agent_ids = standard_agent_ids()
     table_specs_list = [spec for spec in TABLES if spec[0] in dataset_id_list]
     dataset_ids, lower_ids, upper_ids = map(list, zip(*table_specs_list))
     data_values = [
-        [_task_value(dataset_id, agent_id) for agent_id in agent_id_list]
+        [_task_value(dataset_id, agent_id) for agent_id in agent_ids]
         for dataset_id in dataset_ids
     ]
     lower_values = [_value(lower_id) for lower_id in lower_ids]
@@ -108,7 +104,7 @@ def save_boxplots(dataset_id_list: list[str], agent_id_list: list[str]) -> None:
     return write_boxplots(
         EXPERIMENT,
         dataset_ids,
-        agent_id_list,
+        agent_display_names(agent_ids),
         data_values,
         lower_values,
         upper_values,
@@ -120,6 +116,6 @@ if __name__ == "__main__":
         for agent_id, _, _ in AGENTS:
             _task_value(dataset_id, agent_id)
 
-    agent_ids = [agent_id for agent_id, _, _ in AGENTS]
+    agent_ids = standard_agent_ids()
     save_tables(DATASETS, agent_ids)
     save_boxplots(DATASETS, agent_ids)
