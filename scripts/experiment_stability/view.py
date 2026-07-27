@@ -21,8 +21,8 @@ TABLES = [
     ("walker2d_d4rl_medium", "walker2d_random", "walker2d_d4rl_medium"),
     ("walker2d_d4rl_expert", "walker2d_random", "walker2d_d4rl_expert"),
     ("walker2d_d4rl_hybrid", "walker2d_random", "walker2d_d4rl_hybrid"),
-    ("walker2d_replay_medium", "walker2d_random", "walker2d_d4rl_medium"),
-    ("walker2d_replay_expert", "walker2d_random", "walker2d_d4rl_expert"),
+    ("walker2d_replay_medium", "walker2d_random", "walker2d_replay_medium"),
+    ("walker2d_replay_expert", "walker2d_random", "walker2d_replay_expert"),
 ]
 
 DATASETS = [
