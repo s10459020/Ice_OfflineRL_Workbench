@@ -672,6 +672,15 @@ def mean(values: tuple[float, ...]) -> float:
     return sum(values) / len(values)
 
 
+def pr95(values: tuple[float, ...]) -> float:
+    sorted_values = sorted(values)
+    index = (len(sorted_values) - 1) * 0.95
+    lower = int(index)
+    upper = min(lower + 1, len(sorted_values) - 1)
+    weight = index - lower
+    return sorted_values[lower] * (1.0 - weight) + sorted_values[upper] * weight
+
+
 def scaled_score(value: float, lower: float, upper: float) -> float:
     return (value - lower) / (upper - lower) * 100.0
 
@@ -719,9 +728,14 @@ def marked_cell_map(cells: list[SelectedCell]) -> dict[tuple[str, str, str], str
     return result
 
 
-def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> SelectedCell:
-    lower_mean = mean(dataset_returns(dataset.lower_id))
-    upper_mean = mean(dataset_returns(dataset.upper_id))
+def select_cell(
+    spec: ExperimentSpec,
+    dataset: DatasetSpec,
+    agent: AgentSpec,
+    value_fn=mean,
+) -> SelectedCell:
+    lower_mean = value_fn(dataset_returns(dataset.lower_id))
+    upper_mean = value_fn(dataset_returns(dataset.upper_id))
     candidate = selected_candidate(spec, dataset, agent)
     stale_selected = False
     if candidate is None:
@@ -833,7 +847,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
             expected_step=candidate.expected_step,
         )
 
-    raw_mean = mean(candidate.values) if candidate.values else None
+    raw_mean = value_fn(candidate.values) if candidate.values else None
     score = scaled_score(raw_mean, lower_mean, upper_mean) if raw_mean is not None else None
     suffix = candidate.suffix if candidate.complete else "L" if candidate.values else ""
     reason = "legacy_source" if candidate.legacy else invalidation_reason(spec, dataset, agent.agent_id, candidate, candidate.reason)
@@ -887,6 +901,25 @@ def write_experiment_table(spec: ExperimentSpec, cells: list[SelectedCell]) -> P
                 ],
             ])
     return path
+
+
+def write_base_pr95_table() -> Path:
+    base_spec = next(spec for spec in EXPERIMENTS if spec.output_name == "base")
+    spec = ExperimentSpec(
+        "base_pr95",
+        base_spec.test_experiment,
+        base_spec.train_experiment,
+        base_spec.train_min_experiment,
+        base_spec.datasets,
+        base_spec.agents,
+        base_spec.fallback_scores,
+    )
+    cells = [
+        select_cell(spec, dataset, agent, pr95)
+        for dataset in spec.datasets
+        for agent in spec.agents
+    ]
+    return write_experiment_table(spec, cells)
 
 
 def write_version_table(cells: list[SelectedCell]) -> Path:
@@ -963,6 +996,7 @@ def generate() -> tuple[list[Path], list[SelectedCell]]:
             for agent in spec.agents:
                 cells.append(select_cell(spec, dataset, agent))
         output_paths.append(write_experiment_table(spec, cells))
+    output_paths.append(write_base_pr95_table())
     output_paths.append(write_version_table(cells))
     output_paths.append(write_agent_file_table())
     return output_paths, cells

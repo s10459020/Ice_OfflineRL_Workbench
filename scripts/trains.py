@@ -88,7 +88,7 @@ TASKS = [
     # ("base_train", [500_000, 210_000, 500_000], "walker2d_d4rl_hybrid", "scaspl_pn", {}),
     # ("base_train", [500_000, 210_000, 500_000], "walker2d_replay_expert", "scaspl_pn", {}),
     # ("base_train", [500_000, 0, 200_000], "walker2d_d4rl_medium", "scaspl_pgp", {}),
-    ("base_train", [500_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pgp", {}),
+    # ("base_train", [500_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pgp", {}),
     ("base_train", [500_000, 0, 200_000], "walker2d_d4rl_hybrid", "scaspl_pgp", {}),
     ("base_train", [500_000, 0, 200_000], "walker2d_replay_medium", "scaspl_pgp", {}),
     ("base_train", [500_000, 0, 200_000], "walker2d_replay_expert", "scaspl_pgp", {}),
