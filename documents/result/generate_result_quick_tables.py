@@ -180,15 +180,6 @@ DATASET_KIND_ORDER = (
 )
 
 
-STABILITY_DATASET_KIND_ORDER = (
-    ("d4rl_medium", "d4rl_medium"),
-    ("d4rl_expert", "d4rl_expert"),
-    ("d4rl_hybrid", "d4rl_hybrid"),
-    ("replay_medium", "replay_medium"),
-    ("replay_expert", "replay_expert"),
-)
-
-
 def standard_tables(environment: str, dataset_kind_order: tuple[tuple[str, str], ...] = DATASET_KIND_ORDER) -> tuple[DatasetSpec, ...]:
     return tuple(
         DatasetSpec(
@@ -202,7 +193,6 @@ def standard_tables(environment: str, dataset_kind_order: tuple[tuple[str, str],
 
 
 WALKER_TABLES = standard_tables("walker2d")
-STABILITY_WALKER_TABLES = standard_tables("walker2d", STABILITY_DATASET_KIND_ORDER)
 
 
 BASE_TABLES = (
@@ -294,11 +284,11 @@ HYBRID_TABLES = (
 
 
 EXPERIMENTS = (
-    ExperimentSpec("stability_td3bc", "base", "base_train", "base", STABILITY_WALKER_TABLES, STABILITY_TD3BC_AGENTS),
-    ExperimentSpec("stability_aspl", "base", "base_train", "base", STABILITY_WALKER_TABLES, STABILITY_ASPL_AGENTS),
-    ExperimentSpec("stability_scas", "base", "base_train", "base", STABILITY_WALKER_TABLES, STABILITY_SCAS_AGENTS),
-    ExperimentSpec("stability_scaspl", "base", "base_train", "base", STABILITY_WALKER_TABLES, STABILITY_SCASPL_AGENTS),
-    ExperimentSpec("stability_scc", "base", "base_train", "base", STABILITY_WALKER_TABLES, STABILITY_SCC_AGENTS),
+    ExperimentSpec("stability_td3bc", "base", "base_train", "base", WALKER_TABLES, STABILITY_TD3BC_AGENTS),
+    ExperimentSpec("stability_aspl", "base", "base_train", "base", WALKER_TABLES, STABILITY_ASPL_AGENTS),
+    ExperimentSpec("stability_scas", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCAS_AGENTS),
+    ExperimentSpec("stability_scaspl", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCASPL_AGENTS),
+    ExperimentSpec("stability_scc", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCC_AGENTS),
     ExperimentSpec("base", "base", "base_train", None, BASE_TABLES, REPRESENTATIVE_AGENTS),
     ExperimentSpec("noise_init", "noise_init", "base_train", "base", noise_tables("noise_init", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS, False),
     ExperimentSpec("noise_action", "noise_action", "base_train", "base", noise_tables("noise_action", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS, False),
