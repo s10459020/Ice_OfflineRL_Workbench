@@ -38,6 +38,21 @@ FORCE_UPDATED_AGENTS = {
     "scaspl_nc",
     "scaspl_gpc",
 }
+STALE_SCORE_AGENTS = {
+    "scas_gpn",
+    "scaspl_p",
+    "scaspl_pn",
+    "scaspl_pgp",
+    "scaspl_pc",
+    "scaspl_pnc",
+}
+LEGACY_RESULT_SOURCE_AGENTS = {
+    "scaspl_p": ("scaspl",),
+    "scaspl_pn": ("scaspl_n",),
+    "scaspl_pgp": ("scaspl_gp",),
+    "scaspl_pc": ("scaspl_c",),
+    "scaspl_pnc": ("scaspl_nc",),
+}
 INVALIDATED_AGENTS = {
     "aspl",
     "aspl_gp",
@@ -128,6 +143,8 @@ class Candidate:
     values: tuple[float, ...]
     max_step: int | None
     expected_step: int
+    source_agent_id: str
+    legacy: bool = False
 
 
 @dataclass(frozen=True)
@@ -218,6 +235,7 @@ STABILITY_SCAS_AGENTS = (
     AgentSpec("scas", 100_000, 500_000),
     AgentSpec("scas_n", 100_000, 500_000),
     AgentSpec("scas_gp", 100_000, 500_000),
+    AgentSpec("scas_gpn", 100_000, 500_000),
 )
 
 
@@ -324,7 +342,7 @@ def invalidated_path(agent_id: str, path: Path) -> bool:
 def candidate_model_path(spec: ExperimentSpec, dataset: DatasetSpec, agent_id: str, candidate: Candidate) -> Path | None:
     if candidate.max_step is None:
         return None
-    train_id = experiment_task_id(spec.train_experiment, agent_id, dataset.train_dataset_id)
+    train_id = experiment_task_id(spec.train_experiment, candidate.source_agent_id, dataset.train_dataset_id)
     path = model_path(train_id, candidate.max_step)
     if not path.exists():
         return None
@@ -470,7 +488,15 @@ def test_steps(agent_step: int) -> tuple[int, ...]:
     )
 
 
-def test_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_step: int, stage: str, suffix: str) -> Candidate | None:
+def test_candidate(
+    experiment_id: str,
+    agent_id: str,
+    dataset_id: str,
+    agent_step: int,
+    stage: str,
+    suffix: str,
+    legacy: bool = False,
+) -> Candidate | None:
     path = task_eval_path(experiment_id, agent_id, dataset_id)
     eval_rows = read_eval_rows(path)
     if eval_rows is None:
@@ -500,10 +526,18 @@ def test_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_ste
         values=values,
         max_step=highest_step,
         expected_step=expected_step,
+        source_agent_id=agent_id,
+        legacy=legacy,
     )
 
 
-def train_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_step: int) -> Candidate | None:
+def train_candidate(
+    experiment_id: str,
+    agent_id: str,
+    dataset_id: str,
+    agent_step: int,
+    legacy: bool = False,
+) -> Candidate | None:
     path = task_eval_path(experiment_id, agent_id, dataset_id)
     eval_rows = read_eval_rows(path)
     if eval_rows is None:
@@ -523,6 +557,8 @@ def train_candidate(experiment_id: str, agent_id: str, dataset_id: str, agent_st
         values=values,
         max_step=highest_step,
         expected_step=agent_step,
+        source_agent_id=agent_id,
+        legacy=legacy,
     )
 
 
@@ -549,6 +585,30 @@ def candidates_for(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec)
     return candidates
 
 
+def legacy_candidates_for(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> list[Candidate]:
+    candidates: list[Candidate] = []
+    for legacy_agent_id in LEGACY_RESULT_SOURCE_AGENTS.get(agent.agent_id, ()):
+        test = test_candidate(spec.test_experiment, legacy_agent_id, dataset.dataset_id, agent.agent_step, "test", "", True)
+        if test is not None:
+            candidates.append(test)
+
+        if not spec.fallback_scores:
+            continue
+
+        if spec.train_min_experiment is not None:
+            train_min_path = task_eval_path(spec.train_min_experiment, legacy_agent_id, dataset.train_dataset_id)
+            test_path = task_eval_path(spec.test_experiment, legacy_agent_id, dataset.dataset_id)
+            if train_min_path != test_path:
+                train_min = test_candidate(spec.train_min_experiment, legacy_agent_id, dataset.train_dataset_id, agent.agent_step, "train_min", "tm", True)
+                if train_min is not None:
+                    candidates.append(train_min)
+
+        train = train_candidate(spec.train_experiment, legacy_agent_id, dataset.train_dataset_id, agent.agent_step, True)
+        if train is not None:
+            candidates.append(train)
+    return candidates
+
+
 def selected_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> Candidate | None:
     candidates = candidates_for(spec, dataset, agent)
     if not candidates:
@@ -560,6 +620,19 @@ def selected_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentS
     ]
     if valid_candidates:
         return max(valid_candidates, key=lambda candidate: candidate.mtime)
+    return max(candidates, key=lambda candidate: candidate.mtime)
+
+
+def selected_legacy_candidate(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) -> Candidate | None:
+    candidates = legacy_candidates_for(spec, dataset, agent)
+    if not candidates:
+        return None
+    complete_candidates = [candidate for candidate in candidates if candidate.complete]
+    if complete_candidates:
+        return max(complete_candidates, key=lambda candidate: candidate.mtime)
+    valued_candidates = [candidate for candidate in candidates if candidate.values]
+    if valued_candidates:
+        return max(valued_candidates, key=lambda candidate: candidate.mtime)
     return max(candidates, key=lambda candidate: candidate.mtime)
 
 
@@ -650,6 +723,15 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
     lower_mean = mean(dataset_returns(dataset.lower_id))
     upper_mean = mean(dataset_returns(dataset.upper_id))
     candidate = selected_candidate(spec, dataset, agent)
+    stale_selected = False
+    if candidate is None:
+        candidate = selected_legacy_candidate(spec, dataset, agent)
+    elif invalidated_candidate(spec, dataset, agent.agent_id, candidate):
+        legacy_candidate = selected_legacy_candidate(spec, dataset, agent)
+        if legacy_candidate is not None:
+            candidate = legacy_candidate
+        else:
+            stale_selected = agent.agent_id in STALE_SCORE_AGENTS
     source_path_text = format_agent_source_paths(agent.agent_id)
     agent_mtime = agent_source_mtime(agent.agent_id)
     agent_newer = False
@@ -724,9 +806,9 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
 
     if agent_mtime is not None:
         agent_newer = agent_mtime > candidate_version_mtime(spec, dataset, agent.agent_id, candidate)
-    agent_newer = agent_newer or agent.agent_id in FORCE_UPDATED_AGENTS
+    agent_newer = agent_newer or agent.agent_id in FORCE_UPDATED_AGENTS or candidate.legacy or stale_selected
 
-    if invalidated_candidate(spec, dataset, agent.agent_id, candidate):
+    if invalidated_candidate(spec, dataset, agent.agent_id, candidate) and not (candidate.legacy or stale_selected):
         reason = invalidation_reason(spec, dataset, agent.agent_id, candidate, candidate.reason)
         return SelectedCell(
             experiment=spec.output_name,
@@ -754,6 +836,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
     raw_mean = mean(candidate.values) if candidate.values else None
     score = scaled_score(raw_mean, lower_mean, upper_mean) if raw_mean is not None else None
     suffix = candidate.suffix if candidate.complete else "L" if candidate.values else ""
+    reason = "legacy_source" if candidate.legacy else invalidation_reason(spec, dataset, agent.agent_id, candidate, candidate.reason)
     return SelectedCell(
         experiment=spec.output_name,
         dataset_id=dataset.dataset_id,
@@ -772,7 +855,7 @@ def select_cell(spec: ExperimentSpec, dataset: DatasetSpec, agent: AgentSpec) ->
         agent_mtime=format_time(agent_mtime),
         agent_newer_than_eval=agent_newer,
         complete=candidate.complete,
-        reason=candidate.reason,
+        reason=reason,
         max_step=candidate.max_step,
         expected_step=candidate.expected_step,
     )

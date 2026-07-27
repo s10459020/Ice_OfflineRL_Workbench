@@ -1,6 +1,6 @@
-task,scas,scas_n,scas_gp
-walker2d_d4rl_medium,52.92(t),117.11(L)*,122.92(t)*
-walker2d_d4rl_expert,1.87(t),3.25(L),9.94(t)*
-walker2d_d4rl_hybrid,3.64(t),22.97(L),38.75(t)*
-walker2d_replay_medium,122.53(t),123.06(L),141.51(L)*
-walker2d_replay_expert,0.40(t),87.12(L)*,80.92(L)
+task,scas,scas_n,scas_gp,scas_gpn
+walker2d_d4rl_medium,52.92(t),117.11(L)*,122.92(t)*,!74.88(L)
+walker2d_d4rl_expert,1.87(t),3.25(L),9.94(t)*,!4.72(L)
+walker2d_d4rl_hybrid,3.64(t),22.97(L),38.75(t)*,!7.96(L)
+walker2d_replay_medium,122.53(t),123.06(L),141.51(L)*,!134.37(L)
+walker2d_replay_expert,0.40(t),87.12(L)*,80.92(L),!88.03(L)*
