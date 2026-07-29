@@ -1,7 +1,7 @@
 import traceback
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import QEvent, QTimer, Qt
+from PySide6.QtGui import QCloseEvent, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -20,6 +20,9 @@ from ice_offline.gui.views.widget_slider import SliderWidget
 
 
 class MainWindow(QMainWindow):
+    _KEY_REPEAT_DELAY_MS = 300
+    _KEY_REPEAT_INTERVAL_MS = 60
+
     # ====================
     # init & reset
     # ====================
@@ -33,6 +36,13 @@ class MainWindow(QMainWindow):
         self._slider = SliderWidget()
         self._render = RenderWidget()
         self._setting = SettingWidget()
+        self._held_horizontal_key: int | None = None
+        self._space_repeat_active = False
+        self._key_repeat_timer = QTimer(self)
+        self._key_repeat_timer.timeout.connect(self._repeat_horizontal_key)
+        self._space_shortcut = QShortcut(QKeySequence(Qt.Key_Space), self)
+        self._space_shortcut.setAutoRepeat(False)
+        self._space_shortcut.activated.connect(self._toggle_space_repeat)
 
         self.setWindowTitle("Replay Viewer")
         self.resize(980, 640)
@@ -137,6 +147,42 @@ class MainWindow(QMainWindow):
     # ====================
     # Qt Native Events
     # ====================
+    def _start_horizontal_key(self, key: int) -> None:
+        self._held_horizontal_key = key
+        if self._move_horizontal(key):
+            self._key_repeat_timer.start(self._KEY_REPEAT_DELAY_MS)
+        else:
+            self._stop_horizontal_key()
+
+    def _move_horizontal(self, key: int) -> bool:
+        current_step = self._slider.value()
+        direction = -1 if key == Qt.Key_Left else 1
+        new_step = current_step + direction * self._viewmodel.step_jump()
+        state = self._viewmodel.set_step(new_step)
+        self._apply_frame_state(state)
+        return state.slider_value != current_step
+
+    def _repeat_horizontal_key(self) -> None:
+        key = self._held_horizontal_key
+        if key is None:
+            return
+        if self._move_horizontal(key):
+            self._key_repeat_timer.start(self._KEY_REPEAT_INTERVAL_MS)
+        else:
+            self._stop_horizontal_key()
+
+    def _stop_horizontal_key(self) -> None:
+        self._key_repeat_timer.stop()
+        self._held_horizontal_key = None
+        self._space_repeat_active = False
+
+    def _toggle_space_repeat(self) -> None:
+        if self._space_repeat_active:
+            self._stop_horizontal_key()
+            return
+        self._space_repeat_active = True
+        self._start_horizontal_key(Qt.Key_Right)
+
     def keyPressEvent(self, event) -> None:  # noqa: N802
         key = event.key()
 
@@ -152,24 +198,34 @@ class MainWindow(QMainWindow):
             event.accept()
             return
 
-        step_jump = self._viewmodel.step_jump()
-
-        if key == Qt.Key_Left:
-            new_step = self._slider.value() - step_jump
-            self._apply_frame_state(self._viewmodel.set_step(new_step))
-            event.accept()
-            return
-
-        if key == Qt.Key_Right:
-            new_step = self._slider.value() + step_jump
-            self._apply_frame_state(self._viewmodel.set_step(new_step))
+        if key in (Qt.Key_Left, Qt.Key_Right):
+            if not event.isAutoRepeat():
+                self._space_repeat_active = False
+                self._start_horizontal_key(key)
             event.accept()
             return
 
         super().keyPressEvent(event)
 
+    def keyReleaseEvent(self, event) -> None:  # noqa: N802
+        key = event.key()
+        if key in (Qt.Key_Left, Qt.Key_Right):
+            if (
+                not event.isAutoRepeat()
+                and not self._space_repeat_active
+                and key == self._held_horizontal_key
+            ):
+                self._stop_horizontal_key()
+            event.accept()
+            return
+        super().keyReleaseEvent(event)
+
+    def changeEvent(self, event) -> None:  # noqa: N802
+        super().changeEvent(event)
+        if event.type() == QEvent.ActivationChange and not self.isActiveWindow():
+            self._stop_horizontal_key()
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802
+        self._stop_horizontal_key()
         self._viewmodel.close()
         super().closeEvent(event)
-
-

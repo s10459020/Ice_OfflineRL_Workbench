@@ -180,6 +180,15 @@ DATASET_KIND_ORDER = (
 )
 
 
+MEDIUM_BOUND_DATASET_KIND_ORDER = (
+    ("d4rl_medium", "d4rl_medium"),
+    ("d4rl_expert", "d4rl_medium"),
+    ("d4rl_hybrid", "d4rl_medium"),
+    ("replay_medium", "d4rl_medium"),
+    ("replay_expert", "d4rl_medium"),
+)
+
+
 def standard_tables(environment: str, dataset_kind_order: tuple[tuple[str, str], ...] = DATASET_KIND_ORDER) -> tuple[DatasetSpec, ...]:
     return tuple(
         DatasetSpec(
@@ -199,6 +208,13 @@ BASE_TABLES = (
     *standard_tables("hopper"),
     *WALKER_TABLES,
     *standard_tables("halfcheetah"),
+)
+
+
+BASE_MEDIUM_TABLES = (
+    *standard_tables("hopper", MEDIUM_BOUND_DATASET_KIND_ORDER),
+    *standard_tables("walker2d", MEDIUM_BOUND_DATASET_KIND_ORDER),
+    *standard_tables("halfcheetah", MEDIUM_BOUND_DATASET_KIND_ORDER),
 )
 
 
@@ -290,6 +306,7 @@ EXPERIMENTS = (
     ExperimentSpec("stability_scaspl", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCASPL_AGENTS),
     ExperimentSpec("stability_scc", "base", "base_train", "base", WALKER_TABLES, STABILITY_SCC_AGENTS),
     ExperimentSpec("base", "base", "base_train", None, BASE_TABLES, REPRESENTATIVE_AGENTS),
+    ExperimentSpec("base_medium", "base", "base_train", None, BASE_MEDIUM_TABLES, REPRESENTATIVE_AGENTS),
     ExperimentSpec("noise_init", "noise_init", "base_train", "base", noise_tables("noise_init", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS, False),
     ExperimentSpec("noise_action", "noise_action", "base_train", "base", noise_tables("noise_action", ("5e-2", "1e-1", "5e-1", "1e0")), REPRESENTATIVE_AGENTS, False),
     ExperimentSpec("noise_state", "noise_state", "base_train", "base", noise_tables("noise_state", ("5e-4", "1e-3", "5e-3", "1e-2")), REPRESENTATIVE_AGENTS, False),

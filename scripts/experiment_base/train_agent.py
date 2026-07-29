@@ -15,11 +15,11 @@ EXPERIMENT_TRAIN = "base_train"
 DEVICE = "cpu"
 
 DATASETS = [
-    # "hopper_d4rl_medium",
-    # "hopper_d4rl_expert",
-    # "hopper_d4rl_hybrid",
-    # "hopper_replay_medium",
-    # "hopper_replay_expert",
+    "hopper_d4rl_medium",
+    "hopper_d4rl_expert",
+    "hopper_d4rl_hybrid",
+    "hopper_replay_medium",
+    "hopper_replay_expert",
     # "walker2d_d4rl_medium",
     # "walker2d_d4rl_expert",
     # "walker2d_d4rl_hybrid",
@@ -38,13 +38,14 @@ AGENTS = [
     # ([None, 0, 200_000], "iql"),
     # ([None, 0, 500_000], "cql"),
     # ([None, 0, 500_000], "aspl_c"),
+    ([500_000, 0, 200_000], "scas"),
     # ([100_000, 0, 500_000], "scas_n"),
     # ([500_000, 0, 500_000], "scaspl_pn"),
     # ([100_000, 0, 500_000], "scc_n"),
 ]
 
 TASKS = [
-    ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_p", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
+    # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_p", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_p", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 2.5}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_p", {"weight_pi": 0.001, "weight_correction": 0.001, "weight_punish": 0.05}),
     # ([100_000, 0, 200_000], "walker2d_d4rl_expert", "scaspl_pc", {"weight_pi": 0.01, "weight_correction": 0.01, "weight_punish": 2.5, "weight_compensate": 0.005}),
