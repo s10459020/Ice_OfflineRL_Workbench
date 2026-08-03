@@ -5,8 +5,8 @@
 /tmps/
 /tmps_old/
 /d3rlpy*/
-/source/ice_offline/joint_learning/dataset/
-/source/ice_offline/joint_learning/model/
+/source/joint_learning/dataset/
+/source/joint_learning/model/
 
 # Python caches and artifacts
 __pycache__/
