@@ -6,7 +6,7 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Normal
 
-from ice_offline.joint_learning.dataset import Batch
+from joint_learning.dataset import Batch
 
 
 class GaussianPolicy(torch.nn.Module):

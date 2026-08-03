@@ -12,7 +12,7 @@ DATASET_ROOT = Path(__file__).resolve().parent / "dataset"
 
 
 # Available datasets for this compact build.
-# Place the corresponding HDF5 files in source/ice_offline/joint_learning/dataset.
+# Place the corresponding HDF5 files in source/joint_learning/dataset.
 D4RL_DATASETS = {
     "hopper_medium": ("hopper_medium-v2.hdf5", "Hopper-v5"),
     "hopper_expert": ("hopper_expert-v2.hdf5", "Hopper-v5"),

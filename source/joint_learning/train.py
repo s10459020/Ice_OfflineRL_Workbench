@@ -1,6 +1,6 @@
-from ice_offline.joint_learning.agent import make_agent
-from ice_offline.joint_learning.agent import model_path
-from ice_offline.joint_learning.dataset import D4RLDataset
+from joint_learning.agent import make_agent
+from joint_learning.agent import model_path
+from joint_learning.dataset import D4RLDataset
 
 
 # Available agents: "bc", "td3bc", "iql", "cql"

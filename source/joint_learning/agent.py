@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from ice_offline.joint_learning.agents.bc import BCAgent
-from ice_offline.joint_learning.agents.cql import CQLAgent
-from ice_offline.joint_learning.agents.iql import IQLAgent
-from ice_offline.joint_learning.agents.td3bc import TD3BCAgent
+from joint_learning.agents.bc import BCAgent
+from joint_learning.agents.cql import CQLAgent
+from joint_learning.agents.iql import IQLAgent
+from joint_learning.agents.td3bc import TD3BCAgent
 
 
 # Available agents for this compact build:

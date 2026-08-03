@@ -1,9 +1,9 @@
 import gymnasium as gym
 import numpy as np
 
-from ice_offline.joint_learning.agent import make_agent
-from ice_offline.joint_learning.agent import model_path
-from ice_offline.joint_learning.dataset import load_dataset_info
+from joint_learning.agent import make_agent
+from joint_learning.agent import model_path
+from joint_learning.dataset import load_dataset_info
 
 
 # Keep these values aligned with train.py when evaluating a saved final model.
