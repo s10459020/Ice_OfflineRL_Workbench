@@ -1,4 +1,6 @@
 {
+    "python.defaultInterpreterPath": "${workspaceFolder}/source/joint_learning/.venv/bin/python",
+    "python.terminal.activateEnvironment": true,
     "python.testing.pytestArgs": [
         "source"
     ],
@@ -7,5 +9,8 @@
     "terminal.integrated.env.windows": {
         "PYTHONPATH": "${workspaceFolder}\\source",
         "MINARI_DATASETS_PATH": "${workspaceFolder}\\tmps\\datasets"
+    },
+    "terminal.integrated.env.linux": {
+        "PYTHONPATH": "${workspaceFolder}/source"
     }
 }

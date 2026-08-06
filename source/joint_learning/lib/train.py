@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import gymnasium
+import gym
 
 from joint_learning.agents.lib import model_path
 from joint_learning.lib.eval import evaluate
@@ -13,7 +13,7 @@ RETURN_AVG_WINDOW = 10
 
 
 def train(agent, dataset, agent_id: str) -> Path:
-    env = gymnasium.make(dataset.env_id)
+    env = gym.make(dataset.env_id)
     eval_returns: list[float] = []
 
     print(f"train agent={agent_id} dataset={dataset.dataset_id} steps={STEPS} device={dataset.device}")

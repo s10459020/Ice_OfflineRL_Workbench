@@ -1,7 +1,7 @@
-import gymnasium
+import gym
 
 
-def evaluate(agent, env: gymnasium.Env) -> float:
+def evaluate(agent, env: gym.Env) -> float:
     observation, _ = env.reset()
     total_return = 0.0
     terminated = False
@@ -11,4 +11,3 @@ def evaluate(agent, env: gymnasium.Env) -> float:
         observation, reward, terminated, truncated, _ = env.step(action)
         total_return += float(reward)
     return total_return
-

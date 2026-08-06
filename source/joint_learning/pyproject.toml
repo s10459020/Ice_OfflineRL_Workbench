@@ -10,7 +10,7 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
     "numpy<2",
     "torch>=2.5",
-    "gymnasium[mujoco-py]==1.0.0",
+    "gym[mujoco_py]==0.26.2",
     "h5py",
     "matplotlib",
     "scipy",
