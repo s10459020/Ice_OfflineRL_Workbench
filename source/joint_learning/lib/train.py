@@ -4,6 +4,8 @@ import gym
 
 from joint_learning.agents.lib import model_path
 from joint_learning.lib.eval import evaluate
+from joint_learning.lib.plot import plot_path
+from joint_learning.lib.plot import save_training_plot
 
 
 STEPS = 500_000
@@ -12,9 +14,9 @@ PRINT_INTERVAL = 1_000
 RETURN_AVG_WINDOW = 10
 
 
-def train(agent, dataset, agent_id: str) -> Path:
+def train(agent, dataset, agent_id: str, experiment_id: str) -> Path:
     env = gym.make(dataset.env_id)
-    eval_returns: list[float] = []
+    history: list[tuple[int, float]] = []
 
     print(f"train agent={agent_id} dataset={dataset.dataset_id} steps={STEPS} device={dataset.device}")
     try:
@@ -23,9 +25,9 @@ def train(agent, dataset, agent_id: str) -> Path:
             agent.update(batch)
 
             if step % PRINT_INTERVAL == 0 or step == STEPS:
-                episode_return = evaluate(agent, env)
-                eval_returns.append(episode_return)
-                recent_returns = eval_returns[-RETURN_AVG_WINDOW:]
+                episode_return = evaluate(agent, env, dataset)
+                history.append((step, episode_return))
+                recent_returns = [value for _, value in history[-RETURN_AVG_WINDOW:]]
                 moving_avg_return = sum(recent_returns) / len(recent_returns)
                 print(
                     f"step={step} "
@@ -37,5 +39,10 @@ def train(agent, dataset, agent_id: str) -> Path:
 
     path = model_path(agent_id, dataset.dataset_id)
     agent.save(path)
+    save_training_plot(
+        history,
+        plot_path(experiment_id, agent_id, dataset.dataset_id),
+        f"{experiment_id} {agent_id} {dataset.dataset_id}",
+    )
     print(f"saved model: {path}")
     return path

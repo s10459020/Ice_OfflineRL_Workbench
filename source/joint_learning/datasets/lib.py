@@ -69,9 +69,13 @@ class D4RLDataset:
             terminals = np.asarray(h5_file["terminals"], dtype=np.bool_)
             timeouts = np.asarray(h5_file["timeouts"], dtype=np.bool_)
             dones = np.logical_or(terminals, timeouts).reshape(-1, 1)
+            raw_observations = np.asarray(h5_file["observations"], dtype=np.float32)
+            raw_next_observations = np.asarray(h5_file["next_observations"], dtype=np.float32)
+            self.obs_mean = raw_observations.mean(axis=0, dtype=np.float64).astype(np.float32)
+            self.obs_std = raw_observations.std(axis=0, dtype=np.float64).astype(np.float32) + 1e-6
 
             self.observations = torch.as_tensor(
-                np.asarray(h5_file["observations"]),
+                self.normalize_observation(raw_observations),
                 dtype=torch.float32,
                 device=self.device,
             )
@@ -86,11 +90,15 @@ class D4RLDataset:
                 device=self.device,
             )
             self.next_observations = torch.as_tensor(
-                np.asarray(h5_file["next_observations"]),
+                self.normalize_observation(raw_next_observations),
                 dtype=torch.float32,
                 device=self.device,
             )
             self.dones = torch.as_tensor(dones, dtype=torch.float32, device=self.device)
+
+    def normalize_observation(self, observation) -> np.ndarray:
+        observation_array = np.asarray(observation, dtype=np.float32)
+        return (observation_array - self.obs_mean) / self.obs_std
 
     def sample_batch(self, batch_size: int) -> Batch:
         indexes = torch.randint(
