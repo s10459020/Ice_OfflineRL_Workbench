@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from joint_learning.dataset import Batch
+from joint_learning.datasets.lib import Batch
 
 
 class Policy(torch.nn.Module):
@@ -39,18 +39,30 @@ class QNetwork(torch.nn.Module):
 
 
 class TD3BCAgent:
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        discount_factor: float = 0.99,
+        target_update_rate: float = 0.005,
+        update_actor_interval: int = 2,
+        weight_td3: float = 2.5,
+        max_action: float = 1.0,
+        noise_scale: float = 0.2,
+        noise_clip: float = 0.5,
+        device: str = "cuda",
+    ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.discount_factor = 0.99
-        self.target_update_rate = 0.005
-        self.update_actor_interval = 2
+        self.discount_factor = discount_factor
+        self.target_update_rate = target_update_rate
+        self.update_actor_interval = update_actor_interval
         self.update_step = 0
-        self.weight_td3 = 0.01
-        self.max_action = 1.0
-        self.noise_scale = 0.2
-        self.noise_clip = 0.5
+        self.weight_td3 = weight_td3
+        self.max_action = max_action
+        self.noise_scale = noise_scale * max_action
+        self.noise_clip = noise_clip
 
         self.policy = Policy(obs_size, act_size, self.max_action).to(device)
         self.target_policy = Policy(obs_size, act_size, self.max_action).to(device)
@@ -63,6 +75,9 @@ class TD3BCAgent:
         self.policy_optimizer = torch.optim.Adam(self.policy.parameters())
         self.q_optimizer = torch.optim.Adam(list(self.q1.parameters()) + list(self.q2.parameters()))
 
+    # ====================
+    # Public Function
+    # ====================
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -92,6 +107,9 @@ class TD3BCAgent:
         state = torch.load(path, map_location=self.device)
         self.policy.load_state_dict(state)
 
+    # ====================
+    # Help Function
+    # ====================
     def sync_target_hard(self) -> None:
         self.target_policy.load_state_dict(self.policy.state_dict())
         self.target_q1.load_state_dict(self.q1.state_dict())
@@ -106,6 +124,9 @@ class TD3BCAgent:
             for source, target in zip(self.q2.parameters(), self.target_q2.parameters()):
                 target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
 
+    # ====================
+    # Loss Function
+    # ====================
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
         # TD3 target:
         #   a' = clip(pi_target(s') + epsilon, -a_max, a_max)
@@ -132,14 +153,14 @@ class TD3BCAgent:
         q2 = self.q2(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # Deterministic policy objective:
-        #   L_TD3 = E_{s~D}[ -Q_1(s, pi(s)) ]
-        # Minimizing this loss increases the critic value of policy actions.
+    def loss_normal(self, batch: Batch) -> torch.Tensor:
         observations, _, _, _, _ = batch
         policy_actions = self.policy(observations)
-        q = self.q1(observations, policy_actions)
-        return -q.mean()
+        q = torch.minimum(
+            self.q1(observations, policy_actions),
+            self.q2(observations, policy_actions),
+        )
+        return -q.mean() / q.abs().mean().detach()
 
     def loss_bc(self, batch: Batch) -> torch.Tensor:
         # Behavior cloning regularizer:
@@ -150,9 +171,6 @@ class TD3BCAgent:
         return F.mse_loss(predicted_actions, actions)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # TD3+BC actor objective:
-        #   L_pi = alpha * L_TD3 + L_BC
-        # The Q term improves actions, while BC constrains them near the dataset support.
-        loss_td3 = self.loss_td3(batch)
+        loss_normal = self.loss_normal(batch)
         loss_bc = self.loss_bc(batch)
-        return self.weight_td3 * loss_td3 + loss_bc
+        return self.weight_td3 * loss_normal + loss_bc

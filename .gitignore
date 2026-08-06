@@ -5,7 +5,7 @@
 /tmps/
 /tmps_old/
 /d3rlpy*/
-/source/joint_learning/dataset/
+/source/joint_learning/datasets/*.hdf5
 /source/joint_learning/model/
 
 # Python caches and artifacts

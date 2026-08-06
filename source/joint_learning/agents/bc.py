@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 
-from joint_learning.dataset import Batch
+from joint_learning.datasets.lib import Batch
 
 
 class Policy(torch.nn.Module):
