@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "joint-learning"
+version = "0.1.0"
+description = "Compact Offline RL joint learning experiments"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "numpy<2",
+    "torch>=2.5",
+    "gymnasium[mujoco-py]==1.0.0",
+    "h5py",
+    "matplotlib",
+    "scipy",
+]
+
+[tool.setuptools]
+package-dir = {"joint_learning" = "."}
+packages = [
+    "joint_learning",
+    "joint_learning.agents",
+    "joint_learning.datasets",
+    "joint_learning.lib",
+]

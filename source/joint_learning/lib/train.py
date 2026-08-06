@@ -3,7 +3,7 @@ from pathlib import Path
 import gymnasium
 
 from joint_learning.agents.lib import model_path
-from joint_learning.utils.eval import evaluate
+from joint_learning.lib.eval import evaluate
 
 
 STEPS = 500_000

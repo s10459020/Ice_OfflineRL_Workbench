@@ -11,3 +11,4 @@ def evaluate(agent, env: gymnasium.Env) -> float:
         observation, reward, terminated, truncated, _ = env.step(action)
         total_return += float(reward)
     return total_return
+

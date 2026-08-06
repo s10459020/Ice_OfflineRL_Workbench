@@ -1,6 +1,6 @@
 from joint_learning.agents.lib import make_agent
 from joint_learning.datasets.lib import D4RLDataset
-from joint_learning.utils.train import train
+from joint_learning.lib.train import train
 
 
 DEVICE = "cuda"
