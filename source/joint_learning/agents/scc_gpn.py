@@ -1,6 +1,6 @@
 from joint_learning.agents.dynamics import SCASDynamics
 from joint_learning.agents.scc_gp import SCCGPAgent
-from joint_learning.datasets.lib import Batch
+from joint_learning.lib.dataset import Batch
 
 
 class SCCGPNAgent(SCCGPAgent):

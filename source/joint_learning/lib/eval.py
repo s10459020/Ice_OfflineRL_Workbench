@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 
 
 EVAL_EPISODES = 10

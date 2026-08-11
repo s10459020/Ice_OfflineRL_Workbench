@@ -1,7 +1,7 @@
-import gym
+import gymnasium as gym
 
-from joint_learning.agents.lib import make_agent
-from joint_learning.datasets.lib import D4RLDataset
+from joint_learning.lib.agent import make_agent
+from joint_learning.lib.dataset import D4RLDataset
 from joint_learning.lib.eval import evaluate_mean
 from joint_learning.lib.table import table_path
 from joint_learning.lib.table import write_table
@@ -12,14 +12,14 @@ EXPERIMENT = "benchmark"
 DEVICE = "cuda"
 
 AGENTS = [
+    "scas_n",
+    "scaspl_n",
+    "scc_n",
     "bc",
     "td3bc",
     "iql",
     "cql",
     "aspl_c",
-    "scas_n",
-    "scaspl_n",
-    "scc_n",
 ]
 
 DATASETS = [

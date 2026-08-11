@@ -1,8 +1,8 @@
 from pathlib import Path
 
-import gym
+import gymnasium as gym
 
-from joint_learning.agents.lib import model_path
+from joint_learning.lib.agent import model_path
 from joint_learning.lib.eval import evaluate
 from joint_learning.lib.plot import plot_path
 from joint_learning.lib.plot import save_training_plot

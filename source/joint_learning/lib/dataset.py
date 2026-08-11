@@ -8,27 +8,27 @@ import torch
 Batch = tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]
 
 
-DATASET_ROOT = Path(__file__).resolve().parent
+DATASET_ROOT = Path(__file__).resolve().parent.parent / "datasets"
 
 
 # Available datasets for this compact build.
 # Place the corresponding HDF5 files in source/joint_learning/datasets.
 D4RL_DATASETS = {
-    "hopper_medium": ("hopper_medium-v2.hdf5", "Hopper-v2"),
-    "hopper_expert": ("hopper_expert-v2.hdf5", "Hopper-v2"),
-    "hopper_hybrid": ("hopper_medium_expert-v2.hdf5", "Hopper-v2"),
-    "hopper_medium_replay": ("hopper_medium_replay-v2.hdf5", "Hopper-v2"),
-    "hopper_expert_replay": ("hopper_full_replay-v2.hdf5", "Hopper-v2"),
-    "walker2d_medium": ("walker2d_medium-v2.hdf5", "Walker2d-v2"),
-    "walker2d_expert": ("walker2d_expert-v2.hdf5", "Walker2d-v2"),
-    "walker2d_hybrid": ("walker2d_medium_expert-v2.hdf5", "Walker2d-v2"),
-    "walker2d_medium_replay": ("walker2d_medium_replay-v2.hdf5", "Walker2d-v2"),
-    "walker2d_expert_replay": ("walker2d_full_replay-v2.hdf5", "Walker2d-v2"),
-    "halfcheetah_medium": ("halfcheetah_medium-v2.hdf5", "HalfCheetah-v2"),
-    "halfcheetah_expert": ("halfcheetah_expert-v2.hdf5", "HalfCheetah-v2"),
-    "halfcheetah_hybrid": ("halfcheetah_medium_expert-v2.hdf5", "HalfCheetah-v2"),
-    "halfcheetah_medium_replay": ("halfcheetah_medium_replay-v2.hdf5", "HalfCheetah-v2"),
-    "halfcheetah_expert_replay": ("halfcheetah_full_replay-v2.hdf5", "HalfCheetah-v2"),
+    "hopper_medium": ("hopper_medium-v2.hdf5", "Hopper-v5"),
+    "hopper_expert": ("hopper_expert-v2.hdf5", "Hopper-v5"),
+    "hopper_hybrid": ("hopper_medium_expert-v2.hdf5", "Hopper-v5"),
+    "hopper_medium_replay": ("hopper_medium_replay-v2.hdf5", "Hopper-v5"),
+    "hopper_expert_replay": ("hopper_full_replay-v2.hdf5", "Hopper-v5"),
+    "walker2d_medium": ("walker2d_medium-v2.hdf5", "Walker2d-v5"),
+    "walker2d_expert": ("walker2d_expert-v2.hdf5", "Walker2d-v5"),
+    "walker2d_hybrid": ("walker2d_medium_expert-v2.hdf5", "Walker2d-v5"),
+    "walker2d_medium_replay": ("walker2d_medium_replay-v2.hdf5", "Walker2d-v5"),
+    "walker2d_expert_replay": ("walker2d_full_replay-v2.hdf5", "Walker2d-v5"),
+    "halfcheetah_medium": ("halfcheetah_medium-v2.hdf5", "HalfCheetah-v5"),
+    "halfcheetah_expert": ("halfcheetah_expert-v2.hdf5", "HalfCheetah-v5"),
+    "halfcheetah_hybrid": ("halfcheetah_medium_expert-v2.hdf5", "HalfCheetah-v5"),
+    "halfcheetah_medium_replay": ("halfcheetah_medium_replay-v2.hdf5", "HalfCheetah-v5"),
+    "halfcheetah_expert_replay": ("halfcheetah_full_replay-v2.hdf5", "HalfCheetah-v5"),
 }
 
 

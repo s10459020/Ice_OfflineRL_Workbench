@@ -3,7 +3,7 @@ import torch
 from torch.nn import functional as F
 
 from joint_learning.agents.td3 import TD3Agent
-from joint_learning.datasets.lib import Batch
+from joint_learning.lib.dataset import Batch
 
 
 class ASPLAgent(TD3Agent):

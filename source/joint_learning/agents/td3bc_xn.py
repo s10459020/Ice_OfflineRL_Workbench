@@ -1,7 +1,7 @@
 import torch
 
 from joint_learning.agents.td3bc import TD3BCAgent
-from joint_learning.datasets.lib import Batch
+from joint_learning.lib.dataset import Batch
 
 
 class TD3BCXNAgent(TD3BCAgent):

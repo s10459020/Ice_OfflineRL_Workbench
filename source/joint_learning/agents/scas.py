@@ -2,7 +2,7 @@ import torch
 
 from joint_learning.agents.dynamics import SCASDynamics
 from joint_learning.agents.td3 import TD3Agent
-from joint_learning.datasets.lib import Batch
+from joint_learning.lib.dataset import Batch
 
 
 class SCASAgent(TD3Agent):

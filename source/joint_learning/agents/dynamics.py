@@ -4,6 +4,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
+from joint_learning.lib.dataset import Batch
+
 
 DYNAMICS_STEPS = 500_000
 DYNAMICS_BATCH_SIZE = 256
@@ -38,9 +40,10 @@ class SCASDynamics:
     def noisy_observation(self, observations: torch.Tensor) -> torch.Tensor:
         return observations + torch.randn_like(observations) * self.noise_scale
 
-    def update(self, batch) -> None:
+    def update(self, batch: Batch) -> None:
         # Dynamics loss: L_M = E[(M(s, a) - s')^2].
-        loss = F.mse_loss(self.next_observation(batch.observations, batch.actions), batch.next_observations)
+        observations, actions, _, next_observations, _ = batch
+        loss = F.mse_loss(self.next_observation(observations, actions), next_observations)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()

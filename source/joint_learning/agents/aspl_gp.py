@@ -1,7 +1,7 @@
 import torch
 
 from joint_learning.agents.aspl import ASPLAgent
-from joint_learning.datasets.lib import Batch
+from joint_learning.lib.dataset import Batch
 
 
 class ASPLGPAgent(ASPLAgent):
