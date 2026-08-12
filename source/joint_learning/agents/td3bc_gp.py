@@ -19,11 +19,14 @@ class TD3BCGPAgent(TD3BCAgent):
         self.gp_count = gp_count
         self.gp_threshold = gp_threshold
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_q(self, batch: Batch) -> torch.Tensor:
         # TD3BC-GP critic loss:
-        #   L_Q = L_TD + lambda_gp * L_GP.
+        # Loss_Q = Loss_TD + \lambda_(GP) * Loss_Gradient_Constraint
         # The actor still uses the original normalized TD3BC objective.
-        return self.loss_td(batch) + self.weight_gp * self.loss_gradient_penalty(
+        return self.loss_td(batch) + self.weight_gp * self.loss_gradient_constraint(
             batch,
             self.gp_count,
             self.gp_threshold,

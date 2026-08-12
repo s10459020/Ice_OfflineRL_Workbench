@@ -19,10 +19,13 @@ class ASPLGPAgent(ASPLAgent):
         self.gp_count = gp_count
         self.gp_threshold = gp_threshold
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_q(self, batch: Batch) -> torch.Tensor:
         # ASPL-GP critic loss:
-        #   L_Q = L_TD + lambda_p * L_ASPL + lambda_gp * L_GP.
-        return super().loss_critic(batch) + self.weight_gp * self.loss_gradient_penalty(
+        # Loss_Q = Loss_TD + \lambda_p * Loss_Pseudo_Label_Constraint + \lambda_(GP) * Loss_Gradient_Constraint
+        return super().loss_q(batch) + self.weight_gp * self.loss_gradient_constraint(
             batch,
             self.gp_count,
             self.gp_threshold,

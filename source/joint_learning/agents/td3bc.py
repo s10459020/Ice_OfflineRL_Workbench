@@ -10,17 +10,20 @@ class TD3BCAgent(TD3Agent):
         super().__init__(obs_size, act_size, device=device)
         self.weight_td3 = weight_td3
 
-    def loss_bc(self, batch: Batch) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_behavior_cloning(self, batch: Batch) -> torch.Tensor:
         # Behavior cloning regularizer:
-        #   L_BC = E_D[||pi(s) - a||_2^2].
+        # Loss_Behavior_Cloning = E_D [\|\pi(s)-a\|_2^2 ]
         # This keeps the learned policy close to dataset actions in offline RL.
         observations, actions, _, _, _ = batch
         predicted_actions = self.policy(observations)
         return F.mse_loss(predicted_actions, actions)
 
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_policy(self, batch: Batch) -> torch.Tensor:
         # Original TD3BC actor loss:
-        #   L_pi = alpha * L_N + L_BC
-        # where L_N = -E[Q(s, pi(s))] / E[|Q(s, pi(s))|].
+        # Loss_Policy = \alpha * Loss_Normalized_Policy + Loss_Behavior_Cloning
+        # Loss_Normalized_Policy = -E[Q_(min)(s,\pi(s))]/E[|Q_(min)(s,\pi(s))|]
         # In the paper, this normalized objective is the official td3bc model.
-        return self.weight_td3 * self.loss_normal(batch) + self.loss_bc(batch)
+        return self.weight_td3 * self.loss_normalized_policy(batch) + self.loss_behavior_cloning(batch)

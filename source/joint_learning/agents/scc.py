@@ -24,30 +24,24 @@ class SCCAgent(SCASAgent):
         self.conservative_count = conservative_count
         self.threshold = threshold
 
-    def update(self, batch: Batch) -> None:
-        self.update_step += 1
-        loss_critic = self.loss_critic(batch)
-        self.q_optimizer.zero_grad()
-        loss_critic.backward()
-        self.q_optimizer.step()
-
-        if self.update_step % self.update_actor_interval == 0:
-            loss_actor = self.loss_actor(batch)
-            self.policy_optimizer.zero_grad()
-            loss_actor.backward()
-            self.policy_optimizer.step()
-            self.sync_target_soft()
-
+    # -------------------------------------------------------------------------
+    # Help functions
+    # -------------------------------------------------------------------------
     def sample_conservative_actions(self, batch_size: int) -> torch.Tensor:
+        # Conservative candidate actions:
+        # a\tilde_n \sim U(-a_(max), a_(max))
         return torch.empty(
             (batch_size, self.conservative_count, self.act_size),
             dtype=torch.float32,
             device=self.device,
         ).uniform_(-self.max_action, self.max_action)
 
-    def loss_conservative(self, batch: Batch) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_conservative_constraint(self, batch: Batch) -> torch.Tensor:
         # SCC conservative critic loss:
-        #   L_C = E[relu(logsumexp_a Q(s,a_sample) - log(N) - Q(s,a_data) + tau)].
+        # Loss_Conservative_Constraint = \sum_(i \in {1,2}) E_D [ReLU(log \sum_n exp(Q_i (s,a\tilde_n)) - log N - Q_i (s,a) + \tau)]
         # This raises a margin between sampled OOD actions and dataset actions.
         observations, actions, _, _, _ = batch
         batch_size = observations.shape[0]
@@ -64,7 +58,7 @@ class SCCAgent(SCASAgent):
             losses.append(F.relu(penalty_value - q_data + self.threshold).mean())
         return sum(losses)
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_q(self, batch: Batch) -> torch.Tensor:
         # SCC critic loss:
-        #   L_Q = L_TD + alpha * L_C.
-        return self.loss_td(batch) + self.weight_conservative * self.loss_conservative(batch)
+        # Loss_Q = Loss_TD + \alpha Loss_Conservative_Constraint
+        return self.loss_td(batch) + self.weight_conservative * self.loss_conservative_constraint(batch)

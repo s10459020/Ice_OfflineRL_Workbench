@@ -45,9 +45,9 @@ def load_dataset_info(dataset_id: str) -> tuple[str, int, int]:
 
 class D4RLDataset:
     def __init__(self, dataset_id: str, device: str = "cuda") -> None:
-        self.dataset_id = dataset_id
+        self.id = dataset_id
         self.device = device
-        filename, env_id = D4RL_DATASETS[self.dataset_id]
+        filename, env_id = D4RL_DATASETS[self.id]
         self.path = DATASET_ROOT / filename
         self.env_id = env_id
         self.load()

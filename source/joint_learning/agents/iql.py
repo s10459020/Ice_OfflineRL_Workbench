@@ -90,6 +90,9 @@ class IQLAgent:
         self.q_optimizer = torch.optim.Adam(list(self.q1.parameters()) + list(self.q2.parameters()))
         self.value_optimizer = torch.optim.Adam(self.value_function.parameters())
 
+    # -------------------------------------------------------------------------
+    # Public functions
+    # -------------------------------------------------------------------------
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -103,14 +106,14 @@ class IQLAgent:
         loss_q.backward()
         self.q_optimizer.step()
 
-        loss_v = self.loss_v(batch)
+        loss_value = self.loss_value(batch)
         self.value_optimizer.zero_grad()
-        loss_v.backward()
+        loss_value.backward()
         self.value_optimizer.step()
 
-        loss_actor = self.loss_actor(batch)
+        loss_policy = self.loss_policy(batch)
         self.policy_optimizer.zero_grad()
-        loss_actor.backward()
+        loss_policy.backward()
         self.policy_optimizer.step()
         self.sync_target_soft()
 
@@ -122,6 +125,9 @@ class IQLAgent:
         state = torch.load(path, map_location=self.device)
         self.policy.load_state_dict(state)
 
+    # -------------------------------------------------------------------------
+    # Help functions
+    # -------------------------------------------------------------------------
     def sync_target_hard(self) -> None:
         self.target_q1.load_state_dict(self.q1.state_dict())
         self.target_q2.load_state_dict(self.q2.state_dict())
@@ -133,15 +139,20 @@ class IQLAgent:
             for source, target in zip(self.q2.parameters(), self.target_q2.parameters()):
                 target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
 
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
     def target_q_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        # IQL target Q estimate:
+        # Q_(min)'(s,a) = min_i Q'_i (s,a)
         q1 = self.target_q1(observations, actions)
         q2 = self.target_q2(observations, actions)
         return torch.minimum(q1, q2)
 
     def loss_q(self, batch: Batch) -> torch.Tensor:
         # IQL Q objective:
-        #   y = r + gamma * (1 - d) * V(s')
-        #   L_Q = E_D[ (Q_1(s,a) - y)^2 + (Q_2(s,a) - y)^2 ]
+        # y = r + \gamma(1 - d)V(s')
+        # Loss_Q = E_D [ \sum_(i \in {1,2}) (Q_i (s,a) - y)^2 ]
         # The value function supplies the bootstrapped target instead of a policy action.
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
@@ -150,10 +161,10 @@ class IQLAgent:
         q2 = self.q2(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
-    def loss_v(self, batch: Batch) -> torch.Tensor:
+    def loss_value(self, batch: Batch) -> torch.Tensor:
         # IQL expectile value objective:
-        #   u = min_i Q_i_target(s,a) - V(s)
-        #   L_V = E_D[ |tau - 1(u < 0)| * u^2 ]
+        # u(s,a) = Q_(min)'(s,a) - V(s)
+        # Loss_Value = E_D [ |\tau - 1_(u < 0)| u^2 ]
         # Expectile regression fits V to high-value in-dataset actions without querying OOD actions.
         observations, actions, _, _, _ = batch
         with torch.no_grad():
@@ -163,11 +174,11 @@ class IQLAgent:
         weight = torch.abs(self.expectile - (diff < 0.0).float())
         return (weight * diff.pow(2)).mean()
 
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_policy(self, batch: Batch) -> torch.Tensor:
         # IQL advantage-weighted behavior cloning:
-        #   A(s,a) = min_i Q_i_target(s,a) - V(s)
-        #   w = exp(beta * A(s,a))
-        #   L_pi = E_D[ -clip(w, max=w_max) * log pi(a|s) ]
+        # A(s,a) = Q_(min)'(s,a) - V(s)
+        # w(s,a) = min(exp(\beta A(s,a)),w_(max))
+        # Loss_Policy = E_D [ -w(s,a) log \pi(a|s) ]
         # The actor imitates dataset actions more strongly when their estimated advantage is high.
         observations, actions, _, _, _ = batch
         with torch.no_grad():

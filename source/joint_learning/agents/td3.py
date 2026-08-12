@@ -73,6 +73,9 @@ class TD3Agent:
         self.policy_optimizer = torch.optim.Adam(self.policy.parameters())
         self.q_optimizer = torch.optim.Adam(list(self.q1.parameters()) + list(self.q2.parameters()))
 
+    # -------------------------------------------------------------------------
+    # Public functions
+    # -------------------------------------------------------------------------
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -82,15 +85,15 @@ class TD3Agent:
 
     def update(self, batch: Batch) -> None:
         self.update_step += 1
-        loss_critic = self.loss_critic(batch)
+        loss_q = self.loss_q(batch)
         self.q_optimizer.zero_grad()
-        loss_critic.backward()
+        loss_q.backward()
         self.q_optimizer.step()
 
         if self.update_step % self.update_actor_interval == 0:
-            loss_actor = self.loss_actor(batch)
+            loss_policy = self.loss_policy(batch)
             self.policy_optimizer.zero_grad()
-            loss_actor.backward()
+            loss_policy.backward()
             self.policy_optimizer.step()
             self.sync_target_soft()
 
@@ -102,6 +105,9 @@ class TD3Agent:
         state = torch.load(path, map_location=self.device)
         self.policy.load_state_dict(state)
 
+    # -------------------------------------------------------------------------
+    # Help functions
+    # -------------------------------------------------------------------------
     def sync_target_hard(self) -> None:
         self.target_policy.load_state_dict(self.policy.state_dict())
         self.target_q1.load_state_dict(self.q1.state_dict())
@@ -116,10 +122,14 @@ class TD3Agent:
             for source, target in zip(self.q2.parameters(), self.target_q2.parameters()):
                 target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
 
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
         # TD3 target:
-        #   a' = clip(pi_target(s') + epsilon, -a_max, a_max)
-        #   y = r + gamma * (1 - d) * min_i Q_i_target(s', a')
+        # \epsilon \sim clip(N(0, \sigma^2 I), -c, c)
+        # a' = clip(\pi'(s') + \epsilon, -a_(max), a_(max))
+        # y = r + \gamma(1 - d) min_i Q'_i (s', a')
         # Target policy smoothing makes the critic less sensitive to sharp action errors.
         with torch.no_grad():
             next_actions = self.target_policy(next_observations)
@@ -134,7 +144,7 @@ class TD3Agent:
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
         # Critic TD objective:
-        #   L_Q = E_D[(Q_1(s,a) - y)^2 + (Q_2(s,a) - y)^2].
+        # Loss_TD = E_D [ \sum_(i \in {1,2}) (Q_i (s,a) - y)^2 ]
         # The target y is computed with clipped double Q-learning.
         observations, actions, rewards, next_observations, dones = batch
         target = self.target_td3(next_observations, rewards, dones)
@@ -142,20 +152,22 @@ class TD3Agent:
         q2 = self.q2(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_q(self, batch: Batch) -> torch.Tensor:
+        # TD3 critic objective:
+        # Loss_Q = Loss_TD
         return self.loss_td(batch)
 
     def loss_td3(self, batch: Batch) -> torch.Tensor:
         # TD3 actor objective:
-        #   L_TD3 = -E_D[min_i Q_i(s, pi(s))].
+        # Loss_TD3 = -E_D [ min_i Q_i (s, \pi(s)) ]
         observations, _, _, _, _ = batch
         policy_actions = self.policy(observations)
         q = torch.minimum(self.q1(observations, policy_actions), self.q2(observations, policy_actions))
         return -q.mean()
 
-    def loss_normal(self, batch: Batch) -> torch.Tensor:
+    def loss_normalized_policy(self, batch: Batch) -> torch.Tensor:
         # Normalized actor objective:
-        #   L_N = -E[Q(s, pi(s))] / E[|Q(s, pi(s))|].
+        # Loss_Normalized_Policy = -E[Q_(min)(s,\pi(s))]/E[|Q_(min)(s,\pi(s))|]
         # This keeps the actor scale stable across datasets and critic magnitudes.
         observations, _, _, _, _ = batch
         policy_actions = self.policy(observations)
@@ -163,15 +175,18 @@ class TD3Agent:
         return -q.mean() / q.abs().mean().detach()
 
     def sample_random_actions(self, batch_size: int, sample_count: int) -> torch.Tensor:
+        # Uniform critic probe actions:
+        # a\tilde \sim U(-a_(max), a_(max))
         return torch.empty(
             (batch_size, sample_count, self.act_size),
             dtype=torch.float32,
             device=self.device,
         ).uniform_(-self.max_action, self.max_action)
 
-    def loss_gradient_penalty(self, batch: Batch, sample_count: int = 16, threshold: float = 1.0) -> torch.Tensor:
-        # Action-gradient penalty:
-        #   L_GP = E[relu(||dQ_i(s, a_sample) / da_sample||_2 - tau)^2].
+    def loss_gradient_constraint(self, batch: Batch, sample_count: int = 16, threshold: float = 1.0) -> torch.Tensor:
+        # Action-gradient constraint on uniformly sampled actions:
+        # g_i = \|dQ_i (s,a\tilde)/da\tilde\|_2
+        # Loss_Gradient_Constraint = E_(D,a\tilde)[\sum_i ReLU(g_i-\tau)^2 ]
         # This discourages sharp critic slopes around sampled actions.
         observations, _, _, _, _ = batch
         batch_size = observations.shape[0]
@@ -193,5 +208,7 @@ class TD3Agent:
             penalties.append(F.relu(grad.norm(p=2, dim=-1) - threshold).square())
         return torch.stack(penalties, dim=0).sum(dim=0).mean()
 
-    def loss_actor(self, batch: Batch) -> torch.Tensor:
+    def loss_policy(self, batch: Batch) -> torch.Tensor:
+        # TD3 actor loss:
+        # Loss_Policy = Loss_TD3
         return self.loss_td3(batch)

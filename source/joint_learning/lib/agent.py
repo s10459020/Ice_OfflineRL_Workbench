@@ -90,11 +90,15 @@ def make_agent(agent_id: str, dataset, device: str):
     if agent_id in DYNAMIC_AGENT_CLASSES:
         dynamics = load_or_train_dynamics(dataset, device)
         agent_class = DYNAMIC_AGENT_CLASSES[agent_id]
-        return agent_class(dataset.obs_size, dataset.act_size, dynamics=dynamics, device=device)
+        agent = agent_class(dataset.obs_size, dataset.act_size, dynamics=dynamics, device=device)
+        agent.id = agent_id
+        return agent
 
     agent_class = AGENT_CLASSES[agent_id]
-    return agent_class(dataset.obs_size, dataset.act_size, device=device)
+    agent = agent_class(dataset.obs_size, dataset.act_size, device=device)
+    agent.id = agent_id
+    return agent
 
 
-def model_path(agent_id: str, dataset_id: str) -> Path:
-    return Path(__file__).resolve().parent.parent / "model" / f"{agent_id}-{dataset_id}.pt"
+def model_path(agent, dataset) -> Path:
+    return Path(__file__).resolve().parent.parent / "model" / f"{agent.id}-{dataset.id}.pt"

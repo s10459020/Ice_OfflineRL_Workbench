@@ -35,13 +35,18 @@ class SCASDynamics:
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=1e-3)
 
     def next_observation(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        # Learned transition model:
+        # s\hat' = M(s,a)
         return self.model(observations, actions)
 
     def noisy_observation(self, observations: torch.Tensor) -> torch.Tensor:
+        # Noisy SCAS state:
+        # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 )
         return observations + torch.randn_like(observations) * self.noise_scale
 
     def update(self, batch: Batch) -> None:
-        # Dynamics loss: L_M = E[(M(s, a) - s')^2].
+        # Dynamics model loss:
+        # Loss_Dynamics_Model = E_D [\|M(s,a)-s'\|_2^2 ]
         observations, actions, _, next_observations, _ = batch
         loss = F.mse_loss(self.next_observation(observations, actions), next_observations)
         self.optimizer.zero_grad()
@@ -68,12 +73,12 @@ def dynamics_path(dataset_id: str) -> Path:
 
 def load_or_train_dynamics(dataset, device: str) -> SCASDynamics:
     dynamics = SCASDynamics(dataset.obs_size, dataset.act_size, device=device)
-    path = dynamics_path(dataset.dataset_id)
+    path = dynamics_path(dataset.id)
     if path.exists():
         dynamics.load(path)
         return dynamics.eval()
 
-    print(f"train dynamics: {dataset.dataset_id}")
+    print(f"train dynamics: {dataset.id}")
     for step in range(1, DYNAMICS_STEPS + 1):
         dynamics.update(dataset.sample_batch(DYNAMICS_BATCH_SIZE))
         if step % DYNAMICS_PRINT_INTERVAL == 0:

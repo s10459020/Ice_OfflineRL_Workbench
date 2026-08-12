@@ -8,9 +8,12 @@ class SCASGPNAgent(SCASGPAgent):
         super().__init__(obs_size, act_size, dynamics=dynamics, device=device)
         self.weight_correction = 0.002
 
-    def loss_actor(self, batch: Batch):
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_policy(self, batch: Batch):
         # SCAS-GPN actor loss:
-        #   L_normal = -E[Q(s, pi(s))] / E[|Q(s, pi(s))|]
-        #   L_pi = (1 - lambda_s) * L_normal + lambda_s * L_SCAS.
+        # Loss_Normalized_Policy = -E[Q_(min)(s,\pi(s))]/E[|Q_(min)(s,\pi(s))|]
+        # Loss_Policy = (1 - \lambda_s) * Loss_Normalized_Policy + \lambda_s * Loss_State_Correction
         # The critic uses TD plus action-gradient penalty.
-        return (1.0 - self.weight_correction) * self.loss_normal(batch) + self.weight_correction * self.loss_correction(batch)
+        return (1.0 - self.weight_correction) * self.loss_normalized_policy(batch) + self.weight_correction * self.loss_state_correction(batch)

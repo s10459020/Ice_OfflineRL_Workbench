@@ -6,8 +6,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-def plot_path(experiment_id: str, agent_id: str, dataset_id: str) -> Path:
-    return Path(__file__).resolve().parent.parent / "plots" / experiment_id / f"{agent_id}-{dataset_id}.png"
+def plot_path(experiment_id: str, agent, dataset) -> Path:
+    return Path(__file__).resolve().parent.parent / "plots" / experiment_id / f"{agent.id}-{dataset.id}.png"
 
 
 def save_training_plot(history: list[tuple[int, float]], path: Path, title: str) -> None:
@@ -21,4 +21,3 @@ def save_training_plot(history: list[tuple[int, float]], path: Path, title: str)
     plt.tight_layout()
     plt.savefig(path)
     plt.close()
-

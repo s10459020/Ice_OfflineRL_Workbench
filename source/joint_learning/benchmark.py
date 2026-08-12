@@ -1,10 +1,8 @@
-import gymnasium as gym
-
 from joint_learning.lib.agent import make_agent
 from joint_learning.lib.dataset import D4RLDataset
-from joint_learning.lib.eval import evaluate_mean
 from joint_learning.lib.table import table_path
 from joint_learning.lib.table import write_table
+from joint_learning.lib.test import test
 from joint_learning.lib.train import train
 
 
@@ -12,14 +10,14 @@ EXPERIMENT = "benchmark"
 DEVICE = "cuda"
 
 AGENTS = [
-    "scas_n",
-    "scaspl_n",
-    "scc_n",
     "bc",
     "td3bc",
     "iql",
     "cql",
     "aspl_c",
+    "scas_n",
+    "scaspl_n",
+    "scc_n",
 ]
 
 DATASETS = [
@@ -50,15 +48,9 @@ def main() -> None:
         for agent_id in AGENTS:
             dataset = D4RLDataset(dataset_id, DEVICE)
             agent = make_agent(agent_id, dataset, DEVICE)
-            train(agent, dataset, agent_id, EXPERIMENT)
-
-            env = gym.make(dataset.env_id)
-            try:
-                mean_return = evaluate_mean(agent, env, dataset)
-            finally:
-                env.close()
-
-            row.append(f"{mean_return:.6f}")
+            train(agent, dataset, EXPERIMENT)
+            result = test(agent, dataset)
+            row.append(f"{result.mean_return:.6f}")
         rows.append(row)
         write_table(table_path(EXPERIMENT), header, rows)
 

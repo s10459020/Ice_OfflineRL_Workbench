@@ -17,15 +17,18 @@ class SCASPLNCAgent(SCASPLNAgent):
         super().__init__(obs_size, act_size, dynamics=dynamics, device=device)
         self.weight_compensate = weight_compensate
 
-    def loss_compensate(self, batch: Batch) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_compensation(self, batch: Batch) -> torch.Tensor:
         # Compensation term:
-        #   L_C = -E[mean_i Q_i(s, a_data)].
+        # Loss_Compensation = -E_D [(1/2)\sum_(i=1)^2 Q_i (s,a)]
         # SCASPL-NC keeps SCASPL-N actor normalization and adds critic compensation.
         observations, actions, _, _, _ = batch
         q = torch.stack([self.q1(observations, actions), self.q2(observations, actions)], dim=0)
         return -q.mean()
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    def loss_q(self, batch: Batch) -> torch.Tensor:
         # SCASPL-NC critic loss:
-        #   L_Q = L_TD + lambda_p * L_PL + lambda_c * L_C.
-        return super().loss_critic(batch) + self.weight_compensate * self.loss_compensate(batch)
+        # Loss_Q = Loss_TD + \lambda_p * Loss_Pseudo_Label_Constraint + \lambda_c * Loss_Compensation
+        return super().loss_q(batch) + self.weight_compensate * self.loss_compensation(batch)

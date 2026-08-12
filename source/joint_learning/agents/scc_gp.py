@@ -21,10 +21,13 @@ class SCCGPAgent(SCCAgent):
         self.gp_count = gp_count
         self.gp_threshold = gp_threshold
 
-    def loss_critic(self, batch: Batch) -> torch.Tensor:
+    # -------------------------------------------------------------------------
+    # Loss functions
+    # -------------------------------------------------------------------------
+    def loss_q(self, batch: Batch) -> torch.Tensor:
         # SCC-GP critic loss:
-        #   L_Q = L_TD + alpha * L_C + lambda_gp * L_GP.
-        return super().loss_critic(batch) + self.weight_gp * self.loss_gradient_penalty(
+        # Loss_Q = Loss_TD + \alpha * Loss_Conservative_Constraint + \lambda_(GP) * Loss_Gradient_Constraint
+        return super().loss_q(batch) + self.weight_gp * self.loss_gradient_constraint(
             batch,
             self.gp_count,
             self.gp_threshold,

@@ -10,15 +10,15 @@ from joint_learning.lib.plot import save_training_plot
 
 STEPS = 500_000
 BATCH_SIZE = 256
-PRINT_INTERVAL = 1_000
+PRINT_INTERVAL = 2_000
 RETURN_AVG_WINDOW = 10
 
 
-def train(agent, dataset, agent_id: str, experiment_id: str) -> Path:
+def train(agent, dataset, experiment_id: str) -> Path:
     env = gym.make(dataset.env_id)
     history: list[tuple[int, float]] = []
 
-    print(f"train agent={agent_id} dataset={dataset.dataset_id} steps={STEPS} device={dataset.device}")
+    print(f"train agent={agent.id} dataset={dataset.id} steps={STEPS} device={dataset.device}")
     try:
         for step in range(1, STEPS + 1):
             batch = dataset.sample_batch(BATCH_SIZE)
@@ -37,12 +37,12 @@ def train(agent, dataset, agent_id: str, experiment_id: str) -> Path:
     finally:
         env.close()
 
-    path = model_path(agent_id, dataset.dataset_id)
+    path = model_path(agent, dataset)
     agent.save(path)
     save_training_plot(
         history,
-        plot_path(experiment_id, agent_id, dataset.dataset_id),
-        f"{experiment_id} {agent_id} {dataset.dataset_id}",
+        plot_path(experiment_id, agent, dataset),
+        f"{experiment_id} {agent.id} {dataset.id}",
     )
     print(f"saved model: {path}")
     return path
