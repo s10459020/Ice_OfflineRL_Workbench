@@ -13,10 +13,10 @@ from joint_learning.agents.scaspl_c import SCASPLCAgent
 from joint_learning.agents.scaspl_gp import SCASPLGPAgent
 from joint_learning.agents.scaspl_n import SCASPLNAgent
 from joint_learning.agents.scaspl_nc import SCASPLNCAgent
-from joint_learning.agents.scc import SCCAgent
-from joint_learning.agents.scc_gp import SCCGPAgent
-from joint_learning.agents.scc_gpn import SCCGPNAgent
-from joint_learning.agents.scc_n import SCCNAgent
+from joint_learning.agents.sccc import SCCCAgent
+from joint_learning.agents.sccc_gp import SCCCGPAgent
+from joint_learning.agents.sccc_gpn import SCCCGPNAgent
+from joint_learning.agents.sccc_n import SCCCNAgent
 from joint_learning.agents.td3bc import TD3BCAgent
 from joint_learning.agents.td3bc_gp import TD3BCGPAgent
 from joint_learning.agents.td3bc_p import TD3BCPAgent
@@ -48,10 +48,10 @@ from joint_learning.lib.train import train_model
 # - "scaspl_gp": SCASPL with action-gradient penalty
 # - "scaspl_c": SCASPL with dataset-action compensation
 # - "scaspl_nc": SCASPL-N with dataset-action compensation
-# - "scc": SCAS with conservative critic
-# - "scc_n": SCC with normalized actor objective
-# - "scc_gp": SCC with action-gradient penalty
-# - "scc_gpn": SCC-GP with normalized actor objective
+# - "sccc": SCAS with conservative critic
+# - "sccc_n": SCCC with normalized actor objective
+# - "sccc_gp": SCCC with action-gradient penalty
+# - "sccc_gpn": SCCC-GP with normalized actor objective
 AGENT_CLASSES = {
     "bc": BCAgent,
     "td3bc": TD3BCAgent,
@@ -77,10 +77,10 @@ DYNAMIC_AGENT_CLASSES = {
     "scaspl_gp": SCASPLGPAgent,
     "scaspl_c": SCASPLCAgent,
     "scaspl_nc": SCASPLNCAgent,
-    "scc": SCCAgent,
-    "scc_n": SCCNAgent,
-    "scc_gp": SCCGPAgent,
-    "scc_gpn": SCCGPNAgent,
+    "sccc": SCCCAgent,
+    "sccc_n": SCCCNAgent,
+    "sccc_gp": SCCCGPAgent,
+    "sccc_gpn": SCCCGPNAgent,
 }
 
 
@@ -88,7 +88,7 @@ def make_agent(agent_id: str, dataset, device: str):
     if agent_id in DYNAMIC_AGENT_CLASSES:
         dynamics = train_model(dataset, device)
         agent_class = DYNAMIC_AGENT_CLASSES[agent_id]
-        agent = agent_class(dataset.obs_size, dataset.act_size, dynamics=dynamics, device=device)
+        agent = agent_class(dataset.obs_size, dataset.act_size, dynamic=dynamics, device=device)
         agent.id = agent_id
         return agent
 

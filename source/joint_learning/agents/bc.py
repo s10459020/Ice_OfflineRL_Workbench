@@ -28,7 +28,7 @@ class BCAgent:
         self.act_size = act_size
         self.device = device
         self.actor = BCActor(obs_size, act_size).to(device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
 
     # -------------------------------------------------------------------------
     # Public functions

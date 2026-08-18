@@ -1,4 +1,3 @@
-from scipy.stats import qmc
 import torch
 from torch.nn import functional as F
 
@@ -21,18 +20,10 @@ class ASPLAgent(TD3Agent):
         self.actor_num_sample = actor_num_sample
         self.critic_rate_decay = critic_rate_decay
         self.q_avg = torch.tensor(0.0, dtype=torch.float32, device=self.device)
-        self.action_sampler = qmc.LatinHypercube(d=self.act_size)
 
     # -------------------------------------------------------------------------
     # Help functions
     # -------------------------------------------------------------------------
-    def sample_actions_lhs(self, batch_size: int) -> torch.Tensor:
-        # a\tilde_k \sim LHS([-a_(max) ,a_(max) ] A), k \in {1,...,K}
-        samples = self.action_sampler.random(n=self.actor_num_sample)
-        samples = qmc.scale(samples, [-self.max_action] * self.act_size, [self.max_action] * self.act_size)
-        actions = torch.as_tensor(samples, dtype=torch.float32, device=self.device)
-        return actions.unsqueeze(1).repeat(1, batch_size, 1)
-
     def action_distance(self, actions: torch.Tensor, sampled_actions: torch.Tensor) -> torch.Tensor:
         # d(a,a\tilde)=(1/A)\sum_j ((a_j-a\tilde_j)/(2a_(max)))^2
         diff = (actions - sampled_actions) ** 2
@@ -56,12 +47,12 @@ class ASPLAgent(TD3Agent):
         # Q\tilde (s,a\tilde_k)=min_i sg(Q_i ^target (s,a))-c_t d(a,a\tilde_k)
         # Loss_pseudo = E_D [(1/K)\sum_k \sum _(i=1)^2 (Q_i (s,a\tilde_k)-Q\tilde (s,a\tilde_k))^2]
         observations, actions, _, _, _ = batch
-        sampled_actions = self.sample_actions_lhs(observations.shape[0])
+        sampled_actions = self.actor.sample_lhs(observations, self.actor_num_sample)
         distance = self.action_distance(actions, sampled_actions)
 
         q_hat_1, q_hat_2 = self.critic.q_all(observations, actions)
         with torch.no_grad():
-            q_anchor = self.target_critic.q_min(observations, actions)
+            q_anchor = self.critic.t_min(observations, actions)
             q_pseudo = q_anchor.unsqueeze(0) - self.update_q_avg(q_hat_1, q_hat_2) * distance
 
         flat_observations = observations.unsqueeze(0).expand(sampled_actions.shape[0], -1, -1)

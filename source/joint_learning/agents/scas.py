@@ -1,6 +1,6 @@
 import torch
 
-from joint_learning.agents.dynamics import SCASDynamics
+from joint_learning.agents.dynamics import Dynamic
 from joint_learning.agents.td3 import TD3Agent
 from joint_learning.lib.dataset import Batch
 
@@ -10,14 +10,14 @@ class SCASAgent(TD3Agent):
         self,
         obs_size: int,
         act_size: int,
-        dynamics: SCASDynamics,
+        dynamic: Dynamic,
         lambda_s: float = 0.25,
         scale_gap: float = 5.0,
         max_gap: float = 50.0,
         device: str = "cuda",
     ) -> None:
         super().__init__(obs_size, act_size, device=device)
-        self.dynamics = dynamics
+        self.dynamic = dynamic
         self.lambda_s = lambda_s
         self.scale_gap = scale_gap
         self.max_gap = max_gap
@@ -37,9 +37,9 @@ class SCASAgent(TD3Agent):
         next_value = self.critic.q_min(next_observations, next_actions)
         weight = (self.scale_gap * (next_value.detach() - value.detach())).exp().clamp(max=self.max_gap)
 
-        noisy_observations = self.dynamics.noisy_observation(observations)
+        noisy_observations = self.dynamic.noisy_observation(observations)
         noisy_actions = self.actor(noisy_observations)
-        predicted_next_observations = self.dynamics.next_observation(noisy_observations, noisy_actions)
+        predicted_next_observations = self.dynamic(noisy_observations, noisy_actions)
         return (weight * ((predicted_next_observations - next_observations) ** 2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:

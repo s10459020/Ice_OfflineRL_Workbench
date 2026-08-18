@@ -88,12 +88,14 @@ class QNetwork(torch.nn.Module):
 
 
 class CQLCritic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, target_update_rate: float) -> None:
+    def __init__(self, obs_size: int, act_size: int, target_update_rate: float = 0.005) -> None:
         super().__init__()
         self.target_update_rate = target_update_rate
         self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
-        self.target_q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.t_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.sync_hard()
+        for parameter in self.t_networks.parameters():
+            parameter.requires_grad_(False)
 
     def q_all(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
         return tuple(q_network(observations, actions) for q_network in self.q_networks)
@@ -101,9 +103,9 @@ class CQLCritic(torch.nn.Module):
     def q_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         return torch.cat(self.q_all(observations, actions), dim=1).min(dim=1, keepdim=True).values
 
-    def target_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+    def t_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         values = torch.cat(
-            [q_network(observations, actions) for q_network in self.target_q_networks],
+            [q_network(observations, actions) for q_network in self.t_networks],
             dim=1,
         )
         return values.min(dim=1, keepdim=True).values
@@ -122,12 +124,12 @@ class CQLCritic(torch.nn.Module):
         return self.q_networks.parameters()
 
     def sync_hard(self) -> None:
-        for source, target in zip(self.q_networks, self.target_q_networks):
+        for source, target in zip(self.q_networks, self.t_networks):
             target.load_state_dict(source.state_dict())
 
     def sync_soft(self) -> None:
         with torch.no_grad():
-            for source_network, target_network in zip(self.q_networks, self.target_q_networks):
+            for source_network, target_network in zip(self.q_networks, self.t_networks):
                 for source, target in zip(source_network.parameters(), target_network.parameters()):
                     target.data.copy_(
                         self.target_update_rate * source.data
@@ -150,10 +152,10 @@ class CQLAgent:
 
         self.log_alpha = torch.nn.Parameter(torch.full((1, 1), math.log(1.0), dtype=torch.float32, device=device))
         self.log_cql_lambda = torch.nn.Parameter(torch.full((1, 1), math.log(10.0), dtype=torch.float32, device=device))
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
-        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters())
-        self.alpha_optimizer = torch.optim.Adam([self.log_alpha])
-        self.cql_lambda_optimizer = torch.optim.Adam([self.log_cql_lambda])
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=3e-4)
+        self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=3e-4)
+        self.cql_lambda_optimizer = torch.optim.Adam([self.log_cql_lambda], lr=3e-4)
 
     # -------------------------------------------------------------------------
     # Public functions
@@ -217,7 +219,7 @@ class CQLAgent:
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
             next_actions, next_log_probs = self.actor.sample(next_observations)
-            target_q = self.critic.target_min(next_observations, next_actions)
+            target_q = self.critic.t_min(next_observations, next_actions)
             target = rewards + self.discount_factor * (target_q - self.alpha() * next_log_probs) * (1.0 - dones)
         q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)

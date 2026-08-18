@@ -1,11 +1,11 @@
-from joint_learning.agents.dynamics import SCASDynamics
+from joint_learning.agents.dynamics import Dynamic
 from joint_learning.agents.scas_gp import SCASGPAgent
 from joint_learning.lib.dataset import Batch
 
 
 class SCASGPNAgent(SCASGPAgent):
-    def __init__(self, obs_size: int, act_size: int, dynamics: SCASDynamics, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamics=dynamics, device=device)
+    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
         self.lambda_s = 0.002
 
     # -------------------------------------------------------------------------

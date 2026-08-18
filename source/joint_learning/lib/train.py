@@ -2,7 +2,7 @@ from pathlib import Path
 
 import gymnasium as gym
 
-from joint_learning.agents.dynamics import SCASDynamics
+from joint_learning.agents.dynamics import Dynamic
 from joint_learning.lib.eval import evaluate
 from joint_learning.lib.metrics import metrics_path
 from joint_learning.lib.metrics import save_metric
@@ -28,8 +28,8 @@ def model_path(dataset) -> Path:
     return Path(__file__).resolve().parent.parent / "model" / f"dynamics-{dataset.id}.pt"
 
 
-def train_model(dataset, device: str) -> SCASDynamics:
-    model = SCASDynamics(dataset.obs_size, dataset.act_size, device=device)
+def train_model(dataset, device: str) -> Dynamic:
+    model = Dynamic(dataset.obs_size, dataset.act_size, device=device)
     path = model_path(dataset)
     if path.exists():
         model.load(path)

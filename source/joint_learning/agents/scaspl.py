@@ -1,7 +1,7 @@
 import torch
 from torch.nn import functional as F
 
-from joint_learning.agents.dynamics import SCASDynamics
+from joint_learning.agents.dynamics import Dynamic
 from joint_learning.agents.scas import SCASAgent
 from joint_learning.lib.dataset import Batch
 
@@ -11,7 +11,7 @@ class SCASPLAgent(SCASAgent):
         self,
         obs_size: int,
         act_size: int,
-        dynamics: SCASDynamics,
+        dynamic: Dynamic,
         lambda_s: float = 0.25,
         lambda_p: float = 2.5,
         actor_num_sample: int = 16,
@@ -21,7 +21,7 @@ class SCASPLAgent(SCASAgent):
         super().__init__(
             obs_size,
             act_size,
-            dynamics=dynamics,
+            dynamic=dynamic,
             lambda_s=lambda_s,
             device=device,
         )
@@ -33,14 +33,6 @@ class SCASPLAgent(SCASAgent):
     # -------------------------------------------------------------------------
     # Help functions
     # -------------------------------------------------------------------------
-    def sample_actions_uniform(self, batch_size: int) -> torch.Tensor:
-        # a\tilde_k \sim U([-a_(max) ,a_(max) ] A), k \in {1,...,K}
-        return torch.empty(
-            (self.actor_num_sample, batch_size, self.act_size),
-            dtype=torch.float32,
-            device=self.device,
-        ).uniform_(-self.max_action, self.max_action)
-
     def action_distance(self, actions: torch.Tensor, sampled_actions: torch.Tensor) -> torch.Tensor:
         # d(a,a\tilde)=(1/A)\sum_j ((a_j-a\tilde_j)/(2a_(max)))^2
         diff = (actions - sampled_actions) ** 2
@@ -64,12 +56,12 @@ class SCASPLAgent(SCASAgent):
         # Q\tilde (s,a\tilde_k)=min_i sg(Q_i ^target (s,a))-c_t d(a,a\tilde_k)
         # Loss_pseudo = E_D [(1/K)\sum_k \sum _(i=1)^2 (Q_i (s,a\tilde_k)-Q\tilde (s,a\tilde_k))^2]
         observations, actions, _, _, _ = batch
-        sampled_actions = self.sample_actions_uniform(observations.shape[0])
+        sampled_actions = self.actor.sample_uniform(observations, self.actor_num_sample).transpose(0, 1)
         distance = self.action_distance(actions, sampled_actions)
 
         q_hat_1, q_hat_2 = self.critic.q_all(observations, actions)
         with torch.no_grad():
-            q_anchor = self.target_critic.q_min(observations, actions)
+            q_anchor = self.critic.t_min(observations, actions)
             q_pseudo = q_anchor.unsqueeze(0) - self.update_q_avg(q_hat_1, q_hat_2) * distance
 
         flat_observations = observations.unsqueeze(0).expand(sampled_actions.shape[0], -1, -1)

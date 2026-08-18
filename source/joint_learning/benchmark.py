@@ -10,14 +10,14 @@ DEVICE = "cuda"
 TRAIN_COUNT = 5
 
 AGENTS = [
-    "bc",
+    # "bc",
     "td3bc",
-    "iql",
-    "cql",
-    "aspl_c",
+    # "iql",
+    # "cql",
+    # "aspl_c",
     # "scas_n",
     # "scaspl_n",
-    # "scc_n",
+    # "sccc_n",
 ]
 
 DATASETS = [

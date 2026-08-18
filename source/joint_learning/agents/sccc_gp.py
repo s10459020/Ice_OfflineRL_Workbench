@@ -1,23 +1,23 @@
 import torch
 from torch.nn import functional as F
 
-from joint_learning.agents.dynamics import SCASDynamics
-from joint_learning.agents.scc import SCCAgent
+from joint_learning.agents.dynamics import Dynamic
+from joint_learning.agents.sccc import SCCCAgent
 from joint_learning.lib.dataset import Batch
 
 
-class SCCGPAgent(SCCAgent):
+class SCCCGPAgent(SCCCAgent):
     def __init__(
         self,
         obs_size: int,
         act_size: int,
-        dynamics: SCASDynamics,
+        dynamic: Dynamic,
         lambda_gp: float = 1.0,
         gp_count: int = 16,
         gp_threshold: float = 1.0,
         device: str = "cuda",
     ) -> None:
-        super().__init__(obs_size, act_size, dynamics=dynamics, device=device)
+        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
         self.lambda_gp = lambda_gp
         self.gp_count = gp_count
         self.gp_threshold = gp_threshold
@@ -25,14 +25,6 @@ class SCCGPAgent(SCCAgent):
     # -------------------------------------------------------------------------
     # Help functions
     # -------------------------------------------------------------------------
-    def sample_random_actions(self, batch_size: int, sample_count: int) -> torch.Tensor:
-        # a\hat \sim U(A)
-        return torch.empty(
-            (batch_size, sample_count, self.act_size),
-            dtype=torch.float32,
-            device=self.device,
-        ).uniform_(-self.max_action, self.max_action)
-
     # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
@@ -43,7 +35,7 @@ class SCCGPAgent(SCCAgent):
         threshold = self.gp_threshold
         observations, _, _, _, _ = batch
         batch_size = observations.shape[0]
-        sampled_actions = self.sample_random_actions(batch_size, sample_count)
+        sampled_actions = self.actor.sample_uniform(observations, sample_count)
         flat_actions = sampled_actions.reshape(batch_size * sample_count, self.act_size).requires_grad_(True)
         flat_observations = observations.unsqueeze(1).expand(-1, sample_count, -1)
         flat_observations = flat_observations.reshape(batch_size * sample_count, self.obs_size).detach()

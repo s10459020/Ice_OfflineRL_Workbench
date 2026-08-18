@@ -20,7 +20,7 @@ AGENTS = [
     "aspl_c",
     "scas_n",
     "scaspl_n",
-    "scc_n",
+    "sccc_n",
 ]
 
 DATASETS = [

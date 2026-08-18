@@ -1,16 +1,16 @@
 import torch
 
-from joint_learning.agents.dynamics import SCASDynamics
+from joint_learning.agents.dynamics import Dynamic
 from joint_learning.agents.scaspl import SCASPLAgent
 from joint_learning.lib.dataset import Batch
 
 
 class SCASPLNAgent(SCASPLAgent):
-    def __init__(self, obs_size: int, act_size: int, dynamics: SCASDynamics, device: str = "cuda") -> None:
+    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
         super().__init__(
             obs_size,
             act_size,
-            dynamics=dynamics,
+            dynamic=dynamic,
             lambda_s=0.005,
             lambda_p=0.5,
             device=device,

@@ -25,7 +25,7 @@ class IQLActor(torch.nn.Module):
     def dist(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         hidden = self.hidden(observations)
         mean = torch.tanh(self.mean(hidden))
-        logstd = self.min_logstd + torch.sigmoid(self.logstd) * (self.max_logstd - self.min_logstd)
+        logstd = self.logstd.clamp(self.min_logstd, self.max_logstd)
         return mean, logstd
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
@@ -53,19 +53,21 @@ class QNetwork(torch.nn.Module):
 
 
 class IQLCritic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, target_update_rate: float) -> None:
+    def __init__(self, obs_size: int, act_size: int, target_update_rate: float = 0.005) -> None:
         super().__init__()
         self.target_update_rate = target_update_rate
         self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
-        self.target_q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.t_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.sync_hard()
+        for parameter in self.t_networks.parameters():
+            parameter.requires_grad_(False)
 
     def q_all(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
         return tuple(q_network(observations, actions) for q_network in self.q_networks)
 
-    def target_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+    def t_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         values = torch.cat(
-            [q_network(observations, actions) for q_network in self.target_q_networks],
+            [q_network(observations, actions) for q_network in self.t_networks],
             dim=1,
         )
         return values.min(dim=1, keepdim=True).values
@@ -74,12 +76,12 @@ class IQLCritic(torch.nn.Module):
         return self.q_networks.parameters()
 
     def sync_hard(self) -> None:
-        for source, target in zip(self.q_networks, self.target_q_networks):
+        for source, target in zip(self.q_networks, self.t_networks):
             target.load_state_dict(source.state_dict())
 
     def sync_soft(self) -> None:
         with torch.no_grad():
-            for source_network, target_network in zip(self.q_networks, self.target_q_networks):
+            for source_network, target_network in zip(self.q_networks, self.t_networks):
                 for source, target in zip(source_network.parameters(), target_network.parameters()):
                     target.data.copy_(
                         self.target_update_rate * source.data
@@ -103,7 +105,13 @@ class IQLValue(torch.nn.Module):
 
 
 class IQLAgent:
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        lr: float = 3e-4,
+        device: str = "cuda"
+    ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
@@ -117,9 +125,9 @@ class IQLAgent:
         self.critic = IQLCritic(obs_size, act_size, self.target_update_rate).to(device)
         self.value = IQLValue(obs_size).to(device)
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
-        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters())
-        self.value_optimizer = torch.optim.Adam(self.value.parameters())
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=lr)
+        self.value_optimizer = torch.optim.Adam(self.value.parameters(), lr=lr)
 
     # -------------------------------------------------------------------------
     # Public functions
@@ -132,20 +140,25 @@ class IQLAgent:
         return action.cpu().numpy()[0]
 
     def update(self, batch: Batch) -> None:
-        loss_critic = self.loss_critic(batch)
-        self.critic_optimizer.zero_grad()
-        loss_critic.backward()
-        self.critic_optimizer.step()
-
+        # value
         loss_value = self.loss_value(batch)
         self.value_optimizer.zero_grad()
         loss_value.backward()
         self.value_optimizer.step()
 
+        # actor
         loss_actor = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
         loss_actor.backward()
         self.actor_optimizer.step()
+
+        # critic
+        loss_critic = self.loss_critic(batch)
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
+
+        # target
         self.critic.sync_soft()
 
     def save(self, path: Path) -> None:
@@ -173,7 +186,7 @@ class IQLAgent:
         # Loss_Value=E_D [|\tau-1_(u<0) | u^2]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
-            q = self.critic.target_min(observations, actions)
+            q = self.critic.t_min(observations, actions)
         v = self.value(observations)
         diff = q - v
         weight = torch.abs(self.expectile - (diff < 0.0).float())
@@ -185,7 +198,7 @@ class IQLAgent:
         # Loss_Actor=E_D [-w(s,a) log \pi(a|s)]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
-            advantage = self.critic.target_min(observations, actions) - self.value(observations)
+            advantage = self.critic.t_min(observations, actions) - self.value(observations)
             weight = (self.advantage_scale * advantage).exp().clamp(max=self.cap_weight)
         log_prob = self.actor.log_prob(observations, actions)
         return -(weight * log_prob).mean()

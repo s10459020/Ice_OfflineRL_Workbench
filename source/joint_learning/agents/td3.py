@@ -7,10 +7,9 @@ from torch.nn import functional as F
 from joint_learning.lib.dataset import Batch
 
 
-class TD3Actor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0) -> None:
+class PolicyNetwork(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int) -> None:
         super().__init__()
-        self.max_action = max_action
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
@@ -20,7 +19,54 @@ class TD3Actor(torch.nn.Module):
         )
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        return self.network(observations)
+
+
+class TD3Actor(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0, target_update_rate: float = 0.005) -> None:
+        super().__init__()
+        self.act_size = act_size
+        self.max_action = max_action
+        self.target_update_rate = target_update_rate
+        self.network = PolicyNetwork(obs_size, act_size)
+        self.t_network = PolicyNetwork(obs_size, act_size)
+        self.sync_hard()
+        for parameter in self.t_network.parameters():
+            parameter.requires_grad_(False)
+
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return self.max_action * torch.tanh(self.network(observations))
+
+    def sample_uniform(self, observations: torch.Tensor, sample_count: int) -> torch.Tensor:
+        batch_size = observations.shape[0]
+        return torch.empty(
+            (batch_size, sample_count, self.act_size),
+            dtype=observations.dtype,
+            device=observations.device,
+        ).uniform_(-self.max_action, self.max_action)
+
+    def sample_lhs(self, observations: torch.Tensor, sample_count: int) -> torch.Tensor:
+        from scipy.stats import qmc
+
+        batch_size = observations.shape[0]
+        samples = qmc.LatinHypercube(d=self.act_size).random(n=sample_count)
+        samples = qmc.scale(samples, [-self.max_action] * self.act_size, [self.max_action] * self.act_size)
+        actions = torch.as_tensor(samples, dtype=observations.dtype, device=observations.device)
+        return actions.unsqueeze(1).repeat(1, batch_size, 1)
+
+    def t(self, observations: torch.Tensor) -> torch.Tensor:
+        return self.max_action * torch.tanh(self.t_network(observations))
+
+    def online_parameters(self):
+        return self.network.parameters()
+
+    def sync_hard(self) -> None:
+        self.t_network.load_state_dict(self.network.state_dict())
+
+    def sync_soft(self) -> None:
+        with torch.no_grad():
+            for source, target in zip(self.network.parameters(), self.t_network.parameters()):
+                target.copy_(self.target_update_rate * source + (1.0 - self.target_update_rate) * target)
 
 
 class QNetwork(torch.nn.Module):
@@ -39,11 +85,17 @@ class QNetwork(torch.nn.Module):
 
 
 class TD3Critic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int) -> None:
+    def __init__(self, obs_size: int, act_size: int, target_update_rate: float = 0.005) -> None:
         super().__init__()
-        self.q_networks = torch.nn.ModuleList(
-            [QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)]
-        )
+        self.target_update_rate = target_update_rate
+        self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.t_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.sync_hard()
+        for parameter in self.t_networks.parameters():
+            parameter.requires_grad_(False)
+
+    def q1(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        return self.q_networks[0](observations, actions)
 
     def q_all(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
         return tuple(q_network(observations, actions) for q_network in self.q_networks)
@@ -58,14 +110,25 @@ class TD3Critic(torch.nn.Module):
         gradients = []
         for q_network in self.q_networks:
             q = q_network(observations, actions)
-            gradient = torch.autograd.grad(
-                q.sum(),
-                actions,
-                create_graph=True,
-                retain_graph=True,
-            )[0]
-            gradients.append(gradient)
+            gradients.append(torch.autograd.grad(q.sum(), actions, create_graph=True, retain_graph=True)[0])
         return tuple(gradients)
+
+    def t_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        values = torch.cat(tuple(network(observations, actions) for network in self.t_networks), dim=1)
+        return values.min(dim=1, keepdim=True).values
+
+    def online_parameters(self):
+        return self.q_networks.parameters()
+
+    def sync_hard(self) -> None:
+        for source, target in zip(self.q_networks, self.t_networks):
+            target.load_state_dict(source.state_dict())
+
+    def sync_soft(self) -> None:
+        with torch.no_grad():
+            for source_network, target_network in zip(self.q_networks, self.t_networks):
+                for source, target in zip(source_network.parameters(), target_network.parameters()):
+                    target.copy_(self.target_update_rate * source + (1.0 - self.target_update_rate) * target)
 
 
 class TD3Agent:
@@ -79,31 +142,24 @@ class TD3Agent:
         max_action: float = 1.0,
         noise_scale: float = 0.2,
         noise_clip: float = 0.5,
+        lr: float = 3e-4,
         device: str = "cuda",
     ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
         self.discount_factor = discount_factor
-        self.target_update_rate = target_update_rate
         self.update_actor_interval = update_actor_interval
         self.update_step = 0
         self.max_action = max_action
         self.noise_scale = noise_scale * max_action
         self.noise_clip = noise_clip
 
-        self.actor = TD3Actor(obs_size, act_size, self.max_action).to(device)
-        self.target_actor = TD3Actor(obs_size, act_size, self.max_action).to(device)
-        self.critic = TD3Critic(obs_size, act_size).to(device)
-        self.target_critic = TD3Critic(obs_size, act_size).to(device)
-        self.sync_target_hard()
+        self.actor = TD3Actor(obs_size, act_size, max_action, target_update_rate).to(device)
+        self.critic = TD3Critic(obs_size, act_size, target_update_rate).to(device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.online_parameters(), lr=lr)
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=lr)
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
-        self.critic_optimizer = torch.optim.Adam(self.critic.parameters())
-
-    # -------------------------------------------------------------------------
-    # Public functions
-    # -------------------------------------------------------------------------
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -123,62 +179,40 @@ class TD3Agent:
             self.actor_optimizer.zero_grad()
             loss_actor.backward()
             self.actor_optimizer.step()
-            self.sync_target_soft()
+            self.actor.sync_soft()
+            self.critic.sync_soft()
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(self.actor.state_dict(), path)
+        torch.save(self.actor.network.state_dict(), path)
 
     def load(self, path: Path) -> None:
         state = torch.load(path, map_location=self.device)
-        self.actor.load_state_dict(state)
+        self.actor.network.load_state_dict(state)
+        self.actor.sync_hard()
 
-    # -------------------------------------------------------------------------
-    # Help functions
-    # -------------------------------------------------------------------------
-    def sync_target_hard(self) -> None:
-        self.target_actor.load_state_dict(self.actor.state_dict())
-        self.target_critic.load_state_dict(self.critic.state_dict())
-
-    def sync_target_soft(self) -> None:
-        with torch.no_grad():
-            for source, target in zip(self.actor.parameters(), self.target_actor.parameters()):
-                target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
-            for source, target in zip(self.critic.parameters(), self.target_critic.parameters()):
-                target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
-
-    # -------------------------------------------------------------------------
-    # Loss functions
-    # -------------------------------------------------------------------------
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
-        # \epsilon \sim clip(N(0, \sigma^2 I), -c, c)
-        # a' = clip(\pi'(s')+\epsilon,-a_(max) ,a_(max) )
-        # y = r + \gamma(1-d) min_i Q'_i (s',a')
         with torch.no_grad():
-            next_actions = self.target_actor(next_observations)
+            next_actions = self.actor.t(next_observations)
             noise = (torch.randn_like(next_actions) * self.noise_scale).clamp(-self.noise_clip, self.noise_clip)
             next_actions = (next_actions + noise).clamp(-self.max_action, self.max_action)
-            target_q = self.target_critic.q_min(next_observations, next_actions)
+            target_q = self.critic.t_min(next_observations, next_actions)
             return rewards + self.discount_factor * target_q * (1.0 - dones)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
-        # Loss_TD = E_D [\sum _(i=1)^2 (Q_i (s,a)-y)^2]
         observations, actions, rewards, next_observations, dones = batch
         target = self.target_td3(next_observations, rewards, dones)
         q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Critic = Loss_TD
         return self.loss_td(batch)
 
     def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # Loss_TD3 = -E_D [min_i Q_i (s,\pi(s))]
         observations, _, _, _, _ = batch
         policy_actions = self.actor(observations)
         q = self.critic.q_min(observations, policy_actions)
         return -q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = Loss_TD3
         return self.loss_td3(batch)

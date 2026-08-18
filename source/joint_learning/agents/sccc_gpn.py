@@ -1,13 +1,13 @@
 import torch
 
-from joint_learning.agents.dynamics import SCASDynamics
-from joint_learning.agents.scc_gp import SCCGPAgent
+from joint_learning.agents.dynamics import Dynamic
+from joint_learning.agents.sccc_gp import SCCCGPAgent
 from joint_learning.lib.dataset import Batch
 
 
-class SCCGPNAgent(SCCGPAgent):
-    def __init__(self, obs_size: int, act_size: int, dynamics: SCASDynamics, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamics=dynamics, device=device)
+class SCCCGPNAgent(SCCCGPAgent):
+    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
         self.lambda_s = 0.01
 
     # -------------------------------------------------------------------------

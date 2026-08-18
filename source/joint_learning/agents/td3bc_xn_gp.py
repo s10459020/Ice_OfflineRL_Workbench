@@ -23,14 +23,6 @@ class TD3BCXNGPAgent(TD3BCXNAgent):
     # -------------------------------------------------------------------------
     # Help functions
     # -------------------------------------------------------------------------
-    def sample_random_actions(self, batch_size: int, sample_count: int) -> torch.Tensor:
-        # a\hat \sim U(A)
-        return torch.empty(
-            (batch_size, sample_count, self.act_size),
-            dtype=torch.float32,
-            device=self.device,
-        ).uniform_(-self.max_action, self.max_action)
-
     # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
@@ -41,7 +33,7 @@ class TD3BCXNGPAgent(TD3BCXNAgent):
         batch_size = observations.shape[0]
 
         sample_count = self.gp_count
-        sampled_actions = self.sample_random_actions(batch_size, sample_count)
+        sampled_actions = self.actor.sample_uniform(observations, sample_count)
         flat_actions = sampled_actions.reshape(batch_size * sample_count, self.act_size).requires_grad_(True)
         flat_observations = observations.unsqueeze(1).expand(-1, sample_count, -1)
         flat_observations = flat_observations.reshape(batch_size * sample_count, self.obs_size).detach()
