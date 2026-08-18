@@ -41,11 +41,8 @@ def install_dependencies() -> None:
         "-m",
         "pip",
         "install",
-        "torch>=2.5",
-        "gymnasium[mujoco]==1.0.0",
-        "h5py",
-        "matplotlib",
-        "scipy",
+        "--editable",
+        str(JOINT_ROOT),
     ])
 
 

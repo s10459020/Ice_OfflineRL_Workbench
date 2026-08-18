@@ -23,7 +23,6 @@ from joint_learning.agents.td3bc_p import TD3BCPAgent
 from joint_learning.agents.td3bc_p_gp import TD3BCPGPAgent
 from joint_learning.agents.td3bc_xn import TD3BCXNAgent
 from joint_learning.agents.td3bc_xn_gp import TD3BCXNGPAgent
-from joint_learning.lib.train import train_model
 
 
 # Available agents for this compact build:
@@ -84,15 +83,14 @@ DYNAMIC_AGENT_CLASSES = {
 }
 
 
-def make_agent(agent_id: str, dataset, device: str):
+def make_agent(agent_id: str, dataset, dynamic=None):
     if agent_id in DYNAMIC_AGENT_CLASSES:
-        dynamics = train_model(dataset, device)
         agent_class = DYNAMIC_AGENT_CLASSES[agent_id]
-        agent = agent_class(dataset.obs_size, dataset.act_size, dynamic=dynamics, device=device)
+        agent = agent_class(dataset.obs_size, dataset.act_size, dynamic=dynamic, device=dataset.device)
         agent.id = agent_id
         return agent
 
     agent_class = AGENT_CLASSES[agent_id]
-    agent = agent_class(dataset.obs_size, dataset.act_size, device=device)
+    agent = agent_class(dataset.obs_size, dataset.act_size, device=dataset.device)
     agent.id = agent_id
     return agent

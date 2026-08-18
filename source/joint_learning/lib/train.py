@@ -28,8 +28,8 @@ def model_path(dataset) -> Path:
     return Path(__file__).resolve().parent.parent / "model" / f"dynamics-{dataset.id}.pt"
 
 
-def train_model(dataset, device: str) -> Dynamic:
-    model = Dynamic(dataset.obs_size, dataset.act_size, device=device)
+def train_model(dataset) -> Dynamic:
+    model = Dynamic(dataset.obs_size, dataset.act_size, device=dataset.device)
     path = model_path(dataset)
     if path.exists():
         model.load(path)
