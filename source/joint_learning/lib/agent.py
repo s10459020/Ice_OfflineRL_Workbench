@@ -1,28 +1,11 @@
-from joint_learning.agents.aspl import ASPLAgent
-from joint_learning.agents.aspl_c import ASPLCAgent
-from joint_learning.agents.aspl_gp import ASPLGPAgent
+from joint_learning.agents.aspl import ASPLAgent, ASPLCAgent, ASPLGPAgent
 from joint_learning.agents.bc import BCAgent
 from joint_learning.agents.cql import CQLAgent
 from joint_learning.agents.iql import IQLAgent
-from joint_learning.agents.scas import SCASAgent
-from joint_learning.agents.scas_gp import SCASGPAgent
-from joint_learning.agents.scas_gpn import SCASGPNAgent
-from joint_learning.agents.scas_n import SCASNAgent
-from joint_learning.agents.scaspl import SCASPLAgent
-from joint_learning.agents.scaspl_c import SCASPLCAgent
-from joint_learning.agents.scaspl_gp import SCASPLGPAgent
-from joint_learning.agents.scaspl_n import SCASPLNAgent
-from joint_learning.agents.scaspl_nc import SCASPLNCAgent
-from joint_learning.agents.sccc import SCCCAgent
-from joint_learning.agents.sccc_gp import SCCCGPAgent
-from joint_learning.agents.sccc_gpn import SCCCGPNAgent
-from joint_learning.agents.sccc_n import SCCCNAgent
-from joint_learning.agents.td3bc import TD3BCAgent
-from joint_learning.agents.td3bc_gp import TD3BCGPAgent
-from joint_learning.agents.td3bc_p import TD3BCPAgent
-from joint_learning.agents.td3bc_p_gp import TD3BCPGPAgent
-from joint_learning.agents.td3bc_xn import TD3BCXNAgent
-from joint_learning.agents.td3bc_xn_gp import TD3BCXNGPAgent
+from joint_learning.agents.scas import SCASAgent, SCASGPAgent, SCASGPNAgent, SCASNAgent
+from joint_learning.agents.scaspl import SCASPLAgent, SCASPLCAgent, SCASPLGPAgent, SCASPLNAgent, SCASPLNCAgent
+from joint_learning.agents.sccc import SCCCAgent, SCCCGPAgent, SCCCGPNAgent, SCCCNAgent
+from joint_learning.agents.td3bc import TD3BCAgent, TD3BCGPAgent, TD3BCPGPAgent, TD3BCPAgent, TD3BCXNAgent, TD3BCXNGPAgent
 
 
 # Available agents for this compact build:

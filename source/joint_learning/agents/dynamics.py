@@ -12,12 +12,12 @@ class Dynamic(torch.nn.Module):
         obs_size: int,
         act_size: int,
         device: str,
-        noise_scale: float = 0.003,
+        state_noise_scale: float = 0.003,
         learning_rate: float = 3e-4,
     ):
         super().__init__()
         self.device = torch.device(device)
-        self.noise_scale = noise_scale
+        self.state_noise_scale = state_noise_scale
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size + act_size, 256),
             torch.nn.ReLU(),
@@ -32,7 +32,7 @@ class Dynamic(torch.nn.Module):
 
     def noisy_observation(self, observations: torch.Tensor) -> torch.Tensor:
         # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 I)
-        return observations + torch.randn_like(observations) * self.noise_scale
+        return observations + torch.randn_like(observations) * self.state_noise_scale
 
     def update(self, batch: Batch) -> None:
         # Loss_Dynamic = E_((s, a, r, s', d) \sim D) [\|M(s, a) - s'\|_2^2]

@@ -9,7 +9,7 @@ from joint_learning.lib.dataset import Batch
 
 
 class IQLActor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, min_logstd: float = -5.0, max_logstd: float = 2.0) -> None:
+    def __init__(self, obs_size: int, act_size: int, min_log_std: float = -5.0, max_log_std: float = 2.0) -> None:
         super().__init__()
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
@@ -18,23 +18,23 @@ class IQLActor(torch.nn.Module):
             torch.nn.ReLU(),
         )
         self.mean = torch.nn.Linear(256, act_size)
-        self.logstd = torch.nn.Parameter(torch.zeros(1, act_size, dtype=torch.float32))
-        self.min_logstd = min_logstd
-        self.max_logstd = max_logstd
+        self.log_std = torch.nn.Parameter(torch.zeros(1, act_size, dtype=torch.float32))
+        self.min_log_std = min_log_std
+        self.max_log_std = max_log_std
 
     def dist(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
         features = self.network(observations)
         mean = torch.tanh(self.mean(features))
-        logstd = self.logstd.clamp(self.min_logstd, self.max_logstd)
-        return mean, logstd
+        log_std = self.log_std.clamp(self.min_log_std, self.max_log_std)
+        return mean, log_std
 
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         mean, _ = self.dist(observations)
         return mean
 
     def log_prob(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
-        mean, logstd = self.dist(observations)
-        return Normal(mean, logstd.exp()).log_prob(actions).sum(dim=-1, keepdim=True)
+        mean, log_std = self.dist(observations)
+        return Normal(mean, log_std.exp()).log_prob(actions).sum(dim=-1, keepdim=True)
 
 
 class QNetwork(torch.nn.Module):
@@ -120,9 +120,9 @@ class IQLAgent:
         act_size: int,
         discount_factor: float = 0.99,
         expectile: float = 0.7,
-        advantage_scale: float = 3.0,
-        cap_weight: float = 100.0,
-        lr: float = 3e-4,
+        advantage_temperature: float = 3.0,
+        max_weight: float = 100.0,
+        learning_rate: float = 3e-4,
         device: str = "cuda"
     ) -> None:
         self.obs_size = obs_size
@@ -130,16 +130,16 @@ class IQLAgent:
         self.device = device
         self.discount_factor = discount_factor
         self.expectile = expectile
-        self.advantage_scale = advantage_scale
-        self.cap_weight = cap_weight
+        self.advantage_temperature = advantage_temperature
+        self.max_weight = max_weight
 
         self.actor = IQLActor(obs_size, act_size).to(device)
         self.critic = IQLCritic(obs_size, act_size).to(device)
         self.value = IQLValue(obs_size).to(device)
 
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
-        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=lr)
-        self.value_optimizer = torch.optim.Adam(self.value.parameters(), lr=lr)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=learning_rate)
+        self.value_optimizer = torch.optim.Adam(self.value.parameters(), lr=learning_rate)
 
     # ====================
     # Public functions
@@ -194,7 +194,7 @@ class IQLAgent:
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_value(self, batch: Batch) -> torch.Tensor:
-        # u(s, a) = Q_(min) ^target (s, a) - V(s)
+        # u(s, a) = Q_(min)' (s, a) - V(s)
         # Loss_Value = E_((s, a) \sim D) [|\tau - I(u < 0)|u^2]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
@@ -205,12 +205,12 @@ class IQLAgent:
         return (weight * diff.pow(2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # A(s, a) = Q_(min) ^target (s, a) - V(s)
+        # A(s, a) = Q_(min)' (s, a) - V(s)
         # w(s, a) = min(exp(\beta A(s, a)), w_(max))
         # Loss_Actor = -E_((s, a) \sim D) [w(s, a)log \pi(a | s)]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
             advantage = self.critic.t_min(observations, actions) - self.value(observations)
-            weight = (self.advantage_scale * advantage).exp().clamp(max=self.cap_weight)
+            weight = (self.advantage_temperature * advantage).exp().clamp(max=self.max_weight)
         log_prob = self.actor.log_prob(observations, actions)
         return -(weight * log_prob).mean()

@@ -153,27 +153,27 @@ class TD3Agent:
         obs_size: int,
         act_size: int,
         discount_factor: float = 0.99,
-        update_actor_interval: int = 2,
+        policy_delay: int = 2,
         max_action: float = 1.0,
-        noise_scale: float = 0.2,
-        noise_clip: float = 0.5,
-        lr: float = 3e-4,
+        policy_noise_scale: float = 0.2,
+        policy_noise_clip: float = 0.5,
+        learning_rate: float = 3e-4,
         device: str = "cuda",
     ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
         self.discount_factor = discount_factor
-        self.update_actor_interval = update_actor_interval
+        self.policy_delay = policy_delay
         self.update_step = 0
         self.max_action = max_action
-        self.noise_scale = noise_scale * max_action
-        self.noise_clip = noise_clip
+        self.policy_noise_scale = policy_noise_scale * max_action
+        self.policy_noise_clip = policy_noise_clip
 
         self.actor = TD3Actor(obs_size, act_size, max_action).to(device)
         self.critic = TD3Critic(obs_size, act_size).to(device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.online_parameters(), lr=lr)
-        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=lr)
+        self.actor_optimizer = torch.optim.Adam(self.actor.online_parameters(), lr=learning_rate)
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=learning_rate)
 
     # ====================
     # Public functions
@@ -193,7 +193,7 @@ class TD3Agent:
         loss_critic.backward()
         self.critic_optimizer.step()
 
-        if self.update_step % self.update_actor_interval == 0:
+        if self.update_step % self.policy_delay == 0:
             # Actor
             loss_actor = self.loss_actor(batch)
             self.actor_optimizer.zero_grad()
@@ -223,12 +223,12 @@ class TD3Agent:
     # Loss functions
     # ====================
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
-        # \epsilon = clip(N(0, \sigma_a^2 I), -c, c)
-        # a' = clip(\pi^target (s') + \epsilon, -a_(max), a_(max))
-        # y = r + \gamma(1 - d)min_i Q_i ^target (s', a')
+        # \epsilon = clip(N(0, \sigma^2 I), -c, c)
+        # a' = clip(\pi' (s') + \epsilon, -a_(max), a_(max))
+        # y = r + \gamma(1 - d)min_i Q_i' (s', a')
         with torch.no_grad():
             next_actions = self.actor.t(next_observations)
-            noise = (torch.randn_like(next_actions) * self.noise_scale).clamp(-self.noise_clip, self.noise_clip)
+            noise = (torch.randn_like(next_actions) * self.policy_noise_scale).clamp(-self.policy_noise_clip, self.policy_noise_clip)
             next_actions = (next_actions + noise).clamp(-self.max_action, self.max_action)
             target_q = self.critic.t_min(next_observations, next_actions)
             return rewards + self.discount_factor * target_q * (1.0 - dones)

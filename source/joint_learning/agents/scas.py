@@ -2,6 +2,7 @@ import torch
 
 from joint_learning.agents.dynamics import Dynamic
 from joint_learning.agents.td3 import TD3Agent
+from joint_learning.agents.variant import GPAgent, NAgent
 from joint_learning.lib.dataset import Batch
 
 
@@ -11,16 +12,16 @@ class SCASAgent(TD3Agent):
         obs_size: int,
         act_size: int,
         dynamic: Dynamic,
-        lambda_s: float = 0.25,
-        scale_gap: float = 5.0,
-        max_gap: float = 50.0,
+        lambda_a: float = 0.25,
+        value_gap_scale: float = 5.0,
+        max_weight: float = 50.0,
         device: str = "cuda",
     ) -> None:
         super().__init__(obs_size, act_size, device=device)
         self.dynamic = dynamic
-        self.lambda_s = lambda_s
-        self.scale_gap = scale_gap
-        self.max_gap = max_gap
+        self.lambda_a = lambda_a
+        self.value_gap_scale = value_gap_scale
+        self.max_weight = max_weight
 
     # -------------------------------------------------------------------------
     # Help functions
@@ -40,7 +41,7 @@ class SCASAgent(TD3Agent):
         observations, _, _, next_observations, _ = batch
         value = self.actor_q(observations)
         next_value = self.actor_q(next_observations)
-        weight = (self.scale_gap * (next_value.detach() - value.detach())).exp().clamp(max=self.max_gap)
+        weight = (self.value_gap_scale * (next_value.detach() - value.detach())).exp().clamp(max=self.max_weight)
 
         noisy_observations = self.dynamic.noisy_observation(observations)
         noisy_actions = self.actor(noisy_observations)
@@ -48,5 +49,21 @@ class SCASAgent(TD3Agent):
         return (weight * ((predicted_next_observations - next_observations) ** 2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = (1 - \lambda_s) Loss_TD3 + \lambda_s Loss_correction
-        return (1.0 - self.lambda_s) * self.loss_td3(batch) + self.lambda_s * self.loss_correction(batch)
+        # Loss_Actor = (1 - \lambda_A) Loss_TD3 + \lambda_A Loss_correction
+        return (1.0 - self.lambda_a) * self.loss_td3(batch) + self.lambda_a * self.loss_correction(batch)
+
+
+class SCASNAgent(NAgent, SCASAgent):
+    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_a=0.005, device=device)
+
+
+class SCASGPAgent(GPAgent, SCASAgent):
+    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
+
+
+class SCASGPNAgent(GPAgent, SCASNAgent):
+    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
+        self.lambda_a = 0.002
