@@ -7,6 +7,7 @@
 /d3rlpy*/
 /source/joint_learning/datasets/*.hdf5
 /source/joint_learning/model/
+/source/joint_learning/metrics/
 /source/joint_learning/plots/
 /source/joint_learning/table/
 

@@ -2,10 +2,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Joint Benchmark",
+            "name": "Python: Current File",
             "type": "debugpy",
             "request": "launch",
-            "module": "joint_learning.benchmark",
+            "program": "${file}",
             "python": "${workspaceFolder}/source/joint_learning/.venv/bin/python",
             "cwd": "${workspaceFolder}",
             "env": {

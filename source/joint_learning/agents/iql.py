@@ -8,7 +8,7 @@ from torch.distributions import Normal
 from joint_learning.lib.dataset import Batch
 
 
-class Policy(torch.nn.Module):
+class IQLActor(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int) -> None:
         super().__init__()
         self.hidden = torch.nn.Sequential(
@@ -52,7 +52,42 @@ class QNetwork(torch.nn.Module):
         return self.network(torch.cat([observations, actions], dim=1))
 
 
-class VNetwork(torch.nn.Module):
+class IQLCritic(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int, target_update_rate: float) -> None:
+        super().__init__()
+        self.target_update_rate = target_update_rate
+        self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.target_q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.sync_hard()
+
+    def q_all(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        return tuple(q_network(observations, actions) for q_network in self.q_networks)
+
+    def target_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        values = torch.cat(
+            [q_network(observations, actions) for q_network in self.target_q_networks],
+            dim=1,
+        )
+        return values.min(dim=1, keepdim=True).values
+
+    def online_parameters(self):
+        return self.q_networks.parameters()
+
+    def sync_hard(self) -> None:
+        for source, target in zip(self.q_networks, self.target_q_networks):
+            target.load_state_dict(source.state_dict())
+
+    def sync_soft(self) -> None:
+        with torch.no_grad():
+            for source_network, target_network in zip(self.q_networks, self.target_q_networks):
+                for source, target in zip(source_network.parameters(), target_network.parameters()):
+                    target.data.copy_(
+                        self.target_update_rate * source.data
+                        + (1.0 - self.target_update_rate) * target.data
+                    )
+
+
+class IQLValue(torch.nn.Module):
     def __init__(self, obs_size: int) -> None:
         super().__init__()
         self.network = torch.nn.Sequential(
@@ -78,17 +113,13 @@ class IQLAgent:
         self.advantage_scale = 3.0
         self.cap_weight = 100.0
 
-        self.policy = Policy(obs_size, act_size).to(device)
-        self.q1 = QNetwork(obs_size, act_size).to(device)
-        self.q2 = QNetwork(obs_size, act_size).to(device)
-        self.target_q1 = QNetwork(obs_size, act_size).to(device)
-        self.target_q2 = QNetwork(obs_size, act_size).to(device)
-        self.value_function = VNetwork(obs_size).to(device)
-        self.sync_target_hard()
+        self.actor = IQLActor(obs_size, act_size).to(device)
+        self.critic = IQLCritic(obs_size, act_size, self.target_update_rate).to(device)
+        self.value = IQLValue(obs_size).to(device)
 
-        self.policy_optimizer = torch.optim.Adam(self.policy.parameters())
-        self.q_optimizer = torch.optim.Adam(list(self.q1.parameters()) + list(self.q2.parameters()))
-        self.value_optimizer = torch.optim.Adam(self.value_function.parameters())
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters())
+        self.value_optimizer = torch.optim.Adam(self.value.parameters())
 
     # -------------------------------------------------------------------------
     # Public functions
@@ -97,92 +128,64 @@ class IQLAgent:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            action = self.policy(observations)
+            action = self.actor(observations)
         return action.cpu().numpy()[0]
 
     def update(self, batch: Batch) -> None:
-        loss_q = self.loss_q(batch)
-        self.q_optimizer.zero_grad()
-        loss_q.backward()
-        self.q_optimizer.step()
+        loss_critic = self.loss_critic(batch)
+        self.critic_optimizer.zero_grad()
+        loss_critic.backward()
+        self.critic_optimizer.step()
 
         loss_value = self.loss_value(batch)
         self.value_optimizer.zero_grad()
         loss_value.backward()
         self.value_optimizer.step()
 
-        loss_policy = self.loss_policy(batch)
-        self.policy_optimizer.zero_grad()
-        loss_policy.backward()
-        self.policy_optimizer.step()
-        self.sync_target_soft()
+        loss_actor = self.loss_actor(batch)
+        self.actor_optimizer.zero_grad()
+        loss_actor.backward()
+        self.actor_optimizer.step()
+        self.critic.sync_soft()
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(self.policy.state_dict(), path)
+        torch.save(self.actor.state_dict(), path)
 
     def load(self, path: Path) -> None:
         state = torch.load(path, map_location=self.device)
-        self.policy.load_state_dict(state)
-
-    # -------------------------------------------------------------------------
-    # Help functions
-    # -------------------------------------------------------------------------
-    def sync_target_hard(self) -> None:
-        self.target_q1.load_state_dict(self.q1.state_dict())
-        self.target_q2.load_state_dict(self.q2.state_dict())
-
-    def sync_target_soft(self) -> None:
-        with torch.no_grad():
-            for source, target in zip(self.q1.parameters(), self.target_q1.parameters()):
-                target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
-            for source, target in zip(self.q2.parameters(), self.target_q2.parameters()):
-                target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
+        self.actor.load_state_dict(state)
 
     # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
-    def target_q_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
-        # IQL target Q estimate:
-        # Q_(min)'(s,a) = min_i Q'_i (s,a)
-        q1 = self.target_q1(observations, actions)
-        q2 = self.target_q2(observations, actions)
-        return torch.minimum(q1, q2)
-
-    def loss_q(self, batch: Batch) -> torch.Tensor:
-        # IQL Q objective:
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
         # y = r + \gamma(1 - d)V(s')
-        # Loss_Q = E_D [ \sum_(i \in {1,2}) (Q_i (s,a) - y)^2 ]
-        # The value function supplies the bootstrapped target instead of a policy action.
+        # Loss_Critic=E_D [\sum _(i=1)^2 (Q_i (s,a)-y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
-            target = rewards + self.discount_factor * self.value_function(next_observations) * (1.0 - dones)
-        q1 = self.q1(observations, actions)
-        q2 = self.q2(observations, actions)
+            target = rewards + self.discount_factor * self.value(next_observations) * (1.0 - dones)
+        q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_value(self, batch: Batch) -> torch.Tensor:
-        # IQL expectile value objective:
-        # u(s,a) = Q_(min)'(s,a) - V(s)
-        # Loss_Value = E_D [ |\tau - 1_(u < 0)| u^2 ]
-        # Expectile regression fits V to high-value in-dataset actions without querying OOD actions.
+        # u(s,a)=Q_(min) ' (s,a)-V(s)
+        # Loss_Value=E_D [|\tau-1_(u<0) | u^2]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
-            q = self.target_q_min(observations, actions)
-        v = self.value_function(observations)
+            q = self.critic.target_min(observations, actions)
+        v = self.value(observations)
         diff = q - v
         weight = torch.abs(self.expectile - (diff < 0.0).float())
         return (weight * diff.pow(2)).mean()
 
-    def loss_policy(self, batch: Batch) -> torch.Tensor:
-        # IQL advantage-weighted behavior cloning:
-        # A(s,a) = Q_(min)'(s,a) - V(s)
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
+        # A(s,a)=Q_(min) ' (s,a)-V(s)
         # w(s,a) = min(exp(\beta A(s,a)),w_(max))
-        # Loss_Policy = E_D [ -w(s,a) log \pi(a|s) ]
-        # The actor imitates dataset actions more strongly when their estimated advantage is high.
+        # Loss_Actor=E_D [-w(s,a) log \pi(a|s)]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
-            advantage = self.target_q_min(observations, actions) - self.value_function(observations)
+            advantage = self.critic.target_min(observations, actions) - self.value(observations)
             weight = (self.advantage_scale * advantage).exp().clamp(max=self.cap_weight)
-        log_prob = self.policy.log_prob(observations, actions)
+        log_prob = self.actor.log_prob(observations, actions)
         return -(weight * log_prob).mean()

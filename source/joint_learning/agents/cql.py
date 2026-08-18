@@ -9,7 +9,7 @@ from torch.distributions import Normal
 from joint_learning.lib.dataset import Batch
 
 
-class GaussianPolicy(torch.nn.Module):
+class CQLActor(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int) -> None:
         super().__init__()
         self.act_size = act_size
@@ -40,14 +40,12 @@ class GaussianPolicy(torch.nn.Module):
         return torch.tanh(mean)
 
     def sample(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # Reparameterized policy sample:
-        # a = tanh(u), u \sim \pi_(raw)(.|s)
+        # a=tanh(u), u \sim \pi_(raw) (.|s)
         dist, _ = self.dist(observations)
         raw_actions = dist.rsample()
         return torch.tanh(raw_actions), self.log_prob_from_raw(dist, raw_actions)
 
     def sample_n(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # Policy candidate actions:
         # a\tilde_n \sim \pi(.|s)
         dist, _ = self.dist(observations)
         raw_actions = dist.rsample((self.n_samples,))
@@ -56,7 +54,6 @@ class GaussianPolicy(torch.nn.Module):
         return actions, log_probs
 
     def sample_random_n(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # Uniform CQL candidate actions:
         # a\tilde_n \sim U(-1, 1), log \mu(a\tilde_n|s) = A log 0.5
         batch_size = observations.shape[0]
         actions = torch.empty(
@@ -90,6 +87,54 @@ class QNetwork(torch.nn.Module):
         return self.network(torch.cat([observations, actions], dim=1))
 
 
+class CQLCritic(torch.nn.Module):
+    def __init__(self, obs_size: int, act_size: int, target_update_rate: float) -> None:
+        super().__init__()
+        self.target_update_rate = target_update_rate
+        self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.target_q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
+        self.sync_hard()
+
+    def q_all(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        return tuple(q_network(observations, actions) for q_network in self.q_networks)
+
+    def q_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        return torch.cat(self.q_all(observations, actions), dim=1).min(dim=1, keepdim=True).values
+
+    def target_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
+        values = torch.cat(
+            [q_network(observations, actions) for q_network in self.target_q_networks],
+            dim=1,
+        )
+        return values.min(dim=1, keepdim=True).values
+
+    def q_all_n(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
+        batch_size = observations.shape[0]
+        sample_count = actions.shape[1]
+        repeated_observations = observations.repeat_interleave(sample_count, dim=0)
+        flat_actions = actions.reshape(-1, actions.shape[-1])
+        return tuple(
+            q.reshape(batch_size, sample_count, 1)
+            for q in self.q_all(repeated_observations, flat_actions)
+        )
+
+    def online_parameters(self):
+        return self.q_networks.parameters()
+
+    def sync_hard(self) -> None:
+        for source, target in zip(self.q_networks, self.target_q_networks):
+            target.load_state_dict(source.state_dict())
+
+    def sync_soft(self) -> None:
+        with torch.no_grad():
+            for source_network, target_network in zip(self.q_networks, self.target_q_networks):
+                for source, target in zip(source_network.parameters(), target_network.parameters()):
+                    target.data.copy_(
+                        self.target_update_rate * source.data
+                        + (1.0 - self.target_update_rate) * target.data
+                    )
+
+
 class CQLAgent:
     def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
         self.obs_size = obs_size
@@ -100,19 +145,15 @@ class CQLAgent:
         self.target_entropy = -float(act_size)
         self.threshold = 2.0
 
-        self.policy = GaussianPolicy(obs_size, act_size).to(device)
-        self.q1 = QNetwork(obs_size, act_size).to(device)
-        self.q2 = QNetwork(obs_size, act_size).to(device)
-        self.target_q1 = QNetwork(obs_size, act_size).to(device)
-        self.target_q2 = QNetwork(obs_size, act_size).to(device)
-        self.sync_target_hard()
+        self.actor = CQLActor(obs_size, act_size).to(device)
+        self.critic = CQLCritic(obs_size, act_size, self.target_update_rate).to(device)
 
         self.log_alpha = torch.nn.Parameter(torch.full((1, 1), math.log(1.0), dtype=torch.float32, device=device))
-        self.log_cql_weight = torch.nn.Parameter(torch.full((1, 1), math.log(10.0), dtype=torch.float32, device=device))
-        self.policy_optimizer = torch.optim.Adam(self.policy.parameters())
-        self.q_optimizer = torch.optim.Adam(list(self.q1.parameters()) + list(self.q2.parameters()))
+        self.log_cql_lambda = torch.nn.Parameter(torch.full((1, 1), math.log(10.0), dtype=torch.float32, device=device))
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters())
+        self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters())
         self.alpha_optimizer = torch.optim.Adam([self.log_alpha])
-        self.cql_weight_optimizer = torch.optim.Adam([self.log_cql_weight])
+        self.cql_lambda_optimizer = torch.optim.Adam([self.log_cql_lambda])
 
     # -------------------------------------------------------------------------
     # Public functions
@@ -121,142 +162,98 @@ class CQLAgent:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
         with torch.no_grad():
-            action = self.policy(observations)
+            action = self.actor(observations)
         return action.cpu().numpy()[0]
 
     def update(self, batch: Batch) -> None:
         loss_td = self.loss_td(batch)
-        loss_conservative_q_constraint = self.loss_conservative_q_constraint(batch)
+        loss_conservative = self.loss_conservative(batch)
 
-        # CQL Lagrange \multiplier objective:
-        # Loss_Conservative_Weight = -\alpha' * (Loss_Conservative_Q_Constraint - \tau_(CQL))
-        # The \multiplier grows when the conservative penalty is above the target threshold.
-        loss_cql_weight = -(self.cql_weight() * (loss_conservative_q_constraint.detach() - self.threshold)).mean()
-        self.cql_weight_optimizer.zero_grad()
-        loss_cql_weight.backward()
-        self.cql_weight_optimizer.step()
+        # Loss_weight = -\lambda'_(CQL) (Loss_conservative-\tau_(CQL))
+        loss_weight = -(self.cql_lambda() * (loss_conservative.detach() - self.threshold)).mean()
+        self.cql_lambda_optimizer.zero_grad()
+        loss_weight.backward()
+        self.cql_lambda_optimizer.step()
 
-        loss = loss_td + self.cql_weight().detach() * loss_conservative_q_constraint
-        self.q_optimizer.zero_grad()
+        loss = loss_td + self.cql_lambda().detach() * loss_conservative
+        self.critic_optimizer.zero_grad()
         loss.backward()
-        self.q_optimizer.step()
+        self.critic_optimizer.step()
 
-        loss_policy = self.loss_policy(batch)
-        self.policy_optimizer.zero_grad()
-        loss_policy.backward()
-        self.policy_optimizer.step()
+        loss_actor = self.loss_actor(batch)
+        self.actor_optimizer.zero_grad()
+        loss_actor.backward()
+        self.actor_optimizer.step()
 
         loss_temperature = self.loss_temperature(batch)
         self.alpha_optimizer.zero_grad()
         loss_temperature.backward()
         self.alpha_optimizer.step()
-        self.sync_target_soft()
+        self.critic.sync_soft()
 
     def save(self, path: Path) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(self.policy.state_dict(), path)
+        torch.save(self.actor.state_dict(), path)
 
     def load(self, path: Path) -> None:
         state = torch.load(path, map_location=self.device)
-        self.policy.load_state_dict(state)
-
-    # -------------------------------------------------------------------------
-    # Help functions
-    # -------------------------------------------------------------------------
-    def sync_target_hard(self) -> None:
-        self.target_q1.load_state_dict(self.q1.state_dict())
-        self.target_q2.load_state_dict(self.q2.state_dict())
-
-    def sync_target_soft(self) -> None:
-        with torch.no_grad():
-            for source, target in zip(self.q1.parameters(), self.target_q1.parameters()):
-                target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
-            for source, target in zip(self.q2.parameters(), self.target_q2.parameters()):
-                target.data.copy_(self.target_update_rate * source.data + (1.0 - self.target_update_rate) * target.data)
+        self.actor.load_state_dict(state)
 
     # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
     def alpha(self) -> torch.Tensor:
-        # SAC temperature:
         # \alpha = exp(log \alpha)
         return self.log_alpha.exp()
 
-    def cql_weight(self) -> torch.Tensor:
-        # CQL Lagrange weight:
-        # \alpha' = clip(exp(log \alpha'), 0, 10^6 )
-        return self.log_cql_weight.exp().clamp(0.0, 1e6)
-
-    def target_q_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
-        # CQL target Q estimate:
-        # Q_(min)'(s,a) = min_i Q'_i (s,a)
-        q1 = self.target_q1(observations, actions)
-        q2 = self.target_q2(observations, actions)
-        return torch.minimum(q1, q2)
+    def cql_lambda(self) -> torch.Tensor:
+        # \lambda'_(CQL) = clip(exp(log \lambda'_(CQL)), 0, 10^6 )
+        return self.log_cql_lambda.exp().clamp(0.0, 1e6)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
-        # SAC Bellman objective used inside CQL:
         # a' \sim \pi(.|s')
-        # y = r + \gamma(1 - d)[ Q_(min)'(s',a') - \alpha log \pi(a'|s')]
-        # Loss_TD = E_D [ \sum_(i \in {1,2}) (Q_i (s,a) - y)^2 ]
+        # y=r+\gamma(1-d)[Q_(min) ' (s',a')-\alpha log \pi(a'|s')]
+        # Loss_TD=E_D [\sum _(i \in {1,2}) (Q_i (s,a)-y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
-            next_actions, next_log_probs = self.policy.sample(next_observations)
-            target_q = self.target_q_min(next_observations, next_actions)
+            next_actions, next_log_probs = self.actor.sample(next_observations)
+            target_q = self.critic.target_min(next_observations, next_actions)
             target = rewards + self.discount_factor * (target_q - self.alpha() * next_log_probs) * (1.0 - dones)
-        q1 = self.q1(observations, actions)
-        q2 = self.q2(observations, actions)
+        q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
-    def evaluate_q_n(self, observations: torch.Tensor, sampled_actions: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # Batched candidate Q evaluation:
-        # Q_i,n = Q_i (s,a\tilde_n)
-        batch_size = observations.shape[0]
-        sample_count = sampled_actions.shape[1]
-        repeated_observations = observations.repeat_interleave(sample_count, dim=0)
-        flat_actions = sampled_actions.reshape(-1, sampled_actions.shape[-1])
-        q1 = self.q1(repeated_observations, flat_actions).view(batch_size, sample_count, 1)
-        q2 = self.q2(repeated_observations, flat_actions).view(batch_size, sample_count, 1)
-        return q1, q2
-
-    def loss_conservative_q_constraint(self, batch: Batch) -> torch.Tensor:
-        # Conservative Q-Learning penalty:
-        # Loss_Conservative_Q_Constraint = \sum_i [E_(s~D)[log \sum_n exp(Q_i (s,a\tilde_n) - log \mu(a\tilde_n|s))] - E_((s,a)~D)[Q_i (s,a)]]
-        # Candidate actions include current-policy, next-state-policy, and uniform random actions.
-        # This lowers Q on broad out-of-dataset actions while preserving dataset action values.
+    def loss_conservative(self, batch: Batch) -> torch.Tensor:
+        # Loss_conservative=\sum _(i=1)^2 [E_(s~D) [log \sum_n exp(Q_i (s,a\tilde_n)-log \mu(a\tilde_n|s))]-E_((s,a)~D) [Q_i (s,a)]]
         observations, actions, _, next_observations, _ = batch
         with torch.no_grad():
-            policy_actions, policy_log_probs = self.policy.sample_n(observations)
-            next_policy_actions, next_policy_log_probs = self.policy.sample_n(next_observations)
-            random_actions, random_log_probs = self.policy.sample_random_n(observations)
+            policy_actions, policy_log_probs = self.actor.sample_n(observations)
+            next_policy_actions, next_policy_log_probs = self.actor.sample_n(next_observations)
+            random_actions, random_log_probs = self.actor.sample_random_n(observations)
             log_probs = torch.cat([policy_log_probs, next_policy_log_probs, random_log_probs], dim=1)
 
-        q1_policy, q2_policy = self.evaluate_q_n(observations, policy_actions)
-        q1_next_policy, q2_next_policy = self.evaluate_q_n(observations, next_policy_actions)
-        q1_random, q2_random = self.evaluate_q_n(observations, random_actions)
+        q1_policy, q2_policy = self.critic.q_all_n(observations, policy_actions)
+        q1_next_policy, q2_next_policy = self.critic.q_all_n(observations, next_policy_actions)
+        q1_random, q2_random = self.critic.q_all_n(observations, random_actions)
 
         q1_candidates = torch.cat([q1_policy, q1_next_policy, q1_random], dim=1)
         q2_candidates = torch.cat([q2_policy, q2_next_policy, q2_random], dim=1)
         q1_logsumexp = torch.logsumexp(q1_candidates - log_probs, dim=1).mean()
         q2_logsumexp = torch.logsumexp(q2_candidates - log_probs, dim=1).mean()
-        q1_data = self.q1(observations, actions).mean()
-        q2_data = self.q2(observations, actions).mean()
+        q1_data, q2_data = self.critic.q_all(observations, actions)
+        q1_data = q1_data.mean()
+        q2_data = q2_data.mean()
         return (q1_logsumexp - q1_data) + (q2_logsumexp - q2_data)
 
-    def loss_policy(self, batch: Batch) -> torch.Tensor:
-        # SAC actor objective:
-        # Loss_Policy = E_(s\sim D,a\sim\pi)[\alpha log\pi(a|s)-Q_(min)(s,a)]
-        # The policy maximizes Q while maintaining entropy through \alpha.
+    def loss_actor(self, batch: Batch) -> torch.Tensor:
+        # Loss_Actor=E_(s\sim D,a\sim\pi) [\alpha log\pi(a|s)-Q_(min) (s,a)]
         observations, _, _, _, _ = batch
-        actions, log_probs = self.policy.sample(observations)
-        q = torch.minimum(self.q1(observations, actions), self.q2(observations, actions))
+        actions, log_probs = self.actor.sample(observations)
+        q = self.critic.q_min(observations, actions)
         return (self.alpha().detach() * log_probs - q).mean()
 
     def loss_temperature(self, batch: Batch) -> torch.Tensor:
-        # SAC temperature objective:
-        # Loss_Temperature = E_(s\sim D,a\sim\pi)[-\alpha(log\pi(a|s)+H_t)]
-        # This tunes entropy so stochastic exploration pressure matches the target entropy.
+        # Loss_Temperature=E_(s\sim D,a\sim\pi) [-\alpha(log\pi(a|s)+H_t)]
         observations, _, _, _, _ = batch
         with torch.no_grad():
-            _, log_probs = self.policy.sample(observations)
+            _, log_probs = self.actor.sample(observations)
         return -(self.alpha() * (log_probs + self.target_entropy)).mean()

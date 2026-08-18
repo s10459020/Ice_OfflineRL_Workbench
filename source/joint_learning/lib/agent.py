@@ -1,11 +1,8 @@
-from pathlib import Path
-
 from joint_learning.agents.aspl import ASPLAgent
 from joint_learning.agents.aspl_c import ASPLCAgent
 from joint_learning.agents.aspl_gp import ASPLGPAgent
 from joint_learning.agents.bc import BCAgent
 from joint_learning.agents.cql import CQLAgent
-from joint_learning.agents.dynamics import load_or_train_dynamics
 from joint_learning.agents.iql import IQLAgent
 from joint_learning.agents.scas import SCASAgent
 from joint_learning.agents.scas_gp import SCASGPAgent
@@ -26,6 +23,7 @@ from joint_learning.agents.td3bc_p import TD3BCPAgent
 from joint_learning.agents.td3bc_p_gp import TD3BCPGPAgent
 from joint_learning.agents.td3bc_xn import TD3BCXNAgent
 from joint_learning.agents.td3bc_xn_gp import TD3BCXNGPAgent
+from joint_learning.lib.train import train_model
 
 
 # Available agents for this compact build:
@@ -88,7 +86,7 @@ DYNAMIC_AGENT_CLASSES = {
 
 def make_agent(agent_id: str, dataset, device: str):
     if agent_id in DYNAMIC_AGENT_CLASSES:
-        dynamics = load_or_train_dynamics(dataset, device)
+        dynamics = train_model(dataset, device)
         agent_class = DYNAMIC_AGENT_CLASSES[agent_id]
         agent = agent_class(dataset.obs_size, dataset.act_size, dynamics=dynamics, device=device)
         agent.id = agent_id
@@ -98,7 +96,3 @@ def make_agent(agent_id: str, dataset, device: str):
     agent = agent_class(dataset.obs_size, dataset.act_size, device=device)
     agent.id = agent_id
     return agent
-
-
-def model_path(agent, dataset) -> Path:
-    return Path(__file__).resolve().parent.parent / "model" / f"{agent.id}-{dataset.id}.pt"

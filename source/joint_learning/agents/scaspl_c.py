@@ -11,24 +11,20 @@ class SCASPLCAgent(SCASPLAgent):
         obs_size: int,
         act_size: int,
         dynamics: SCASDynamics,
-        weight_compensate: float = 1.0,
+        lambda_c: float = 1.0,
         device: str = "cuda",
     ) -> None:
         super().__init__(obs_size, act_size, dynamics=dynamics, device=device)
-        self.weight_compensate = weight_compensate
+        self.lambda_c = lambda_c
 
     # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
     def loss_compensation(self, batch: Batch) -> torch.Tensor:
-        # Compensation term:
-        # Loss_Compensation = -E_D [(1/2)\sum_(i=1)^2 Q_i (s,a)]
-        # It offsets pseudo-label punishment by lifting dataset-action values.
+        # Loss_compensation = -E_D [(1/2)\sum _(i=1)^2 Q_i (s,a)]
         observations, actions, _, _, _ = batch
-        q = torch.stack([self.q1(observations, actions), self.q2(observations, actions)], dim=0)
-        return -q.mean()
+        return -self.critic.q_mean(observations, actions).mean()
 
-    def loss_q(self, batch: Batch) -> torch.Tensor:
-        # SCASPL-C critic loss:
-        # Loss_Q = Loss_TD + \lambda_p * Loss_Pseudo_Label_Constraint + \lambda_c * Loss_Compensation
-        return super().loss_q(batch) + self.weight_compensate * self.loss_compensation(batch)
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
+        # Loss_Critic = Loss_TD + \lambda_p Loss_pseudo + \lambda_c Loss_compensation
+        return super().loss_critic(batch) + self.lambda_c * self.loss_compensation(batch)
