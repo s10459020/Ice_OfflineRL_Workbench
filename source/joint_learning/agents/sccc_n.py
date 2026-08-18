@@ -7,8 +7,7 @@ from joint_learning.lib.dataset import Batch
 
 class SCCCNAgent(SCCCAgent):
     def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_q=10.0, device=device)
-        self.lambda_s = 0.005
+        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_s=0.005, lambda_q=10.0, device=device)
 
     # -------------------------------------------------------------------------
     # Loss functions

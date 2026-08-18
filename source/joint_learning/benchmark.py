@@ -4,7 +4,7 @@ from joint_learning.lib.dataset import D4RLDataset
 from joint_learning.lib.table import table_path
 from joint_learning.lib.table import write_table
 from joint_learning.lib.train import train
-from joint_learning.lib.train import train_model
+from joint_learning.lib.train import train_dynamic
 
 
 EXPERIMENT = "benchmark"
@@ -48,7 +48,7 @@ def main() -> None:
     for dataset_id in DATASETS:
         row = [dataset_id]
         dataset = D4RLDataset(dataset_id, DEVICE)
-        dynamic = train_model(dataset) if any(agent_id in DYNAMIC_AGENT_CLASSES for agent_id in AGENTS) else None
+        dynamic = train_dynamic(dataset) if any(agent_id in DYNAMIC_AGENT_CLASSES for agent_id in AGENTS) else None
         for agent_id in AGENTS:
             returns = []
             for train_index in range(1, TRAIN_COUNT + 1):

@@ -7,8 +7,7 @@ from joint_learning.lib.dataset import Batch
 
 class SCCCGPNAgent(SCCCGPAgent):
     def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
-        self.lambda_s = 0.01
+        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_s=0.01, device=device)
 
     # -------------------------------------------------------------------------
     # Loss functions

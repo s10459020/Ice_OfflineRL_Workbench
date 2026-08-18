@@ -47,8 +47,10 @@ class Dynamic(torch.nn.Module):
     def load(self, path: Path) -> None:
         self.network.load_state_dict(torch.load(path, map_location=self.device))
 
-    def eval(self):
-        super().eval()
+    def freeze(self):
         for parameter in self.parameters():
             parameter.requires_grad_(False)
         return self
+
+    def eval(self):
+        return super().eval()

@@ -26,7 +26,7 @@ class ASPLAgent(TD3Agent):
     # -------------------------------------------------------------------------
     def action_distance(self, actions: torch.Tensor, sampled_actions: torch.Tensor) -> torch.Tensor:
         # d(a,a\tilde)=(1/A)\sum_j ((a_j-a\tilde_j)/(2a_(max)))^2
-        diff = (actions - sampled_actions) ** 2
+        diff = (actions.unsqueeze(1) - sampled_actions) ** 2
         return (diff / ((2 * self.max_action) ** 2)).mean(dim=2, keepdim=True)
 
     def update_q_avg(self, q_hat_1: torch.Tensor, q_hat_2: torch.Tensor) -> torch.Tensor:
@@ -53,14 +53,10 @@ class ASPLAgent(TD3Agent):
         q_hat_1, q_hat_2 = self.critic.q_all(observations, actions)
         with torch.no_grad():
             q_anchor = self.critic.t_min(observations, actions)
-            q_pseudo = q_anchor.unsqueeze(0) - self.update_q_avg(q_hat_1, q_hat_2) * distance
+            q_pseudo = q_anchor.unsqueeze(1) - self.update_q_avg(q_hat_1, q_hat_2) * distance
 
-        flat_observations = observations.unsqueeze(0).expand(sampled_actions.shape[0], -1, -1)
-        flat_observations = flat_observations.reshape(-1, self.obs_size)
-        flat_actions = sampled_actions.reshape(-1, self.act_size)
-        flat_pseudo = q_pseudo.reshape(-1, 1)
-
-        q1, q2 = self.critic.q_all(flat_observations, flat_actions)
+        q1, q2 = self.critic.q_all_n(observations, sampled_actions)
+        flat_pseudo = q_pseudo
         return F.mse_loss(q1, flat_pseudo) + F.mse_loss(q2, flat_pseudo)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:

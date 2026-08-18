@@ -24,25 +24,25 @@ def agent_path(agent, dataset, train_index: int) -> Path:
     return Path(__file__).resolve().parent.parent / "model" / f"{agent.id}-{dataset.id}-{train_index}.pt"
 
 
-def model_path(dataset) -> Path:
+def dynamic_path(dataset) -> Path:
     return Path(__file__).resolve().parent.parent / "model" / f"dynamics-{dataset.id}.pt"
 
 
-def train_model(dataset) -> Dynamic:
-    model = Dynamic(dataset.obs_size, dataset.act_size, device=dataset.device)
-    path = model_path(dataset)
+def train_dynamic(dataset) -> Dynamic:
+    dynamic = Dynamic(dataset.obs_size, dataset.act_size, device=dataset.device)
+    path = dynamic_path(dataset)
     if path.exists():
-        model.load(path)
-        return model.eval()
+        dynamic.load(path)
+        return dynamic.eval().freeze()
 
-    print(f"train model: {dataset.id}")
+    print(f"train dynamic: {dataset.id}")
     for step in range(1, MODEL_STEPS + 1):
-        model.update(dataset.sample_batch(MODEL_BATCH_SIZE))
+        dynamic.update(dataset.sample_batch(MODEL_BATCH_SIZE))
         if step % MODEL_PRINT_INTERVAL == 0:
             print(f"model step {step}/{MODEL_STEPS}")
 
-    model.save(path)
-    return model.eval()
+    dynamic.save(path)
+    return dynamic.eval().freeze()
 
 
 def train(agent, dataset, experiment_id: str, train_index: int) -> float:

@@ -11,7 +11,7 @@ from joint_learning.lib.dataset import Batch
 class IQLActor(torch.nn.Module):
     def __init__(self, obs_size: int, act_size: int) -> None:
         super().__init__()
-        self.hidden = torch.nn.Sequential(
+        self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
             torch.nn.Linear(256, 256),
@@ -23,8 +23,8 @@ class IQLActor(torch.nn.Module):
         self.max_logstd = 2.0
 
     def dist(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        hidden = self.hidden(observations)
-        mean = torch.tanh(self.mean(hidden))
+        features = self.network(observations)
+        mean = torch.tanh(self.mean(features))
         logstd = self.logstd.clamp(self.min_logstd, self.max_logstd)
         return mean, logstd
 
@@ -116,13 +116,12 @@ class IQLAgent:
         self.act_size = act_size
         self.device = device
         self.discount_factor = 0.99
-        self.target_update_rate = 0.005
         self.expectile = 0.7
         self.advantage_scale = 3.0
         self.cap_weight = 100.0
 
         self.actor = IQLActor(obs_size, act_size).to(device)
-        self.critic = IQLCritic(obs_size, act_size, self.target_update_rate).to(device)
+        self.critic = IQLCritic(obs_size, act_size).to(device)
         self.value = IQLValue(obs_size).to(device)
 
         self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=lr)
@@ -140,25 +139,25 @@ class IQLAgent:
         return action.cpu().numpy()[0]
 
     def update(self, batch: Batch) -> None:
-        # value
+        # value: fit the expectile value before dependent policy and Q updates
         loss_value = self.loss_value(batch)
         self.value_optimizer.zero_grad()
         loss_value.backward()
         self.value_optimizer.step()
 
-        # actor
+        # actor: fit the advantage-weighted behavior policy
         loss_actor = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
         loss_actor.backward()
         self.actor_optimizer.step()
 
-        # critic
+        # critic: update Q-functions from the value target
         loss_critic = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
         loss_critic.backward()
         self.critic_optimizer.step()
 
-        # target
+        # target: softly track the updated online Q-functions
         self.critic.sync_soft()
 
     def save(self, path: Path) -> None:

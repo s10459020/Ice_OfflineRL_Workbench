@@ -25,6 +25,12 @@ class SCASAgent(TD3Agent):
     # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        observations, _, _, _, _ = batch
+        actions = self.actor(observations)
+        q = self.critic.q_min(observations, actions)
+        return -q.mean()
+
     def loss_correction(self, batch: Batch) -> torch.Tensor:
         # V(s) = Q_(min) (s,\pi(s)), \Delta V = V(s') - V(s)
         # w(s,s') = min(exp(\beta \Delta V), w_(max))
