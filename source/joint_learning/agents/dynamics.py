@@ -31,9 +31,11 @@ class Dynamic(torch.nn.Module):
         return self.network(torch.cat([observations, actions], dim=-1))
 
     def noisy_observation(self, observations: torch.Tensor) -> torch.Tensor:
+        # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 I)
         return observations + torch.randn_like(observations) * self.noise_scale
 
     def update(self, batch: Batch) -> None:
+        # Loss_Dynamic = E_((s, a, r, s', d) \sim D) [\|M(s, a) - s'\|_2^2]
         observations, actions, _, next_observations, _ = batch
         loss = F.mse_loss(self(observations, actions), next_observations)
         self.optimizer.zero_grad()

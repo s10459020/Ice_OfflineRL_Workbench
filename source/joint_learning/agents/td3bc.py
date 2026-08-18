@@ -14,13 +14,13 @@ class TD3BCAgent(TD3Agent):
     # Loss functions
     # -------------------------------------------------------------------------
     def loss_bc(self, batch: Batch) -> torch.Tensor:
-        # Loss_BC = E_D [\|\pi(s)-a\|_2^2]
+        # Loss_BC = E_((s, a) \sim D) [\|\pi(s) - a\|_2^2]
         observations, actions, _, _, _ = batch
         predicted_actions = self.actor(observations)
         return F.mse_loss(predicted_actions, actions)
 
     def loss_normalized(self, batch: Batch) -> torch.Tensor:
-        # Loss_normalized = -E[Q_1 (s,\pi(s))]/E[|Q_1 (s,\pi(s))|]
+        # Loss_normalized = -E_(s \sim D) [Q_1 (s, \pi(s))]/E_(s \sim D) [|Q_1 (s, \pi(s))|]
         observations, _, _, _, _ = batch
         q = self.actor_q(observations)
         return -q.mean() / q.abs().mean().detach()

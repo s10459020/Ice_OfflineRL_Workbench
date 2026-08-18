@@ -33,10 +33,10 @@ class SCASAgent(TD3Agent):
     # Loss functions
     # -------------------------------------------------------------------------
     def loss_correction(self, batch: Batch) -> torch.Tensor:
-        # V(s) = Q_(min) (s,\pi(s)), \Delta V = V(s') - V(s)
-        # w(s,s') = min(exp(\beta \Delta V), w_(max))
+        # V(s) = Q_(min) (s, \pi(s)), \Delta V = V(s') - V(s)
+        # w(s, s') = min(exp(\beta \Delta V), w_(max))
         # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 I)
-        # Loss_correction = E_D [w(s,s')\|M(s\hat,\pi(s\hat))-s'\|_2^2]
+        # Loss_correction = E_((s, a, r, s', d) \sim D) [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
         observations, _, _, next_observations, _ = batch
         value = self.actor_q(observations)
         next_value = self.actor_q(next_observations)
@@ -48,5 +48,5 @@ class SCASAgent(TD3Agent):
         return (weight * ((predicted_next_observations - next_observations) ** 2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = (1-\lambda_s) Loss_TD3 + \lambda_s Loss_correction
+        # Loss_Actor = (1 - \lambda_s) Loss_TD3 + \lambda_s Loss_correction
         return (1.0 - self.lambda_s) * self.loss_td3(batch) + self.lambda_s * self.loss_correction(batch)

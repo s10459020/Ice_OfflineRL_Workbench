@@ -19,7 +19,11 @@ class GPAgent:
         self.gp_count = gp_count
         self.gp_threshold = gp_threshold
 
+    # ====================
+    # Loss functions
+    # ====================
     def loss_gradient(self, batch: Batch) -> torch.Tensor:
+        # Loss_GP = E_(s \sim D) [(1/K)\sum_k \sum _(i = 1)^2 ReLU(\|\nabla_(a\tilde_k) Q_i (s, a\tilde_k)\|_2 - \tau_(GP))^2]
         observations, _, _, _, _ = batch
         sampled_actions = self.actor.sample_uniform(observations, self.gp_count).requires_grad_(True)
         q_values = self.critic.q_all_n(observations, sampled_actions)
@@ -35,4 +39,5 @@ class GPAgent:
         return torch.stack(penalties, dim=0).sum(dim=0).mean()
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
+        # Loss_Critic = Loss_(base) + \lambda_(GP) Loss_GP
         return super().loss_critic(batch) + self.lambda_gp * self.loss_gradient(batch)

@@ -10,8 +10,8 @@ class ASPLAgent(TD3Agent):
         self,
         obs_size: int,
         act_size: int,
-        lambda_p: float = 2.5,
-        actor_num_sample: int = 16,
+        lambda_p: float = 0.05,
+        actor_num_sample: int = 6,
         critic_rate_decay: float = 0.005,
         device: str = "cuda",
     ) -> None:
@@ -21,16 +21,16 @@ class ASPLAgent(TD3Agent):
         self.critic_rate_decay = critic_rate_decay
         self.q_avg = torch.tensor(0.0, dtype=torch.float32, device=self.device)
 
-    # -------------------------------------------------------------------------
+    # ====================
     # Help functions
-    # -------------------------------------------------------------------------
+    # ====================
     def action_distance(self, actions: torch.Tensor, sampled_actions: torch.Tensor) -> torch.Tensor:
-        # d(a,a\tilde)=(1/A)\sum_j ((a_j-a\tilde_j)/(2a_(max)))^2
+        # d(a, a\tilde) = (1/A)\sum_j ((a_j - a\tilde_j)/(2a_(max)))^2
         diff = (actions.unsqueeze(1) - sampled_actions) ** 2
         return (diff / ((2 * self.max_action) ** 2)).mean(dim=2, keepdim=True)
 
     def update_q_avg(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
-        # c_t=(1-\rho)c_(t-1) +\rho E_D [(|Q_1 (s,a)|+|Q_2 (s,a)|)/2]
+        # c_t = (1 - \rho)c_(t - 1) + \rho E_((s, a) \sim D) [(|Q_1 (s, a)| + |Q_2 (s, a)|)/2]
         with torch.no_grad():
             q_values = self.critic.q_all(observations, actions)
             current = torch.stack(q_values).abs().mean()
@@ -41,12 +41,12 @@ class ASPLAgent(TD3Agent):
                 self.q_avg.add_(self.critic_rate_decay * current)
         return self.q_avg
 
-    # -------------------------------------------------------------------------
+    # ====================
     # Loss functions
-    # -------------------------------------------------------------------------
+    # ====================
     def loss_pseudo(self, batch: Batch) -> torch.Tensor:
-        # Q\tilde (s,a\tilde_k)=min_i sg(Q_i ^target (s,a))-c_t d(a,a\tilde_k)
-        # Loss_pseudo = E_D [(1/K)\sum_k \sum _(i=1)^2 (Q_i (s,a\tilde_k)-Q\tilde (s,a\tilde_k))^2]
+        # Q\tilde (s, a\tilde_k) = min_i sg(Q_i ^target (s, a)) - c_t d(a, a\tilde_k)
+        # Loss_pseudo = E_((s, a) \sim D) [(1/K)\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_lhs(observations, self.actor_num_sample)
         distance = self.action_distance(actions, sampled_actions)

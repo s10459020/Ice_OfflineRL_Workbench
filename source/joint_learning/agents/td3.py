@@ -34,6 +34,9 @@ class TD3Actor(torch.nn.Module):
         for parameter in self.t_network.parameters():
             parameter.requires_grad_(False)
 
+    # ====================
+    # Action functions
+    # ====================
     def forward(self, observations: torch.Tensor) -> torch.Tensor:
         return self.max_action * torch.tanh(self.network(observations))
 
@@ -53,9 +56,15 @@ class TD3Actor(torch.nn.Module):
         strata = strata.expand(batch_size, -1, self.act_size).gather(1, permutation)
         return strata.mul(2.0 * self.max_action).sub(self.max_action)
 
+    # ====================
+    # Target functions
+    # ====================
     def t(self, observations: torch.Tensor) -> torch.Tensor:
         return self.max_action * torch.tanh(self.t_network(observations))
 
+    # ====================
+    # Parameter functions
+    # ====================
     def online_parameters(self):
         return self.network.parameters()
 
@@ -93,6 +102,9 @@ class TD3Critic(torch.nn.Module):
         for parameter in self.t_networks.parameters():
             parameter.requires_grad_(False)
 
+    # ====================
+    # Q functions
+    # ====================
     def q1(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         return self.q_networks[0](observations, actions)
 
@@ -111,10 +123,16 @@ class TD3Critic(torch.nn.Module):
         flat_actions = actions.reshape(-1, actions.shape[-1])
         return tuple(q.reshape(batch_size, sample_count, 1) for q in self.q_all(flat_observations, flat_actions))
 
+    # ====================
+    # Target functions
+    # ====================
     def t_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         values = torch.cat(tuple(network(observations, actions) for network in self.t_networks), dim=1)
         return values.min(dim=1, keepdim=True).values
 
+    # ====================
+    # Parameter functions
+    # ====================
     def online_parameters(self):
         return self.q_networks.parameters()
 
@@ -157,6 +175,9 @@ class TD3Agent:
         self.actor_optimizer = torch.optim.Adam(self.actor.online_parameters(), lr=lr)
         self.critic_optimizer = torch.optim.Adam(self.critic.online_parameters(), lr=lr)
 
+    # ====================
+    # Public functions
+    # ====================
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -191,7 +212,20 @@ class TD3Agent:
         self.actor.network.load_state_dict(state)
         self.actor.sync_hard()
 
+    # ====================
+    # Help functions
+    # ====================
+    def actor_q(self, observations: torch.Tensor) -> torch.Tensor:
+        actions = self.actor(observations)
+        return self.critic.q1(observations, actions)
+
+    # ====================
+    # Loss functions
+    # ====================
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
+        # \epsilon = clip(N(0, \sigma_a^2 I), -c, c)
+        # a' = clip(\pi^target (s') + \epsilon, -a_(max), a_(max))
+        # y = r + \gamma(1 - d)min_i Q_i ^target (s', a')
         with torch.no_grad():
             next_actions = self.actor.t(next_observations)
             noise = (torch.randn_like(next_actions) * self.noise_scale).clamp(-self.noise_clip, self.noise_clip)
@@ -200,21 +234,21 @@ class TD3Agent:
             return rewards + self.discount_factor * target_q * (1.0 - dones)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
+        # Loss_TD = E_((s, a, r, s', d) \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         target = self.target_td3(next_observations, rewards, dones)
         q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
+        # Loss_Critic = Loss_TD
         return self.loss_td(batch)
 
     def loss_td3(self, batch: Batch) -> torch.Tensor:
+        # Loss_TD3 = -E_(s \sim D) [Q_1 (s, \pi(s))]
         observations, _, _, _, _ = batch
         return -self.actor_q(observations).mean()
 
-    def actor_q(self, observations: torch.Tensor) -> torch.Tensor:
-        actions = self.actor(observations)
-        return self.critic.q1(observations, actions)
-
     def loss_actor(self, batch: Batch) -> torch.Tensor:
+        # Loss_Actor = Loss_TD3
         return self.loss_td3(batch)

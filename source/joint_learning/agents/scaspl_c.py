@@ -21,7 +21,7 @@ class SCASPLCAgent(SCASPLAgent):
     # Loss functions
     # -------------------------------------------------------------------------
     def loss_compensation(self, batch: Batch) -> torch.Tensor:
-        # Loss_compensation = -E_D [(1/2)\sum _(i=1)^2 Q_i (s,a)]
+        # Loss_compensation = -E_((s, a) \sim D) [(1/2)\sum _(i = 1)^2 Q_i (s, a)]
         observations, actions, _, _, _ = batch
         return -self.critic.q_mean(observations, actions).mean()
 

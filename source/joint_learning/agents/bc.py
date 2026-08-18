@@ -23,16 +23,16 @@ class BCActor(torch.nn.Module):
 
 
 class BCAgent:
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
+    def __init__(self, obs_size: int, act_size: int, learning_rate: float = 3e-4, device: str = "cuda") -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
         self.actor = BCActor(obs_size, act_size).to(device)
-        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=3e-4)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=learning_rate)
 
-    # -------------------------------------------------------------------------
+    # ====================
     # Public functions
-    # -------------------------------------------------------------------------
+    # ====================
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -55,11 +55,11 @@ class BCAgent:
         state = torch.load(path, map_location=self.device)
         self.actor.load_state_dict(state)
 
-    # -------------------------------------------------------------------------
+    # ====================
     # Loss functions
-    # -------------------------------------------------------------------------
+    # ====================
     def loss_bc(self, batch: Batch) -> torch.Tensor:
-        # Loss_BC = E_((s,a)\sim D) [\|\pi(s)-a\|_2^2]
+        # Loss_BC = E_((s, a) \sim D) [\|\pi(s) - a\|_2^2]
         observations, actions, _, _, _ = batch
         predicted_actions = self.actor(observations)
         return F.mse_loss(predicted_actions, actions)

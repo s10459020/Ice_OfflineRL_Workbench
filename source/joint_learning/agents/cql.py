@@ -10,11 +10,11 @@ from joint_learning.lib.dataset import Batch
 
 
 class CQLActor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int) -> None:
+    def __init__(self, obs_size: int, act_size: int, min_logstd: float = -20.0, max_logstd: float = 2.0) -> None:
         super().__init__()
         self.act_size = act_size
-        self.min_logstd = -20.0
-        self.max_logstd = 2.0
+        self.min_logstd = min_logstd
+        self.max_logstd = max_logstd
         self.network = torch.nn.Sequential(
             torch.nn.Linear(obs_size, 256),
             torch.nn.ReLU(),
@@ -39,13 +39,13 @@ class CQLActor(torch.nn.Module):
         return torch.tanh(mean)
 
     def sample(self, observations: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        # a=tanh(u), u \sim \pi_(raw) (.|s)
+        # a = tanh(u), u \sim \pi_(raw) (.|s)
         dist, _ = self.dist(observations)
         raw_actions = dist.rsample()
         return torch.tanh(raw_actions), self.log_prob_from_raw(dist, raw_actions)
 
     def sample_n(self, observations: torch.Tensor, sample_count: int) -> tuple[torch.Tensor, torch.Tensor]:
-        # a\tilde_n \sim \pi(.|s)
+        # a\tilde_n \sim \pi(. | s)
         dist, _ = self.dist(observations)
         raw_actions = dist.rsample((sample_count,))
         actions = torch.tanh(raw_actions).transpose(0, 1)
@@ -53,7 +53,7 @@ class CQLActor(torch.nn.Module):
         return actions, log_probs
 
     def sample_uniform(self, observations: torch.Tensor, sample_count: int) -> tuple[torch.Tensor, torch.Tensor]:
-        # a\tilde_n \sim U(-1, 1), log \mu(a\tilde_n|s) = A log 0.5
+        # a\tilde_n \sim U(-1, 1), log \mu(a\tilde_n | s) = A log 0.5
         batch_size = observations.shape[0]
         actions = torch.empty(
             batch_size,
@@ -96,12 +96,18 @@ class CQLCritic(torch.nn.Module):
         for parameter in self.t_networks.parameters():
             parameter.requires_grad_(False)
 
+    # ====================
+    # Q functions
+    # ====================
     def q_all(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
         return tuple(q_network(observations, actions) for q_network in self.q_networks)
 
     def q_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         return torch.cat(self.q_all(observations, actions), dim=1).min(dim=1, keepdim=True).values
 
+    # ====================
+    # Target functions
+    # ====================
     def t_min(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         values = torch.cat(
             [q_network(observations, actions) for q_network in self.t_networks],
@@ -119,6 +125,9 @@ class CQLCritic(torch.nn.Module):
             for q in self.q_all(repeated_observations, flat_actions)
         )
 
+    # ====================
+    # Parameter functions
+    # ====================
     def online_parameters(self):
         return self.q_networks.parameters()
 
@@ -167,9 +176,9 @@ class CQLAgent:
         self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=learning_rate)
         self.cql_lambda_optimizer = torch.optim.Adam([self.log_cql_lambda], lr=learning_rate)
 
-    # -------------------------------------------------------------------------
+    # ====================
     # Public functions
-    # -------------------------------------------------------------------------
+    # ====================
     def act(self, observation) -> np.ndarray:
         observation_array = np.asarray(observation, dtype=np.float32).reshape(1, -1)
         observations = torch.as_tensor(observation_array, dtype=torch.float32, device=self.device)
@@ -185,8 +194,9 @@ class CQLAgent:
         self.alpha_optimizer.step()
 
         # Conservative weight
+        # Loss_(\lambda) = -\lambda'_(CQL)(L_(gap) - \tau_(CQL))
         loss_conservative = self.loss_conservative(batch)
-        # gap = (L_CQL,1 + L_CQL,2) / 2
+        # L_(gap) = (L_(CQL,1) + L_(CQL,2))/2
         conservative_gap = loss_conservative.detach() / 2.0
         loss_weight = -(self.cql_lambda() * (conservative_gap - self.threshold)).mean()
         self.cql_lambda_optimizer.zero_grad()
@@ -217,9 +227,9 @@ class CQLAgent:
         state = torch.load(path, map_location=self.device)
         self.actor.load_state_dict(state)
 
-    # -------------------------------------------------------------------------
+    # ====================
     # Loss functions
-    # -------------------------------------------------------------------------
+    # ====================
     def alpha(self) -> torch.Tensor:
         # \alpha = exp(log \alpha)
         return self.log_alpha.exp()
@@ -229,9 +239,9 @@ class CQLAgent:
         return self.log_cql_lambda.exp().clamp(0.0, 1e6)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
-        # a' \sim \pi(.|s')
-        # y=r+\gamma(1-d)Q_(min) ' (s',a')
-        # Loss_TD=E_D [\sum _(i \in {1,2}) (Q_i (s,a)-y)^2]
+        # a' \sim \pi(. | s')
+        # y = r + \gamma(1 - d)Q_(min) ^target (s', a')
+        # Loss_TD = E_((s, a, r, s', d) \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
             next_actions, _ = self.actor.sample(next_observations)
@@ -241,7 +251,7 @@ class CQLAgent:
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_conservative(self, batch: Batch) -> torch.Tensor:
-        # Loss_conservative=\sum _(i=1)^2 [E_(s~D) [log \sum_n exp(Q_i (s,a\tilde_n)-log \mu(a\tilde_n|s))]-E_((s,a)~D) [Q_i (s,a)]]
+        # Loss_conservative = \sum _(i = 1)^2 [E_(s \sim D) [log \sum_n exp(Q_i (s, a\tilde_n) - log \mu(a\tilde_n | s))] - E_((s, a) \sim D) [Q_i (s, a)]]
         observations, actions, _, next_observations, _ = batch
         with torch.no_grad():
             policy_actions, policy_log_probs = self.actor.sample_n(observations, self.sample_count)
@@ -266,15 +276,15 @@ class CQLAgent:
         return sum(losses)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor=E_(s\sim D,a\sim\pi) [\alpha log\pi(a|s)-Q_(min) (s,a)]
+        # Loss_Actor = E_(s \sim D, a \sim \pi) [\alpha log \pi(a | s) - Q_(min) (s, a)]
         observations, _, _, _, _ = batch
         actions, log_probs = self.actor.sample(observations)
         q = self.critic.q_min(observations, actions)
         return (self.alpha().detach() * log_probs - q).mean()
 
     def loss_temperature(self, batch: Batch) -> torch.Tensor:
-        # Loss_Temperature=E_(s\sim D,a\sim\pi) [-\alpha(log\pi(a|s)+H_t)]
+        # Loss_Temperature = -E_(s \sim D, a \sim \pi) [log \alpha(log \pi(a | s) + H_t)]
         observations, _, _, _, _ = batch
         with torch.no_grad():
             _, log_probs = self.actor.sample(observations)
-        return -(self.alpha() * (log_probs + self.target_entropy)).mean()
+        return -(self.log_alpha * (log_probs + self.target_entropy).detach()).mean()

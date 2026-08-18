@@ -25,14 +25,11 @@ class SCCCAgent(SCASAgent):
         self.conservative_count = conservative_count
         self.threshold = threshold
 
-    # -------------------------------------------------------------------------
-    # Help functions
-    # -------------------------------------------------------------------------
-    # -------------------------------------------------------------------------
+    # ====================
     # Loss functions
-    # -------------------------------------------------------------------------
+    # ====================
     def loss_conservative(self, batch: Batch) -> torch.Tensor:
-        # Loss_conservative=\sum _(i=1)^2 E_D [ReLU(log \sum_n exp(Q_i (s,a\tilde_n))-log N-Q_i (s,a)+\tau)]
+        # Loss_conservative = \sum _(i = 1)^2 E_((s, a) \sim D) [ReLU(log \sum_n exp(Q_i (s, a\tilde_n)) - log N - Q_i (s, a) + \tau)]
         observations, actions, _, _, _ = batch
         batch_size = observations.shape[0]
         sampled_actions = self.actor.sample_uniform(observations, self.conservative_count)
