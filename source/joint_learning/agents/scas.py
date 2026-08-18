@@ -23,24 +23,23 @@ class SCASAgent(TD3Agent):
         self.max_gap = max_gap
 
     # -------------------------------------------------------------------------
+    # Help functions
+    # -------------------------------------------------------------------------
+    def actor_q(self, observations: torch.Tensor) -> torch.Tensor:
+        actions = self.actor(observations)
+        return self.critic.q_min(observations, actions)
+
+    # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        observations, _, _, _, _ = batch
-        actions = self.actor(observations)
-        q = self.critic.q_min(observations, actions)
-        return -q.mean()
-
     def loss_correction(self, batch: Batch) -> torch.Tensor:
         # V(s) = Q_(min) (s,\pi(s)), \Delta V = V(s') - V(s)
         # w(s,s') = min(exp(\beta \Delta V), w_(max))
         # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 I)
         # Loss_correction = E_D [w(s,s')\|M(s\hat,\pi(s\hat))-s'\|_2^2]
         observations, _, _, next_observations, _ = batch
-        actions = self.actor(observations)
-        next_actions = self.actor(next_observations)
-        value = self.critic.q_min(observations, actions)
-        next_value = self.critic.q_min(next_observations, next_actions)
+        value = self.actor_q(observations)
+        next_value = self.actor_q(next_observations)
         weight = (self.scale_gap * (next_value.detach() - value.detach())).exp().clamp(max=self.max_gap)
 
         noisy_observations = self.dynamic.noisy_observation(observations)

@@ -109,16 +109,20 @@ class IQLAgent:
         self,
         obs_size: int,
         act_size: int,
+        discount_factor: float = 0.99,
+        expectile: float = 0.7,
+        advantage_scale: float = 3.0,
+        cap_weight: float = 100.0,
         lr: float = 3e-4,
         device: str = "cuda"
     ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.discount_factor = 0.99
-        self.expectile = 0.7
-        self.advantage_scale = 3.0
-        self.cap_weight = 100.0
+        self.discount_factor = discount_factor
+        self.expectile = expectile
+        self.advantage_scale = advantage_scale
+        self.cap_weight = cap_weight
 
         self.actor = IQLActor(obs_size, act_size).to(device)
         self.critic = IQLCritic(obs_size, act_size).to(device)
@@ -139,25 +143,25 @@ class IQLAgent:
         return action.cpu().numpy()[0]
 
     def update(self, batch: Batch) -> None:
-        # value: fit the expectile value before dependent policy and Q updates
+        # Value
         loss_value = self.loss_value(batch)
         self.value_optimizer.zero_grad()
         loss_value.backward()
         self.value_optimizer.step()
 
-        # actor: fit the advantage-weighted behavior policy
+        # Actor
         loss_actor = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
         loss_actor.backward()
         self.actor_optimizer.step()
 
-        # critic: update Q-functions from the value target
+        # Critic
         loss_critic = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
         loss_critic.backward()
         self.critic_optimizer.step()
 
-        # target: softly track the updated online Q-functions
+        # Target
         self.critic.sync_soft()
 
     def save(self, path: Path) -> None:

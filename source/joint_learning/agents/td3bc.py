@@ -22,8 +22,7 @@ class TD3BCAgent(TD3Agent):
     def loss_normalized(self, batch: Batch) -> torch.Tensor:
         # Loss_normalized = -E[Q_1 (s,\pi(s))]/E[|Q_1 (s,\pi(s))|]
         observations, _, _, _, _ = batch
-        actions = self.actor(observations)
-        q = self.critic.q1(observations, actions)
+        q = self.actor_q(observations)
         return -q.mean() / q.abs().mean().detach()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:

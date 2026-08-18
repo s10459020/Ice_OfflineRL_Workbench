@@ -41,7 +41,7 @@ class BCAgent:
         return action.cpu().numpy()[0]
 
     def update(self, batch: Batch) -> None:
-        # actor: fit the policy directly to dataset actions
+        # Actor
         loss_actor = self.loss_actor(batch)
         self.actor_optimizer.zero_grad()
         loss_actor.backward()

@@ -51,6 +51,3 @@ class Dynamic(torch.nn.Module):
         for parameter in self.parameters():
             parameter.requires_grad_(False)
         return self
-
-    def eval(self):
-        return super().eval()

@@ -105,13 +105,6 @@ class TD3Critic(torch.nn.Module):
     def q_mean(self, observations: torch.Tensor, actions: torch.Tensor) -> torch.Tensor:
         return torch.cat(self.q_all(observations, actions), dim=1).mean(dim=1, keepdim=True)
 
-    def action_gradients(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
-        gradients = []
-        for q_network in self.q_networks:
-            q = q_network(observations, actions)
-            gradients.append(torch.autograd.grad(q.sum(), actions, create_graph=True, retain_graph=True)[0])
-        return tuple(gradients)
-
     def q_all_n(self, observations: torch.Tensor, actions: torch.Tensor) -> tuple[torch.Tensor, ...]:
         batch_size, sample_count = observations.shape[0], actions.shape[1]
         flat_observations = observations.unsqueeze(1).expand(-1, sample_count, -1).reshape(-1, observations.shape[-1])
@@ -173,19 +166,19 @@ class TD3Agent:
 
     def update(self, batch: Batch) -> None:
         self.update_step += 1
-        # critic: update Q-functions from the Bellman target
+        # Critic
         loss_critic = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
         loss_critic.backward()
         self.critic_optimizer.step()
 
         if self.update_step % self.update_actor_interval == 0:
-            # actor: update the deterministic policy on delayed policy steps
+            # Actor
             loss_actor = self.loss_actor(batch)
             self.actor_optimizer.zero_grad()
             loss_actor.backward()
             self.actor_optimizer.step()
-            # target: softly track the updated online networks
+            # Target
             self.actor.sync_soft()
             self.critic.sync_soft()
 
@@ -217,9 +210,11 @@ class TD3Agent:
 
     def loss_td3(self, batch: Batch) -> torch.Tensor:
         observations, _, _, _, _ = batch
+        return -self.actor_q(observations).mean()
+
+    def actor_q(self, observations: torch.Tensor) -> torch.Tensor:
         actions = self.actor(observations)
-        q = self.critic.q1(observations, actions)
-        return -q.mean()
+        return self.critic.q1(observations, actions)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         return self.loss_td3(batch)
