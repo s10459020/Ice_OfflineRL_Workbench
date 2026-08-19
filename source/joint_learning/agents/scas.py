@@ -38,7 +38,7 @@ class SCASAgent(TD3Agent):
         # \Delta V = V(s') - V(s)
         # w(s, s') = min(exp(\beta \Delta V), w_(max))
         # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 I)
-        # Loss_correction = E_((s, a, r, s', d) \sim D) [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
+        # Loss_correction = E_((s, a, r, s') \sim D) [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
         observations, _, _, next_observations, _ = batch
         actions = self.actor(observations)
         next_actions = self.actor(next_observations)

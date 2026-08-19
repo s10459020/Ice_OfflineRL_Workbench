@@ -185,8 +185,8 @@ class IQLAgent:
     # Loss functions
     # ====================
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # y = r + \gamma(1 - d)V(s')
-        # Loss_Critic = E_((s, a, r, s', d) \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
+        # y = r + \gamma V(s')
+        # Loss_Critic = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
             target = rewards + self.discount_factor * self.value(next_observations) * (1.0 - dones)

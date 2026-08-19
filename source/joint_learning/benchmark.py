@@ -11,17 +11,17 @@ from joint_learning.lib.metrics import metrics_path
 
 EXPERIMENT = "benchmark"
 DEVICE = "cuda"
-TRAIN_COUNT = 5
+TRAIN_COUNT = 1
 
 AGENTS = [
     "bc",
-    # "td3bc",
-    # "iql",
-    # "cql",
-    # "aspl_c",
-    # "scas_n",
-    # "scaspl_n",
-    # "sccc_n",
+    "td3bc",
+    "iql",
+    "cql",
+    "aspl_c",
+    "scas_n",
+    "scaspl_n",
+    "sccc_n",
 ]
 
 DATASETS = [

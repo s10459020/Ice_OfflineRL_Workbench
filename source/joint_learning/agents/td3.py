@@ -218,7 +218,7 @@ class TD3Agent:
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
         # \epsilon = clip(N(0, \sigma^2 I), -c, c)
         # a' = clip(\pi' (s') + \epsilon, -a_(max), a_(max))
-        # y = r + \gamma(1 - d)min_i Q_i' (s', a')
+        # y = r + \gamma min_i Q_i' (s', a')
         with torch.no_grad():
             next_actions = self.actor.t(next_observations)
             noise = (torch.randn_like(next_actions) * self.policy_noise_scale).clamp(-self.policy_noise_clip, self.policy_noise_clip)
@@ -227,7 +227,7 @@ class TD3Agent:
             return rewards + self.discount_factor * target_q * (1.0 - dones)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
-        # Loss_TD = E_((s, a, r, s', d) \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
+        # Loss_TD = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         target = self.target_td3(next_observations, rewards, dones)
         q1, q2 = self.critic.q_all(observations, actions)
