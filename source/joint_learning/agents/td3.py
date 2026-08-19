@@ -213,13 +213,6 @@ class TD3Agent:
         self.actor.sync_hard()
 
     # ====================
-    # Help functions
-    # ====================
-    def actor_q(self, observations: torch.Tensor) -> torch.Tensor:
-        actions = self.actor(observations)
-        return self.critic.q1(observations, actions)
-
-    # ====================
     # Loss functions
     # ====================
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
@@ -247,7 +240,9 @@ class TD3Agent:
     def loss_td3(self, batch: Batch) -> torch.Tensor:
         # Loss_TD3 = -E_(s \sim D) [Q_1 (s, \pi(s))]
         observations, _, _, _, _ = batch
-        return -self.actor_q(observations).mean()
+        actions = self.actor(observations)
+        q = self.critic.q1(observations, actions)
+        return -q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         # Loss_Actor = Loss_TD3

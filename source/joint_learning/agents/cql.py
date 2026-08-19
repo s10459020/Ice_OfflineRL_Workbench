@@ -224,12 +224,12 @@ class CQLAgent:
         return self.log_temperature.exp()
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
-        # a' \sim \pi(. | s')
+        # a' = \pi(s')
         # y = r + \gamma(1 - d)Q_(min)' (s', a')
         # Loss_TD = E_((s, a, r, s', d) \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
-            next_actions, _ = self.actor.sample(next_observations)
+            next_actions = self.actor(next_observations)
             target_q = self.critic.t_min(next_observations, next_actions)
             target = rewards + self.discount_factor * target_q * (1.0 - dones)
         q1, q2 = self.critic.q_all(observations, actions)

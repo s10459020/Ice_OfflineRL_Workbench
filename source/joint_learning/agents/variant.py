@@ -11,10 +11,11 @@ class NAgent:
     # Loss functions
     # ====================
     def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # alpha = lambda_N / E_(s \sim D) [|Q(s, \pi(s))|]
-        # Loss_TD3-N = -alpha E_(s \sim D) [Q(s, \pi(s))]
+        # alpha = lambda_N / E_(s \sim D) [|Q_(min) (s, \pi(s))|]
+        # Loss_TD3-N = -alpha E_(s \sim D) [Q_(min) (s, \pi(s))]
         observations, _, _, _, _ = batch
-        q = self.actor_q(observations)
+        actions = self.actor(observations)
+        q = self.critic.q_min(observations, actions)
         alpha = self.lambda_N / q.abs().mean().detach()
         return -alpha * q.mean()
 

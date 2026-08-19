@@ -24,15 +24,15 @@ class SCASAgent(TD3Agent):
         self.max_weight = max_weight
 
     # -------------------------------------------------------------------------
-    # Help functions
-    # -------------------------------------------------------------------------
-    def actor_q(self, observations: torch.Tensor) -> torch.Tensor:
-        actions = self.actor(observations)
-        return self.critic.q_min(observations, actions)
-
-    # -------------------------------------------------------------------------
     # Loss functions
     # -------------------------------------------------------------------------
+    def loss_td3(self, batch: Batch) -> torch.Tensor:
+        # Loss_TD3^SCAS = -E_(s \sim D) [Q_(min) (s, \pi(s))]
+        observations, _, _, _, _ = batch
+        actions = self.actor(observations)
+        q = self.critic.q_min(observations, actions)
+        return -q.mean()
+
     def loss_correction(self, batch: Batch) -> torch.Tensor:
         # V(s) = Q_(mean) (s, \pi(s)) = (Q_1 (s, \pi(s)) + Q_2 (s, \pi(s)))/2
         # \Delta V = V(s') - V(s)
