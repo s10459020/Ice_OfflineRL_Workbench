@@ -67,8 +67,7 @@ class D4RLDataset:
     def load(self) -> None:
         with h5py.File(self.path, "r") as h5_file:
             terminals = np.asarray(h5_file["terminals"], dtype=np.bool_)
-            timeouts = np.asarray(h5_file["timeouts"], dtype=np.bool_)
-            dones = np.logical_or(terminals, timeouts).reshape(-1, 1)
+            dones = terminals.reshape(-1, 1)
             raw_observations = np.asarray(h5_file["observations"], dtype=np.float32)
             raw_next_observations = np.asarray(h5_file["next_observations"], dtype=np.float32)
             self.obs_mean = raw_observations.mean(axis=0, dtype=np.float64).astype(np.float32)

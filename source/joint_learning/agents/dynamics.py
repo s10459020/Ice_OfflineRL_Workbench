@@ -13,7 +13,7 @@ class Dynamic(torch.nn.Module):
         act_size: int,
         device: str,
         state_noise_scale: float = 0.003,
-        learning_rate: float = 3e-4,
+        learning_rate: float = 1e-3,
     ):
         super().__init__()
         self.device = torch.device(device)
@@ -35,7 +35,7 @@ class Dynamic(torch.nn.Module):
         return observations + torch.randn_like(observations) * self.state_noise_scale
 
     def update(self, batch: Batch) -> None:
-        # Loss_Dynamic = E_((s, a, r, s', d) \sim D) [\|M(s, a) - s'\|_2^2]
+        # Loss_M^SCAS = E_((s, a, s') \sim D) [\|M(s, a) - s'\|_2^2]
         observations, actions, _, next_observations, _ = batch
         loss = F.mse_loss(self(observations, actions), next_observations)
         self.optimizer.zero_grad()

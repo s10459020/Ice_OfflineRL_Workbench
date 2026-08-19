@@ -22,8 +22,8 @@ class SCASPLAgent(SCASAgent):
             lambda_a=0.25,
             device=device,
         )
-        self.lambda_p = 0.05
-        self.pseudo_sample_count = 16
+        self.lambda_q = 0.05
+        self.pseudo_sample_count = 6
         self.ema_rate = 0.005
         self.value_scale = torch.tensor(0.0, dtype=torch.float32, device=self.device)
 
@@ -56,7 +56,7 @@ class SCASPLAgent(SCASAgent):
     # Loss functions
     # ====================
     def loss_pseudo(self, batch: Batch) -> torch.Tensor:
-        # Q\tilde (s, a\tilde_k) = min_i sg(Q_i' (s, a)) - c_t d(a, a\tilde_k)
+        # Q\tilde (s, a\tilde_k) = min_i Q_i^target (s, a) - c_t d(a, a\tilde_k)
         # Loss_pseudo = E_((s, a) \sim D) [(1/K)\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_uniform(observations, self.pseudo_sample_count)
@@ -70,14 +70,13 @@ class SCASPLAgent(SCASAgent):
         return sum(F.mse_loss(q, q_pseudo) for q in q_values)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Critic = Loss_TD + \lambda_p Loss_pseudo
-        return self.loss_td(batch) + self.lambda_p * self.loss_pseudo(batch)
+        # Loss_Q^SCASPL = Loss_TD + \lambda_Q Loss_pseudo
+        return self.loss_td(batch) + self.lambda_q * self.loss_pseudo(batch)
 
 
 class SCASPLNAgent(NAgent, SCASPLAgent):
     def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
         super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
-        self.lambda_a = 0.005
 
 
 class SCASPLGPAgent(GPAgent, SCASPLAgent):

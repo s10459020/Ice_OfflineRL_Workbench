@@ -21,14 +21,16 @@ class TD3BCAgent(TD3Agent):
         return F.mse_loss(predicted_actions, actions)
 
     def loss_normalized(self, batch: Batch) -> torch.Tensor:
-        # Loss_normalized = -E_(s \sim D) [Q_1 (s, \pi(s))]/E_(s \sim D) [|Q_1 (s, \pi(s))|]
+        # alpha = lambda_N / E_(s \sim D) [|Q_1 (s, \pi(s))|]
+        # Loss_normalized = -alpha E_(s \sim D) [Q_1 (s, \pi(s))]
         observations, _, _, _, _ = batch
         q = self.actor_q(observations)
-        return -q.mean() / q.abs().mean().detach()
+        alpha = self.lambda_n / q.abs().mean().detach()
+        return -alpha * q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = \lambda_n Loss_normalized + Loss_BC
-        return self.lambda_n * self.loss_normalized(batch) + self.loss_bc(batch)
+        # Loss_Actor = -alpha E_(s \sim D) [Q_1 (s, \pi(s))] + Loss_BC
+        return self.loss_normalized(batch) + self.loss_bc(batch)
 
 
 class TD3BCXNAgent(TD3BCAgent):

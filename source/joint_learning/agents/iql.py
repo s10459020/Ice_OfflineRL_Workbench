@@ -120,7 +120,7 @@ class IQLAgent:
         act_size: int,
         discount_factor: float = 0.99,
         expectile: float = 0.7,
-        advantage_temperature: float = 3.0,
+        advantage_temperature: float = 0.5,
         max_weight: float = 100.0,
         learning_rate: float = 3e-4,
         device: str = "cuda"

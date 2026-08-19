@@ -51,7 +51,7 @@ class ASPLAgent(TD3Agent):
     # Loss functions
     # ====================
     def loss_pseudo(self, batch: Batch) -> torch.Tensor:
-        # Q\tilde (s, a\tilde_k) = min_i sg(Q_i' (s, a)) - c_t d(a, a\tilde_k)
+        # Q\tilde (s, a\tilde_k) = min_i Q_i^target (s, a) - c_t d(a, a\tilde_k)
         # Loss_pseudo = E_((s, a) \sim D) [(1/K)\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_lhs(observations, self.pseudo_sample_count)

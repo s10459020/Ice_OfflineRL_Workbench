@@ -34,13 +34,16 @@ class SCASAgent(TD3Agent):
     # Loss functions
     # -------------------------------------------------------------------------
     def loss_correction(self, batch: Batch) -> torch.Tensor:
-        # V(s) = Q_(min) (s, \pi(s)), \Delta V = V(s') - V(s)
+        # V(s) = Q_(mean) (s, \pi(s)) = (Q_1 (s, \pi(s)) + Q_2 (s, \pi(s)))/2
+        # \Delta V = V(s') - V(s)
         # w(s, s') = min(exp(\beta \Delta V), w_(max))
         # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma^2 I)
         # Loss_correction = E_((s, a, r, s', d) \sim D) [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
         observations, _, _, next_observations, _ = batch
-        value = self.actor_q(observations)
-        next_value = self.actor_q(next_observations)
+        actions = self.actor(observations)
+        next_actions = self.actor(next_observations)
+        value = self.critic.q_mean(observations, actions)
+        next_value = self.critic.q_mean(next_observations, next_actions)
         weight = (self.value_gap_scale * (next_value.detach() - value.detach())).exp().clamp(max=self.max_weight)
 
         noisy_observations = self.dynamic.noisy_observation(observations)
@@ -55,7 +58,7 @@ class SCASAgent(TD3Agent):
 
 class SCASNAgent(NAgent, SCASAgent):
     def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_a=0.005, device=device)
+        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
 
 
 class SCASGPAgent(GPAgent, SCASAgent):
@@ -66,4 +69,3 @@ class SCASGPAgent(GPAgent, SCASAgent):
 class SCASGPNAgent(GPAgent, SCASNAgent):
     def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
         super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
-        self.lambda_a = 0.002
