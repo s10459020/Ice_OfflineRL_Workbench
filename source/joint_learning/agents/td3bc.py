@@ -7,8 +7,14 @@ from joint_learning.lib.dataset import Batch
 
 
 class TD3BCAgent(TD3Agent):
-    def __init__(self, obs_size: int, act_size: int, lambda_n: float = 2.5, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, device=device)
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        lambda_n: float = 2.5,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, **kwargs)
         self.lambda_n = lambda_n
 
     # -------------------------------------------------------------------------
@@ -36,25 +42,28 @@ class TD3BCAgent(TD3Agent):
 
 class TD3BCXNAgent(TD3BCAgent):
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = \lambda_n Loss_TD3 + Loss_BC
+        # Loss_Actor = \lambda_N Loss_TD3 + Loss_BC
         return self.lambda_n * self.loss_td3(batch) + self.loss_bc(batch)
 
 
 class TD3BCPAgent(TD3BCXNAgent):
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, lambda_n=0.01, device=device)
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        lambda_n: float = 0.01,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, lambda_n=lambda_n, **kwargs)
 
 
 class TD3BCGPAgent(GPAgent, TD3BCAgent):
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, device=device)
+    pass
 
 
 class TD3BCXNGPAgent(GPAgent, TD3BCXNAgent):
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, device=device)
+    pass
 
 
 class TD3BCPGPAgent(GPAgent, TD3BCPAgent):
-    def __init__(self, obs_size: int, act_size: int, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, device=device)
+    pass

@@ -53,9 +53,9 @@ class QNetwork(torch.nn.Module):
 
 
 class IQLCritic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, target_update_rate: float = 0.005) -> None:
+    def __init__(self, obs_size: int, act_size: int, tau: float = 0.005) -> None:
         super().__init__()
-        self.target_update_rate = target_update_rate
+        self.tau = tau
         self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.t_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.sync_hard()
@@ -93,8 +93,8 @@ class IQLCritic(torch.nn.Module):
             for source_network, target_network in zip(self.q_networks, self.t_networks):
                 for source, target in zip(source_network.parameters(), target_network.parameters()):
                     target.data.copy_(
-                        self.target_update_rate * source.data
-                        + (1.0 - self.target_update_rate) * target.data
+                        self.tau * source.data
+                        + (1.0 - self.tau) * target.data
                     )
 
 
@@ -118,20 +118,20 @@ class IQLAgent:
         self,
         obs_size: int,
         act_size: int,
-        discount_factor: float = 0.99,
-        expectile: float = 0.7,
-        advantage_temperature: float = 0.5,
-        max_weight: float = 100.0,
+        gamma: float = 0.99,
+        omega: float = 0.7,
+        beta_iql: float = 0.5,
+        w_max: float = 100.0,
         learning_rate: float = 3e-4,
-        device: str = "cuda"
+        device: str = "cuda",
     ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.discount_factor = discount_factor
-        self.expectile = expectile
-        self.advantage_temperature = advantage_temperature
-        self.max_weight = max_weight
+        self.gamma = gamma
+        self.omega = omega
+        self.beta_iql = beta_iql
+        self.w_max = w_max
 
         self.actor = IQLActor(obs_size, act_size).to(device)
         self.critic = IQLCritic(obs_size, act_size).to(device)
@@ -189,28 +189,28 @@ class IQLAgent:
         # Loss_Critic = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
-            target = rewards + self.discount_factor * self.value(next_observations) * (1.0 - dones)
+            target = rewards + self.gamma * self.value(next_observations) * (1.0 - dones)
         q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_value(self, batch: Batch) -> torch.Tensor:
         # u(s, a) = Q_(min)' (s, a) - V(s)
-        # Loss_Value = E_((s, a) \sim D) [|\tau - I(u < 0)|u^2]
+        # Loss_Value = E_((s, a) \sim D) [|\omega - I(u < 0)|u^2]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
             q = self.critic.t_min(observations, actions)
         v = self.value(observations)
         diff = q - v
-        weight = torch.abs(self.expectile - (diff < 0.0).float())
+        weight = torch.abs(self.omega - (diff < 0.0).float())
         return (weight * diff.pow(2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         # A(s, a) = Q_(min)' (s, a) - V(s)
-        # w(s, a) = min(exp(\beta A(s, a)), w_(max))
+        # w(s, a) = min(exp(\beta_(IQL) A(s, a)), w_(max))
         # Loss_Actor = -E_((s, a) \sim D) [w(s, a)log \pi(a | s)]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
             advantage = self.critic.t_min(observations, actions) - self.value(observations)
-            weight = (self.advantage_temperature * advantage).exp().clamp(max=self.max_weight)
+            weight = (self.beta_iql * advantage).exp().clamp(max=self.w_max)
         log_prob = self.actor.log_prob(observations, actions)
         return -(weight * log_prob).mean()

@@ -23,11 +23,11 @@ class PolicyNetwork(torch.nn.Module):
 
 
 class TD3Actor(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0, target_update_rate: float = 0.005) -> None:
+    def __init__(self, obs_size: int, act_size: int, max_action: float = 1.0, tau: float = 0.005) -> None:
         super().__init__()
         self.act_size = act_size
         self.max_action = max_action
-        self.target_update_rate = target_update_rate
+        self.tau = tau
         self.network = PolicyNetwork(obs_size, act_size)
         self.t_network = PolicyNetwork(obs_size, act_size)
         self.sync_hard()
@@ -74,7 +74,7 @@ class TD3Actor(torch.nn.Module):
     def sync_soft(self) -> None:
         with torch.no_grad():
             for source, target in zip(self.network.parameters(), self.t_network.parameters()):
-                target.copy_(self.target_update_rate * source + (1.0 - self.target_update_rate) * target)
+                target.copy_(self.tau * source + (1.0 - self.tau) * target)
 
 
 class QNetwork(torch.nn.Module):
@@ -93,9 +93,9 @@ class QNetwork(torch.nn.Module):
 
 
 class TD3Critic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, target_update_rate: float = 0.005) -> None:
+    def __init__(self, obs_size: int, act_size: int, tau: float = 0.005) -> None:
         super().__init__()
-        self.target_update_rate = target_update_rate
+        self.tau = tau
         self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.t_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.sync_hard()
@@ -144,7 +144,7 @@ class TD3Critic(torch.nn.Module):
         with torch.no_grad():
             for source_network, target_network in zip(self.q_networks, self.t_networks):
                 for source, target in zip(source_network.parameters(), target_network.parameters()):
-                    target.copy_(self.target_update_rate * source + (1.0 - self.target_update_rate) * target)
+                    target.copy_(self.tau * source + (1.0 - self.tau) * target)
 
 
 class TD3Agent:
@@ -152,22 +152,22 @@ class TD3Agent:
         self,
         obs_size: int,
         act_size: int,
-        discount_factor: float = 0.99,
-        policy_delay: int = 2,
-        max_action: float = 1.0,
-        policy_noise_scale: float = 0.2,
+        gamma: float = 0.99,
+        sigma_td3: float = 0.2,
         policy_noise_clip: float = 0.5,
+        policy_delay: int = 2,
         learning_rate: float = 3e-4,
+        max_action: float = 1.0,
         device: str = "cuda",
     ) -> None:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.discount_factor = discount_factor
+        self.gamma = gamma
         self.policy_delay = policy_delay
         self.update_step = 0
         self.max_action = max_action
-        self.policy_noise_scale = policy_noise_scale * max_action
+        self.sigma_td3 = sigma_td3 * max_action
         self.policy_noise_clip = policy_noise_clip
 
         self.actor = TD3Actor(obs_size, act_size, max_action).to(device)
@@ -216,15 +216,15 @@ class TD3Agent:
     # Loss functions
     # ====================
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
-        # \epsilon = clip(N(0, \sigma^2 I), -c, c)
+        # \epsilon = clip(N(0, \sigma_(TD3)^2 I), -c, c)
         # a' = clip(\pi' (s') + \epsilon, -a_(max), a_(max))
         # y = r + \gamma min_i Q_i' (s', a')
         with torch.no_grad():
             next_actions = self.actor.t(next_observations)
-            noise = (torch.randn_like(next_actions) * self.policy_noise_scale).clamp(-self.policy_noise_clip, self.policy_noise_clip)
+            noise = (torch.randn_like(next_actions) * self.sigma_td3).clamp(-self.policy_noise_clip, self.policy_noise_clip)
             next_actions = (next_actions + noise).clamp(-self.max_action, self.max_action)
             target_q = self.critic.t_min(next_observations, next_actions)
-            return rewards + self.discount_factor * target_q * (1.0 - dones)
+            return rewards + self.gamma * target_q * (1.0 - dones)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
         # Loss_TD = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]

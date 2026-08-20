@@ -13,27 +13,30 @@ class SCCCAgent(SCASAgent):
         obs_size: int,
         act_size: int,
         dynamic: Dynamic,
-        device: str = "cuda",
+        lambda_q: float = 5.0,
+        k_sccc: int = 30,
+        delta_q: float = 5.0,
+        **kwargs,
     ) -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
-        self.lambda_q = 5.0
-        self.conservative_sample_count = 30
-        self.conservative_threshold = 5.0
+        super().__init__(obs_size, act_size, dynamic=dynamic, **kwargs)
+        self.lambda_q = lambda_q
+        self.k_sccc = k_sccc
+        self.delta_q = delta_q
 
     # ====================
     # Loss functions
     # ====================
     def loss_conservative(self, batch: Batch) -> torch.Tensor:
-        # LSE_i(s) = log \sum_k exp(Q_i (s, a\tilde_k))
-        # Loss_conservative^SCCC = E_((s, a) \sim D) [\sum_i ReLU(LSE_i(s) - Q_i (s, a) + \delta_(SCCC))]
+        # LSE_i(s) = log \sum_(k = 1)^(K_(SCCC)) exp(Q_i (s, a\tilde_k))
+        # Loss_conservative^SCCC = E_((s, a) \sim D) [\sum_i ReLU(LSE_i(s) - Q_i (s, a) + \delta_Q)]
         observations, actions, _, _, _ = batch
-        sampled_actions = self.actor.sample_uniform(observations, self.conservative_sample_count)
+        sampled_actions = self.actor.sample_uniform(observations, self.k_sccc)
         losses = []
         q_data_all = self.critic.q_all(observations, actions)
         q_sample_all = self.critic.q_all_n(observations, sampled_actions)
         for q_data, q_sample in zip(q_data_all, q_sample_all):
             penalty_value = torch.logsumexp(q_sample, dim=1)
-            losses.append(F.relu(penalty_value - q_data + self.conservative_threshold).mean())
+            losses.append(F.relu(penalty_value - q_data + self.delta_q).mean())
         return sum(losses)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
@@ -42,15 +45,12 @@ class SCCCAgent(SCASAgent):
 
 
 class SCCCNAgent(NAgent, SCCCAgent):
-    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
+    pass
 
 
 class SCCCGPAgent(GPAgent, SCCCAgent):
-    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
+    pass
 
 
 class SCCCGPNAgent(GPAgent, SCCCNAgent):
-    def __init__(self, obs_size: int, act_size: int, dynamic: Dynamic, device: str = "cuda") -> None:
-        super().__init__(obs_size, act_size, dynamic=dynamic, device=device)
+    pass

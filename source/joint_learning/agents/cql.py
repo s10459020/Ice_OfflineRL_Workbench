@@ -87,9 +87,9 @@ class QNetwork(torch.nn.Module):
 
 
 class CQLCritic(torch.nn.Module):
-    def __init__(self, obs_size: int, act_size: int, target_update_rate: float = 0.005) -> None:
+    def __init__(self, obs_size: int, act_size: int, tau: float = 0.005) -> None:
         super().__init__()
-        self.target_update_rate = target_update_rate
+        self.tau = tau
         self.q_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.t_networks = torch.nn.ModuleList([QNetwork(obs_size, act_size), QNetwork(obs_size, act_size)])
         self.sync_hard()
@@ -140,8 +140,8 @@ class CQLCritic(torch.nn.Module):
             for source_network, target_network in zip(self.q_networks, self.t_networks):
                 for source, target in zip(source_network.parameters(), target_network.parameters()):
                     target.data.copy_(
-                        self.target_update_rate * source.data
-                        + (1.0 - self.target_update_rate) * target.data
+                        self.tau * source.data
+                        + (1.0 - self.tau) * target.data
                     )
 
 
@@ -150,8 +150,9 @@ class CQLAgent:
         self,
         obs_size: int,
         act_size: int,
-        discount_factor: float = 0.99,
-        conservative_sample_count: int = 10,
+        gamma: float = 0.99,
+        lambda_q: float = 5.0,
+        k_cql: int = 10,
         initial_temperature: float = 1.0,
         learning_rate: float = 3e-4,
         device: str = "cuda",
@@ -159,10 +160,10 @@ class CQLAgent:
         self.obs_size = obs_size
         self.act_size = act_size
         self.device = device
-        self.discount_factor = discount_factor
+        self.gamma = gamma
         self.target_entropy = -float(act_size)
-        self.lambda_cql = 5.0
-        self.conservative_sample_count = conservative_sample_count
+        self.lambda_q = lambda_q
+        self.k_cql = k_cql
 
         self.actor = CQLActor(obs_size, act_size).to(device)
         self.critic = CQLCritic(obs_size, act_size).to(device)
@@ -193,8 +194,8 @@ class CQLAgent:
 
         # Critic
         loss_td = self.loss_td(batch)
-        # Loss_Critic = Loss_TD + lambda_cql Loss_conservative
-        loss = loss_td + self.lambda_cql * loss_conservative
+        # Loss_Critic = Loss_TD + \lambda_Q Loss_conservative
+        loss = loss_td + self.lambda_q * loss_conservative
         self.critic_optimizer.zero_grad()
         loss.backward()
         self.critic_optimizer.step()
@@ -231,7 +232,7 @@ class CQLAgent:
         with torch.no_grad():
             next_actions, next_log_probs = self.actor.sample(next_observations)
             target_q = self.critic.t_min(next_observations, next_actions)
-            target = rewards + self.discount_factor * (
+            target = rewards + self.gamma * (
                 target_q - self.temperature() * next_log_probs
             ) * (1.0 - dones)
         q1, q2 = self.critic.q_all(observations, actions)
@@ -244,12 +245,12 @@ class CQLAgent:
         # z_(i,rand,n) = Q_i (s, a\tilde_(rand,n)) - log \mu_(rand) (a\tilde_(rand,n))
         # z_(i,curr,n) = Q_i (s, a\tilde_(curr,n)) - log \pi(a\tilde_(curr,n) | s)
         # z_(i,next,n) = Q_i (s, a\tilde_(next,n)) - log \pi(a\tilde_(next,n) | s')
-        # Loss_conservative = \sum _(i = 1)^2 [E_(s \sim D) [log \sum_n exp({z_(i,rand,n), z_(i,curr,n), z_(i,next,n)})] - E_((s, a) \sim D) [Q_i (s, a)]]
+        # Loss_conservative = \sum _(i = 1)^2 [E_(s \sim D) [log \sum_(n = 1)^(K_(CQL)) exp({z_(i,rand,n), z_(i,curr,n), z_(i,next,n)})] - E_((s, a) \sim D) [Q_i (s, a)]]
         observations, actions, _, next_observations, _ = batch
         with torch.no_grad():
-            policy_actions, policy_log_probs = self.actor.sample_n(observations, self.conservative_sample_count)
-            next_policy_actions, next_policy_log_probs = self.actor.sample_n(next_observations, self.conservative_sample_count)
-            random_actions, random_log_probs = self.actor.sample_uniform(observations, self.conservative_sample_count)
+            policy_actions, policy_log_probs = self.actor.sample_n(observations, self.k_cql)
+            next_policy_actions, next_policy_log_probs = self.actor.sample_n(next_observations, self.k_cql)
+            random_actions, random_log_probs = self.actor.sample_uniform(observations, self.k_cql)
             log_probs = torch.cat([policy_log_probs, next_policy_log_probs, random_log_probs], dim=1)
 
         policy_q_values = self.critic.q_all_n(observations, policy_actions)
