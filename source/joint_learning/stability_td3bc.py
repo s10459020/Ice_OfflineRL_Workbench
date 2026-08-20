@@ -11,7 +11,15 @@ from joint_learning.lib.metrics import metrics_path
 
 EXPERIMENT = "stability_td3bc"
 DEVICE = "cuda"
-TRAIN_COUNT = 5
+MODEL_COUNT = 5
+TRAIN_COUNT = 200_000
+EVAL_COUNT = 10
+BATCH_SIZE = 256
+PRINT_INTERVAL = 2_000
+RETURN_AVG_WINDOW = 10
+MODEL_STEPS = 500_000
+MODEL_BATCH_SIZE = 256
+MODEL_PRINT_INTERVAL = 10_000
 
 AGENTS = [
     "td3bc",
@@ -43,14 +51,33 @@ def main() -> None:
     for dataset_id in DATASETS:
         row = [dataset_id]
         dataset = D4RLDataset(dataset_id, DEVICE)
-        dynamic = train_dynamic(dataset) if any(agent_id in DYNAMIC_AGENT_CLASSES for agent_id in AGENTS) else None
+        dynamic = (
+            train_dynamic(dataset, MODEL_STEPS, MODEL_BATCH_SIZE, MODEL_PRINT_INTERVAL)
+            if any(agent_id in DYNAMIC_AGENT_CLASSES for agent_id in AGENTS)
+            else None
+        )
         for agent_id in AGENTS:
             clear_metric(metrics_path(agent_id, dataset_id))
             returns = []
-            for train_index in range(1, TRAIN_COUNT + 1):
-                print(f"train {train_index}/{TRAIN_COUNT} agent={agent_id} dataset={dataset_id}")
+            for train_index in range(1, MODEL_COUNT + 1):
+                print(
+                    f"train {train_index}/{MODEL_COUNT} "
+                    f"agent={agent_id} dataset={dataset_id}"
+                )
                 agent = make_agent(agent_id, dataset, dynamic=dynamic)
-                returns.append(train(agent, dataset, EXPERIMENT, train_index))
+                returns.append(
+                    train(
+                        agent,
+                        dataset,
+                        EXPERIMENT,
+                        train_index,
+                        TRAIN_COUNT,
+                        EVAL_COUNT,
+                        BATCH_SIZE,
+                        PRINT_INTERVAL,
+                        RETURN_AVG_WINDOW,
+                    )
+                )
             mean_return = sum(returns) / len(returns)
             row.append(f"{mean_return:.6f}")
         rows.append(row)

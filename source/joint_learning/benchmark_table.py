@@ -66,10 +66,10 @@ def dataset_kind(dataset_id: str) -> str:
 def dataset_return(dataset_id: str) -> float:
     dataset = D4RLDataset(dataset_id, "cpu")
     rewards = dataset.rewards.detach().cpu().numpy().reshape(-1)
-    dones = dataset.dones.detach().cpu().numpy().reshape(-1).astype(bool)
+    episode_dones = dataset.episode_dones.detach().cpu().numpy().reshape(-1).astype(bool)
     episode_returns = []
     episode_return = 0.0
-    for reward, done in zip(rewards, dones):
+    for reward, done in zip(rewards, episode_dones):
         episode_return += float(reward)
         if done:
             episode_returns.append(episode_return)

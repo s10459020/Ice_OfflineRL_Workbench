@@ -11,17 +11,25 @@ from joint_learning.lib.metrics import metrics_path
 
 EXPERIMENT = "benchmark"
 DEVICE = "cuda"
-TRAIN_COUNT = 1
+MODEL_COUNT = 1
+TRAIN_COUNT = 200_000
+EVAL_COUNT = 10
+BATCH_SIZE = 256
+PRINT_INTERVAL = 2_000
+RETURN_AVG_WINDOW = 10
+MODEL_STEPS = 500_000
+MODEL_BATCH_SIZE = 256
+MODEL_PRINT_INTERVAL = 10_000
 
 AGENTS = [
-    "bc",
-    "td3bc",
-    "iql",
-    "cql",
-    "aspl_c",
-    "scas_n",
-    "scaspl_n",
-    "sccc_n",
+    # "bc",
+    # "td3bc",
+    # "iql",
+    # "cql",
+    "aspl",
+    # "scas_n",
+    # "scaspl_n",
+    # "sccc_n",
 ]
 
 DATASETS = [
@@ -42,6 +50,16 @@ DATASETS = [
     "halfcheetah_expert_replay",
 ]
 
+TASKS = [
+    # ("scas_n", "hopper_expert"),
+    # ("scaspl_n", "hopper_expert"),
+    # ("bc", "hopper_medium_replay"),
+    # ("bc", "hopper_expert_replay"),
+    # ("scas_n", "walker2d_expert"),
+    # ("bc", "walker2d_medium_replay"),
+    # ("bc", "walker2d_expert_replay"),
+]
+
 
 def main() -> None:
     rows: list[list[str]] = []
@@ -50,18 +68,69 @@ def main() -> None:
     for dataset_id in DATASETS:
         row = [dataset_id]
         dataset = D4RLDataset(dataset_id, DEVICE)
-        dynamic = train_dynamic(dataset) if any(agent_id in DYNAMIC_AGENT_CLASSES for agent_id in AGENTS) else None
+        dynamic = (
+            train_dynamic(dataset, MODEL_STEPS, MODEL_BATCH_SIZE, MODEL_PRINT_INTERVAL)
+            if any(agent_id in DYNAMIC_AGENT_CLASSES for agent_id in AGENTS)
+            else None
+        )
         for agent_id in AGENTS:
             clear_metric(metrics_path(agent_id, dataset_id))
             returns = []
-            for train_index in range(1, TRAIN_COUNT + 1):
-                print(f"train {train_index}/{TRAIN_COUNT} agent={agent_id} dataset={dataset_id}")
+            for train_index in range(1, MODEL_COUNT + 1):
+                print(
+                    f"train {train_index}/{MODEL_COUNT} "
+                    f"agent={agent_id} dataset={dataset_id}"
+                )
                 agent = make_agent(agent_id, dataset, dynamic=dynamic)
-                returns.append(train(agent, dataset, EXPERIMENT, train_index))
+                returns.append(
+                    train(
+                        agent,
+                        dataset,
+                        EXPERIMENT,
+                        train_index,
+                        TRAIN_COUNT,
+                        EVAL_COUNT,
+                        BATCH_SIZE,
+                        PRINT_INTERVAL,
+                        RETURN_AVG_WINDOW,
+                    )
+                )
             mean_return = sum(returns) / len(returns)
             row.append(f"{mean_return:.6f}")
         rows.append(row)
         write_table(table_path(EXPERIMENT), header, rows)
+
+    for task_index, (agent_id, dataset_id) in enumerate(TASKS, start=1):
+        print(f"task {task_index}/{len(TASKS)} agent={agent_id} dataset={dataset_id}")
+        dataset = D4RLDataset(dataset_id, DEVICE)
+        dynamic = (
+            train_dynamic(dataset, MODEL_STEPS, MODEL_BATCH_SIZE, MODEL_PRINT_INTERVAL)
+            if agent_id in DYNAMIC_AGENT_CLASSES
+            else None
+        )
+        clear_metric(metrics_path(agent_id, dataset_id))
+        returns = []
+        for train_index in range(1, MODEL_COUNT + 1):
+            print(
+                f"task train {train_index}/{MODEL_COUNT} "
+                f"agent={agent_id} dataset={dataset_id}"
+            )
+            agent = make_agent(agent_id, dataset, dynamic=dynamic)
+            returns.append(
+                train(
+                    agent,
+                    dataset,
+                    EXPERIMENT,
+                    train_index,
+                    TRAIN_COUNT,
+                    EVAL_COUNT,
+                    BATCH_SIZE,
+                    PRINT_INTERVAL,
+                    RETURN_AVG_WINDOW,
+                )
+            )
+        mean_return = sum(returns) / len(returns)
+        print(f"task mean_return={mean_return:.6f} agent={agent_id} dataset={dataset_id}")
 
 
 if __name__ == "__main__":

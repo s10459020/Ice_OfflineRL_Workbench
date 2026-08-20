@@ -1,9 +1,6 @@
 import gymnasium as gym
 
 
-EVAL_EPISODES = 10
-
-
 def evaluate(agent, env: gym.Env, dataset) -> float:
     observation, _ = env.reset()
     total_return = 0.0
@@ -16,6 +13,6 @@ def evaluate(agent, env: gym.Env, dataset) -> float:
     return total_return
 
 
-def evaluate_mean(agent, env: gym.Env, dataset, episodes: int = EVAL_EPISODES) -> float:
+def evaluate_mean(agent, env: gym.Env, dataset, episodes: int) -> float:
     returns = [evaluate(agent, env, dataset) for _ in range(episodes)]
     return sum(returns) / len(returns)
