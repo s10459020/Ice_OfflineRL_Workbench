@@ -10,8 +10,8 @@ class TestResult:
     mean_return: float
 
 
-def test(agent, dataset, eval_count: int) -> TestResult:
+def test(agent, dataset, n_eval: int) -> TestResult:
     env = gym.make(dataset.env_id)
-    mean_return = evaluate_mean(agent, env, dataset, eval_count)
+    mean_return = evaluate_mean(agent, env, dataset, n_eval)
     env.close()
     return TestResult(mean_return)

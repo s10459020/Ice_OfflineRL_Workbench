@@ -27,7 +27,8 @@ class SCCCAgent(SCASAgent):
     # Loss functions
     # ====================
     def loss_conservative(self, batch: Batch) -> torch.Tensor:
-        # Q_(LSE,i)(s) = log \sum_(k = 1)^(K_(SCCC)) exp(Q_i (s, a\tilde_k))
+        # a\tilde_k \sim U(A), k = 1, ..., K_(SCCC)
+        # Q_(LSE,i)(s) = log \sum_(k = 1)^(K_(SCCC)) exp(Q_i(s, a\tilde_k))
         # Loss_conservative = E_((s, a) \sim D) [
         #     \sum_i ReLU(Q_(LSE,i)(s) - Q_i(s, a) + \delta_Q)
         # ]

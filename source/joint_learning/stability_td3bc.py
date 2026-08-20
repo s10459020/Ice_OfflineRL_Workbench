@@ -11,9 +11,9 @@ from joint_learning.lib.metrics import metrics_path
 
 EXPERIMENT = "stability_td3bc"
 DEVICE = "cuda"
-MODEL_COUNT = 5
-TRAIN_COUNT = 200_000
-EVAL_COUNT = 10
+N_MODEL = 5
+N_TRAIN = 200_000
+N_EVAL = 10
 BATCH_SIZE = 256
 PRINT_INTERVAL = 2_000
 RETURN_AVG_WINDOW = 10
@@ -59,9 +59,9 @@ def main() -> None:
         for agent_id in AGENTS:
             clear_metric(metrics_path(agent_id, dataset_id))
             returns = []
-            for train_index in range(1, MODEL_COUNT + 1):
+            for train_index in range(1, N_MODEL + 1):
                 print(
-                    f"train {train_index}/{MODEL_COUNT} "
+                    f"train {train_index}/{N_MODEL} "
                     f"agent={agent_id} dataset={dataset_id}"
                 )
                 agent = make_agent(agent_id, dataset, dynamic=dynamic)
@@ -71,8 +71,8 @@ def main() -> None:
                         dataset,
                         EXPERIMENT,
                         train_index,
-                        TRAIN_COUNT,
-                        EVAL_COUNT,
+                        N_TRAIN,
+                        N_EVAL,
                         BATCH_SIZE,
                         PRINT_INTERVAL,
                         RETURN_AVG_WINDOW,

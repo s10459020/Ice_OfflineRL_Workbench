@@ -40,8 +40,8 @@ def train(
     dataset,
     experiment_id: str,
     train_index: int,
-    train_count: int,
-    eval_count: int,
+    n_train: int,
+    n_eval: int,
     batch_size: int,
     print_interval: int,
     return_avg_window: int,
@@ -52,15 +52,15 @@ def train(
 
     print(
         f"train agent={agent.id} dataset={dataset.id} "
-        f"steps={train_count} device={dataset.device}"
+        f"steps={n_train} device={dataset.device}"
     )
     try:
-        for step in range(1, train_count + 1):
+        for step in range(1, n_train + 1):
             batch = dataset.sample_batch(batch_size)
             agent.update(batch)
 
-            if step % print_interval == 0 or step == train_count:
-                episode_return = evaluate_mean(agent, env, dataset, eval_count)
+            if step % print_interval == 0 or step == n_train:
+                episode_return = evaluate_mean(agent, env, dataset, n_eval)
                 history.append((step, episode_return))
                 recent_returns = [value for _, value in history[-return_avg_window:]]
                 moving_avg_return = sum(recent_returns) / len(recent_returns)

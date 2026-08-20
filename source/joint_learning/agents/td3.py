@@ -217,8 +217,8 @@ class TD3Agent:
     # ====================
     def target_td3(self, next_observations: torch.Tensor, rewards: torch.Tensor, dones: torch.Tensor) -> torch.Tensor:
         # \epsilon = clip(N(0, \sigma_(TD3)^2 I), -c, c)
-        # a' = clip(\pi' (s') + \epsilon, -a_(max), a_(max))
-        # y = r + \gamma min_i Q_i' (s', a')
+        # a' = clip(\pi^tar(s') + \epsilon, -a_(max), a_(max))
+        # y = r + \gamma min_i Q_i^tar(s', a')
         with torch.no_grad():
             next_actions = self.actor.t(next_observations)
             noise = (torch.randn_like(next_actions) * self.sigma_td3).clamp(-self.policy_noise_clip, self.policy_noise_clip)

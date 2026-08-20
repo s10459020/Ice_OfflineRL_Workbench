@@ -194,7 +194,7 @@ class IQLAgent:
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_value(self, batch: Batch) -> torch.Tensor:
-        # u(s, a) = Q_(min)' (s, a) - V(s)
+        # u(s, a) = Q_(min)^tar(s, a) - V(s)
         # Loss_Value = E_((s, a) \sim D) [|\omega - I(u < 0)|u^2]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
@@ -205,7 +205,7 @@ class IQLAgent:
         return (weight * u.pow(2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # A(s, a) = Q_(min)' (s, a) - V(s)
+        # A(s, a) = Q_(min)^tar(s, a) - V(s)
         # w(s, a) = min(exp(\beta_(IQL) A(s, a)), w_(max))
         # Loss_Actor = -E_((s, a) \sim D) [w(s, a)log \pi(a | s)]
         observations, actions, _, _, _ = batch

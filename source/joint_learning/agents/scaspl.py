@@ -32,7 +32,7 @@ class SCASPLAgent(SCASAgent):
     # Help functions
     # ====================
     def action_distance(self, actions: torch.Tensor, sampled_actions: torch.Tensor) -> torch.Tensor:
-        # d(a, a\tilde) = (1/A)\sum_j ((a_j - a\tilde_j)/(2a_(max)))^2
+        # d(a, a\tilde) = (1/d_a)\sum_(j = 1)^(d_a) ((a_j - a\tilde_j)/(2a_(max)))^2
         diff = (actions.unsqueeze(1) - sampled_actions) ** 2
         return (diff / ((2 * self.max_action) ** 2)).mean(dim=2, keepdim=True)
 
@@ -40,12 +40,12 @@ class SCASPLAgent(SCASAgent):
         # c_t = (1 - \rho_c)c_(t - 1) + \rho_c E_((s, a) \sim D) [(|Q_1 (s, a)| + |Q_2 (s, a)|)/2]
         with torch.no_grad():
             q_values = self.critic.q_all(observations, actions)
-            current = torch.stack(q_values).abs().mean()
+            q_scale = torch.stack(q_values).abs().mean()
             if self.c_t.item() == 0.0:
-                self.c_t.copy_(current)
+                self.c_t.copy_(q_scale)
             else:
                 self.c_t.mul_(1.0 - self.rho_c)
-                self.c_t.add_(self.rho_c * current)
+                self.c_t.add_(self.rho_c * q_scale)
         return self.c_t
 
     def update(self, batch: Batch) -> None:
@@ -57,7 +57,7 @@ class SCASPLAgent(SCASAgent):
     # Loss functions
     # ====================
     def loss_pseudo(self, batch: Batch) -> torch.Tensor:
-        # Q\tilde (s, a\tilde_k) = min_i Q_i^target (s, a) - c_t d(a, a\tilde_k)
+        # Q\tilde(s, a\tilde_k) = Q_(min)^tar(s, a) - c_t d(a, a\tilde_k)
         # Loss_pseudo = E_((s, a) \sim D) [(1/K_(SCASPL))\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_uniform(observations, self.k_scaspl)

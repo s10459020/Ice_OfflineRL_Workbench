@@ -46,11 +46,12 @@ class SCASAgent(TD3Agent):
         return -q.mean()
 
     def loss_correction(self, batch: Batch) -> torch.Tensor:
-        # V(s) = Q_(mean) (s, \pi(s)) = (Q_1 (s, \pi(s)) + Q_2 (s, \pi(s)))/2
+        # V(s) = Q_(mean)(s, \pi(s)) = (Q_1(s, \pi(s)) + Q_2(s, \pi(s)))/2
         # \Delta V = V(s') - V(s)
         # w(s, s') = min(exp(\beta_(SCAS) \Delta V), w_(max))
         # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma_s^2 I)
-        # Loss_correction = E_((s, a, r, s') \sim D) [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
+        # Loss_correction = E_((s, s') \sim D, z \sim N(0, I))
+        #     [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
         observations, _, _, next_observations, _ = batch
         actions = self.actor(observations)
         next_actions = self.actor(next_observations)
