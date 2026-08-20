@@ -77,5 +77,16 @@ class ASPLCAgent(CAgent, ASPLAgent):
     pass
 
 
+class ASPLC10Agent(ASPLCAgent):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        lambda_comp: float = 10.0,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, lambda_comp=lambda_comp, **kwargs)
+
+
 class ASPLGPAgent(GPAgent, ASPLAgent):
     pass

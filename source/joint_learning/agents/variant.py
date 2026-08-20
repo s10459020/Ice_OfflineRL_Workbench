@@ -18,14 +18,16 @@ class NAgent:
     # ====================
     # Loss functions
     # ====================
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # alpha = lambda_N / E_(s \sim D) [|Q_(min) (s, \pi(s))|]
-        # Loss_TD3-N = -alpha E_(s \sim D) [Q_(min) (s, \pi(s))]
+    def alpha_norm(self, batch: Batch) -> torch.Tensor:
+        # alpha_norm = \lambda_N / E_(s \sim D) [|Q_(opt) (s, \pi(s))|]
         observations, _, _, _, _ = batch
         actions = self.actor(observations)
         q = self.critic.q_min(observations, actions)
-        alpha = self.lambda_n / q.abs().mean().detach()
-        return -alpha * q.mean()
+        return self.lambda_n / q.abs().mean().detach()
+
+    def loss_opt(self, batch: Batch) -> torch.Tensor:
+        # Loss_opt = -alpha_norm E_(s \sim D) [Q_(opt) (s, \pi(s))]
+        return self.alpha_norm(batch) * super().loss_opt(batch)
 
 
 class GPAgent:

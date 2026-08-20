@@ -27,16 +27,20 @@ class SCCCAgent(SCASAgent):
     # Loss functions
     # ====================
     def loss_conservative(self, batch: Batch) -> torch.Tensor:
-        # LSE_i(s) = log \sum_(k = 1)^(K_(SCCC)) exp(Q_i (s, a\tilde_k))
-        # Loss_conservative^SCCC = E_((s, a) \sim D) [\sum_i ReLU(LSE_i(s) - Q_i (s, a) + \delta_Q)]
+        # Q_(LSE,i)(s) = log \sum_(k = 1)^(K_(SCCC)) exp(Q_i (s, a\tilde_k))
+        # Loss_conservative = E_((s, a) \sim D) [
+        #     \sum_i ReLU(Q_(LSE,i)(s) - Q_i(s, a) + \delta_Q)
+        # ]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_uniform(observations, self.k_sccc)
         losses = []
         q_data_all = self.critic.q_all(observations, actions)
         q_sample_all = self.critic.q_all_n(observations, sampled_actions)
         for q_data, q_sample in zip(q_data_all, q_sample_all):
-            penalty_value = torch.logsumexp(q_sample, dim=1)
-            losses.append(F.relu(penalty_value - q_data + self.delta_q).mean())
+            q_lse = torch.logsumexp(q_sample, dim=1)
+            losses.append(
+                F.relu(q_lse - q_data + self.delta_q).mean()
+            )
         return sum(losses)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:

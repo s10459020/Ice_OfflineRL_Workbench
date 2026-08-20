@@ -1,4 +1,4 @@
-from joint_learning.agents.aspl import ASPLAgent, ASPLCAgent, ASPLGPAgent
+from joint_learning.agents.aspl import ASPLAgent, ASPLC10Agent, ASPLCAgent, ASPLGPAgent
 from joint_learning.agents.bc import BCAgent
 from joint_learning.agents.cql import CQLAgent
 from joint_learning.agents.iql import IQLAgent
@@ -20,6 +20,7 @@ from joint_learning.agents.td3bc import TD3BCAgent, TD3BCGPAgent, TD3BCPGPAgent,
 # - "cql": conservative Q-learning baseline
 # - "aspl": action-space pseudo-labeling
 # - "aspl_c": ASPL with dataset-action compensation
+# - "aspl_c_10": ASPL with dataset-action compensation weight 10
 # - "aspl_gp": ASPL with action-gradient penalty
 # - "scas": state correction with action-space smoothing
 # - "scas_n": SCAS with normalized actor objective
@@ -46,6 +47,7 @@ AGENT_CLASSES = {
     "cql": CQLAgent,
     "aspl": ASPLAgent,
     "aspl_c": ASPLCAgent,
+    "aspl_c_10": ASPLC10Agent,
     "aspl_gp": ASPLGPAgent,
 }
 

@@ -237,13 +237,13 @@ class TD3Agent:
         # Loss_Critic = Loss_TD
         return self.loss_td(batch)
 
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # Loss_TD3 = -E_(s \sim D) [Q_1 (s, \pi(s))]
+    def loss_opt(self, batch: Batch) -> torch.Tensor:
+        # Loss_opt = -E_(s \sim D) [Q_1 (s, \pi(s))]
         observations, _, _, _, _ = batch
         actions = self.actor(observations)
         q = self.critic.q1(observations, actions)
         return -q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = Loss_TD3
-        return self.loss_td3(batch)
+        # Loss_Actor = Loss_opt
+        return self.loss_opt(batch)

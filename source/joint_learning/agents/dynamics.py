@@ -29,9 +29,12 @@ class Dynamic(torch.nn.Module):
         return self.network(torch.cat([observations, actions], dim=-1))
 
     def update(self, batch: Batch) -> None:
-        # Loss_M^SCAS = E_((s, a, s') \sim D) [\|M(s, a) - s'\|_2^2]
+        # Loss_dyn = E_((s, a, s') \sim D) [\|M(s, a) - s'\|_2^2]
         observations, actions, _, next_observations, _ = batch
-        loss = F.mse_loss(self(observations, actions), next_observations)
+        loss = F.mse_loss(
+            self(observations, actions),
+            next_observations,
+        )
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()

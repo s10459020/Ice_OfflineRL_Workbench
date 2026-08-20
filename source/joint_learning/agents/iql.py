@@ -200,9 +200,9 @@ class IQLAgent:
         with torch.no_grad():
             q = self.critic.t_min(observations, actions)
         v = self.value(observations)
-        diff = q - v
-        weight = torch.abs(self.omega - (diff < 0.0).float())
-        return (weight * diff.pow(2)).mean()
+        u = q - v
+        weight = torch.abs(self.omega - (u < 0.0).float())
+        return (weight * u.pow(2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         # A(s, a) = Q_(min)' (s, a) - V(s)

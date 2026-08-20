@@ -190,14 +190,10 @@ class CQLAgent:
         loss_temperature.backward()
         self.temperature_optimizer.step()
 
-        loss_conservative = self.loss_conservative(batch)
-
         # Critic
-        loss_td = self.loss_td(batch)
-        # Loss_Critic = Loss_TD + \lambda_Q Loss_conservative
-        loss = loss_td + self.lambda_q * loss_conservative
+        loss_critic = self.loss_critic(batch)
         self.critic_optimizer.zero_grad()
-        loss.backward()
+        loss_critic.backward()
         self.critic_optimizer.step()
 
         # Actor
@@ -245,13 +241,15 @@ class CQLAgent:
         # z_(i,rand,n) = Q_i (s, a\tilde_(rand,n)) - log \mu_(rand) (a\tilde_(rand,n))
         # z_(i,curr,n) = Q_i (s, a\tilde_(curr,n)) - log \pi(a\tilde_(curr,n) | s)
         # z_(i,next,n) = Q_i (s, a\tilde_(next,n)) - log \pi(a\tilde_(next,n) | s')
-        # Loss_conservative = \sum _(i = 1)^2 [E_(s \sim D) [log \sum_(n = 1)^(K_(CQL)) exp({z_(i,rand,n), z_(i,curr,n), z_(i,next,n)})] - E_((s, a) \sim D) [Q_i (s, a)]]
+        # Loss_conservative = \sum _(i = 1)^2 [
+        #     E_(s \sim D) [log \sum_n exp({z_(i,rand,n), z_(i,curr,n), z_(i,next,n)})]
+        #     - E_((s, a) \sim D) [Q_i (s, a)]
+        # ]
         observations, actions, _, next_observations, _ = batch
         with torch.no_grad():
             policy_actions, policy_log_probs = self.actor.sample_n(observations, self.k_cql)
             next_policy_actions, next_policy_log_probs = self.actor.sample_n(next_observations, self.k_cql)
             random_actions, random_log_probs = self.actor.sample_uniform(observations, self.k_cql)
-            log_probs = torch.cat([policy_log_probs, next_policy_log_probs, random_log_probs], dim=1)
 
         policy_q_values = self.critic.q_all_n(observations, policy_actions)
         next_policy_q_values = self.critic.q_all_n(observations, next_policy_actions)
@@ -264,10 +262,24 @@ class CQLAgent:
             random_q_values,
             data_q_values,
         ):
-            candidates = torch.cat([policy_q, next_policy_q, random_q], dim=1)
-            logsumexp = torch.logsumexp(candidates - log_probs, dim=1).mean()
-            losses.append(logsumexp - data_q.mean())
+            z_random = random_q - random_log_probs
+            z_current = policy_q - policy_log_probs
+            z_next = next_policy_q - next_policy_log_probs
+
+            z = torch.cat(
+                [z_random, z_current, z_next],
+                dim=1,
+            )
+
+            losses.append(
+                torch.logsumexp(z, dim=1).mean()
+                - data_q.mean()
+            )
         return sum(losses)
+
+    def loss_critic(self, batch: Batch) -> torch.Tensor:
+        # Loss_Critic = Loss_TD + \lambda_Q Loss_conservative
+        return self.loss_td(batch) + self.lambda_q * self.loss_conservative(batch)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         # Loss_Actor = E_(s \sim D, a \sim \pi) [\alpha log \pi(a | s) - Q_(min) (s, a)]

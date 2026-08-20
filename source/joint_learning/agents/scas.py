@@ -38,8 +38,8 @@ class SCASAgent(TD3Agent):
     # ====================
     # Loss functions
     # ====================
-    def loss_td3(self, batch: Batch) -> torch.Tensor:
-        # Loss_TD3^SCAS = -E_(s \sim D) [Q_(min) (s, \pi(s))]
+    def loss_opt(self, batch: Batch) -> torch.Tensor:
+        # Loss_opt = -E_(s \sim D) [Q_(min) (s, \pi(s))]
         observations, _, _, _, _ = batch
         actions = self.actor(observations)
         q = self.critic.q_min(observations, actions)
@@ -67,8 +67,11 @@ class SCASAgent(TD3Agent):
         return (weight * ((predicted_next_observations - next_observations) ** 2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = (1 - \lambda_A) Loss_TD3 + \lambda_A Loss_correction
-        return (1.0 - self.lambda_a) * self.loss_td3(batch) + self.lambda_a * self.loss_correction(batch)
+        # Loss_Actor = (1 - \lambda_A) Loss_opt + \lambda_A Loss_correction
+        return (
+            (1.0 - self.lambda_a) * self.loss_opt(batch)
+            + self.lambda_a * self.loss_correction(batch)
+        )
 
 
 class SCASNAgent(NAgent, SCASAgent):

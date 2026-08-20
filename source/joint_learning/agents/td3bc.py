@@ -26,24 +26,22 @@ class TD3BCAgent(TD3Agent):
         predicted_actions = self.actor(observations)
         return F.mse_loss(predicted_actions, actions)
 
-    def loss_normalized(self, batch: Batch) -> torch.Tensor:
-        # alpha = lambda_N / E_(s \sim D) [|Q_1 (s, \pi(s))|]
-        # Loss_normalized = -alpha E_(s \sim D) [Q_1 (s, \pi(s))]
+    def alpha_norm(self, batch: Batch) -> torch.Tensor:
+        # alpha_norm = \lambda_N / E_(s \sim D) [|Q_1 (s, \pi(s))|]
         observations, _, _, _, _ = batch
         actions = self.actor(observations)
         q = self.critic.q1(observations, actions)
-        alpha = self.lambda_n / q.abs().mean().detach()
-        return -alpha * q.mean()
+        return self.lambda_n / q.abs().mean().detach()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = -alpha E_(s \sim D) [Q_1 (s, \pi(s))] + Loss_BC
-        return self.loss_normalized(batch) + self.loss_bc(batch)
+        # Loss_Actor = alpha_norm Loss_opt + Loss_BC
+        return self.alpha_norm(batch) * self.loss_opt(batch) + self.loss_bc(batch)
 
 
 class TD3BCXNAgent(TD3BCAgent):
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = \lambda_N Loss_TD3 + Loss_BC
-        return self.lambda_n * self.loss_td3(batch) + self.loss_bc(batch)
+        # Loss_Actor = \lambda_N Loss_opt + Loss_BC
+        return self.lambda_n * self.loss_opt(batch) + self.loss_bc(batch)
 
 
 class TD3BCPAgent(TD3BCXNAgent):

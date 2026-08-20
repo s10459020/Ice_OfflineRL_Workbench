@@ -71,7 +71,7 @@ class SCASPLAgent(SCASAgent):
         return sum(F.mse_loss(q, q_pseudo) for q in q_values)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Q^SCASPL = Loss_TD + \lambda_Q Loss_pseudo
+        # Loss_Critic = Loss_TD + \lambda_Q Loss_pseudo
         return self.loss_td(batch) + self.lambda_q * self.loss_pseudo(batch)
 
 
