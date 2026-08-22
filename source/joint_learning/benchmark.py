@@ -5,17 +5,17 @@ from joint_learning.lib.table import table_path
 from joint_learning.lib.table import write_table
 from joint_learning.lib.train import train
 from joint_learning.lib.train import train_dynamic
-from joint_learning.lib.metrics import clear_metric
 from joint_learning.lib.metrics import metrics_path
+from joint_learning.lib.metrics import write_metrics
 
 
 EXPERIMENT = "benchmark"
 DEVICE = "cuda"
-N_MODEL = 1
-N_TRAIN = 200_000
+N_MODEL = 5
+N_TRAIN = 500_000
 N_EVAL = 10
 BATCH_SIZE = 256
-PRINT_INTERVAL = 2_000
+PRINT_INTERVAL = 5_000
 RETURN_AVG_WINDOW = 10
 MODEL_STEPS = 500_000
 MODEL_BATCH_SIZE = 256
@@ -23,14 +23,16 @@ MODEL_PRINT_INTERVAL = 10_000
 
 AGENTS = [
     # "bc",
-    # "td3bc",
+    "td3bc",
     # "iql",
     # "cql",
     # "aspl",
     # "aspl_c",
-    "aspl_c_10",
     # "scas_n",
     # "scaspl_n",
+    # "scaspl_n_q_005",
+    # "scaspl_n_q_05",
+    # "scaspl_n_q_5",
     # "sccc_n",
 ]
 
@@ -76,7 +78,6 @@ def main() -> None:
             else None
         )
         for agent_id in AGENTS:
-            clear_metric(metrics_path(agent_id, dataset_id))
             returns = []
             for train_index in range(1, N_MODEL + 1):
                 print(
@@ -97,6 +98,7 @@ def main() -> None:
                         RETURN_AVG_WINDOW,
                     )
                 )
+            write_metrics(metrics_path(agent_id, dataset_id), returns)
             mean_return = sum(returns) / len(returns)
             row.append(f"{mean_return:.6f}")
         rows.append(row)
@@ -110,7 +112,6 @@ def main() -> None:
             if agent_id in DYNAMIC_AGENT_CLASSES
             else None
         )
-        clear_metric(metrics_path(agent_id, dataset_id))
         returns = []
         for train_index in range(1, N_MODEL + 1):
             print(
@@ -131,6 +132,7 @@ def main() -> None:
                     RETURN_AVG_WINDOW,
                 )
             )
+        write_metrics(metrics_path(agent_id, dataset_id), returns)
         mean_return = sum(returns) / len(returns)
         print(f"task mean_return={mean_return:.6f} agent={agent_id} dataset={dataset_id}")
 

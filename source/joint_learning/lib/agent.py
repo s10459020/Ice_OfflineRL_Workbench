@@ -1,9 +1,9 @@
-from joint_learning.agents.aspl import ASPLAgent, ASPLC10Agent, ASPLCAgent, ASPLGPAgent
+from joint_learning.agents.aspl import ASPLAgent, ASPLC01Agent, ASPLC10Agent, ASPLCAgent, ASPLGPAgent
 from joint_learning.agents.bc import BCAgent
 from joint_learning.agents.cql import CQLAgent
 from joint_learning.agents.iql import IQLAgent
 from joint_learning.agents.scas import SCASAgent, SCASGPAgent, SCASGPNAgent, SCASNAgent
-from joint_learning.agents.scaspl import SCASPLAgent, SCASPLCAgent, SCASPLGPAgent, SCASPLNAgent, SCASPLNCAgent
+from joint_learning.agents.scaspl import SCASPLAgent, SCASPLCAgent, SCASPLGPAgent, SCASPLNAgent, SCASPLNCAgent, SCASPLNQ005Agent, SCASPLNQ05Agent, SCASPLNQ5Agent
 from joint_learning.agents.sccc import SCCCAgent, SCCCGPAgent, SCCCGPNAgent, SCCCNAgent
 from joint_learning.agents.td3bc import TD3BCAgent, TD3BCGPAgent, TD3BCPGPAgent, TD3BCPAgent, TD3BCXNAgent, TD3BCXNGPAgent
 
@@ -20,6 +20,7 @@ from joint_learning.agents.td3bc import TD3BCAgent, TD3BCGPAgent, TD3BCPGPAgent,
 # - "cql": conservative Q-learning baseline
 # - "aspl": action-space pseudo-labeling
 # - "aspl_c": ASPL with dataset-action compensation
+# - "aspl_c_01": ASPL with dataset-action compensation weight 0.1
 # - "aspl_c_10": ASPL with dataset-action compensation weight 10
 # - "aspl_gp": ASPL with action-gradient penalty
 # - "scas": state correction with action-space smoothing
@@ -28,6 +29,9 @@ from joint_learning.agents.td3bc import TD3BCAgent, TD3BCGPAgent, TD3BCPGPAgent,
 # - "scas_gpn": SCAS-GP with normalized actor objective
 # - "scaspl": SCAS with pseudo-label critic punishment
 # - "scaspl_n": SCASPL with normalized actor objective
+# - "scaspl_n_q_005": SCASPL-N with pseudo-label weight 0.05
+# - "scaspl_n_q_05": SCASPL-N with pseudo-label weight 0.5
+# - "scaspl_n_q_5": SCASPL-N with pseudo-label weight 5
 # - "scaspl_gp": SCASPL with action-gradient penalty
 # - "scaspl_c": SCASPL with dataset-action compensation
 # - "scaspl_nc": SCASPL-N with dataset-action compensation
@@ -47,6 +51,7 @@ AGENT_CLASSES = {
     "cql": CQLAgent,
     "aspl": ASPLAgent,
     "aspl_c": ASPLCAgent,
+    "aspl_c_01": ASPLC01Agent,
     "aspl_c_10": ASPLC10Agent,
     "aspl_gp": ASPLGPAgent,
 }
@@ -58,6 +63,9 @@ DYNAMIC_AGENT_CLASSES = {
     "scas_gpn": SCASGPNAgent,
     "scaspl": SCASPLAgent,
     "scaspl_n": SCASPLNAgent,
+    "scaspl_n_q_005": SCASPLNQ005Agent,
+    "scaspl_n_q_05": SCASPLNQ05Agent,
+    "scaspl_n_q_5": SCASPLNQ5Agent,
     "scaspl_gp": SCASPLGPAgent,
     "scaspl_c": SCASPLCAgent,
     "scaspl_nc": SCASPLNCAgent,

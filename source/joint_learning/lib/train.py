@@ -4,8 +4,6 @@ import gymnasium as gym
 
 from joint_learning.agents.dynamics import Dynamic
 from joint_learning.lib.eval import evaluate_mean
-from joint_learning.lib.metrics import metrics_path
-from joint_learning.lib.metrics import save_metric
 from joint_learning.lib.plot import plot_path
 from joint_learning.lib.plot import save_training_plot
 
@@ -74,7 +72,6 @@ def train(
 
     path = agent_path(agent, dataset, train_index)
     agent.save(path)
-    save_metric(metrics_path(agent.id, dataset.id), moving_avg_return)
     save_training_plot(
         history,
         plot_path(experiment_id, agent, dataset),

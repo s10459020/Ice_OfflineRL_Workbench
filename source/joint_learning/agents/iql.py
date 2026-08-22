@@ -186,7 +186,7 @@ class IQLAgent:
     # ====================
     def loss_critic(self, batch: Batch) -> torch.Tensor:
         # y = r + \gamma V(s')
-        # Loss_Critic = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
+        # L_critic = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
             target = rewards + self.gamma * self.value(next_observations) * (1.0 - dones)
@@ -195,7 +195,7 @@ class IQLAgent:
 
     def loss_value(self, batch: Batch) -> torch.Tensor:
         # u(s, a) = Q_(min)^tar(s, a) - V(s)
-        # Loss_Value = E_((s, a) \sim D) [|\omega - I(u < 0)|u^2]
+        # L_value = E_((s, a) \sim D) [|\omega - I(u < 0)|u^2]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
             q = self.critic.t_min(observations, actions)
@@ -206,8 +206,9 @@ class IQLAgent:
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
         # A(s, a) = Q_(min)^tar(s, a) - V(s)
-        # w(s, a) = min(exp(\beta_(IQL) A(s, a)), w_(max))
-        # Loss_Actor = -E_((s, a) \sim D) [w(s, a)log \pi(a | s)]
+        # L_actor = -E_((s, a) \sim D) [
+        #     exp(\beta_(IQL) A(s, a)) log \pi(a | s)
+        # ]
         observations, actions, _, _, _ = batch
         with torch.no_grad():
             advantage = self.critic.t_min(observations, actions) - self.value(observations)

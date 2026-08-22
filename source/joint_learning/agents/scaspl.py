@@ -58,7 +58,7 @@ class SCASPLAgent(SCASAgent):
     # ====================
     def loss_pseudo(self, batch: Batch) -> torch.Tensor:
         # Q\tilde(s, a\tilde_k) = Q_(min)^tar(s, a) - c_t d(a, a\tilde_k)
-        # Loss_pseudo = E_((s, a) \sim D) [(1/K_(SCASPL))\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
+        # L_pseudo = E_((s, a) \sim D) [(1/K_(SCASPL))\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_uniform(observations, self.k_scaspl)
         distance = self.action_distance(actions, sampled_actions)
@@ -71,12 +71,48 @@ class SCASPLAgent(SCASAgent):
         return sum(F.mse_loss(q, q_pseudo) for q in q_values)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Critic = Loss_TD + \lambda_Q Loss_pseudo
+        # L_critic = L_TD + \lambda_Q L_pseudo
         return self.loss_td(batch) + self.lambda_q * self.loss_pseudo(batch)
 
 
 class SCASPLNAgent(NAgent, SCASPLAgent):
     pass
+
+
+class SCASPLNQ005Agent(SCASPLNAgent):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        dynamic: Dynamic,
+        lambda_q: float = 0.05,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_q=lambda_q, **kwargs)
+
+
+class SCASPLNQ05Agent(SCASPLNAgent):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        dynamic: Dynamic,
+        lambda_q: float = 0.5,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_q=lambda_q, **kwargs)
+
+
+class SCASPLNQ5Agent(SCASPLNAgent):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        dynamic: Dynamic,
+        lambda_q: float = 5.0,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, dynamic=dynamic, lambda_q=lambda_q, **kwargs)
 
 
 class SCASPLGPAgent(GPAgent, SCASPLAgent):

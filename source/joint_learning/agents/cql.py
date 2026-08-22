@@ -223,7 +223,7 @@ class CQLAgent:
     def loss_td(self, batch: Batch) -> torch.Tensor:
         # a' \sim \pi(. | s')
         # y = r + \gamma [Q_(min)^tar(s', a') - \alpha_(SAC) log \pi(a' | s')]
-        # Loss_TD = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
+        # L_TD = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         with torch.no_grad():
             next_actions, next_log_probs = self.actor.sample(next_observations)
@@ -235,21 +235,23 @@ class CQLAgent:
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_conservative(self, batch: Batch) -> torch.Tensor:
-        # a\tilde_(rand,n) \sim U(A)
-        # a\tilde_(curr,n) \sim \pi(. | s)
-        # a\tilde_(next,n) \sim \pi(. | s')
-        # z_(i,rand,n) = Q_i(s, a\tilde_(rand,n)) - log \mu_(rand)(a\tilde_(rand,n))
-        # z_(i,curr,n) = Q_i(s, a\tilde_(curr,n)) - log \pi(a\tilde_(curr,n) | s)
-        # z_(i,next,n) = Q_i(s, a\tilde_(next,n)) - log \pi(a\tilde_(next,n) | s')
+        # a\tilde_k^U \sim U(A)
+        # a\tilde_k^s \sim \pi(. | s)
+        # a\tilde_k^(s') \sim \pi(. | s')
+        # z_(i,k)^U = Q_i(s, a\tilde_k^U) - log \mu_U(a\tilde_k^U)
+        # z_(i,k)^s = Q_i(s, a\tilde_k^s) - log \pi(a\tilde_k^s | s)
+        # z_(i,k)^(s') = Q_i(s, a\tilde_k^(s')) - log \pi(a\tilde_k^(s') | s')
         #
-        # Q_(LSE,i)(s) = log \sum_(n = 1)^(K_(CQL)) (
-        #     exp(z_(i,rand,n))
-        #     + exp(z_(i,curr,n))
-        #     + exp(z_(i,next,n))
-        # )
-        #
-        # Loss_conservative = \sum _(i = 1)^2
-        #     E_((s, a) \sim D) [Q_(LSE,i)(s) - Q_i(s, a)]
+        # L_conservative = \sum _(i = 1)^2 [
+        #     E_(s \sim D) [
+        #         log \sum_(k = 1)^(K_(CQL)) (
+        #             exp(z_(i,k)^U)
+        #             + exp(z_(i,k)^s)
+        #             + exp(z_(i,k)^(s'))
+        #         )
+        #     ]
+        #     - E_((s, a) \sim D) [Q_i(s, a)]
+        # ]
         observations, actions, _, next_observations, _ = batch
         with torch.no_grad():
             policy_actions, policy_log_probs = self.actor.sample_n(observations, self.k_cql)
@@ -284,18 +286,18 @@ class CQLAgent:
         return sum(losses)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Critic = Loss_TD + \lambda_Q Loss_conservative
+        # L_critic = L_TD + \lambda_Q L_conservative
         return self.loss_td(batch) + self.lambda_q * self.loss_conservative(batch)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = E_(s \sim D, a \sim \pi) [\alpha_(SAC) log \pi(a | s) - Q_(min)(s, a)]
+        # L_actor = E_(s \sim D, a \sim \pi) [\alpha_(SAC) log \pi(a | s) - Q_(min)(s, a)]
         observations, _, _, _, _ = batch
         actions, log_probs = self.actor.sample(observations)
         q = self.critic.q_min(observations, actions)
         return (self.temperature().detach() * log_probs - q).mean()
 
     def loss_temperature(self, batch: Batch) -> torch.Tensor:
-        # Loss_Temperature = -E_(s \sim D, a \sim \pi) [log \alpha_(SAC)(log \pi(a | s) + H_t)]
+        # L_temperature = -E_(s \sim D, a \sim \pi) [log \alpha_(SAC)(log \pi(a | s) + H_t)]
         observations, _, _, _, _ = batch
         with torch.no_grad():
             _, log_probs = self.actor.sample(observations)

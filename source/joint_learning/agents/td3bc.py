@@ -21,7 +21,7 @@ class TD3BCAgent(TD3Agent):
     # Loss functions
     # -------------------------------------------------------------------------
     def loss_bc(self, batch: Batch) -> torch.Tensor:
-        # Loss_BC = E_((s, a) \sim D) [(\pi(s) - a)^2]
+        # L_BC = E_((s, a) \sim D) [(\pi(s) - a)^2]
         observations, actions, _, _, _ = batch
         predicted_actions = self.actor(observations)
         return F.mse_loss(predicted_actions, actions)
@@ -34,13 +34,13 @@ class TD3BCAgent(TD3Agent):
         return self.lambda_n / q.abs().mean().detach()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = alpha_norm Loss_opt + Loss_BC
+        # L_actor = alpha_norm L_opt + L_BC
         return self.alpha_norm(batch) * self.loss_opt(batch) + self.loss_bc(batch)
 
 
 class TD3BCXNAgent(TD3BCAgent):
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = \lambda_N Loss_opt + Loss_BC
+        # L_actor = \lambda_N L_opt + L_BC
         return self.lambda_n * self.loss_opt(batch) + self.loss_bc(batch)
 
 

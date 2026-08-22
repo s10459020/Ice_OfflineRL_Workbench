@@ -19,9 +19,11 @@ AGENTS = [
     "cql",
     "aspl",
     "aspl_c",
-    "aspl_c_10",
     "scas_n",
     "scaspl_n",
+    "scaspl_n_q_005",
+    "scaspl_n_q_05",
+    "scaspl_n_q_5",
     "sccc_n",
 ]
 

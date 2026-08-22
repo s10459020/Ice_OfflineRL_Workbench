@@ -227,23 +227,23 @@ class TD3Agent:
             return rewards + self.gamma * target_q * (1.0 - dones)
 
     def loss_td(self, batch: Batch) -> torch.Tensor:
-        # Loss_TD = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
+        # L_TD = E_((s, a, r, s') \sim D) [\sum _(i = 1)^2 (Q_i (s, a) - y)^2]
         observations, actions, rewards, next_observations, dones = batch
         target = self.target_td3(next_observations, rewards, dones)
         q1, q2 = self.critic.q_all(observations, actions)
         return F.mse_loss(q1, target) + F.mse_loss(q2, target)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Critic = Loss_TD
+        # L_critic = L_TD
         return self.loss_td(batch)
 
     def loss_opt(self, batch: Batch) -> torch.Tensor:
-        # Loss_opt = -E_(s \sim D) [Q_1 (s, \pi(s))]
+        # L_opt = -E_(s \sim D) [Q_1 (s, \pi(s))]
         observations, _, _, _, _ = batch
         actions = self.actor(observations)
         q = self.critic.q1(observations, actions)
         return -q.mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = Loss_opt
+        # L_actor = L_opt
         return self.loss_opt(batch)

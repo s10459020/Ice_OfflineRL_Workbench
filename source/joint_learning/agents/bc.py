@@ -59,11 +59,11 @@ class BCAgent:
     # Loss functions
     # ====================
     def loss_bc(self, batch: Batch) -> torch.Tensor:
-        # Loss_BC = E_((s, a) \sim D) [(\pi(s) - a)^2]
+        # L_BC = E_((s, a) \sim D) [(\pi(s) - a)^2]
         observations, actions, _, _, _ = batch
         predicted_actions = self.actor(observations)
         return F.mse_loss(predicted_actions, actions)
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = Loss_BC
+        # L_actor = L_BC
         return self.loss_bc(batch)

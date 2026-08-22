@@ -11,8 +11,10 @@ class ASPLAgent(TD3Agent):
         self,
         obs_size: int,
         act_size: int,
-        lambda_q: float = 0.05,
-        k_aspl: int = 6,
+        lambda_q: float = 0.5,
+        # lambda_q: float = 1,
+        # k_aspl: int = 6,
+        k_aspl: int = 30,
         rho_c: float = 0.005,
         **kwargs,
     ) -> None:
@@ -56,7 +58,7 @@ class ASPLAgent(TD3Agent):
     # ====================
     def loss_pseudo(self, batch: Batch) -> torch.Tensor:
         # Q\tilde(s, a\tilde_k) = Q_(min)^tar(s, a) - c_t d(a, a\tilde_k)
-        # Loss_pseudo = E_((s, a) \sim D) [(1/K_(ASPL))\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
+        # L_pseudo = E_((s, a) \sim D) [(1/K_(ASPL))\sum_k \sum _(i = 1)^2 (Q_i (s, a\tilde_k) - Q\tilde (s, a\tilde_k))^2]
         observations, actions, _, _, _ = batch
         sampled_actions = self.actor.sample_lhs(observations, self.k_aspl)
         distance = self.action_distance(actions, sampled_actions)
@@ -69,12 +71,23 @@ class ASPLAgent(TD3Agent):
         return sum(F.mse_loss(q, q_pseudo) for q in q_values)
 
     def loss_critic(self, batch: Batch) -> torch.Tensor:
-        # Loss_Critic = Loss_TD + \lambda_Q Loss_pseudo
+        # L_critic = L_TD + \lambda_Q L_pseudo
         return self.loss_td(batch) + self.lambda_q * self.loss_pseudo(batch)
 
 
 class ASPLCAgent(CAgent, ASPLAgent):
     pass
+
+
+class ASPLC01Agent(ASPLCAgent):
+    def __init__(
+        self,
+        obs_size: int,
+        act_size: int,
+        lambda_comp: float = 0.1,
+        **kwargs,
+    ) -> None:
+        super().__init__(obs_size, act_size, lambda_comp=lambda_comp, **kwargs)
 
 
 class ASPLC10Agent(ASPLCAgent):

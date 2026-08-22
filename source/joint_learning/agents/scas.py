@@ -32,26 +32,26 @@ class SCASAgent(TD3Agent):
         self,
         observations: torch.Tensor,
     ) -> torch.Tensor:
-        # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma_s^2 I)
+        # z \sim N(0, I), s\hat = s + \sigma_s z
         return observations + torch.randn_like(observations) * self.sigma_s
 
     # ====================
     # Loss functions
     # ====================
     def loss_opt(self, batch: Batch) -> torch.Tensor:
-        # Loss_opt = -E_(s \sim D) [Q_(min) (s, \pi(s))]
+        # L_opt = -E_(s \sim D) [Q_(min) (s, \pi(s))]
         observations, _, _, _, _ = batch
         actions = self.actor(observations)
         q = self.critic.q_min(observations, actions)
         return -q.mean()
 
     def loss_correction(self, batch: Batch) -> torch.Tensor:
-        # V(s) = Q_(mean)(s, \pi(s)) = (Q_1(s, \pi(s)) + Q_2(s, \pi(s)))/2
-        # \Delta V = V(s') - V(s)
-        # w(s, s') = min(exp(\beta_(SCAS) \Delta V), w_(max))
-        # s\hat = s + \epsilon, \epsilon \sim N(0, \sigma_s^2 I)
-        # Loss_correction = E_((s, s') \sim D, z \sim N(0, I))
-        #     [w(s, s')\|M(s\hat, \pi(s\hat)) - s'\|_2^2]
+        # V^\pi(s) = Q_(mean)(s, \pi(s))
+        # z \sim N(0, I), s\hat = s + \sigma_s z
+        # L_correction = E_((s, s') \sim D, z \sim N(0, I)) [
+        #     exp(\beta_(SCAS)(V^\pi(s') - V^\pi(s)))
+        #     \|M(s\hat, \pi(s\hat)) - s'\|_2^2
+        # ]
         observations, _, _, next_observations, _ = batch
         actions = self.actor(observations)
         next_actions = self.actor(next_observations)
@@ -68,7 +68,7 @@ class SCASAgent(TD3Agent):
         return (weight * ((predicted_next_observations - next_observations) ** 2)).mean()
 
     def loss_actor(self, batch: Batch) -> torch.Tensor:
-        # Loss_Actor = (1 - \lambda_A) Loss_opt + \lambda_A Loss_correction
+        # L_actor = (1 - \lambda_A) L_opt + \lambda_A L_correction
         return (
             (1.0 - self.lambda_a) * self.loss_opt(batch)
             + self.lambda_a * self.loss_correction(batch)

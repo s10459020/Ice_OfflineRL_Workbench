@@ -5,8 +5,8 @@ from joint_learning.lib.table import table_path
 from joint_learning.lib.table import write_table
 from joint_learning.lib.train import train
 from joint_learning.lib.train import train_dynamic
-from joint_learning.lib.metrics import clear_metric
 from joint_learning.lib.metrics import metrics_path
+from joint_learning.lib.metrics import write_metrics
 
 
 EXPERIMENT = "stability_td3bc"
@@ -57,7 +57,6 @@ def main() -> None:
             else None
         )
         for agent_id in AGENTS:
-            clear_metric(metrics_path(agent_id, dataset_id))
             returns = []
             for train_index in range(1, N_MODEL + 1):
                 print(
@@ -78,6 +77,7 @@ def main() -> None:
                         RETURN_AVG_WINDOW,
                     )
                 )
+            write_metrics(metrics_path(agent_id, dataset_id), returns)
             mean_return = sum(returns) / len(returns)
             row.append(f"{mean_return:.6f}")
         rows.append(row)
